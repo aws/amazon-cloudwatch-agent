@@ -1,5 +1,5 @@
 exporters:
-    otlphttp/appsignals_logs:
+    otlphttp/application_signals:
         auth:
             authenticator: awscloudwatchlogsprovisioner
         compression: gzip
@@ -40,20 +40,20 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/appsignals_logs
+        additional_auth: sigv4auth/application_signals
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
     entitystore:
         mode: ec2
         region: us-east-1
-    sigv4auth/appsignals_logs:
+    sigv4auth/application_signals:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
         service: logs
 processors:
-    batch/application_signals_logs:
+    batch/application_signals:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
@@ -81,16 +81,16 @@ receivers:
                 write_timeout: 0s
 service:
     extensions:
-        - sigv4auth/appsignals_logs
+        - sigv4auth/application_signals
         - awscloudwatchlogsprovisioner
         - agenthealth/logs
         - entitystore
     pipelines:
-        logs/application_signals_logs:
+        logs/application_signals:
             exporters:
-                - otlphttp/appsignals_logs
+                - otlphttp/application_signals
             processors:
-                - batch/application_signals_logs
+                - batch/application_signals
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316

@@ -7,6 +7,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -17,29 +18,47 @@ type HeaderMapping struct {
 	ContextKey string
 }
 
+type Option func(*translator)
+
+func WithAdditionalAuth(id component.ID) Option {
+	return func(t *translator) {
+		t.additionalAuth = &id
+	}
+}
+
+func WithHeaders(headers []HeaderMapping) Option {
+	return func(t *translator) {
+		t.headers = headers
+	}
+}
+
 type translator struct {
 	name           string
-	additionalAuth component.ID
+	factory        extension.Factory
+	additionalAuth *component.ID
 	headers        []HeaderMapping
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithName(name string, additionalAuth component.ID, headers []HeaderMapping) common.ComponentTranslator {
-	return &translator{
-		name:           name,
-		additionalAuth: additionalAuth,
-		headers:        headers,
+func NewTranslatorWithName(name string, opts ...Option) common.ComponentTranslator {
+	t := &translator{
+		name:    name,
+		factory: headerssetterextension.NewFactory(),
 	}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(component.MustNewType("headers_setter"), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
-	cfg := headerssetterextension.NewFactory().CreateDefaultConfig().(*headerssetterextension.Config)
-	cfg.AdditionalAuth = &t.additionalAuth
+	cfg := t.factory.CreateDefaultConfig().(*headerssetterextension.Config)
+	cfg.AdditionalAuth = t.additionalAuth
 
 	for _, h := range t.headers {
 		key := h.HeaderName

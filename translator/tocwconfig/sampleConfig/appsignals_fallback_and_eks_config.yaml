@@ -115,20 +115,6 @@ exporters:
                   separator: ;
               metric_name_selectors:
                 - ^.*$
-            - dimensions:
-                - - environment
-                  - exception
-                  - operation
-                  - service_name
-              label_matchers:
-                - label_names:
-                    - Telemetry.Source
-                  regex: ^Telemend$
-                  separator: ;
-              log_group_name: /aws/telemend/metrics
-              metric_name_selectors:
-                - Count
-              namespace: Telemend
         middleware: agenthealth/logs
         namespace: ApplicationSignals
         no_verify_ssl: false
@@ -284,9 +270,9 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
-    otlphttp/appsignals_logs:
+    otlphttp/application_signals:
         auth:
-            authenticator: headers_setter/appsignals_logs
+            authenticator: headers_setter/application_signals
         compression: gzip
         encoding: proto
         endpoint: https://logs.us-east-1.amazonaws.com
@@ -339,7 +325,7 @@ extensions:
                 mode: EKS
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/appsignals_logs
+        additional_auth: sigv4auth/application_signals
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
@@ -366,7 +352,7 @@ extensions:
         kubernetes_mode: EKS
         mode: ec2
         region: us-east-1
-    headers_setter/appsignals_logs:
+    headers_setter/application_signals:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
             - action: upsert
@@ -381,7 +367,7 @@ extensions:
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
-    sigv4auth/appsignals_logs:
+    sigv4auth/application_signals:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
@@ -411,7 +397,7 @@ processors:
         entity_type: Service
         kubernetes_mode: EKS
         platform: ec2
-    batch/application_signals_logs:
+    batch/application_signals:
         metadata_cardinality_limit: 1000
         metadata_keys:
             - aws.cloudwatch.log_group.destination
@@ -1552,7 +1538,7 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
-    transform/application_signals_logs:
+    transform/application_signals:
         error_mode: propagate
         flatten_data: false
         log_statements:
@@ -1564,8 +1550,8 @@ processors:
         trace_statements: []
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: false
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: false
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -1628,19 +1614,19 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - k8smetadata
-        - headers_setter/appsignals_logs
-        - sigv4auth/appsignals_logs
+        - headers_setter/application_signals
+        - sigv4auth/application_signals
         - awscloudwatchlogsprovisioner
         - entitystore
         - server
     pipelines:
-        logs/application_signals_logs:
+        logs/application_signals:
             exporters:
-                - otlphttp/appsignals_logs
+                - otlphttp/application_signals
             processors:
-                - transform/application_signals_logs
+                - transform/application_signals
                 - attributestocontext
-                - batch/application_signals_logs
+                - batch/application_signals
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316

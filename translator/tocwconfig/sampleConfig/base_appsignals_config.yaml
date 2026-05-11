@@ -115,20 +115,6 @@ exporters:
                   separator: ;
               metric_name_selectors:
                 - ^.*$
-            - dimensions:
-                - - environment
-                  - exception
-                  - operation
-                  - service_name
-              label_matchers:
-                - label_names:
-                    - Telemetry.Source
-                  regex: ^Telemend$
-                  separator: ;
-              log_group_name: /aws/telemend/metrics
-              metric_name_selectors:
-                - Count
-              namespace: Telemend
         middleware: agenthealth/logs
         namespace: ApplicationSignals
         no_verify_ssl: false
@@ -182,14 +168,9 @@ exporters:
         sampling_thereafter: 500
         use_internal_logger: true
         verbosity: Detailed
-    debug/application_signals_logs:
-        sampling_initial: 2
-        sampling_thereafter: 500
-        use_internal_logger: true
-        verbosity: Detailed
-    otlphttp/appsignals_logs:
+    otlphttp/application_signals:
         auth:
-            authenticator: headers_setter/appsignals_logs
+            authenticator: headers_setter/application_signals
         compression: gzip
         encoding: proto
         endpoint: https://logs.us-east-1.amazonaws.com
@@ -242,7 +223,7 @@ extensions:
                 mode: OP
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/appsignals_logs
+        additional_auth: sigv4auth/application_signals
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
@@ -272,13 +253,13 @@ extensions:
         profile: AmazonCloudWatchAgent
         region: us-east-1
         shared_credential_file: fake-path
-    headers_setter/appsignals_logs:
+    headers_setter/application_signals:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
             - action: upsert
               from_context: aws.cloudwatch.log_group.destination
               key: x-aws-log-group
-    sigv4auth/appsignals_logs:
+    sigv4auth/application_signals:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
@@ -295,7 +276,7 @@ processors:
     awsentity/service/application_signals:
         entity_type: Service
         platform: onPremise
-    batch/application_signals_logs:
+    batch/application_signals:
         metadata_cardinality_limit: 1000
         metadata_keys:
             - aws.cloudwatch.log_group.destination
@@ -1417,7 +1398,7 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
-    transform/application_signals_logs:
+    transform/application_signals:
         error_mode: propagate
         flatten_data: false
         log_statements:
@@ -1454,19 +1435,19 @@ service:
         - agenthealth/traces
         - agenthealth/statuscode
         - agenthealth/logs
-        - headers_setter/appsignals_logs
-        - sigv4auth/appsignals_logs
+        - headers_setter/application_signals
+        - sigv4auth/application_signals
         - awscloudwatchlogsprovisioner
         - entitystore
     pipelines:
-        logs/application_signals_logs:
+        logs/application_signals:
             exporters:
-                - otlphttp/appsignals_logs
-                - debug/application_signals_logs
+                - otlphttp/application_signals
+                - debug/application_signals
             processors:
-                - transform/application_signals_logs
+                - transform/application_signals
                 - attributestocontext
-                - batch/application_signals_logs
+                - batch/application_signals
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316

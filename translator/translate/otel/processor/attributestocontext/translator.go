@@ -9,6 +9,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -20,17 +21,18 @@ type ActionMapping struct {
 }
 
 type translator struct {
+	factory processor.Factory
 	actions []ActionMapping
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(actions []ActionMapping) common.ComponentTranslator {
-	return &translator{actions: actions}
+	return &translator{factory: attributestocontextprocessor.NewFactory(), actions: actions}
 }
 
 func (t *translator) ID() component.ID {
-	return component.MustNewID("attributestocontext")
+	return component.NewIDWithName(t.factory.Type(), "")
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {

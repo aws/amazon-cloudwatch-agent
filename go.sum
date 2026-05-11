@@ -187,6 +187,8 @@ github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrc
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260410000839-bf7ae656c809 h1:H8F7MTotSI5XL3qu8zIFNLideBrL6igxW6kog6AnDqg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260410000839-bf7ae656c809/go.mod h1:7IC5iRiEVjkl3gQkyGF54WJrvAPNwRPp88JmYlPszu8=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260410000839-bf7ae656c809 h1:fr11yAgSPF2Q+6gxZ1aAxsf8GZrlwITi0BoP2YvW5VU=
+github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260410000839-bf7ae656c809/go.mod h1:3CyMeKLU/pTjhm0qL4WEbYtq4/IaHJsOF8e7WiweXJQ=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20260410000839-bf7ae656c809 h1:5ntn3IUVZjwddPEViNu9RKiq/k+tStfLPcuQYyBNgS4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20260410000839-bf7ae656c809/go.mod h1:Jm0k76CRZ1uR0B6kFHYlLPe7AxWJu69aIrCQiygTBFg=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260410000839-bf7ae656c809 h1:eboil+ys3iqJPtNBJPgxiuIhPjCHNmf80x8d6pfgkY0=
@@ -1585,8 +1587,6 @@ github.com/valyala/fastjson v1.6.4 h1:uAUNq9Z6ymTgGhcm0UynUAB6tlbakBrz6CQFax3BXV
 github.com/valyala/fastjson v1.6.4/go.mod h1:CLCAqky6SMuOcxStkYQvblddUtoRxhYMGLrsQns1aXY=
 github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36 h1:JBj2CqnFwBhI3XsdMNn9MjKvehog+p5QZihotqq0Zuo=
 github.com/vapourismo/knx-go v0.0.0-20211128234507-8198fa17db36/go.mod h1:AslkIOXnEbVmvzc8uqDjm8ZyIqNJcEPiFRqlokmqr2o=
-github.com/vastin/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260416225910-f8f1ece6fdb6 h1:8+MlAqIMHrLwKnMQpwhHg2zd5ZeX9QmiwnC49vVmVR4=
-github.com/vastin/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260416225910-f8f1ece6fdb6/go.mod h1:3CyMeKLU/pTjhm0qL4WEbYtq4/IaHJsOF8e7WiweXJQ=
 github.com/vishvananda/netlink v1.3.0 h1:X7l42GfcV4S6E4vHTsw48qbrV+9PVojNfIhZcwQdrZk=
 github.com/vishvananda/netlink v1.3.0/go.mod h1:i6NetklAujEcC6fK0JPjT8qSwWyO0HLn4UKG+hGqeJs=
 github.com/vishvananda/netns v0.0.4 h1:Oeaw1EM2JMxD51g9uhtC0D7erkIjgmj8+JZc26m1YX8=

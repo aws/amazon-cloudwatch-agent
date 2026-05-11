@@ -44,14 +44,3 @@ metric_declarations:
         regex: '^RuntimeMetric$'
     metric_name_selectors:
       - '^.*$'
-  # Telemend EndpointErrorMetrics
-  - dimensions:
-      - [service_name, environment, operation, exception]
-    label_matchers:
-      - label_names:
-          - Telemetry.Source
-        regex: '^Telemend$'
-    metric_name_selectors:
-      - Count
-    namespace: Telemend
-    log_group_name: /aws/telemend/metrics

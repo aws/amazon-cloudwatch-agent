@@ -22,6 +22,15 @@ var transformJmxConfig string
 //go:embed transform_jmx_drop_config.yaml
 var transformJmxDropConfig string
 
+type Option func(*translator)
+
+// WithLogStatements sets OTTL statements to execute in the "resource" context for logs.
+func WithLogStatements(statements []string) Option {
+	return func(t *translator) {
+		t.logStatements = statements
+	}
+}
+
 type translator struct {
 	name          string
 	factory       processor.Factory
@@ -30,14 +39,12 @@ type translator struct {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name: name, factory: transformprocessor.NewFactory()}
-}
-
-// NewTranslatorWithLogStatements creates a transform processor translator that
-// executes the given OTTL statements in the "resource" context for logs.
-func NewTranslatorWithLogStatements(name string, statements []string) common.ComponentTranslator {
-	return &translator{name: name, factory: transformprocessor.NewFactory(), logStatements: statements}
+func NewTranslatorWithName(name string, opts ...Option) common.ComponentTranslator {
+	t := &translator{name: name, factory: transformprocessor.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
