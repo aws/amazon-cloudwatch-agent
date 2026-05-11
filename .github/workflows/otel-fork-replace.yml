@@ -161,3 +161,13 @@ jobs:
             _Before commit the code, please do the following steps._
             1. Run `make fmt` and `make fmt-sh`
             2. Run `make lint`
+      - name: Trigger PR Build workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.get-latest-commit.outputs.sha }}
+        run: |
+          # workflow_dispatch is exempt from the GITHUB_TOKEN limitation that
+          # prevents events from triggering new workflow runs. This ensures
+          # PR-build checks run immediately after the bot creates the PR.
+          # See: https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+          gh workflow run PR-build.yml --ref "otel-fork-replace-${SHA}"
