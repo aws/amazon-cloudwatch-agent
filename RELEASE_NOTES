@@ -9,8 +9,6 @@ Bug Fixes
 * [Agent] Add IRSA and Pod Identity env var checks before JWT fallback in EKS detector by @musa-asad in #2107
 * [ContainerInsights] Fix LIS scraper service selector to match renamed ec2-instance-store CSI plugin in #2114
 
-Enhancements
-* [CI] Add helm_chart_branch support to EKS daemon tests by @spanaik in #2099
 ========================================================================
 Amazon CloudWatch Agent 1.300067.0 (2026-04-17)
 ========================================================================
