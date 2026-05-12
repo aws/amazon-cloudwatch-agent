@@ -1546,7 +1546,7 @@ processors:
             - context: resource
               error_mode: ""
               statements:
-                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/telemetry/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
+                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/service-events/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
         metric_statements: []
         trace_statements: []
 receivers:

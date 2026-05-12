@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
@@ -32,13 +33,11 @@ import (
 	transformproc "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
-
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 const (
-	defaultLogGroupPrefix = "/aws/telemetry/"
-	defaultLogStreamName  = "default"
+	defaultLogGroupName  = "/aws/service-events/{service.name}"
+	defaultLogStreamName = "default"
 
 	metadataKeyLogGroup  = "aws.cloudwatch.log_group.destination"
 	metadataKeyLogStream = "aws.cloudwatch.log_stream.destination"
@@ -233,7 +232,7 @@ func resolveLogConfig(conf *confmap.Conf, configKeys []string) ([]templateSegmen
 	}
 
 	if logGroupName == "" {
-		logGroupName = defaultLogGroupPrefix + "{service.name}"
+		logGroupName = defaultLogGroupName
 	}
 
 	return parseTemplate(logGroupName), parseTemplate(logStreamName)
