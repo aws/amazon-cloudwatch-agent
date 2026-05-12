@@ -1,7 +1,7 @@
 name: hydrate-goproxy
 on:
   push:
-    branches: [main, add-hydrate-goproxy-workflow]
+    branches: [main]
     tags: ["*"]
   workflow_dispatch:
 jobs:
