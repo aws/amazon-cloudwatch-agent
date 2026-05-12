@@ -2,12 +2,12 @@
 Amazon CloudWatch Agent 1.300068.0 (2026-05-11)
 ========================================================================
 New Features
-* [Metrics] Add support for collecting Elastic Fabric Adapter (EFA) metrics on EC2 instances by @mitali-salvi in #2093, #2110
+* [Metrics] Add support for collecting Elastic Fabric Adapter (EFA) metrics on EC2 instances
 
 Bug Fixes
-* [Agent] Fix nil pointer dereference in kubernetesResolver.Stop() causing crash on shutdown by @musa-asad in #2106
-* [Agent] Add IRSA and Pod Identity env var checks before JWT fallback in EKS detector by @musa-asad in #2107
-* [ContainerInsights] Fix LIS scraper service selector to match renamed ec2-instance-store CSI plugin in #2114
+* [Agent] Fix nil pointer dereference in kubernetesResolver.Stop() causing crash on shutdown
+* [Agent] Add IRSA and Pod Identity env var checks before JWT fallback in EKS detector
+* [ContainerInsights] Fix LIS scraper service selector to match renamed ec2-instance-store CSI plugin
 
 ========================================================================
 Amazon CloudWatch Agent 1.300067.0 (2026-04-17)
