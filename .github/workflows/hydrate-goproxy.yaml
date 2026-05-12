@@ -4,6 +4,8 @@ on:
     branches: [main]
     tags: ["*"]
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   hydrate:
     runs-on: ubuntu-latest
