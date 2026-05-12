@@ -1,0 +1,10 @@
+metric_statements:
+  - context: datapoint
+    error_mode: propagate
+    statements:
+      - set(attributes["device"], attributes["aws.efa.device"]) where attributes["aws.efa.device"] != nil
+      - delete_key(attributes, "aws.efa.device")
+      - set(attributes["port"], attributes["aws.efa.port"]) where attributes["aws.efa.port"] != nil
+      - delete_key(attributes, "aws.efa.port")
+      - set(attributes["eniId"], attributes["aws.efa.eni.id"]) where attributes["aws.efa.eni.id"] != nil
+      - delete_key(attributes, "aws.efa.eni.id")

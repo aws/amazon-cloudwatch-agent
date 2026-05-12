@@ -96,7 +96,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 				continue
 			}
 			if md := metadata.Build(k, valueStr); metadata.IsSupported(md) {
-				usageMetadataSet.Add(md)
+				usageMetadataSet.Add(metadata.Resolve(md))
 			}
 		}
 	}
