@@ -13,6 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	adaptertranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsefa"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
@@ -48,6 +49,10 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 
 	if shouldAddNvmeReceiver(conf, configSection) {
 		deltaReceivers.Set(awsnvme.NewTranslator())
+	}
+
+	if shouldAddEfaReceiver(conf, configSection) {
+		deltaReceivers.Set(awsefa.NewTranslator())
 	}
 
 	otlpReceivers.Merge(otlp.NewTranslators(conf, common.PipelineNameHostOtlpMetrics, common.ConfigKey(configSection, common.OtlpKey)))
@@ -110,6 +115,10 @@ func NewTranslators(conf *confmap.Conf, configSection, os string) (common.Transl
 	}
 
 	return translators, nil
+}
+
+func shouldAddEfaReceiver(conf *confmap.Conf, configSection string) bool {
+	return conf.IsSet(common.ConfigKey(configSection, common.EfaKey))
 }
 
 func shouldAddNvmeReceiver(conf *confmap.Conf, configSection string) bool {

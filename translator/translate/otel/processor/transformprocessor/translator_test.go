@@ -34,6 +34,26 @@ func TestContainerInsightsJmx(t *testing.T) {
 	assert.Equal(t, len(expectedCfg.MetricStatements), len(actualCfg.MetricStatements))
 }
 
+func TestEfaTranslate(t *testing.T) {
+	transl := NewTranslatorWithName(common.PipelineNameHostDeltaMetrics).(*translator)
+	expectedCfg := transl.factory.CreateDefaultConfig().(*transformprocessor.Config)
+	c := testutil.GetConf(t, "transform_efa_config.yaml")
+	require.NoError(t, c.Unmarshal(&expectedCfg))
+
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	assert.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*transformprocessor.Config)
+	assert.True(t, ok)
+	assert.Equal(t, len(expectedCfg.MetricStatements), len(actualCfg.MetricStatements))
+	assert.Equal(t, string(actualCfg.ErrorMode), "propagate")
+	// Verify EFA attribute renaming statements are present
+	require.Len(t, actualCfg.MetricStatements, 1)
+	assert.Contains(t, actualCfg.MetricStatements[0].Statements, `set(attributes["device"], attributes["aws.efa.device"]) where attributes["aws.efa.device"] != nil`)
+	assert.Contains(t, actualCfg.MetricStatements[0].Statements, `set(attributes["port"], attributes["aws.efa.port"]) where attributes["aws.efa.port"] != nil`)
+	assert.Contains(t, actualCfg.MetricStatements[0].Statements, `set(attributes["eniId"], attributes["aws.efa.eni.id"]) where attributes["aws.efa.eni.id"] != nil`)
+}
+
 func TestJmxTranslate(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	transl := NewTranslatorWithName(common.PipelineNameJmx + "/drop").(*translator)
