@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -20,6 +21,7 @@ type IsEKSCache struct {
 
 var (
 	getInClusterConfig = func() (*rest.Config, error) { return rest.InClusterConfig() }
+	getEnv             = os.Getenv
 	// IsEKS is a function variable that can be overridden in tests
 	IsEKS = isEKS
 
@@ -32,6 +34,13 @@ var (
 // checking if it contains "eks". The result is cached to avoid repeated expensive operations.
 func isEKS() IsEKSCache {
 	once.Do(func() {
+		// Fast path: check IRSA and Pod Identity env vars (no I/O)
+		if checkEnvVars() {
+			isEKSCacheSingleton = IsEKSCache{Value: true, Err: nil}
+			return
+		}
+
+		// Fallback: parse JWT token issuer
 		var err error
 		var value bool
 		issuer, err := getIssuer()
@@ -41,6 +50,18 @@ func isEKS() IsEKSCache {
 		isEKSCacheSingleton = IsEKSCache{Value: value, Err: err}
 	})
 	return isEKSCacheSingleton
+}
+
+// checkEnvVars checks IRSA and Pod Identity environment variables for EKS indicators.
+// Returns true if either env var indicates an EKS environment.
+func checkEnvVars() bool {
+	if strings.Contains(getEnv("AWS_WEB_IDENTITY_TOKEN_FILE"), "eks.amazonaws.com") {
+		return true
+	}
+	if strings.Contains(getEnv("AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE"), "eks-pod-identity") {
+		return true
+	}
+	return false
 }
 
 // getIssuer retrieves the issuer ("iss") from the service account token
