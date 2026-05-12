@@ -134,6 +134,8 @@ func (ua *userAgent) SetComponents(otelCfg *otelcol.Config, telegrafCfg *telegra
 			}
 		}
 	}
+	//Add journald status
+	ua.setJournaldFeatureFlags(otelCfg)
 
 	if !ua.isRoot {
 		ua.inputs.Add(flagRunAsUser)
