@@ -50,7 +50,7 @@ func TestTranslator_Translate_BasicConfig(t *testing.T) {
 
 	assert.Equal(t, &agenthealth.LogsID, cfg.MiddlewareID)
 	assert.Equal(t, "us-west-2", cfg.AWSSessionSettings.Region)
-	assert.Equal(t, "", cfg.LogGroupName) // Default empty when no collect config
+	assert.Equal(t, "", cfg.LogGroupName)  // Default empty when no collect config
 	assert.Equal(t, "", cfg.LogStreamName) // Default empty when no collect config
 }
 
@@ -60,9 +60,9 @@ func TestTranslator_Translate_WithCollectConfig(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 
 	collectConfig := map[string]interface{}{
-		"log_group_name":     "my-journald-logs",
-		"log_stream_name":    "{instance_id}",
-		"retention_in_days":  float64(7),
+		"log_group_name":    "my-journald-logs",
+		"log_stream_name":   "{instance_id}",
+		"retention_in_days": float64(7),
 	}
 
 	translator := NewTranslatorWithConfig("journald_0", collectConfig)
@@ -105,7 +105,7 @@ func TestTranslator_Translate_WithDefaultValues(t *testing.T) {
 	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)
 
-	assert.Equal(t, "journald-logs", cfg.LogGroupName) // Default value
+	assert.Equal(t, "journald-logs", cfg.LogGroupName)  // Default value
 	assert.Equal(t, "{instance_id}", cfg.LogStreamName) // Default {instance_id} not resolved without metadata
 }
 
@@ -115,7 +115,7 @@ func TestTranslator_Translate_WithCredentials(t *testing.T) {
 	agent.Global_Config.Region = "us-west-2"
 	agent.Global_Config.Role_arn = "arn:aws:iam::123456789012:role/CloudWatchAgentServerRole"
 	agent.Global_Config.Credentials = map[string]interface{}{
-		"profile":           "test-profile",
+		"profile":                "test-profile",
 		"shared_credential_file": "/path/to/credentials",
 	}
 

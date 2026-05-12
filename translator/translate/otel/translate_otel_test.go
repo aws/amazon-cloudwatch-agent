@@ -207,10 +207,10 @@ func TestTranslator(t *testing.T) {
 						"journald": map[string]interface{}{
 							"collect_list": []interface{}{
 								map[string]interface{}{
-									"log_group_name":   "system-logs",
-									"log_stream_name":  "journald-stream",
+									"log_group_name":    "system-logs",
+									"log_stream_name":   "journald-stream",
 									"retention_in_days": 7,
-									"units":            []interface{}{"systemd", "sshd"},
+									"units":             []interface{}{"systemd", "sshd"},
 								},
 							},
 						},
@@ -233,10 +233,10 @@ func TestTranslator(t *testing.T) {
 						"journald": map[string]interface{}{
 							"collect_list": []interface{}{
 								map[string]interface{}{
-									"log_group_name":   "system-logs",
-									"log_stream_name":  "journald-stream",
+									"log_group_name":    "system-logs",
+									"log_stream_name":   "journald-stream",
 									"retention_in_days": 7,
-									"units":            []interface{}{"systemd"},
+									"units":             []interface{}{"systemd"},
 									"filters": []interface{}{
 										map[string]interface{}{
 											"type":       "exclude",

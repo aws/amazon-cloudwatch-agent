@@ -41,9 +41,9 @@ func TestJournald_ToMap(t *testing.T) {
 	expectedVal := map[string]interface{}{
 		"collect_list": []map[string]interface{}{
 			{
-				"log_group_name":    "system-logs",
-				"log_stream_name":   "{instance_id}",
-				"units":             []string{"systemd", "kernel"},
+				"log_group_name":  "system-logs",
+				"log_stream_name": "{instance_id}",
+				"units":           []string{"systemd", "kernel"},
 				"filters": []map[string]interface{}{
 					{
 						"type":       "exclude",
@@ -53,9 +53,9 @@ func TestJournald_ToMap(t *testing.T) {
 				"retention_in_days": 7,
 			},
 			{
-				"log_group_name":    "application-logs",
-				"log_stream_name":   "{instance_id}-apps",
-				"units":             []string{"nginx", "apache2"},
+				"log_group_name":  "application-logs",
+				"log_stream_name": "{instance_id}-apps",
+				"units":           []string{"nginx", "apache2"},
 				"filters": []map[string]interface{}{
 					{
 						"type":       "include",

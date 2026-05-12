@@ -24,9 +24,9 @@ import (
 )
 
 type translator struct {
-	name           string
-	factory        exporter.Factory
-	collectConfig  map[string]interface{} // Specific journald collect_list entry config
+	name          string
+	factory       exporter.Factory
+	collectConfig map[string]interface{} // Specific journald collect_list entry config
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
