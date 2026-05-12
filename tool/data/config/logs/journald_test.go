@@ -45,9 +45,9 @@ func TestJournald_ToMap(t *testing.T) {
 	expectedVal := map[string]interface{}{
 		"collect_list": []map[string]interface{}{
 			{
-				"log_group_name":    "system-logs",
-				"log_stream_name":   "{instance_id}",
-				"units":             []string{"systemd", "kernel"},
+				"log_group_name":  "system-logs",
+				"log_stream_name": "{instance_id}",
+				"units":           []string{"systemd", "kernel"},
 				"filters": []map[string]interface{}{
 					{
 						"type":       "exclude",

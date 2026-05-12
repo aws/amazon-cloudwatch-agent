@@ -29,11 +29,6 @@ func (config *Collection) ToMap(ctx *runtime.Context) (string, map[string]interf
 		util.AddToMap(ctx, resultMap, config.WinEvents)
 	}
 
-	// Journald should be nil if the target Os is not Linux
-	if config.Journald != nil {
-		util.AddToMap(ctx, resultMap, config.Journald)
-	}
-
 	return "logs_collected", resultMap
 }
 

@@ -48,7 +48,7 @@ func (config *Logs) AddWindowsEvent(eventName, logGroupName, logStream, eventFor
 	config.LogsCollect.AddWindowsEvent(eventName, logGroupName, logStream, eventFormat, eventLevels, eventIDs, filters, retention, logGroupClass)
 }
 
-func (config *Logs) AddJournald(units []string, priority string, matches []map[string]string, logGroupName, logStream string, filters []*logs.JournaldFilter, retention int) {
+func (config *Logs) AddJournald(logGroupName, logStream string, units []string, priority string, matches []map[string]string,  filters []*logs.JournaldFilter, retention int) {
 	if config.LogsCollect == nil {
 		config.LogsCollect = &logs.Collection{}
 	}

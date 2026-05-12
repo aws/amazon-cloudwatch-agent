@@ -44,9 +44,19 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 	for {
 		logsConf := config.LogsConf()
 
+		// Log group name
+		logGroupName := util.AskWithDefault("Log group name:", "journald")
+
+		// Log stream name
+		logStreamNameHint := "{instance_id}"
+		if ctx.IsOnPrem {
+			logStreamNameHint = "{hostname}"
+		}
+		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
+
+
 		// Ask if they want all units or specific ones
 		collectAllUnits := util.Yes("Do you want to collect logs from all units?")
-
 		var units []string
 		if !collectAllUnits {
 			// Ask about common units individually
@@ -78,17 +88,29 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 				}
 			}
 		}
-		// If collectAllUnits is true, units remains empty (which means all units)
 
-		// Log group name
-		logGroupName := util.AskWithDefault("Log group name:", "journald")
-
-		// Log stream name
-		logStreamNameHint := "{instance_id}"
-		if ctx.IsOnPrem {
-			logStreamNameHint = "{hostname}"
+		// Priority (optional)
+		var priority string
+		if util.Yes("Do you want to filter by minimum priority level?") {
+			priority = util.Choice("Minimum priority level:", 1, []string{
+				"emerg", "alert", "crit", "err", "warning", "notice", "info", "debug",
+			})
 		}
-		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
+
+		// Matches (optional)
+		var matches []map[string]string
+		if util.Yes("Do you want to add journald field matches (e.g., _UID=0, _PID=1)?") {
+			for {
+				field := util.Ask("Enter field name (e.g., _UID, _PID, _TRANSPORT):")
+				value := util.Ask(fmt.Sprintf("Enter value for %s:", field))
+				if field != "" && value != "" {
+					matches = append(matches, map[string]string{field: value})
+				}
+				if !util.Yes("Do you want to add another field match?") {
+					break
+				}
+			}
+		}
 
 		// Filters (optional)
 		var filters []*logs.JournaldFilter
@@ -128,30 +150,7 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 			retention = i
 		}
 
-		// Priority (optional)
-		var priority string
-		if util.Yes("Do you want to filter by minimum priority level?") {
-			priority = util.Choice("Minimum priority level:", 1, []string{
-				"emerg", "alert", "crit", "err", "warning", "notice", "info", "debug",
-			})
-		}
-
-		// Matches (optional)
-		var matches []map[string]string
-		if util.Yes("Do you want to add journald field matches (e.g., _UID=0, _PID=1)?") {
-			for {
-				field := util.Ask("Enter field name (e.g., _UID, _PID, _TRANSPORT):")
-				value := util.Ask(fmt.Sprintf("Enter value for %s:", field))
-				if field != "" && value != "" {
-					matches = append(matches, map[string]string{field: value})
-				}
-				if !util.Yes("Do you want to add another field match?") {
-					break
-				}
-			}
-		}
-
-		logsConf.AddJournald(units, priority, matches, logGroupName, logStreamName, filters, retention)
+		logsConf.AddJournald(logGroupName, logStreamName, units, priority, matches, filters, retention)
 
 		yes = util.Yes("Do you want to specify any additional journald configurations to monitor?")
 		if !yes {
