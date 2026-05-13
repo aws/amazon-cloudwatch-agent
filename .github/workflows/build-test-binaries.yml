@@ -1,0 +1,197 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Build Test Binaries
+
+on:
+  workflow_call:
+    inputs:
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      s3_integration_bucket:
+        required: true
+        type: string
+      terraform_assume_role:
+        required: true
+        type: string
+      s3_integration_bucket_itar:
+        required: false
+        type: string
+      terraform_assume_role_itar:
+        required: false
+        type: string
+      s3_integration_bucket_cn:
+        required: false
+        type: string
+      terraform_assume_role_cn:
+        required: false
+        type: string
+    outputs:
+      test_binaries_prefix:
+        description: "S3 prefix for pre-compiled test binaries"
+        value: ${{ jobs.Complete.outputs.test_binaries_prefix }}
+
+jobs:
+  BuildTestBinaries:
+    name: 'BuildTestBinaries-${{ matrix.arch }}'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    outputs:
+      test_binaries_prefix: ${{ steps.set-prefix.outputs.test_binaries_prefix }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.test_repo_name }}
+          ref: ${{ inputs.test_repo_branch }}
+
+      - name: Set prefix
+        id: set-prefix
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          echo "test_binaries_prefix=integration-test/test-binaries/${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ~1.25
+          cache: false
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role }}
+          aws-region: us-west-2
+
+      - name: Build and upload test binaries
+        env:
+          S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          PREFIX="integration-test/test-binaries/${COMMIT_SHA}/linux/${GOARCH}"
+          mkdir -p "build/bin/${GOARCH}"
+
+          go mod download
+
+          echo "=== Building for linux/${GOARCH} ==="
+          for pkg in $(go list ./test/...); do
+            name=$(basename "$pkg")
+            if CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH go test -c -o "build/bin/${GOARCH}/${name}.test" "$pkg" 2>&1; then
+              echo "  ✓ ${name}.test"
+            else
+              echo "  ✗ ${name}.test (skipped)"
+            fi
+          done
+
+          BUILT=$(ls "build/bin/${GOARCH}/"*.test 2>/dev/null | wc -l)
+          echo "Built ${BUILT} binaries for linux/${GOARCH}"
+
+          aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/" --recursive --quiet
+          echo "Upload complete to commercial bucket"
+
+      - name: Upload binaries artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-binaries-${{ matrix.arch }}
+          path: build/bin/${{ matrix.arch }}/
+          retention-days: 1
+
+  UploadTestBinariesITAR:
+    name: 'UploadTestBinariesITAR'
+    needs: [BuildTestBinaries]
+    if: ${{ inputs.s3_integration_bucket_itar != '' && inputs.terraform_assume_role_itar != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download amd64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries-amd64
+          path: build/bin/amd64/
+
+      - name: Download arm64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries-arm64
+          path: build/bin/arm64/
+
+      - name: Configure AWS Credentials for ITAR
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role_itar }}
+          aws-region: us-gov-east-1
+
+      - name: Upload to ITAR bucket
+        env:
+          S3_BUCKET: ${{ inputs.s3_integration_bucket_itar }}
+          PREFIX: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
+        run: |
+          for GOARCH in amd64 arm64; do
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/linux/${GOARCH}/" --recursive --quiet
+          done
+          echo "Upload complete to ITAR bucket"
+
+  UploadTestBinariesCN:
+    name: 'UploadTestBinariesCN'
+    needs: [BuildTestBinaries]
+    if: ${{ inputs.s3_integration_bucket_cn != '' && inputs.terraform_assume_role_cn != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Download amd64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries-amd64
+          path: build/bin/amd64/
+
+      - name: Download arm64 binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binaries-arm64
+          path: build/bin/arm64/
+
+      - name: Configure AWS Credentials for CN
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role_cn }}
+          aws-region: cn-north-1
+
+      - name: Upload to CN bucket
+        env:
+          S3_BUCKET: ${{ inputs.s3_integration_bucket_cn }}
+          PREFIX: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
+        run: |
+          for GOARCH in amd64 arm64; do
+            aws s3 cp "build/bin/${GOARCH}/" "s3://${S3_BUCKET}/${PREFIX}/linux/${GOARCH}/" --recursive --quiet
+          done
+          echo "Upload complete to CN bucket"
+
+  Complete:
+    name: 'Complete'
+    needs: [BuildTestBinaries, UploadTestBinariesITAR, UploadTestBinariesCN]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    outputs:
+      test_binaries_prefix: ${{ needs.BuildTestBinaries.outputs.test_binaries_prefix }}
+    steps:
+      - name: Check results
+        run: |
+          echo "BuildTestBinaries: ${{ needs.BuildTestBinaries.result }}"
+          echo "UploadTestBinariesITAR: ${{ needs.UploadTestBinariesITAR.result }}"
+          echo "UploadTestBinariesCN: ${{ needs.UploadTestBinariesCN.result }}"
+          if [[ "${{ needs.BuildTestBinaries.result }}" != "success" ]]; then
+            exit 1
+          fi
