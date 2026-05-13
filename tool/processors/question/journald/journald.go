@@ -55,35 +55,16 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
 
 
-		// Ask if they want all units or specific ones
-		collectAllUnits := util.Yes("Do you want to collect logs from all units?")
+		// Units (optional)
 		var units []string
-		if !collectAllUnits {
-			// Ask about common units individually
-			commonUnits := []string{
-				"sshd",
-				"docker",
-				"nginx",
-				"apache2",
-				"systemd-networkd",
-			}
-
-			for _, unit := range commonUnits {
-				if util.Yes(fmt.Sprintf("Do you want to monitor %s unit logs?", unit)) {
-					units = append(units, unit)
-				}
-			}
-
-			// Ask about custom units
-			if util.Yes("Do you want to monitor custom units?") {
-				customUnitsInput := util.Ask("Enter custom unit names (comma-separated):")
-				if customUnitsInput != "" {
-					customUnits := strings.Split(customUnitsInput, ",")
-					for _, unit := range customUnits {
-						unit = strings.TrimSpace(unit)
-						if unit != "" {
-							units = append(units, unit)
-						}
+		if util.Yes("Do you want to filter by specific systemd units?") {
+			fmt.Println("Common systemd units: (sshd, docker, nginx, apache2, systemd-networkd, amazon-ssm-agent, crond)")
+			unitsInput := util.Ask("Enter unit names to monitor (comma-separated):")
+			if unitsInput != "" {
+				for _, unit := range strings.Split(unitsInput, ",") {
+					unit = strings.TrimSpace(unit)
+					if unit != "" {
+						units = append(units, unit)
 					}
 				}
 			}

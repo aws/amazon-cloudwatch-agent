@@ -36,7 +36,7 @@ func TestProcessor_Process_WithAllUnits(t *testing.T) {
 	ctx := &runtime.Context{OsParameter: util.OsTypeLinux}
 	conf := new(data.Config)
 
-	testutil.Type(inputChan, "1", "", "", "1", "2", "2", "2", "1", "2")
+	testutil.Type(inputChan, "1", "", "", "2", "2", "2", "2", "1", "2")
 	Processor.Process(ctx, conf)
 
 	journaldConfig := conf.LogsConf().LogsCollect.Journald.JournaldConfigs[0]
@@ -54,7 +54,7 @@ func TestProcessor_Process_WithSpecificUnits(t *testing.T) {
 	ctx := &runtime.Context{OsParameter: util.OsTypeLinux, IsOnPrem: true}
 	conf := new(data.Config)
 
-	testutil.Type(inputChan, "1", "my-logs", "", "2", "1", "2", "2", "2", "2", "2", "2", "2", "2", "5", "2")
+	testutil.Type(inputChan, "1", "my-logs", "", "1", "sshd", "2", "2", "2", "5", "2")
 	Processor.Process(ctx, conf)
 
 	journaldConfig := conf.LogsConf().LogsCollect.Journald.JournaldConfigs[0]
@@ -69,7 +69,7 @@ func TestProcessor_Process_WithAllFields(t *testing.T) {
 	ctx := &runtime.Context{OsParameter: util.OsTypeLinux}
 	conf := new(data.Config)
 
-	testutil.Type(inputChan, "1", "all-logs", "my-stream", "2", "1", "2", "2", "2", "2", "2", "1", "4", "1", "_UID", "0", "2", "1", "1", ".*error.*", "2", "5", "2")
+	testutil.Type(inputChan, "1", "all-logs", "my-stream", "1", "sshd", "1", "4", "1", "_UID", "0", "2", "1", "1", ".*error.*", "2", "5", "2")
 	Processor.Process(ctx, conf)
 
 	journaldConfig := conf.LogsConf().LogsCollect.Journald.JournaldConfigs[0]
