@@ -19,6 +19,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: write   # actions/cache save path on cache miss
+
 jobs:
   changes:
     name: Check changes
