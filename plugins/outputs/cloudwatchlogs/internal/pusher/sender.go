@@ -26,7 +26,6 @@ type Sender interface {
 	Send(*logEventBatch)
 	SetRetryDuration(time.Duration)
 	RetryDuration() time.Duration
-	Stop()
 }
 
 type sender struct {
@@ -34,24 +33,21 @@ type sender struct {
 	retryDuration atomic.Value
 	targetManager TargetManager
 	logger        telegraf.Logger
-	stopCh        chan struct{}
-	stopped       bool
+	stop          <-chan struct{}
 }
-
-var _ (Sender) = (*sender)(nil)
 
 func newSender(
 	logger telegraf.Logger,
 	service cloudWatchLogsService,
 	targetManager TargetManager,
 	retryDuration time.Duration,
+	stop <-chan struct{},
 ) Sender {
 	s := &sender{
 		logger:        logger,
 		service:       service,
 		targetManager: targetManager,
-		stopCh:        make(chan struct{}),
-		stopped:       false,
+		stop:          stop,
 	}
 	s.retryDuration.Store(retryDuration)
 	return s
@@ -129,21 +125,13 @@ func (s *sender) Send(batch *logEventBatch) {
 		s.logger.Warnf("Retried %v time, going to sleep %v before retrying.", retryCountShort+retryCountLong-1, wait)
 
 		select {
-		case <-s.stopCh:
+		case <-s.stop:
 			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", retryCountShort+retryCountLong-1, batch.Group, batch.Stream)
 			batch.updateState()
 			return
 		case <-time.After(wait):
 		}
 	}
-}
-
-func (s *sender) Stop() {
-	if s.stopped {
-		return
-	}
-	close(s.stopCh)
-	s.stopped = true
 }
 
 // SetRetryDuration sets the maximum duration for retrying failed log sends.
