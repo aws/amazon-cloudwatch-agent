@@ -26,7 +26,7 @@ func TestTranslator(t *testing.T) {
 			translator: NewTranslator(),
 			input:      map[string]interface{}{},
 			want: &filterprocessor.Config{
-				ErrorMode: "ignore",
+				ErrorMode: "propagate",
 			},
 		},
 		"WithFilters": {
@@ -36,7 +36,7 @@ func TestTranslator(t *testing.T) {
 			}),
 			input: map[string]interface{}{},
 			want: &filterprocessor.Config{
-				ErrorMode: "ignore",
+				ErrorMode: "propagate",
 				Logs: filterprocessor.LogFilters{
 					LogConditions: []string{
 						`IsMatch(body, "error.*")`,

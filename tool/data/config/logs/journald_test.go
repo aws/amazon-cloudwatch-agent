@@ -57,11 +57,11 @@ func TestJournald_ToMap(t *testing.T) {
 				"retention_in_days": 7,
 			},
 			{
-				"log_group_name":    "application-logs",
-				"log_stream_name":   "{instance_id}-apps",
-				"units":             []string{"nginx", "apache2"},
-				"priority":          "err",
-				"matches":           []map[string]string{{"_SYSTEMD_UNIT": "nginx.service"}},
+				"log_group_name":  "application-logs",
+				"log_stream_name": "{instance_id}-apps",
+				"units":           []string{"nginx", "apache2"},
+				"priority":        "err",
+				"matches":         []map[string]string{{"_SYSTEMD_UNIT": "nginx.service"}},
 				"filters": []map[string]interface{}{
 					{
 						"type":       "include",

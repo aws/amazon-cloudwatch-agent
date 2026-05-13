@@ -54,7 +54,6 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 		}
 		logStreamName := util.AskWithDefault("Log stream name:", logStreamNameHint)
 
-
 		// Units (optional)
 		var units []string
 		if util.Yes("Do you want to filter by specific systemd units?") {
