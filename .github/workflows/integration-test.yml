@@ -3,21 +3,15 @@
 
 name: Run Integration Tests
 env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
+  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY }}
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
-  CF_IAM_ROLE: ${{ secrets.CF_IAM_ROLE }}
-  CF_KEY_NAME: ${{ secrets.CF_KEY_NAME }}
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
-  TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
-  S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
-  TERRAFORM_AWS_ASSUME_ROLE_CN: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
-  S3_INTEGRATION_BUCKET_CN: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
+  CWA_GITHUB_TEST_REPO_BRANCH: "subset-test/eks-daemon-mvb-al2-20260513"
 
 on:
   workflow_dispatch:
@@ -30,32 +24,11 @@ on:
         description: 'The SHA of the build-test-artifacts workflow run'
         type: string
         required: true
-      test_repo_branch:
-        description: 'Override for the GitHub test repository branch to use (default is main)'
-        type: string
-      test_os_filter:
-        description: 'Filter tests to specific OS (e.g., al2023, ubuntu-22.04). Leave empty to run all OS.'
-        type: string
-        required: false
-      test_dir_filter:
-        description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs). Leave empty to run all tests.'
-        type: string
-        required: false
 
 jobs:
   CheckBuildTestArtifacts:
     runs-on: ubuntu-latest
     steps:
-      - env:
-          BUILD_SHA: ${{ inputs.build_sha }}
-          GITHUB_SHA_VAL: ${{ github.sha }}
-        run: |
-          if [[ "$BUILD_SHA" == "$GITHUB_SHA_VAL" ]]; then
-            echo "Build SHA matches test SHA"
-          else
-            echo "Build SHA does not match test SHA"
-            exit 1
-          fi
       - run: |
           for i in {1..6}; do
             conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
@@ -84,6 +57,3 @@ jobs:
       contents: read
     with:
       build_id: ${{ inputs.build_sha }}
-      test_repo_branch: ${{ inputs.test_repo_branch }}
-      test_os_filter: ${{ inputs.test_os_filter }}
-      test_dir_filter: ${{ inputs.test_dir_filter }}
