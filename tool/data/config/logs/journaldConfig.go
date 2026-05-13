@@ -11,11 +11,13 @@ type JournaldFilter struct {
 }
 
 type JournaldConfig struct {
-	LogGroup        string            `json:"log_group_name"`
-	LogStream       string            `json:"log_stream_name"`
-	Units           []string          `json:"units"`
-	Filters         []*JournaldFilter `json:"filters"`
-	RetentionInDays int               `json:"retention_in_days"`
+	LogGroup        string              `json:"log_group_name"`
+	LogStream       string              `json:"log_stream_name"`
+	Units           []string            `json:"units"`
+	Priority        string              `json:"priority"`
+	Matches         []map[string]string `json:"matches"`
+	Filters         []*JournaldFilter   `json:"filters"`
+	RetentionInDays int                 `json:"retention_in_days"`
 }
 
 func (config *JournaldConfig) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -26,6 +28,14 @@ func (config *JournaldConfig) ToMap(ctx *runtime.Context) (string, map[string]in
 
 	if len(config.Units) > 0 {
 		resultMap["units"] = config.Units
+	}
+
+	if config.Priority != "" {
+		resultMap["priority"] = config.Priority
+	}
+
+	if len(config.Matches) > 0 {
+		resultMap["matches"] = config.Matches
 	}
 
 	if len(config.Filters) > 0 {

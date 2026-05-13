@@ -22,7 +22,7 @@ func (config *Journald) ToMap(ctx *runtime.Context) (string, map[string]interfac
 	return "journald", resultMap
 }
 
-func (config *Journald) AddJournald(units []string, logGroupName, logStreamName string, filters []*JournaldFilter, retention int) {
+func (config *Journald) AddJournald(units []string, priority string, matches []map[string]string, logGroupName, logStreamName string, filters []*JournaldFilter, retention int) {
 	if config.JournaldConfigs == nil {
 		config.JournaldConfigs = []*JournaldConfig{}
 	}
@@ -31,6 +31,8 @@ func (config *Journald) AddJournald(units []string, logGroupName, logStreamName 
 		LogGroup:        logGroupName,
 		LogStream:       logStreamName,
 		Units:           units,
+		Priority:        priority,
+		Matches:         matches,
 		Filters:         filters,
 		RetentionInDays: retention,
 	}
