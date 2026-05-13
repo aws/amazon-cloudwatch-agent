@@ -20,7 +20,7 @@ type JournaldConfig struct {
 	RetentionInDays int                 `json:"retention_in_days"`
 }
 
-func (config *JournaldConfig) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
+func (config *JournaldConfig) ToMap(_ *runtime.Context) (string, map[string]interface{}) {
 	resultMap := make(map[string]interface{})
 
 	resultMap["log_group_name"] = config.LogGroup

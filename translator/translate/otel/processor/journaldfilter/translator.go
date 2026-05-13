@@ -36,7 +36,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
 	cfg.ErrorMode = "propagate"
@@ -70,7 +70,7 @@ func (t *filterTranslator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-func (t *filterTranslator) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *filterTranslator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filterprocessor.Config)
 
 	cfg.ErrorMode = "propagate"

@@ -31,7 +31,7 @@ func (p *processor) Process(ctx *runtime.Context, config *data.Config) {
 	monitorJournald(ctx, config)
 }
 
-func (p *processor) NextProcessor(ctx *runtime.Context, config *data.Config) interface{} {
+func (p *processor) NextProcessor(_ *runtime.Context, _ *data.Config) interface{} {
 	return tracesconfig.Processor
 }
 

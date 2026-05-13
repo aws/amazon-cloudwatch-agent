@@ -108,8 +108,8 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.InputConfig.Priority, gotCfg.InputConfig.Priority)
 				assert.Equal(t, testCase.want.InputConfig.Matches, gotCfg.InputConfig.Matches)
 				// Storage is configured for cursor persistence
-				assert.NotNil(t, gotCfg.BaseConfig.StorageID)
-				assert.Equal(t, filestorage.StorageID, *gotCfg.BaseConfig.StorageID)
+				assert.NotNil(t, gotCfg.StorageID)
+				assert.Equal(t, filestorage.StorageID, *gotCfg.StorageID)
 			}
 		})
 	}

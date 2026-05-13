@@ -65,25 +65,25 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	// Set AWS session configuration
-	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
+	cfg.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if endpoint, ok := common.GetString(c, endpointOverrideKey); ok {
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
-		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+		cfg.Profile = fmt.Sprintf("%v", profileKey)
 	}
-	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
-	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	cfg.Region = agent.Global_Config.Region
+	cfg.RoleARN = agent.Global_Config.Role_arn
 	if c.IsSet(roleARNPathKey) {
-		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleARNPathKey)
+		cfg.RoleARN, _ = common.GetString(c, roleARNPathKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
-		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+		cfg.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
-		cfg.AWSSessionSettings.LocalMode = true
+		cfg.LocalMode = true
 	}
 
 	return cfg, nil

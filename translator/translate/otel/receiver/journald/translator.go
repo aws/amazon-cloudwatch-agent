@@ -131,12 +131,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	// Set storage for cursor persistence
 	storageID := filestorage.StorageID
-	cfg.BaseConfig.StorageID = &storageID
+	cfg.StorageID = &storageID
 
 	return cfg, nil
 }
 
-func (t *translatorWithConfig) Translate(conf *confmap.Conf) (component.Config, error) {
+func (t *translatorWithConfig) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*journaldreceiver.JournaldConfig)
 
 	// Configure units from the provided units slice
@@ -155,14 +155,12 @@ func (t *translatorWithConfig) Translate(conf *confmap.Conf) (component.Config, 
 	// Configure matches
 	if len(t.matches) > 0 {
 		cfg.InputConfig.Matches = make([]journaldinput.MatchConfig, len(t.matches))
-		for i, m := range t.matches {
-			cfg.InputConfig.Matches[i] = m
-		}
+		copy(cfg.InputConfig.Matches, t.matches)
 	}
 
 	// Set storage for cursor persistence
 	storageID := filestorage.StorageID
-	cfg.BaseConfig.StorageID = &storageID
+	cfg.StorageID = &storageID
 
 	return cfg, nil
 }
