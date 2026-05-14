@@ -101,6 +101,7 @@ func TestComponents(t *testing.T) {
 
 	wantExtensions := []string{
 		"agenthealth",
+		"awscloudwatchlogsprovisioner",
 		"awsproxy",
 		"ecs_observer",
 		"entitystore",
