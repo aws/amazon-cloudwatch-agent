@@ -82,3 +82,33 @@ func TestDropOriginConfig(t *testing.T) {
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
 }
+
+func TestJournaldLogsUnits(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "journaldlogs_units", "linux", expectedEnvVars, "")
+}
+
+func TestJournaldLogsPriority(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "journaldlogs_priority", "linux", expectedEnvVars, "")
+}
+
+func TestJournaldLogsFilters(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "journaldlogs_filters", "linux", expectedEnvVars, "")
+}
+
+func TestJournaldLogsMatches(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "journaldlogs_matches", "linux", expectedEnvVars, "")
+}
+
+func TestJournaldLogsUnitsAndPriority(t *testing.T) {
+	resetContext(t)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "journaldlogs_units_and_priority", "linux", expectedEnvVars, "")
+}
