@@ -1,0 +1,22 @@
+name: hydrate-goproxy
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  hydrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: hydrate-goproxy
+        run: |
+          mkdir -p hydrate-goproxy
+          cd hydrate-goproxy
+          go mod init hydrate-goproxy
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            go get github.com/aws/amazon-cloudwatch-agent@${GITHUB_REF_NAME}
+          else
+            go get github.com/aws/amazon-cloudwatch-agent@${GITHUB_SHA}
+          fi
