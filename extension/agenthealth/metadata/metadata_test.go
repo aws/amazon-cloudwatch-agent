@@ -15,11 +15,17 @@ func TestBuild(t *testing.T) {
 		value string
 		want  string
 	}{
+		{key: "ObservabilitySolution", value: "application_signals", want: "obs_application_signals"},
 		{key: "ObservabilitySolution", value: "ec2_health", want: "obs_ec2_health"},
+		{key: "ObservabilitySolution", value: "emf", want: "obs_emf"},
 		{key: "ObservabilitySolution", value: "JVM", want: "obs_jvm"},
-		{key: "OBSERVABILITYSOLUTION", value: "TOMCAT", want: "obs_tomcat"},
+		{key: "ObservabilitySolution", value: "jvm_ec2", want: "obs_jvm_ec2"},
 		{key: "observabilitysolution", value: "kafka_broker", want: "obs_kafka_broker"},
+		{key: "ObservabilitySolution", value: "log_collection", want: "obs_log_collection"},
 		{key: "ObservabilitySolution", value: "NVIDIA_GPU", want: "obs_nvidia_gpu"},
+		{key: "ObservabilitySolution", value: "nvidia_gpu_ec2", want: "obs_nvidia_gpu_ec2"},
+		{key: "OBSERVABILITYSOLUTION", value: "TOMCAT", want: "obs_tomcat"},
+		{key: "ObservabilitySolution", value: "tomcat_ec2", want: "obs_tomcat_ec2"},
 		{key: "unsupported", value: "Value", want: "unsupported_value"},
 	}
 	for _, testCase := range testCases {
@@ -32,14 +38,60 @@ func TestIsSupported(t *testing.T) {
 		input string
 		want  bool
 	}{
-		{input: "obs_jvm", want: true},
-		{input: "obs_tomcat", want: true},
-		{input: "obs_kafka_broker", want: true},
-		{input: "obs_nvidia_gpu", want: true},
+		{input: "obs_application_signals", want: true},
+		{input: "obs_collectd", want: true},
 		{input: "obs_ec2_health", want: true},
+		{input: "obs_emf", want: true},
+		{input: "obs_jvm", want: true},
+		{input: "obs_jvm_ec2", want: true},
+		{input: "obs_kafka_broker", want: true},
+		{input: "obs_kafka_consumer", want: true},
+		{input: "obs_kafka_producer", want: true},
+		{input: "obs_log_collection", want: true},
+		{input: "obs_nvidia_gpu", want: true},
+		{input: "obs_nvidia_gpu_ec2", want: true},
+		{input: "obs_otel_metrics", want: true},
+		{input: "obs_otel_traces", want: true},
+		{input: "obs_process_monitoring", want: true},
+		{input: "obs_prometheus", want: true},
+		{input: "obs_statsd", want: true},
+		{input: "obs_tomcat", want: true},
+		{input: "obs_tomcat_ec2", want: true},
+		{input: "obs_windows_events", want: true},
+		{input: "obs_xray_traces", want: true},
+		{input: "obs_unknown", want: false},
 		{input: "unsupported_value", want: false},
 	}
 	for _, testCase := range testCases {
 		assert.Equal(t, testCase.want, IsSupported(testCase.input))
+	}
+}
+
+func TestIsSupportedAliasResolution(t *testing.T) {
+	// _ec2 variants are accepted but resolve to canonical values
+	assert.True(t, IsSupported("obs_jvm_ec2"))
+	assert.True(t, IsSupported("obs_tomcat_ec2"))
+	assert.True(t, IsSupported("obs_nvidia_gpu_ec2"))
+
+	// canonical values are in the supported set directly
+	assert.True(t, IsSupported("obs_jvm"))
+	assert.True(t, IsSupported("obs_tomcat"))
+	assert.True(t, IsSupported("obs_nvidia_gpu"))
+}
+
+func TestResolve(t *testing.T) {
+	testCases := []struct {
+		input string
+		want  string
+	}{
+		{input: "obs_jvm_ec2", want: "obs_jvm"},
+		{input: "obs_tomcat_ec2", want: "obs_tomcat"},
+		{input: "obs_nvidia_gpu_ec2", want: "obs_nvidia_gpu"},
+		{input: "obs_jvm", want: "obs_jvm"},
+		{input: "obs_ec2_health", want: "obs_ec2_health"},
+		{input: "obs_unknown", want: "obs_unknown"},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.want, Resolve(testCase.input))
 	}
 }
