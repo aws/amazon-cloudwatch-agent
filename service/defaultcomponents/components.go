@@ -58,6 +58,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/syslogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver"
@@ -94,6 +95,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/processor/syslogrouterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 )
@@ -123,6 +125,7 @@ func Factories() (otelcol.Factories, error) {
 		prometheusreceiver.NewFactory(),
 		postgresqlreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
+		syslogreceiver.NewFactory(),
 		systemmetricsreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
@@ -161,6 +164,7 @@ func Factories() (otelcol.Factories, error) {
 		resourcedetectionprocessor.NewFactory(),
 		rollupprocessor.NewFactory(),
 		spanprocessor.NewFactory(),
+		syslogrouterprocessor.NewFactory(),
 		tailsamplingprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
 	); err != nil {
