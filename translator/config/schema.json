@@ -658,6 +658,16 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "syslog": {
+              "oneOf": [
+                { "$ref": "#/definitions/logsDefinition/definitions/syslogListenerDefinition" },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogListenerDefinition" },
+                  "minItems": 1
+                }
+              ]
             }
           },
           "minProperties": 1,
@@ -1209,6 +1219,88 @@
               "type": "string"
             }
           }
+        },
+        "syslogListenerDefinition": {
+          "type": "object",
+          "description": "Configuration for a syslog listener",
+          "properties": {
+            "listen_address": {
+              "type": "string",
+              "description": "Listen address in format tcp://host:port or udp://host:port",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "protocol": {
+              "type": "string",
+              "description": "Syslog message format",
+              "enum": ["rfc5424", "rfc3164"]
+            },
+            "log_group_name": {
+              "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+            },
+            "log_stream_name": {
+              "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+            },
+            "retention_in_days": {
+              "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+            },
+            "tls": {
+              "type": "object",
+              "properties": {
+                "cert_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                "key_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                "ca_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                "client_ca_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                "min_version": { "type": "string", "enum": ["1.0", "1.1", "1.2", "1.3"] }
+              },
+              "additionalProperties": false
+            },
+            "filters": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/logsDefinition/definitions/filterDefinition" }
+            },
+            "routing": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogRoutingRuleDefinition" }
+            },
+            "queue_size": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": ["listen_address", "log_group_name"],
+          "additionalProperties": false
+        },
+        "syslogRoutingRuleDefinition": {
+          "type": "object",
+          "description": "Routing rule for syslog messages",
+          "properties": {
+            "match": {
+              "type": "object",
+              "properties": {
+                "hostname": { "type": "string", "minLength": 1 },
+                "facility": { "type": "integer", "minimum": 0, "maximum": 23 },
+                "app_name": { "type": "string", "minLength": 1 }
+              },
+              "minProperties": 1,
+              "additionalProperties": false
+            },
+            "log_group_name": {
+              "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+            },
+            "log_stream_name": {
+              "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+            },
+            "retention_in_days": {
+              "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+            },
+            "filters": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/logsDefinition/definitions/filterDefinition" }
+            }
+          },
+          "required": ["match", "log_group_name"],
+          "additionalProperties": false
         }
       }
     },

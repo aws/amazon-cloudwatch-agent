@@ -1,0 +1,442 @@
+exporters:
+    awscloudwatchlogs/syslog_0_default:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /syslog/tcp/default
+        log_retention: 30
+        log_stream_name: tcp-default
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+    awscloudwatchlogs/syslog_0_rule_0:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /syslog/tcp/web
+        log_retention: 7
+        log_stream_name: web-stream
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+    awscloudwatchlogs/syslog_0_rule_1:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /syslog/tcp/auth
+        log_retention: 30
+        log_stream_name: auth-stream
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+    awscloudwatchlogs/syslog_1_default:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /syslog/udp/default
+        log_retention: 0
+        log_stream_name: udp-default
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+    awscloudwatchlogs/syslog_1_rule_0:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /syslog/udp/nginx
+        log_retention: 0
+        log_stream_name: nginx-stream
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+    awscloudwatchlogs/syslog_2_default:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: /syslog/tls/default
+        log_retention: 0
+        log_stream_name: tls-default
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: ""
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: ""
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+processors:
+    awssyslogrouter/syslog_0_default:
+        all_rules:
+            - app_name: ""
+              hostname: web-*
+            - app_name: ""
+              facility: 4
+              hostname: ""
+        is_default: true
+        listener_filters:
+            - expression: healthcheck
+              type: exclude
+        rule:
+            app_name: ""
+            hostname: ""
+    awssyslogrouter/syslog_0_rule_0:
+        is_default: false
+        listener_filters:
+            - expression: healthcheck
+              type: exclude
+        prior_rules: []
+        rule:
+            app_name: ""
+            hostname: web-*
+        rule_filters:
+            - expression: error|warn|crit
+              type: include
+    awssyslogrouter/syslog_0_rule_1:
+        is_default: false
+        listener_filters:
+            - expression: healthcheck
+              type: exclude
+        prior_rules:
+            - app_name: ""
+              hostname: web-*
+        rule:
+            app_name: ""
+            facility: 4
+            hostname: ""
+    awssyslogrouter/syslog_1_default:
+        all_rules:
+            - app_name: nginx
+              hostname: ""
+        is_default: true
+        rule:
+            app_name: ""
+            hostname: ""
+    awssyslogrouter/syslog_1_rule_0:
+        is_default: false
+        prior_rules: []
+        rule:
+            app_name: nginx
+            hostname: ""
+        rule_filters:
+            - expression: GET /favicon
+              type: exclude
+    awssyslogrouter/syslog_2_default:
+        is_default: true
+        rule:
+            app_name: ""
+            hostname: ""
+    batch/syslog_0_default:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/syslog_0_rule_0:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/syslog_0_rule_1:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/syslog_1_default:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/syslog_1_rule_0:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+    batch/syslog_2_default:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+receivers:
+    syslog/tcp_0_0_0_0_514:
+        id: syslog_input
+        on_error: ""
+        operators: []
+        protocol: rfc5424
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        tcp:
+            encoding: utf-8
+            listen_address: 0.0.0.0:514
+        type: syslog_input
+    syslog/tcp_0_0_0_0_1514:
+        id: syslog_input
+        on_error: ""
+        operators: []
+        protocol: rfc5424
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        tcp:
+            encoding: utf-8
+            listen_address: 0.0.0.0:1514
+            tls:
+                ca_file: /etc/ssl/ca.pem
+                cert_file: /etc/ssl/cert.pem
+                key_file: /etc/ssl/key.pem
+                min_version: "1.3"
+        type: syslog_input
+    syslog/udp_0_0_0_0_514:
+        id: syslog_input
+        on_error: ""
+        operators: []
+        protocol: rfc3164
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        type: syslog_input
+        udp:
+            encoding: utf-8
+            listen_address: 0.0.0.0:514
+            multiline:
+                line_end_pattern: .^
+                line_start_pattern: ""
+                omit_pattern: false
+service:
+    extensions:
+        - agenthealth/logs
+        - agenthealth/statuscode
+        - entitystore
+    pipelines:
+        logs/syslog_0_default:
+            exporters:
+                - awscloudwatchlogs/syslog_0_default
+            processors:
+                - awssyslogrouter/syslog_0_default
+                - batch/syslog_0_default
+            receivers:
+                - syslog/tcp_0_0_0_0_514
+        logs/syslog_0_rule_0:
+            exporters:
+                - awscloudwatchlogs/syslog_0_rule_0
+            processors:
+                - awssyslogrouter/syslog_0_rule_0
+                - batch/syslog_0_rule_0
+            receivers:
+                - syslog/tcp_0_0_0_0_514
+        logs/syslog_0_rule_1:
+            exporters:
+                - awscloudwatchlogs/syslog_0_rule_1
+            processors:
+                - awssyslogrouter/syslog_0_rule_1
+                - batch/syslog_0_rule_1
+            receivers:
+                - syslog/tcp_0_0_0_0_514
+        logs/syslog_1_default:
+            exporters:
+                - awscloudwatchlogs/syslog_1_default
+            processors:
+                - awssyslogrouter/syslog_1_default
+                - batch/syslog_1_default
+            receivers:
+                - syslog/udp_0_0_0_0_514
+        logs/syslog_1_rule_0:
+            exporters:
+                - awscloudwatchlogs/syslog_1_rule_0
+            processors:
+                - awssyslogrouter/syslog_1_rule_0
+                - batch/syslog_1_rule_0
+            receivers:
+                - syslog/udp_0_0_0_0_514
+        logs/syslog_2_default:
+            exporters:
+                - awscloudwatchlogs/syslog_2_default
+            processors:
+                - awssyslogrouter/syslog_2_default
+                - batch/syslog_2_default
+            receivers:
+                - syslog/tcp_0_0_0_0_1514
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
