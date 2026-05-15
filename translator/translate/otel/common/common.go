@@ -277,6 +277,7 @@ type ComponentTranslators struct {
 	Processors ComponentTranslatorMap
 	Exporters  ComponentTranslatorMap
 	Extensions ComponentTranslatorMap
+	Connectors ComponentTranslatorMap
 }
 
 // PipelineTranslator is a Translator that converts a JSON config into a pipeline

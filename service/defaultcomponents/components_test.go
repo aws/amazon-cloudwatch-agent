@@ -100,6 +100,15 @@ func TestComponents(t *testing.T) {
 		assert.Contains(t, gotExporters, typeStr)
 	}
 
+	wantConnectors := []string{
+		"routing",
+	}
+	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
+	assert.Equal(t, len(wantConnectors), len(gotConnectors))
+	for _, typeStr := range wantConnectors {
+		assert.Contains(t, gotConnectors, typeStr)
+	}
+
 	wantExtensions := []string{
 		"agenthealth",
 		"awscloudwatchlogsprovisioner",

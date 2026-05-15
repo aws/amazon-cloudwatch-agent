@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -14,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/routing"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsemf"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/awsxray"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/debug"
@@ -36,6 +39,18 @@ import (
 )
 
 const (
+	metricsVariantRoute    = "application_signals_metrics_route"
+	metricsVariantLogDest  = "application_signals_metrics_logs_destination"
+	metricsVariantOtlpDest = "application_signals_metrics_otlp_destination"
+)
+
+const (
+	logsVariantRoute   = "application_signals_logs_route"
+	logsVariantBatch   = "application_signals_logs_batch"
+	logsVariantNoBatch = "application_signals_logs_nobatch"
+)
+
+const (
 	defaultLogGroupName  = "/aws/service-events/{service.name}"
 	defaultLogStreamName = "default"
 
@@ -49,18 +64,24 @@ type templateSegment struct {
 }
 
 type translator struct {
-	signal pipeline.Signal
+	signal  pipeline.Signal
+	variant string
 }
 
 var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator(signal pipeline.Signal) common.PipelineTranslator {
-	return &translator{
-		signal,
+func NewTranslator(signal pipeline.Signal, opts ...common.TranslatorOption) common.PipelineTranslator {
+	t := &translator{signal: signal}
+	for _, opt := range opts {
+		opt(t)
 	}
+	return t
 }
 
 func (t *translator) ID() pipeline.ID {
+	if t.variant != "" {
+		return pipeline.NewIDWithName(t.signal, t.variant)
+	}
 	return pipeline.NewIDWithName(t.signal, common.AppSignals)
 }
 
@@ -70,23 +91,34 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, fmt.Errorf("no config key defined for signal: %s", t.signal)
 	}
 	if conf == nil || (!conf.IsSet(configKey[0]) && !conf.IsSet(configKey[1])) {
-		// For logs: also activate if metrics is enabled (auto-opt-in)
-		if t.signal == pipeline.SignalLogs {
-			metricsKeys := common.AppSignalsConfigKeys[pipeline.SignalMetrics]
-			if !conf.IsSet(metricsKeys[0]) && !conf.IsSet(metricsKeys[1]) {
-				return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
-			}
-		} else {
-			return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
+	}
+
+	switch t.signal {
+	case pipeline.SignalLogs:
+		switch t.variant {
+		case logsVariantRoute:
+			return t.translateLogsReceiveToRoute(conf)
+		case logsVariantBatch:
+			return t.translateLogsRouteToOtlp(conf, true)
+		case logsVariantNoBatch:
+			return t.translateLogsRouteToOtlp(conf, false)
+		}
+	case pipeline.SignalMetrics:
+		switch t.variant {
+		case metricsVariantRoute:
+			return t.translateMetricsReceiveToRoute(conf)
+		case metricsVariantLogDest:
+			return t.translateMetricsRouteToLogs(conf)
+		case metricsVariantOtlpDest:
+			return t.translateMetricsRouteToOtlp(conf)
 		}
 	}
 
-	// Logs uses a separate pipeline (otlphttp → CW OTLP endpoint) with no
-	// shared processors or exporters with metrics/traces.
-	if t.signal == pipeline.SignalLogs {
-		return t.translateLogs(conf, configKey)
-	}
+	return t.translateTraces(conf)
+}
 
+func (t *translator) translateTraces(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	translators := &common.ComponentTranslators{
 		Receivers:  otlp.NewTranslators(conf, common.AppSignals, t.signal.String()),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
@@ -94,16 +126,69 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 
-	if t.signal == pipeline.SignalMetrics {
-		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.AppSignals))
-	}
-
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithSignal(t.signal)))
 	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithSignal(t.signal)))
 
-	// ECS is not in scope for entity association, so we only add the entity processor in non-ECS platforms
+	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
+		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
+	}
+
+	translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
+	translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
+	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.TracesName, []string{agenthealth.OperationPutTraceSegments}))
+	translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
+
+	return translators, nil
+}
+
+func newMetricsRoutingConnectorTranslator() common.ComponentTranslator {
+	defaultPipelineID := pipeline.NewIDWithName(pipeline.SignalMetrics, metricsVariantLogDest)
+	serviceEventsPipelineID := pipeline.NewIDWithName(pipeline.SignalMetrics, metricsVariantOtlpDest)
+
+	return routing.NewTranslator(common.AppSignals,
+		routing.WithErrorMode(ottl.IgnoreError),
+		routing.WithDefaultPipelines(defaultPipelineID),
+		routing.WithTable(routingconnector.RoutingTableItem{
+			Condition: `resource.attributes["Telemetry.Source"] == "Telemend"`,
+			Pipelines: []pipeline.ID{serviceEventsPipelineID},
+		}),
+	)
+}
+
+func (t *translator) translateMetricsReceiveToRoute(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	connectorTranslator := newMetricsRoutingConnectorTranslator()
+
+	translators := &common.ComponentTranslators{
+		Receivers:  otlp.NewTranslators(conf, common.AppSignals, pipeline.SignalMetrics.String()),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Connectors: common.NewTranslatorMap[component.Config, component.ID](),
+	}
+
+	translators.Exporters.Set(connectorTranslator)
+	translators.Connectors.Set(connectorTranslator)
+
+	return translators, nil
+}
+
+func (t *translator) translateMetricsRouteToLogs(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	connectorTranslator := newMetricsRoutingConnectorTranslator()
+
+	translators := &common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+	}
+
+	translators.Receivers.Set(connectorTranslator)
+
+	translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.AppSignals))
+	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithSignal(t.signal)))
+	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithSignal(t.signal)))
+
 	isECS := ecsutil.GetECSUtilSingleton().IsECS()
-	if t.signal == pipeline.SignalMetrics && !isECS {
+	if !isECS {
 		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
 		if context.CurrentContext().KubernetesMode() != "" {
 			translators.Extensions.Set(k8smetadata.NewTranslator())
@@ -114,33 +199,118 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
 	}
 
-	if t.signal == pipeline.SignalTraces {
-		translators.Exporters.Set(awsxray.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(awsproxy.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.TracesName, []string{agenthealth.OperationPutTraceSegments}))
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
+	translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
+	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
+	translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
 
-	} else {
-		translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
-		translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
-		translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
-	}
 	return translators, nil
 }
 
-func (t *translator) translateLogs(conf *confmap.Conf, configKeys []string) (*common.ComponentTranslators, error) {
+func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.ComponentTranslators, error) {
+	region := agent.Global_Config.Region
+	if region == "" {
+		return nil, fmt.Errorf("region is required for %s OTLP metrics pipeline", common.AppSignals)
+	}
+
+	connectorTranslator := newMetricsRoutingConnectorTranslator()
+	sigv4ID := component.NewIDWithName(component.MustNewType("sigv4auth"), metricsVariantOtlpDest)
+	metricsEndpoint := otlphttp.EndpointConfig{
+		MetricsEndpoint: fmt.Sprintf("https://monitoring.%s.amazonaws.com/v1/metrics", region),
+	}
+
+	translators := &common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+	}
+
+	translators.Receivers.Set(connectorTranslator)
+
+	translators.Processors.Set(batchproc.NewTranslator(common.WithName(metricsVariantOtlpDest), batchproc.WithTelemetrySection(common.LogsKey)))
+	translators.Exporters.Set(otlphttp.NewTranslatorWithName(metricsVariantOtlpDest, metricsEndpoint,
+		otlphttp.WithAuthenticator(sigv4ID),
+	))
+	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(metricsVariantOtlpDest, sigv4auth.WithService("monitoring")))
+	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
+
+	return translators, nil
+}
+
+func newLogsRoutingConnectorTranslator() common.ComponentTranslator {
+	batchPipelineID := pipeline.NewIDWithName(pipeline.SignalLogs, logsVariantBatch)
+	noBatchPipelineID := pipeline.NewIDWithName(pipeline.SignalLogs, logsVariantNoBatch)
+
+	return routing.NewTranslator(common.AppSignals+"_logs",
+		routing.WithErrorMode(ottl.IgnoreError),
+		routing.WithDefaultPipelines(batchPipelineID),
+		routing.WithTable(routingconnector.RoutingTableItem{
+			Context:   "log",
+			Condition: `attributes["event.name"] == "aws.telemend.aggregate_profile"`,
+			Pipelines: []pipeline.ID{noBatchPipelineID},
+		}),
+	)
+}
+
+func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	region := agent.Global_Config.Region
 	if region == "" {
 		return nil, fmt.Errorf("region is required for %s logs pipeline", common.AppSignals)
 	}
 
-	// Use the logs config keys if explicitly set; otherwise fall back to metrics
-	// config for the OTLP receiver (auto-opt-in: same receiver endpoints as metrics).
+	configKeys := common.AppSignalsConfigKeys[pipeline.SignalLogs]
+
+	// Use logs receiver config if explicitly set; otherwise fall back to metrics
+	// receiver config since both resolve to the same OTLP receiver (auto-opt-in
+	// doesn't create logs.logs_collected.application_signals in the JSON config).
 	receiverSignal := pipeline.SignalLogs.String()
 	if !conf.IsSet(configKeys[0]) && !conf.IsSet(configKeys[1]) {
 		receiverSignal = pipeline.SignalMetrics.String()
 	}
 
+	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
+	dynamic := hasPlaceholders(logGroupTemplate) || hasPlaceholders(logStreamTemplate)
+
+	var statements []string
+	var attrActions []attributestocontext.ActionMapping
+
+	if hasPlaceholders(logGroupTemplate) {
+		statements = append(statements, buildOTTLSetStatement(metadataKeyLogGroup, logGroupTemplate))
+		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
+	}
+
+	if hasPlaceholders(logStreamTemplate) {
+		statements = append(statements, buildOTTLSetStatement(metadataKeyLogStream, logStreamTemplate))
+		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
+	}
+
+	connectorTranslator := newLogsRoutingConnectorTranslator()
+
+	translators := &common.ComponentTranslators{
+		Receivers:  otlp.NewTranslators(conf, common.AppSignals, receiverSignal),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Connectors: common.NewTranslatorMap[component.Config, component.ID](),
+	}
+
+	if dynamic {
+		translators.Processors.Set(transformproc.NewTranslatorWithName(common.AppSignals, transformproc.WithLogStatements(statements)))
+		translators.Processors.Set(attributestocontext.NewTranslator(attrActions))
+	}
+
+	translators.Exporters.Set(connectorTranslator)
+	translators.Connectors.Set(connectorTranslator)
+
+	return translators, nil
+}
+
+func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*common.ComponentTranslators, error) {
+	region := agent.Global_Config.Region
+	if region == "" {
+		return nil, fmt.Errorf("region is required for %s logs pipeline", common.AppSignals)
+	}
+
+	configKeys := common.AppSignalsConfigKeys[pipeline.SignalLogs]
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
 
 	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), common.AppSignals)
@@ -151,61 +321,60 @@ func (t *translator) translateLogs(conf *confmap.Conf, configKeys []string) (*co
 		LogsEndpoint: fmt.Sprintf("https://logs.%s.amazonaws.com/v1/logs", region),
 	}
 
-	var statements []string
-	var attrActions []attributestocontext.ActionMapping
+	logGroupHasPlaceholders := hasPlaceholders(logGroupTemplate)
+	logStreamHasPlaceholders := hasPlaceholders(logStreamTemplate)
+	dynamic := logGroupHasPlaceholders || logStreamHasPlaceholders
+
 	var metadataKeys []string
 	var headerMappings []headerssetter.HeaderMapping
-	staticHeaders := map[string]string{}
 
-	if hasPlaceholders(logGroupTemplate) {
-		statements = append(statements, buildOTTLSetStatement(metadataKeyLogGroup, logGroupTemplate))
-		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
+	if logGroupHasPlaceholders {
 		metadataKeys = append(metadataKeys, metadataKeyLogGroup)
 		headerMappings = append(headerMappings, headerssetter.HeaderMapping{HeaderName: "x-aws-log-group", ContextKey: metadataKeyLogGroup})
 	} else {
-		staticHeaders["x-aws-log-group"] = templateToLiteral(logGroupTemplate)
+		headerMappings = append(headerMappings, headerssetter.HeaderMapping{HeaderName: "x-aws-log-group", Value: templateToLiteral(logGroupTemplate)})
 	}
 
-	if hasPlaceholders(logStreamTemplate) {
-		statements = append(statements, buildOTTLSetStatement(metadataKeyLogStream, logStreamTemplate))
-		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
+	if logStreamHasPlaceholders {
 		metadataKeys = append(metadataKeys, metadataKeyLogStream)
 		headerMappings = append(headerMappings, headerssetter.HeaderMapping{HeaderName: "x-aws-log-stream", ContextKey: metadataKeyLogStream})
 	} else {
-		staticHeaders["x-aws-log-stream"] = templateToLiteral(logStreamTemplate)
+		headerMappings = append(headerMappings, headerssetter.HeaderMapping{HeaderName: "x-aws-log-stream", Value: templateToLiteral(logStreamTemplate)})
 	}
 
-	dynamic := len(statements) > 0
+	connectorTranslator := newLogsRoutingConnectorTranslator()
 
 	translators := &common.ComponentTranslators{
-		Receivers:  otlp.NewTranslators(conf, common.AppSignals, receiverSignal),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 	}
 
-	if dynamic {
-		translators.Processors.Set(transformproc.NewTranslatorWithName(common.AppSignals, transformproc.WithLogStatements(statements)))
-		translators.Processors.Set(attributestocontext.NewTranslator(attrActions))
-		translators.Processors.Set(batchproc.NewTranslator(
-			common.WithName(common.AppSignals),
-			batchproc.WithMetadataKeys(metadataKeys),
-		))
-		translators.Exporters.Set(otlphttp.NewTranslatorWithName(common.AppSignals, logsEndpoint,
-			otlphttp.WithAuthenticator(headersSetterID),
-			otlphttp.WithHeaders(staticHeaders),
-		))
-		translators.Extensions.Set(headerssetter.NewTranslatorWithName(common.AppSignals,
-			headerssetter.WithAdditionalAuth(provisionerID),
-			headerssetter.WithHeaders(headerMappings),
-		))
-	} else {
-		translators.Processors.Set(batchproc.NewTranslator(common.WithName(common.AppSignals)))
-		translators.Exporters.Set(otlphttp.NewTranslatorWithName(common.AppSignals, logsEndpoint,
-			otlphttp.WithAuthenticator(provisionerID),
-			otlphttp.WithHeaders(staticHeaders),
-		))
+	translators.Receivers.Set(connectorTranslator)
+
+	if batch {
+		if dynamic {
+			translators.Processors.Set(batchproc.NewTranslator(
+				common.WithName(common.AppSignals),
+				batchproc.WithMetadataKeys(metadataKeys),
+				batchproc.WithTelemetrySection(common.LogsKey),
+			))
+		} else {
+			translators.Processors.Set(batchproc.NewTranslator(
+				common.WithName(common.AppSignals),
+				batchproc.WithTelemetrySection(common.LogsKey),
+			))
+		}
 	}
+
+	translators.Exporters.Set(otlphttp.NewTranslatorWithName(common.AppSignals, logsEndpoint,
+		otlphttp.WithAuthenticator(headersSetterID),
+	))
+	translators.Extensions.Set(headerssetter.NewTranslatorWithName(common.AppSignals,
+		headerssetter.WithAdditionalAuth(provisionerID),
+		headerssetter.WithHeaders(headerMappings),
+	))
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
 		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
@@ -306,4 +475,13 @@ func buildOTTLSetStatement(metadataKey string, segments []templateSegment) strin
 		}
 	}
 	return fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")) + whereGuard
+}
+
+// SetVariant implements common.TranslatorOption for setting the pipeline variant.
+func SetVariant(variant string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.variant = variant
+		}
+	}
 }

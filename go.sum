@@ -185,6 +185,8 @@ github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b h1:mimo19zliBX/vS
 github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b/go.mod h1:fvzegU4vN3H1qMT+8wDmzjAcDONcgo2/SZ/TyfdUOFs=
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483 h1:J8HaD+Zpfi1gcel3HCKpoHHEsrcuRrZlSnx7R9SCf5I=
 github.com/aliyun/alibaba-cloud-sdk-go v1.61.1483/go.mod h1:RcDobYh8k5VP6TNybz9m++gL3ijVI5wueVr0EM10VsU=
+github.com/amazon-contributing/opentelemetry-collector-contrib/connector/routingconnector v0.0.0-20260515160158-c86549cf773d h1:EpkEb8xmY1vmxxg1jSyKMthTxVoBXznszPxX3ELTY4Y=
+github.com/amazon-contributing/opentelemetry-collector-contrib/connector/routingconnector v0.0.0-20260515160158-c86549cf773d/go.mod h1:27Lstfad+LlHk17mhMuZh0vCAZcZxo3iwnE19aY/n7I=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260515160158-c86549cf773d h1:Ke22zwpK+0DXFooQL8dAeA9v+9WcoPHOK1qz/b+38A0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260515160158-c86549cf773d/go.mod h1:7IC5iRiEVjkl3gQkyGF54WJrvAPNwRPp88JmYlPszu8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260515160158-c86549cf773d h1:kQbqwbVU1Dt+qfPdClH/f/uGcd/CEkr0gZkXQ15rKhk=
@@ -197,6 +199,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmidd
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260515160158-c86549cf773d/go.mod h1:KQqi2/SDM6SveSbJmH7yE2ZJrcwvQEsq8fGgj7J42oI=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260515160158-c86549cf773d h1:0bIiIV2mjBtHPqCJJTc2lHEoMNB3VkCT70lfe10d7Ms=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260515160158-c86549cf773d/go.mod h1:tAN1C96iJCDwxl9qMnno54d6sQwxHAVSYdpDJjc6bbY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260515160158-c86549cf773d h1:u5b1KewLwkJQ/zeRi6GEHrho3TD7Vgfv6rTSRuFC8WM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260515160158-c86549cf773d/go.mod h1:2JFFL30N2NI5N8LbjcLWXYTsoDMDYbwItyZ9ntp8++E=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20260515160158-c86549cf773d h1:4YpnHhDHFjuHzQtW3CFA3ENMEFr3YN7VHn5+uLz4TXk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20260515160158-c86549cf773d/go.mod h1:RkX+mCTIbF0RTiqXFe0Wo6a1w0cULc23osRU5IRmqVQ=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20260515160158-c86549cf773d h1:HJL6opPse0RbWklx+FGiFlKMGk774fvNr2+rEEbP348=
@@ -227,6 +231,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20260515160158-c86549cf773d/go.mod h1:2SjHFWsA3UKr7N4IOP5ph0inaZtn6bteD9DitRAASEc=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20260515160158-c86549cf773d h1:/ZEw1ezgTnhvv+heFtSK4GYTBfAY2Db2mW8BPoNYo+U=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20260515160158-c86549cf773d/go.mod h1:mfl6tGXnVyT0+nga+Oml7bMNWKempeGTtL+5Vs2LzHA=
+github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260515160158-c86549cf773d h1:QAtFeR/jBrV7I+7x5DnCAkeK12Fg6657f8KcypMLnCw=
+github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260515160158-c86549cf773d/go.mod h1:LkMDqpRrHT2MNeobnhdNZbY8JrDVFbL08dr/Ayd3JIk=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260515160158-c86549cf773d h1:8+fmhMF5DA6Jlac43R8/BeqsGKDrNh+LxLt3TbThvVs=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260515160158-c86549cf773d/go.mod h1:OFDM1K0I68jJO8s5S0+5xDwnqscnRnYmYgZxA8bbhic=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260515160158-c86549cf773d h1:egI8IhjM9frfdqYRU+wlLoclNqVYFOQcpL2t32Zq5FU=
@@ -980,12 +986,6 @@ github.com/jellydator/ttlcache/v3 v3.3.0 h1:BdoC9cE81qXfrxeb9eoJi9dWrdhSuwXMAnHT
 github.com/jellydator/ttlcache/v3 v3.3.0/go.mod h1:bj2/e0l4jRnQdrnSTaGTsh4GSXvMjQcy41i7th0GVGw=
 github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca h1:a0GZUdb+qnutF8shJxr2qs2qT3fnF+ptxTxPB8+oIvk=
 github.com/jhump/protoreflect v1.8.3-0.20210616212123-6cc1efa697ca/go.mod h1:7GcYQDdMU/O/BBrl/cX6PNHpXh6cenjd8pneu5yW7Tg=
-github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260508010324-989f471f7911 h1:fvrIuX1cEaD0nRbjT7bbk3+2D3GhNPhJUuvz96yFtDA=
-github.com/jj22ee/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260508010324-989f471f7911/go.mod h1:Ggckc2aNo/3fgbgB4uj4vlGxG+NVyyShSjF8fcSt77o=
-github.com/jj22ee/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260507213535-be79c80657e3 h1:fzooUSnGcZkhsPY5yD7zNjCbAL6KNpCFy7HKGZQqHgg=
-github.com/jj22ee/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260507213535-be79c80657e3/go.mod h1:2JFFL30N2NI5N8LbjcLWXYTsoDMDYbwItyZ9ntp8++E=
-github.com/jj22ee/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260507223339-b0a326ca578b h1:e8O7qNh2cVMTjuklCwDhZSpuVPp3Y9DnFaEcUTWcg8k=
-github.com/jj22ee/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260507223339-b0a326ca578b/go.mod h1:LkMDqpRrHT2MNeobnhdNZbY8JrDVFbL08dr/Ayd3JIk=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=

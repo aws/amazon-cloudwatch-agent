@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -100,8 +101,8 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalMetrics)
-	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
+	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantLogDest))
+	assert.EqualValues(t, "metrics/application_signals_metrics_logs_destination", tt.ID().String())
 	testCases := map[string]struct {
 		input          map[string]interface{}
 		want           *want
@@ -122,7 +123,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
@@ -142,7 +143,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
@@ -159,7 +160,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
@@ -196,8 +197,8 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalMetrics)
-	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
+	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantLogDest))
+	assert.EqualValues(t, "metrics/application_signals_metrics_logs_destination", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
 		want       *want
@@ -217,7 +218,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -236,7 +237,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -273,8 +274,8 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalMetrics)
-	assert.EqualValues(t, "metrics/application_signals", tt.ID().String())
+	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantLogDest))
+	assert.EqualValues(t, "metrics/application_signals_metrics_logs_destination", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *want
@@ -293,7 +294,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -311,7 +312,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				receivers:  []string{"routing/application_signals"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -338,4 +339,105 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTranslatorLogsRoute(t *testing.T) {
+	type want struct {
+		receivers  []string
+		processors []string
+		exporters  []string
+		connectors []string
+	}
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantRoute))
+	assert.EqualValues(t, "logs/application_signals_logs_route", tt.ID().String())
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		want    *want
+		wantErr error
+	}{
+		"WithoutLogsCollectedKey": {
+			input:   map[string]interface{}{},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: fmt.Sprint(common.AppSignalsLogs)},
+		},
+		"WithLogsEnabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"application_signals": map[string]interface{}{},
+					},
+				},
+			},
+			want: &want{
+				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
+				processors: []string{"transform/application_signals", "attributestocontext"},
+				exporters:  []string{"routing/application_signals_logs"},
+				connectors: []string{"routing/application_signals_logs"},
+			},
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			conf := confmap.NewFromStringMap(testCase.input)
+			got, err := tt.Translate(conf)
+			assert.Equal(t, testCase.wantErr, err)
+			if testCase.want == nil {
+				assert.Nil(t, got)
+			} else {
+				require.NotNil(t, got)
+				assert.Equal(t, testCase.want.receivers, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.processors, collections.MapSlice(got.Processors.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.exporters, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+				assert.Equal(t, testCase.want.connectors, collections.MapSlice(got.Connectors.Keys(), component.ID.String))
+			}
+		})
+	}
+}
+
+func TestTranslatorLogsBatch(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantBatch))
+	assert.EqualValues(t, "logs/application_signals_logs_batch", tt.ID().String())
+
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"logs_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(input)
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals")
+	assert.Equal(t, []string{"otlphttp/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "awscloudwatchlogsprovisioner")
+}
+
+func TestTranslatorLogsNoBatch(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantNoBatch))
+	assert.EqualValues(t, "logs/application_signals_logs_nobatch", tt.ID().String())
+
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"logs_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(input)
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
+	assert.Empty(t, got.Processors.Keys())
+	assert.Equal(t, []string{"otlphttp/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals")
 }

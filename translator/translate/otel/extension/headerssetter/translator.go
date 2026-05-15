@@ -12,10 +12,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-// HeaderMapping defines a header to set from a context key.
+// HeaderMapping defines a header to set from a context key or a static value.
 type HeaderMapping struct {
 	HeaderName string
 	ContextKey string
+	Value      string
 }
 
 type Option func(*translator)
@@ -62,12 +63,19 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	for _, h := range t.headers {
 		key := h.HeaderName
-		ctx := h.ContextKey
-		cfg.HeadersConfig = append(cfg.HeadersConfig, headerssetterextension.HeaderConfig{
-			Key:         &key,
-			FromContext: &ctx,
-			Action:      headerssetterextension.UPSERT,
-		})
+		hc := headerssetterextension.HeaderConfig{
+			Key:    &key,
+			Action: headerssetterextension.UPSERT,
+		}
+		if h.ContextKey != "" {
+			ctx := h.ContextKey
+			hc.FromContext = &ctx
+		}
+		if h.Value != "" {
+			val := h.Value
+			hc.Value = &val
+		}
+		cfg.HeadersConfig = append(cfg.HeadersConfig, hc)
 	}
 	return cfg, nil
 }

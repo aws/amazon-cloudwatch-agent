@@ -66,6 +66,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 			"log_statements": []interface{}{
 				map[string]interface{}{
 					"context":    "resource",
+					"error_mode": "propagate",
 					"statements": stmts,
 				},
 			},
