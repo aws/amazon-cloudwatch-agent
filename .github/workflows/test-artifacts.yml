@@ -30,10 +30,6 @@ on:
         type: string
         required: true
 
-concurrency:
-  group: ${{ github.workflow }}-${{ inputs.build_id }}
-  cancel-in-progress: true
-
 jobs:
   OutputEnvVariables:
     name: 'OutputEnvVariables'
