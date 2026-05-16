@@ -265,3 +265,21 @@ func TestTranslatorLogsRouteToOtlpBatchStatic(t *testing.T) {
 	// Headers should use Value (static), verified by headers_setter being present
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals")
 }
+
+func TestNewTranslatorsLogsDisabled(t *testing.T) {
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+			"logs_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{
+					"disable": true,
+				},
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(input)
+	translators := NewTranslators(conf, pipeline.SignalLogs)
+	assert.Equal(t, 0, translators.Len())
+}
