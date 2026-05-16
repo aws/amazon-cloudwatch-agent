@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
@@ -59,7 +60,13 @@ func TestNewTranslatorsLogsNotEnabled(t *testing.T) {
 	input := map[string]interface{}{}
 	conf := confmap.NewFromStringMap(input)
 	translators := NewTranslators(conf, pipeline.SignalLogs)
-	assert.Equal(t, 0, translators.Len())
+	// Translators are always registered; Translate returns MissingKeyError when not enabled
+	assert.Equal(t, 3, translators.Len())
+	translators.Range(func(pt common.PipelineTranslator) {
+		result, err := pt.Translate(conf)
+		assert.Nil(t, result)
+		assert.Error(t, err)
+	})
 }
 
 func TestNewTranslatorsLogsAutoOptIn(t *testing.T) {
@@ -94,8 +101,8 @@ func TestTranslatorMetricsReceiveToRoute(t *testing.T) {
 
 	assert.Equal(t, []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Empty(t, got.Processors.Keys())
-	assert.Equal(t, []string{"routing/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Equal(t, []string{"routing/application_signals"}, collections.MapSlice(got.Connectors.Keys(), component.ID.String))
+	assert.Equal(t, []string{"routing/application_signals_metrics"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Equal(t, []string{"routing/application_signals_metrics"}, collections.MapSlice(got.Connectors.Keys(), component.ID.String))
 }
 
 func TestTranslatorMetricsRouteToOtlp(t *testing.T) {
@@ -115,10 +122,10 @@ func TestTranslatorMetricsRouteToOtlp(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
-	assert.Equal(t, []string{"routing/application_signals"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
+	assert.Equal(t, []string{"routing/application_signals_metrics"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Equal(t, []string{"batch/application_signals_metrics_otlp_destination"}, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 	assert.Equal(t, []string{"otlphttp/application_signals_metrics_otlp_destination"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_metrics_otlp_destination")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_metrics")
 }
 
 func TestTranslatorLogsReceiveToRoute(t *testing.T) {
@@ -161,10 +168,10 @@ func TestTranslatorLogsRouteToOtlpBatch(t *testing.T) {
 	require.NotNil(t, got)
 
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals")
-	assert.Equal(t, []string{"otlphttp/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals")
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals")
+	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals_logs")
+	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals_logs")
 }
 
 func TestTranslatorLogsRouteToOtlpNoBatch(t *testing.T) {
@@ -186,8 +193,8 @@ func TestTranslatorLogsRouteToOtlpNoBatch(t *testing.T) {
 
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Empty(t, got.Processors.Keys())
-	assert.Equal(t, []string{"otlphttp/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals")
+	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
 }
 
 func TestTranslatorLogsReceiveToRouteDynamic(t *testing.T) {
@@ -208,13 +215,19 @@ func TestTranslatorLogsReceiveToRouteDynamic(t *testing.T) {
 
 	// Default log group has placeholders ({service.name}), so transform + attributestocontext should be present
 	processors := collections.MapSlice(got.Processors.Keys(), component.ID.String)
-	assert.Contains(t, processors, "transform/application_signals")
+	assert.Contains(t, processors, "transform/application_signals_logs")
 	assert.Contains(t, processors, "attributestocontext")
 }
 
 func TestNewTranslatorsNilConf(t *testing.T) {
 	translators := NewTranslators(nil, pipeline.SignalMetrics)
-	assert.Equal(t, 0, translators.Len())
+	// Translators are always registered; Translate returns error when conf is nil
+	assert.Equal(t, 3, translators.Len())
+	translators.Range(func(pt common.PipelineTranslator) {
+		result, err := pt.Translate(nil)
+		assert.Nil(t, result)
+		assert.Error(t, err)
+	})
 }
 
 func TestTranslatorLogsReceiveToRouteStatic(t *testing.T) {
@@ -237,7 +250,7 @@ func TestTranslatorLogsReceiveToRouteStatic(t *testing.T) {
 	require.NotNil(t, got)
 
 	processors := collections.MapSlice(got.Processors.Keys(), component.ID.String)
-	assert.NotContains(t, processors, "transform/application_signals")
+	assert.NotContains(t, processors, "transform/application_signals_logs")
 	assert.NotContains(t, processors, "attributestocontext")
 }
 
@@ -261,9 +274,9 @@ func TestTranslatorLogsRouteToOtlpBatchStatic(t *testing.T) {
 	require.NotNil(t, got)
 
 	// Static case: batch processor should not have metadata keys
-	assert.Equal(t, []string{"batch/application_signals"}, collections.MapSlice(got.Processors.Keys(), component.ID.String))
+	assert.Equal(t, []string{"batch/application_signals_logs"}, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 	// Headers should use Value (static), verified by headers_setter being present
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals_logs")
 }
 
 func TestNewTranslatorsLogsDisabled(t *testing.T) {
@@ -281,5 +294,11 @@ func TestNewTranslatorsLogsDisabled(t *testing.T) {
 	}
 	conf := confmap.NewFromStringMap(input)
 	translators := NewTranslators(conf, pipeline.SignalLogs)
-	assert.Equal(t, 0, translators.Len())
+	// Translators are always registered; Translate returns error when disabled
+	assert.Equal(t, 3, translators.Len())
+	translators.Range(func(pt common.PipelineTranslator) {
+		result, err := pt.Translate(conf)
+		assert.Nil(t, result)
+		assert.Error(t, err)
+	})
 }

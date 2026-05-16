@@ -39,12 +39,14 @@ import (
 )
 
 const (
+	metricsComponentName   = "application_signals_metrics"
 	metricsVariantRoute    = "application_signals_metrics_route"
 	metricsVariantLogDest  = "application_signals_metrics_logs_destination"
 	metricsVariantOtlpDest = "application_signals_metrics_otlp_destination"
 )
 
 const (
+	logsComponentName  = "application_signals_logs"
 	logsVariantRoute   = "application_signals_logs_route"
 	logsVariantBatch   = "application_signals_logs_batch"
 	logsVariantNoBatch = "application_signals_logs_nobatch"
@@ -90,7 +92,21 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if !ok {
 		return nil, fmt.Errorf("no config key defined for signal: %s", t.signal)
 	}
-	if conf == nil || (!conf.IsSet(configKey[0]) && !conf.IsSet(configKey[1])) {
+	if conf == nil {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
+	}
+	if !conf.IsSet(configKey[0]) && !conf.IsSet(configKey[1]) {
+		// For logs: also activate if metrics is enabled (auto-opt-in)
+		if t.signal == pipeline.SignalLogs {
+			metricsKey := common.AppSignalsConfigKeys[pipeline.SignalMetrics]
+			if !conf.IsSet(metricsKey[0]) && !conf.IsSet(metricsKey[1]) {
+				return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
+			}
+		} else {
+			return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
+		}
+	}
+	if t.signal == pipeline.SignalLogs && isLogsDisabled(conf, configKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 	}
 
@@ -145,7 +161,7 @@ func newMetricsRoutingConnectorTranslator() common.ComponentTranslator {
 	defaultPipelineID := pipeline.NewIDWithName(pipeline.SignalMetrics, metricsVariantLogDest)
 	serviceEventsPipelineID := pipeline.NewIDWithName(pipeline.SignalMetrics, metricsVariantOtlpDest)
 
-	return routing.NewTranslator(common.AppSignals,
+	return routing.NewTranslator(metricsComponentName,
 		routing.WithErrorMode(ottl.IgnoreError),
 		routing.WithDefaultPipelines(defaultPipelineID),
 		routing.WithTable(routingconnector.RoutingTableItem{
@@ -213,7 +229,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 	}
 
 	connectorTranslator := newMetricsRoutingConnectorTranslator()
-	sigv4ID := component.NewIDWithName(component.MustNewType("sigv4auth"), metricsVariantOtlpDest)
+	sigv4ID := component.NewIDWithName(component.MustNewType("sigv4auth"), metricsComponentName)
 	metricsEndpoint := otlphttp.EndpointConfig{
 		MetricsEndpoint: fmt.Sprintf("https://monitoring.%s.amazonaws.com/v1/metrics", region),
 	}
@@ -231,7 +247,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(metricsVariantOtlpDest, metricsEndpoint,
 		otlphttp.WithAuthenticator(sigv4ID),
 	))
-	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(metricsVariantOtlpDest, sigv4auth.WithService("monitoring")))
+	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(metricsComponentName, sigv4auth.WithService("monitoring")))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 
 	return translators, nil
@@ -294,7 +310,7 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	}
 
 	if dynamic {
-		translators.Processors.Set(transformproc.NewTranslatorWithName(common.AppSignals, transformproc.WithLogStatements(statements)))
+		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName, transformproc.WithLogStatements(statements)))
 		translators.Processors.Set(attributestocontext.NewTranslator(attrActions))
 	}
 
@@ -313,9 +329,9 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	configKeys := common.AppSignalsConfigKeys[pipeline.SignalLogs]
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
 
-	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), common.AppSignals)
+	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), logsComponentName)
 	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
-	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), common.AppSignals)
+	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), logsComponentName)
 	logsEndpoint := otlphttp.EndpointConfig{
 		BaseEndpoint: fmt.Sprintf("https://logs.%s.amazonaws.com", region),
 		LogsEndpoint: fmt.Sprintf("https://logs.%s.amazonaws.com/v1/logs", region),
@@ -356,31 +372,31 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	if batch {
 		if dynamic {
 			translators.Processors.Set(batchproc.NewTranslator(
-				common.WithName(common.AppSignals),
+				common.WithName(logsComponentName),
 				batchproc.WithMetadataKeys(metadataKeys),
 				batchproc.WithTelemetrySection(common.LogsKey),
 			))
 		} else {
 			translators.Processors.Set(batchproc.NewTranslator(
-				common.WithName(common.AppSignals),
+				common.WithName(logsComponentName),
 				batchproc.WithTelemetrySection(common.LogsKey),
 			))
 		}
 	}
 
-	translators.Exporters.Set(otlphttp.NewTranslatorWithName(common.AppSignals, logsEndpoint,
+	translators.Exporters.Set(otlphttp.NewTranslatorWithName(logsComponentName, logsEndpoint,
 		otlphttp.WithAuthenticator(headersSetterID),
 	))
-	translators.Extensions.Set(headerssetter.NewTranslatorWithName(common.AppSignals,
+	translators.Extensions.Set(headerssetter.NewTranslatorWithName(logsComponentName,
 		headerssetter.WithAdditionalAuth(provisionerID),
 		headerssetter.WithHeaders(headerMappings),
 	))
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
-		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
+		translators.Exporters.Set(debug.NewTranslator(common.WithName(logsComponentName)))
 	}
 
-	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(common.AppSignals, sigv4auth.WithService("logs")))
+	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(logsComponentName, sigv4auth.WithService("logs")))
 	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4AuthID))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 

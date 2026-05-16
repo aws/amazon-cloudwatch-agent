@@ -22,29 +22,8 @@ func isLogsDisabled(conf *confmap.Conf, configKeys []string) bool {
 // NewTranslators returns pipeline translators for Application Signals.
 // For traces, returns a single pipeline. For metrics/logs, returns 3 pipelines
 // (receive, export_1, export_2) connected via a routing connector.
-func NewTranslators(conf *confmap.Conf, signal pipeline.Signal) common.PipelineTranslatorMap {
+func NewTranslators(_ *confmap.Conf, signal pipeline.Signal) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-
-	configKey, ok := common.AppSignalsConfigKeys[signal]
-	if !ok {
-		return translators
-	}
-	if conf == nil || (!conf.IsSet(configKey[0]) && !conf.IsSet(configKey[1])) {
-		// For logs: also activate if metrics is enabled (auto-opt-in)
-		if signal == pipeline.SignalLogs {
-			metricsKey := common.AppSignalsConfigKeys[pipeline.SignalMetrics]
-			if !conf.IsSet(metricsKey[0]) && !conf.IsSet(metricsKey[1]) {
-				return translators
-			}
-		} else {
-			return translators
-		}
-	}
-
-	// Check if explicitly disabled
-	if signal == pipeline.SignalLogs && isLogsDisabled(conf, configKey) {
-		return translators
-	}
 
 	switch signal {
 	case pipeline.SignalTraces:

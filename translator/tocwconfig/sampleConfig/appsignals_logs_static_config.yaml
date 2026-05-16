@@ -1,13 +1,21 @@
+connectors:
+    routing/application_signals_logs:
+        default_pipelines:
+            - logs/application_signals_logs_batch
+        error_mode: ignore
+        table:
+            - condition: attributes["event.name"] == "aws.telemend.aggregate_profile"
+              context: log
+              pipelines:
+                - logs/application_signals_logs_nobatch
+              statement: ""
 exporters:
-    otlphttp/application_signals:
+    otlphttp/application_signals_logs:
         auth:
-            authenticator: awscloudwatchlogsprovisioner
+            authenticator: headers_setter/application_signals_logs
         compression: gzip
         encoding: proto
         endpoint: https://logs.us-east-1.amazonaws.com
-        headers:
-            x-aws-log-group: null
-            x-aws-log-stream: null
         idle_conn_timeout: 1m30s
         logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
         max_idle_conns: 100
@@ -40,24 +48,33 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/application_signals
+        additional_auth: sigv4auth/application_signals_logs
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
     entitystore:
         mode: ec2
         region: us-east-1
-    sigv4auth/application_signals:
+    headers_setter/application_signals_logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              key: x-aws-log-group
+              value: /static/my-app
+            - action: upsert
+              key: x-aws-log-stream
+              value: my-stream
+    sigv4auth/application_signals_logs:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
         service: logs
 processors:
-    batch/application_signals:
+    batch/application_signals_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 200ms
+        timeout: 5s
 receivers:
     otlp/grpc_0_0_0_0_4315:
         protocols:
@@ -81,16 +98,29 @@ receivers:
                 write_timeout: 0s
 service:
     extensions:
-        - sigv4auth/application_signals
+        - headers_setter/application_signals_logs
+        - sigv4auth/application_signals_logs
         - awscloudwatchlogsprovisioner
         - agenthealth/logs
         - entitystore
     pipelines:
-        logs/application_signals:
+        logs/application_signals_logs_batch:
             exporters:
-                - otlphttp/application_signals
+                - otlphttp/application_signals_logs
             processors:
-                - batch/application_signals
+                - batch/application_signals_logs
+            receivers:
+                - routing/application_signals_logs
+        logs/application_signals_logs_nobatch:
+            exporters:
+                - otlphttp/application_signals_logs
+            processors: []
+            receivers:
+                - routing/application_signals_logs
+        logs/application_signals_logs_route:
+            exporters:
+                - routing/application_signals_logs
+            processors: []
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316

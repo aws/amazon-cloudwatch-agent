@@ -1,3 +1,24 @@
+connectors:
+    routing/application_signals_logs:
+        default_pipelines:
+            - logs/application_signals_logs_batch
+        error_mode: ignore
+        table:
+            - condition: attributes["event.name"] == "aws.telemend.aggregate_profile"
+              context: log
+              pipelines:
+                - logs/application_signals_logs_nobatch
+              statement: ""
+    routing/application_signals_metrics:
+        default_pipelines:
+            - metrics/application_signals_metrics_logs_destination
+        error_mode: ignore
+        table:
+            - condition: resource.attributes["Telemetry.Source"] == "Telemend"
+              context: ""
+              pipelines:
+                - metrics/application_signals_metrics_otlp_destination
+              statement: ""
 exporters:
     awsemf/application_signals:
         add_entity: false
@@ -159,18 +180,43 @@ exporters:
         telemetry:
             enabled: true
             include_metadata: true
-    otlphttp/application_signals:
+    otlphttp/application_signals_logs:
         auth:
-            authenticator: headers_setter/application_signals
+            authenticator: headers_setter/application_signals_logs
         compression: gzip
         encoding: proto
         endpoint: https://logs.us-east-1.amazonaws.com
-        headers:
-            x-aws-log-stream: null
         idle_conn_timeout: 1m30s
         logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
         max_idle_conns: 100
         metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/application_signals_metrics_otlp_destination:
+        auth:
+            authenticator: sigv4auth/application_signals_metrics
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: https://monitoring.us-east-1.amazonaws.com/v1/metrics
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -214,7 +260,7 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/application_signals
+        additional_auth: sigv4auth/application_signals_logs
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
@@ -237,17 +283,25 @@ extensions:
         region: us-east-1
         role_arn: ""
         service_name: ""
-    headers_setter/application_signals:
+    headers_setter/application_signals_logs:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
             - action: upsert
               from_context: aws.cloudwatch.log_group.destination
               key: x-aws-log-group
-    sigv4auth/application_signals:
+            - action: upsert
+              key: x-aws-log-stream
+              value: default
+    sigv4auth/application_signals_logs:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
         service: logs
+    sigv4auth/application_signals_metrics:
+        assume_role:
+            sts_region: us-east-1
+        region: us-east-1
+        service: monitoring
 processors:
     attributestocontext:
         actions:
@@ -263,13 +317,18 @@ processors:
         resolvers:
             - name: ""
               platform: ecs
-    batch/application_signals:
+    batch/application_signals_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
             - aws.cloudwatch.log_group.destination
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 200ms
+        timeout: 5s
+    batch/application_signals_metrics_otlp_destination:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
     metricstransform/application_signals:
         transforms:
             - action: update
@@ -1384,12 +1443,12 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
-    transform/application_signals:
+    transform/application_signals_logs:
         error_mode: propagate
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: ""
+              error_mode: propagate
               statements:
                 - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/service-events/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
         metric_statements: []
@@ -1427,27 +1486,53 @@ service:
         - agenthealth/traces
         - agenthealth/statuscode
         - agenthealth/logs
-        - headers_setter/application_signals
-        - sigv4auth/application_signals
+        - sigv4auth/application_signals_metrics
+        - headers_setter/application_signals_logs
+        - sigv4auth/application_signals_logs
         - awscloudwatchlogsprovisioner
     pipelines:
-        logs/application_signals:
+        logs/application_signals_logs_batch:
             exporters:
-                - otlphttp/application_signals
+                - otlphttp/application_signals_logs
             processors:
-                - transform/application_signals
+                - batch/application_signals_logs
+            receivers:
+                - routing/application_signals_logs
+        logs/application_signals_logs_nobatch:
+            exporters:
+                - otlphttp/application_signals_logs
+            processors: []
+            receivers:
+                - routing/application_signals_logs
+        logs/application_signals_logs_route:
+            exporters:
+                - routing/application_signals_logs
+            processors:
+                - transform/application_signals_logs
                 - attributestocontext
-                - batch/application_signals
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316
-        metrics/application_signals:
+        metrics/application_signals_metrics_logs_destination:
             exporters:
                 - awsemf/application_signals
             processors:
                 - metricstransform/application_signals
                 - resourcedetection
                 - awsapplicationsignals
+            receivers:
+                - routing/application_signals_metrics
+        metrics/application_signals_metrics_otlp_destination:
+            exporters:
+                - otlphttp/application_signals_metrics_otlp_destination
+            processors:
+                - batch/application_signals_metrics_otlp_destination
+            receivers:
+                - routing/application_signals_metrics
+        metrics/application_signals_metrics_route:
+            exporters:
+                - routing/application_signals_metrics
+            processors: []
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316

@@ -123,7 +123,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
@@ -143,7 +143,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
@@ -160,7 +160,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
@@ -218,7 +218,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -237,7 +237,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -294,7 +294,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -312,7 +312,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 				},
 			},
 			want: &want{
-				receivers:  []string{"routing/application_signals"},
+				receivers:  []string{"routing/application_signals_metrics"},
 				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -370,7 +370,7 @@ func TestTranslatorLogsRoute(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
-				processors: []string{"transform/application_signals", "attributestocontext"},
+				processors: []string{"transform/application_signals_logs", "attributestocontext"},
 				exporters:  []string{"routing/application_signals_logs"},
 				connectors: []string{"routing/application_signals_logs"},
 			},
@@ -412,10 +412,10 @@ func TestTranslatorLogsBatch(t *testing.T) {
 	require.NotNil(t, got)
 
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals")
-	assert.Equal(t, []string{"otlphttp/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals")
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals")
+	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals_logs")
+	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals_logs")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "awscloudwatchlogsprovisioner")
 }
 
@@ -438,6 +438,6 @@ func TestTranslatorLogsNoBatch(t *testing.T) {
 
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Empty(t, got.Processors.Keys())
-	assert.Equal(t, []string{"otlphttp/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals")
+	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
 }
