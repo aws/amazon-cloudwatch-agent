@@ -165,7 +165,8 @@ func newMetricsRoutingConnectorTranslator() common.ComponentTranslator {
 		routing.WithErrorMode(ottl.IgnoreError),
 		routing.WithDefaultPipelines(defaultPipelineID),
 		routing.WithTable(routingconnector.RoutingTableItem{
-			Condition: `resource.attributes["Telemetry.Source"] == "Telemend"`,
+			Context:   "datapoint",
+			Condition: `attributes["Telemetry.Source"] == "Telemend"`,
 			Pipelines: []pipeline.ID{serviceEventsPipelineID},
 		}),
 	)
