@@ -309,3 +309,25 @@ jobs:
           set -e
           go run ./clean_security_group/clean_security_group.go || { echo "Failed to clean security groups"; exit 1; }
 
+  clean-ssm-documents:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Clean Old Test SSM Documents and Parameters
+        working-directory: tool/clean
+        run: |
+          set -e
+          echo "Cleaning test SSM documents and parameters in us-west-2"
+          go run ./clean_ssm_documents/clean_ssm_documents.go --dry-run=false || { echo "Failed to clean SSM documents in us-west-2"; exit 1; }
+
