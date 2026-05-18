@@ -148,7 +148,7 @@ var (
 	SystemMetricsEnabledConfigKey = ConfigKey(AgentKey, SystemMetricsEnabledKey)
 	JmxConfigKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
 	ContainerInsightsConfigKey    = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
-	SyslogConfigKey              = ConfigKey(LogsKey, LogsCollectedKey, SyslogKey)
+	SyslogConfigKey               = ConfigKey(LogsKey, LogsCollectedKey, SyslogKey)
 
 	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
