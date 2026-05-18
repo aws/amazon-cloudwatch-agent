@@ -185,19 +185,19 @@ func TestCWLExporterTranslator_Translate(t *testing.T) {
 			assert.Equal(t, tc.wantLogStream, cfg.LogStreamName)
 			assert.Equal(t, tc.wantRetention, cfg.LogRetention)
 			assert.Equal(t, tc.wantRawLog, cfg.RawLog)
-			assert.Equal(t, tc.wantRegion, cfg.AWSSessionSettings.Region)
-			assert.Equal(t, tc.wantRoleARN, cfg.AWSSessionSettings.RoleARN)
-			assert.Equal(t, tc.wantLocalMode, cfg.AWSSessionSettings.LocalMode)
-			assert.Equal(t, tc.wantCertFile, cfg.AWSSessionSettings.CertificateFilePath)
+			assert.Equal(t, tc.wantRegion, cfg.Region)
+			assert.Equal(t, tc.wantRoleARN, cfg.RoleARN)
+			assert.Equal(t, tc.wantLocalMode, cfg.LocalMode)
+			assert.Equal(t, tc.wantCertFile, cfg.CertificateFilePath)
 			assert.Equal(t, tc.wantEndpoint, cfg.AWSSessionSettings.Endpoint)
 			if tc.wantEndpoint != "" {
 				assert.Equal(t, tc.wantEndpoint, cfg.Endpoint)
 			}
 			if tc.wantProfile != "" {
-				assert.Equal(t, tc.wantProfile, cfg.AWSSessionSettings.Profile)
+				assert.Equal(t, tc.wantProfile, cfg.Profile)
 			}
 			if tc.wantCredsFile != "" {
-				assert.Equal(t, []string{tc.wantCredsFile}, cfg.AWSSessionSettings.SharedCredentialsFile)
+				assert.Equal(t, []string{tc.wantCredsFile}, cfg.SharedCredentialsFile)
 			}
 		})
 	}
