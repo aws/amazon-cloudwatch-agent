@@ -277,7 +277,7 @@ func TestNewTranslatorsWithClientCAFile(t *testing.T) {
 
 func TestToFilters(t *testing.T) {
 	testCases := []struct {
-		name string
+		name  string
 		input map[string]any
 		want  int
 	}{
