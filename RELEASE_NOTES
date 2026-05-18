@@ -1,4 +1,66 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300068.0 (2026-05-11)
+========================================================================
+New Features
+* [Metrics] Add support for collecting Elastic Fabric Adapter (EFA) metrics on EC2 instances
+
+Bug Fixes
+* [Agent] Fix nil pointer dereference in kubernetesResolver.Stop() causing crash on shutdown
+* [Agent] Add IRSA and Pod Identity env var checks before JWT fallback in EKS detector
+* [ContainerInsights] Fix LIS scraper service selector to match renamed ec2-instance-store CSI plugin
+
+========================================================================
+Amazon CloudWatch Agent 1.300067.0 (2026-04-17)
+========================================================================
+Enhancements:
+* OTLP/ContainerInsights - KSM Node-metadata Enrichment
+* Add application-signals routing rules to awsproxy translator
+Bug Fixes:
+* fix reload server method - addresses 4311 bind issue
+
+========================================================================
+Amazon CloudWatch Agent 1.300066.1 (2026-04-06)
+========================================================================
+Enhancements:
+* Downgrade PMD error logs for systemmetrics pipeline
+* Bump xpath from 1.3.4 to 1.3.6
+
+========================================================================
+Amazon CloudWatch Agent 1.300066.0 (2026-03-25)
+========================================================================
+Features:
+* [OTLP] Support for configuring otlphttp exporter to publish to AWS OTLP endpoint using YAML
+* [ContainerInsights] Add support for publication to AWS OTLP endpoint using YAML
+
+Enhancements:
+* [Agent] Bump Go 1.25.8 and grpc v1.79.3 with dependency updates
+* [Agent] Remove ec2tagger from system-metrics pipeline if IMDS is not accessible
+
+========================================================================
+Amazon CloudWatch Agent 1.300065.0 (2026-03-17)
+========================================================================
+Features:
+* [Agent] Add pipeline for system metrics on recognized hosts
+
+Enhancements:
+* [Collectd] Adds append_dimensions to collectd, supporting custom metric dimensions
+
+Bug Fixes:
+* [Agent] Handle regex escaping for '+' in timestamp format
+
+========================================================================
+Amazon CloudWatch Agent 1.300064.1 (2026-02-05)
+========================================================================
+Enhancements:
+* Bump Go version
+
+========================================================================
+Amazon CloudWatch Agent 1.300064.0 (2026-01-09)
+========================================================================
+Enhancements:
+* Bump Expr to v1.17.7
+
+========================================================================
 Amazon CloudWatch Agent 1.300063.0 (2025-12-15)
 ========================================================================
 Features:

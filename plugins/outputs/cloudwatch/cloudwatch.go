@@ -45,7 +45,7 @@ const (
 	maxConcurrentPublisher                = 10 // the number of CloudWatch clients send request concurrently
 	defaultForceFlushInterval             = time.Minute
 	highResolutionTagKey                  = "aws:StorageResolution"
-	defaultRetryCount                     = 5 // this is the retry count, the total attempts would be retry count + 1 at most.
+	defaultRetryCount                     = 5 // total number of PutMetricData attempts per batch.
 	backoffRetryBase                      = 200 * time.Millisecond
 	MaxDimensions                         = 30
 )
@@ -93,7 +93,7 @@ func (c *CloudWatch) Capabilities() consumer.Capabilities {
 func (c *CloudWatch) Start(_ context.Context, host component.Host) error {
 	c.publisher, _ = publisher.NewPublisher(
 		publisher.NewNonBlockingFifoQueue(metricChanBufferSize),
-		maxConcurrentPublisher,
+		int64(c.config.MaxConcurrentPublishers),
 		2*time.Second,
 		c.WriteToCloudWatch)
 	credentialConfig := &configaws.CredentialConfig{
@@ -363,12 +363,17 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 // backoffSleep sleeps some amount of time based on number of retries done.
 func (c *CloudWatch) backoffSleep() {
 	d := 1 * time.Minute
-	if c.retries <= defaultRetryCount {
-		d = backoffRetryBase * time.Duration(1<<c.retries)
+	if c.retries <= c.config.MaxRetryCount {
+		d = c.config.BackoffRetryBase * time.Duration(1<<c.retries)
 	}
 	d = (d / 2) + publishJitter(d/2)
-	log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
-		c.retries, d.Milliseconds())
+	if !c.config.DowngradeErrors {
+		log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+			c.retries, d.Milliseconds())
+	} else {
+		log.Printf("I! cloudwatch: %v retries, going to sleep %v ms before retrying.",
+			c.retries, d.Milliseconds())
+	}
 	c.retries++
 	time.Sleep(d)
 }
@@ -405,7 +410,7 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 	}
 
 	var err error
-	for i := 0; i < defaultRetryCount; i++ {
+	for i := 0; i < c.config.MaxRetryCount; i++ {
 		_, err = c.svc.PutMetricData(params)
 		if err != nil {
 			awsErr, ok := err.(awserr.Error)
@@ -423,7 +428,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 				continue
 
 			default:
-				log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+				if !c.config.DowngradeErrors {
+					log.Printf("E! cloudwatch: code: %s, message: %s, original error: %+v", awsErr.Code(), awsErr.Message(), awsErr.OrigErr())
+				} else {
+					log.Printf("I! cloudwatch: PutMetricData unsuccessful")
+				}
 				c.backoffSleep()
 			}
 		} else {
@@ -432,7 +441,11 @@ func (c *CloudWatch) WriteToCloudWatch(req interface{}) {
 		break
 	}
 	if err != nil {
-		log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
+		if !c.config.DowngradeErrors {
+			log.Println("E! cloudwatch: WriteToCloudWatch failure, err: ", err)
+		} else {
+			log.Println("I! cloudwatch: WriteToCloudWatch unsuccessful, batch dropped")
+		}
 	}
 }
 

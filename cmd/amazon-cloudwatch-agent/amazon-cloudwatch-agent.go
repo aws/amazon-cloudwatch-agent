@@ -37,7 +37,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
-	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -348,11 +347,16 @@ func runAgent(ctx context.Context,
 
 	otelConfigs := fOtelConfigs
 	// try merging configs together, will return nil if nothing to merge
-	merged, err := mergeConfigs(otelConfigs)
+	merged, err := mergeConfigs(otelConfigs, envconfig.IsUsageDataEnabled())
 	if err != nil {
 		return err
 	}
 	if merged != nil {
+		if _, err = os.Stat(paths.YamlConfigPath); err == nil {
+			useragent.Get().AddFeatureFlags(featureFlagOtelMergeJSON)
+		} else {
+			useragent.Get().AddFeatureFlags(featureFlagOtelMergeYAML)
+		}
 		_ = os.Setenv(envconfig.CWAgentMergedOtelConfig, toyamlconfig.ToYamlConfig(merged.ToStringMap()))
 		otelConfigs = []string{"env:" + envconfig.CWAgentMergedOtelConfig}
 	} else {
@@ -416,37 +420,6 @@ func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.Co
 		},
 		LoggingOptions: loggingOptions,
 	}
-}
-
-// mergeConfigs tries to merge configurations together. If nothing to merge, returns nil without an error.
-func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
-	var loaders []confmap.Loader
-	if envconfig.IsRunningInContainer() {
-		content, ok := os.LookupEnv(envconfig.CWOtelConfigContent)
-		if ok && len(content) > 0 {
-			log.Printf("D! Merging OTEL configuration from: %s", envconfig.CWOtelConfigContent)
-			loaders = append(loaders, confmap.NewByteLoader(envconfig.CWOtelConfigContent, []byte(content)))
-		}
-	}
-	// If using environment variable or passing in more than one config
-	if len(loaders) > 0 || len(configPaths) > 1 {
-		log.Printf("D! Merging OTEL configurations from: %s", configPaths)
-		for _, configPath := range configPaths {
-			loaders = append(loaders, confmap.NewFileLoader(configPath))
-		}
-		result := confmap.New()
-		for _, loader := range loaders {
-			conf, err := loader.Load()
-			if err != nil {
-				return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
-			}
-			if err = result.Merge(conf); err != nil {
-				return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
-			}
-		}
-		return result, nil
-	}
-	return nil, nil
 }
 
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {

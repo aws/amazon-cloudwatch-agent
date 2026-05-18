@@ -106,16 +106,16 @@ var TimeFormatRexMap = map[string]string{
 // The characters required to be escaped are these characters special in regex, but normal in json.
 // Characters are special in regex:
 // ^ . * ? + - \ | [ ] ( ) { } $
-// + is already part of the timestamp format
 // - is not required to be escaped when not inside [].
 // \ is already required to be escaped in json too.
 // The remaining characters are:
-// ^ . * ? | [ ] ( ) { } $
+// ^ . * ? + | [ ] ( ) { } $
 var TimeFormatRegexEscapeMap = map[string]string{
 	"^": "\\^",
 	".": "\\.",
 	"*": "\\*",
 	"?": "\\?",
+	"+": "\\+",
 	"|": "\\|",
 	"[": "\\[",
 	"]": "\\]",

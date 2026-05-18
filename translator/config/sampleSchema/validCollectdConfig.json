@@ -1,0 +1,18 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "collectd": {
+        "service_address": "udp://127.0.0.1:25826",
+        "name_prefix": "collectd_",
+        "collectd_auth_file": "/etc/collectd/auth_file",
+        "collectd_security_level": "encrypt",
+        "metrics_aggregation_interval": 60,
+        "append_dimensions": {
+          "InstanceId": "${aws:InstanceId}",
+          "Component": "MyService",
+          "Environment": "Production"
+        }
+      }
+    }
+  }
+}

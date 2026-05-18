@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	systemmetricspipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -415,6 +416,15 @@ func TestCollectDConfig(t *testing.T) {
 	checkTranslation(t, "collectd_config_linux", "darwin", nil, "")
 }
 
+// CollectD with append_dimensions
+func TestCollectDAppendDimensionsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "collectd_append_dimensions_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "collectd_append_dimensions_linux", "darwin", nil, "")
+}
+
 // diskio
 func TestDiskIOTelegrafConfig(t *testing.T) {
 	resetContext(t)
@@ -437,6 +447,17 @@ func TestDiskIOMixedConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "diskio_mixed_config_linux", "linux", expectedEnvVars, "")
+}
+
+func TestSystemMetricsConfig(t *testing.T) {
+	resetContext(t)
+	t.Setenv(envconfig.SystemMetricsEnabled, "true")
+	context.CurrentContext().SetMode(config.ModeEC2)
+	orig := systemmetricspipeline.IsIMDSAvailable
+	systemmetricspipeline.IsIMDSAvailable = func() bool { return true }
+	t.Cleanup(func() { systemmetricspipeline.IsIMDSAvailable = orig })
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "system_metrics_config", "linux", expectedEnvVars, "")
 }
 
 // prometheus
@@ -943,6 +964,7 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 
 func resetContext(t *testing.T) {
 	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
+	t.Setenv(envconfig.SystemMetricsEnabled, "false")
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-west-2", "ACJ"
 	}

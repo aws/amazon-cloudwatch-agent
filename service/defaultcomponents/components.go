@@ -8,6 +8,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
@@ -15,6 +16,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatorateprocessor"
@@ -23,6 +26,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbytraceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricsgenerationprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstarttimeprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstransformprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
@@ -33,11 +37,16 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsecscontainermetricsreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/collectdreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
@@ -46,6 +55,7 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
+	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/zpagesextension"
 	"go.opentelemetry.io/collector/otelcol"
@@ -59,15 +69,19 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
+	"github.com/aws/amazon-cloudwatch-agent/extension/nodemetadatacache"
 	"github.com/aws/amazon-cloudwatch-agent/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsneuron"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/gpuattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
+	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 )
 
 func Factories() (otelcol.Factories, error) {
@@ -78,16 +92,22 @@ func Factories() (otelcol.Factories, error) {
 		awscontainerinsightreceiver.NewFactory(),
 		awscontainerinsightskueuereceiver.NewFactory(),
 		awsecscontainermetricsreceiver.NewFactory(),
+		awsefareceiver.NewFactory(),
+		awsekshyperpodreceiver.NewFactory(),
 		awsnvmereceiver.NewFactory(),
 		awsxrayreceiver.NewFactory(),
+		collectdreceiver.NewFactory(),
 		filelogreceiver.NewFactory(),
+		hostmetricsreceiver.NewFactory(),
 		jaegerreceiver.NewFactory(),
 		jmxreceiver.NewFactory(),
 		kafkareceiver.NewFactory(),
+		kubeletstatsreceiver.NewFactory(),
 		nopreceiver.NewFactory(),
 		otlpreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
+		systemmetricsreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
 		zipkinreceiver.NewFactory(),
@@ -98,7 +118,10 @@ func Factories() (otelcol.Factories, error) {
 	if factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory](
 		attributesprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
+		awsattributelimitprocessor.NewFactory(),
 		awsentity.NewFactory(),
+		awsdevicepodcorrelationprocessor.NewFactory(),
+		awsneuron.NewFactory(),
 		batchprocessor.NewFactory(),
 		cumulativetodeltaprocessor.NewFactory(),
 		deltatocumulativeprocessor.NewFactory(),
@@ -111,8 +134,10 @@ func Factories() (otelcol.Factories, error) {
 		groupbyattrsprocessor.NewFactory(),
 		k8sattributesprocessor.NewFactory(),
 		memorylimiterprocessor.NewFactory(),
+		metricstarttimeprocessor.NewFactory(),
 		metricsgenerationprocessor.NewFactory(),
 		metricstransformprocessor.NewFactory(),
+		nodemetadataenricher.NewFactory(),
 		probabilisticsamplerprocessor.NewFactory(),
 		resourceprocessor.NewFactory(),
 		resourcedetectionprocessor.NewFactory(),
@@ -131,6 +156,7 @@ func Factories() (otelcol.Factories, error) {
 		cloudwatch.NewFactory(),
 		debugexporter.NewFactory(),
 		nopexporter.NewFactory(),
+		otlphttpexporter.NewFactory(),
 		prometheusremotewriteexporter.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
@@ -138,9 +164,11 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Extensions, err = otelcol.MakeFactoryMap[extension.Factory](
 		agenthealth.NewFactory(),
+		awscloudwatchlogsprovisionerextension.NewFactory(),
 		awsproxy.NewFactory(),
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
+		nodemetadatacache.NewFactory(),
 		server.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),

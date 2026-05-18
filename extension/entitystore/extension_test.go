@@ -18,9 +18,12 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/exp/maps"
+	"k8s.io/client-go/rest"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
@@ -77,6 +80,7 @@ type mockMetadataProvider struct {
 	InstanceIdentityDocument *ec2metadata.EC2InstanceIdentityDocument
 	Tags                     map[string]string
 	InstanceTagError         bool
+	HostnameError            bool
 }
 
 func mockMetadataProviderFunc() ec2metadataprovider.MetadataProvider {
@@ -106,6 +110,9 @@ func (m *mockMetadataProvider) Get(ctx context.Context) (ec2metadata.EC2Instance
 }
 
 func (m *mockMetadataProvider) Hostname(ctx context.Context) (string, error) {
+	if m.HostnameError {
+		return "", errors.New("hostname unavailable")
+	}
 	return "MockHostName", nil
 }
 
@@ -707,4 +714,72 @@ func assertIfNonEmpty(t *testing.T, message string, pattern string) {
 	if pattern != "" {
 		assert.NotContains(t, message, pattern)
 	}
+}
+
+func TestStartLeaseWriter_MissingNodeName(t *testing.T) {
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+	getEnv = func(_ string) string { return "" }
+
+	logger, _ := zap.NewDevelopment()
+	e := &EntityStore{logger: logger}
+	e.startLeaseWriter()
+	assert.Nil(t, e.leaseWriter, "leaseWriter should be nil when K8S_NODE_NAME is missing")
+}
+
+func TestStartLeaseWriter_K8sConfigFailure(t *testing.T) {
+	origGetEnv := getEnv
+	origGetK8sConfig := getK8sConfig
+	defer func() {
+		getEnv = origGetEnv
+		getK8sConfig = origGetK8sConfig
+	}()
+	getEnv = func(key string) string {
+		switch key {
+		case "K8S_NODE_NAME":
+			return "test-node"
+		case "K8S_NAMESPACE":
+			return "amazon-cloudwatch"
+		}
+		return ""
+	}
+	getK8sConfig = func() (*rest.Config, error) {
+		return nil, errors.New("not in cluster")
+	}
+
+	core, logs := observer.New(zap.ErrorLevel)
+	logger := zap.New(core)
+	e := &EntityStore{logger: logger}
+	e.startLeaseWriter()
+	assert.Nil(t, e.leaseWriter, "leaseWriter should be nil when K8s config fails")
+	require.Equal(t, 1, logs.Len())
+	assert.Contains(t, logs.All()[0].Message, "Failed to create in-cluster K8s config for LeaseWriter")
+}
+
+func TestStartLeaseWriter_DefaultNamespace(t *testing.T) {
+	origGetEnv := getEnv
+	origGetK8sConfig := getK8sConfig
+	defer func() {
+		getEnv = origGetEnv
+		getK8sConfig = origGetK8sConfig
+	}()
+	getEnv = func(key string) string {
+		if key == "K8S_NODE_NAME" {
+			return "test-node"
+		}
+		return "" // K8S_NAMESPACE not set — exercises the default "amazon-cloudwatch" code path
+	}
+	getK8sConfig = func() (*rest.Config, error) {
+		return nil, errors.New("not in cluster")
+	}
+
+	core, logs := observer.New(zap.ErrorLevel)
+	logger := zap.New(core)
+	e := &EntityStore{logger: logger}
+	e.startLeaseWriter()
+	// K8s config fails after the default namespace is applied. The error log
+	// confirms we reached the K8s config step (past the namespace default).
+	assert.Nil(t, e.leaseWriter)
+	require.Equal(t, 1, logs.Len())
+	assert.Contains(t, logs.All()[0].Message, "Failed to create in-cluster K8s config for LeaseWriter")
 }

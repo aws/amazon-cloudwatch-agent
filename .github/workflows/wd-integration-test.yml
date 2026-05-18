@@ -42,13 +42,20 @@ jobs:
             exit 1
           fi
       - run: |-
-          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
-          if [[ $conclusion == "success" ]]; then
-            echo "Run succeeded"
-          else
-            echo "Run failed"
-            exit 1
-          fi
+          for i in {1..6}; do
+            conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+            if [[ "$conclusion" == "success" ]]; then
+              echo "Run succeeded"
+              exit 0
+            elif [[ "$conclusion" == "failure" || "$conclusion" == "cancelled" ]]; then
+              echo "Run failed with: $conclusion"
+              exit 1
+            fi
+            echo "Waiting for workflow to complete (attempt $i)..."
+            sleep 5
+          done
+          echo "Timed out waiting for workflow"
+          exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -62,13 +69,13 @@ jobs:
       ec2_windows_wd_matrix: ${{ steps.set-matrix.outputs.ec2_windows_wd_matrix }}
       ec2_windows_wd_nvidia_matrix: ${{ steps.set-matrix.outputs.ec2_windows_wd_nvidia_matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
           go-version: ~1.22.2
 
@@ -83,7 +90,7 @@ jobs:
 
   EC2LinuxWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -93,13 +100,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -109,7 +116,7 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: 1.12.0
 
@@ -117,7 +124,9 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        id: terraform_apply
+        continue-on-error: true
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 30
@@ -151,9 +160,23 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -169,7 +192,7 @@ jobs:
 
   EC2WindowsWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -179,13 +202,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -195,7 +218,7 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: 1.12.0
 
@@ -203,7 +226,9 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        id: terraform_apply
+        continue-on-error: true
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -230,9 +255,23 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -248,7 +287,7 @@ jobs:
 
   EC2NvidiaLinuxWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -258,13 +297,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -274,7 +313,7 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: 1.12.0
 
@@ -282,7 +321,9 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        id: terraform_apply
+        continue-on-error: true
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 30
@@ -316,9 +357,23 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -334,7 +389,7 @@ jobs:
 
   EC2NvidiaWindowsWorkloadDiscoveryIntegrationTest:
     needs: [ GenerateTestMatrix ]
-    name: ${{matrix.arrays.testName}}
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -344,13 +399,13 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ env.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ inputs.test_repo_branch || env.CWA_GITHUB_TEST_REPO_BRANCH }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
@@ -360,7 +415,7 @@ jobs:
         run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
 
       - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: 1.12.0
 
@@ -368,7 +423,9 @@ jobs:
         run: terraform --version
 
       - name: Terraform apply
-        uses: nick-fields/retry@v2
+        id: terraform_apply
+        continue-on-error: true
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -395,9 +452,23 @@ jobs:
               terraform destroy -auto-approve && exit 1
             fi
 
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
       - name: Terraform destroy
         if: ${{ (cancelled() || failure()) }}
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 3
           timeout_minutes: 8

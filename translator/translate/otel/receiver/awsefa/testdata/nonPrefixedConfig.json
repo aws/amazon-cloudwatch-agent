@@ -1,0 +1,12 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "efa": {
+        "measurement": [
+          "tx_bytes",
+          "rx_dropped"
+        ]
+      }
+    }
+  }
+}

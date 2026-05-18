@@ -41,13 +41,20 @@ jobs:
             exit 1
           fi
       - run: |
-          conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
-          if [[ $conclusion == "success" ]]; then
-            echo "Run succeeded"
-          else
-            echo "Run failed"
-            exit 1
-          fi
+          for i in {1..6}; do
+            conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+            if [[ "$conclusion" == "success" ]]; then
+              echo "Run succeeded"
+              exit 0
+            elif [[ "$conclusion" == "failure" || "$conclusion" == "cancelled" ]]; then
+              echo "Run failed with: $conclusion"
+              exit 1
+            fi
+            echo "Waiting for workflow to complete (attempt $i)..."
+            sleep 5
+          done
+          echo "Timed out waiting for workflow"
+          exit 1
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

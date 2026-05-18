@@ -13,6 +13,7 @@ import (
 
 type Loader interface {
 	Load() (*Conf, error)
+	ID() string
 }
 
 type FileLoader struct {
@@ -21,6 +22,10 @@ type FileLoader struct {
 
 func NewFileLoader(path string) *FileLoader {
 	return &FileLoader{path: path}
+}
+
+func (f *FileLoader) ID() string {
+	return f.path
 }
 
 func (f *FileLoader) Load() (*Conf, error) {
@@ -39,6 +44,10 @@ type ByteLoader struct {
 
 func NewByteLoader(id string, content []byte) *ByteLoader {
 	return &ByteLoader{id: id, content: content}
+}
+
+func (b *ByteLoader) ID() string {
+	return b.id
 }
 
 func (b *ByteLoader) Load() (*Conf, error) {

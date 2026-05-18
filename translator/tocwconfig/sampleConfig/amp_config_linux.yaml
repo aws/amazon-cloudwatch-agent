@@ -1,10 +1,13 @@
 exporters:
     awscloudwatch:
+        backoff_retry_base: 200ms
         drop_original_metrics:
             CPU_USAGE_IDLE: true
             cpu_time_active: true
         force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
         max_datums_per_call: 1000
+        max_retry_count: 5
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent

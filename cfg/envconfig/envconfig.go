@@ -37,6 +37,8 @@ const (
 	CWOtelConfigContent         = "CW_OTEL_CONFIG_CONTENT"
 	CWAgentMergedOtelConfig     = "CWAGENT_MERGED_OTEL_CONFIG"
 	CWAgentLogsBackpressureMode = "CWAGENT_LOGS_BACKPRESSURE_MODE"
+	SystemMetricsEnabled        = "SYSTEM_METRICS_ENABLED"
+	OtelCIVersion               = "OTEL_CI_VERSION"
 
 	// confused deputy prevention related headers
 	AmzSourceAccount = "AMZ_SOURCE_ACCOUNT" // populates the "x-amz-source-account" header

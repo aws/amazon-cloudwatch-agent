@@ -93,6 +93,15 @@ func TestTimestampRegexRule(t *testing.T) {
 				value: "(foo)",
 			},
 		},
+		"WithSpecialCharacter": {
+			input: map[string]interface{}{
+				"timestamp_format": "%Y-%m-%dT%H:%M:%S.%f+00:00",
+			},
+			want: &want{
+				key:   "timestamp_regex",
+				value: "(\\d{4}-\\s{0,1}\\d{1,2}-\\s{0,1}\\d{1,2}T\\d{2}:\\d{2}:\\d{2}\\.(\\d{1,9})\\+00:00)",
+			},
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -104,7 +113,7 @@ func TestTimestampRegexRule(t *testing.T) {
 	}
 }
 
-func TestTimestampLayoutxRule(t *testing.T) {
+func TestTimestampLayoutRule(t *testing.T) {
 	layout := new(TimestampLayout)
 	type want struct {
 		key   string
@@ -185,6 +194,15 @@ func TestTimestampLayoutxRule(t *testing.T) {
 			want: &want{
 				key:   "timestamp_layout",
 				value: []string{"foo"},
+			},
+		},
+		"WithSpecialCharacter": {
+			input: map[string]interface{}{
+				"timestamp_format": "%Y-%m-%dT%H:%M:%S.%f+00:00",
+			},
+			want: &want{
+				key:   "timestamp_layout",
+				value: []string{"2006-01-_2T15:04:05..000+00:00", "2006-1-_2T15:04:05..000+00:00"},
 			},
 		},
 	}

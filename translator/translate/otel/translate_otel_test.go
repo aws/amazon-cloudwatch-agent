@@ -21,6 +21,7 @@ import (
 )
 
 func TestTranslator(t *testing.T) {
+	t.Setenv("SYSTEM_METRICS_ENABLED", "false")
 	agent.Global_Config.Region = "us-east-1"
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	testCases := map[string]struct {

@@ -8,15 +8,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/testutil"
 )
 
 func TestDefaultConfig(t *testing.T) {
-	d := new(Ethtool)
-	var input interface{}
-	err := json.Unmarshal([]byte(`{"ethtool": {
-					}}`), &input)
-	assert.NoError(t, err)
-	_, actual := d.ApplyRule(input)
+	_, actual := testutil.UnmarshalAndApplyRule(t, `{"ethtool": {}}`, new(Ethtool))
 
 	expected := []interface{}{map[string]interface{}{
 		"interface_include": []string{"*"},
@@ -26,9 +23,7 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestFullConfig(t *testing.T) {
-	d := new(Ethtool)
-	var input interface{}
-	err := json.Unmarshal([]byte(`{"ethtool": {
+	_, actual := testutil.UnmarshalAndApplyRule(t, `{"ethtool": {
 					"interface_include": [
 						"eth0"
 					],
@@ -41,9 +36,7 @@ func TestFullConfig(t *testing.T) {
 					"append_dimensions":{
 						"name":"sampleName"
 					}
-					}}`), &input)
-	assert.NoError(t, err)
-	_, actual := d.ApplyRule(input)
+					}}`, new(Ethtool))
 
 	expected := []interface{}{map[string]interface{}{
 		"interface_include": []string{"eth0"},

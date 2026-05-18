@@ -17,6 +17,7 @@ type Config struct {
 	Stats               *agent.StatsConfig  `mapstructure:"stats,omitempty"`
 	IsStatusCodeEnabled bool                `mapstructure:"is_status_code_enabled,omitempty"`
 	UsageMetadata       []metadata.Metadata `mapstructure:"usage_metadata,omitempty"`
+	AdditionalAuth      *component.ID       `mapstructure:"additional_auth,omitempty"`
 }
 
 var _ component.Config = (*Config)(nil)
