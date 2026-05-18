@@ -53,15 +53,15 @@ func (t *cwlExporterTranslator) Translate(c *confmap.Conf) (component.Config, er
 	cfg.LogRetention = t.retentionInDays
 	cfg.RawLog = true
 
-	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
+	cfg.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	endpointKey := common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
 	if endpoint, ok := common.GetString(c, endpointKey); ok {
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
-		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
+		cfg.Profile = fmt.Sprintf("%v", profileKey)
 	}
 	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
