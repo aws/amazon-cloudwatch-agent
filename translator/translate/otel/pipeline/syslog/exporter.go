@@ -63,17 +63,17 @@ func (t *cwlExporterTranslator) Translate(c *confmap.Conf) (component.Config, er
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.Profile = fmt.Sprintf("%v", profileKey)
 	}
-	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
-	cfg.AWSSessionSettings.RoleARN = agent.Global_Config.Role_arn
+	cfg.Region = agent.Global_Config.Region
+	cfg.RoleARN = agent.Global_Config.Role_arn
 	roleARNKey := common.ConfigKey(common.LogsKey, common.CredentialsKey, common.RoleARNKey)
 	if c.IsSet(roleARNKey) {
-		cfg.AWSSessionSettings.RoleARN, _ = common.GetString(c, roleARNKey)
+		cfg.RoleARN, _ = common.GetString(c, roleARNKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
-		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+		cfg.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
-		cfg.AWSSessionSettings.LocalMode = true
+		cfg.LocalMode = true
 	}
 	return cfg, nil
 }
