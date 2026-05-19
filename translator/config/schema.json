@@ -658,6 +658,9 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "journald": {
+              "$ref": "#/definitions/logsDefinition/definitions/logsJournaldDefinition"
             }
           },
           "minProperties": 1,
@@ -1147,6 +1150,75 @@
           "required": [
             "collect_list"
           ]
+        },
+        "logsJournaldDefinition": {
+          "type": "object",
+          "descriptions": "Specifies the journald logs to be collected on linux systems",
+          "properties": {
+            "collect_list": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "log_group_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+                  },
+                  "log_stream_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+                  },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
+                  "retention_in_days": {
+                    "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
+                  },
+                  "units": {
+                    "type": "array",
+                    "description": "Array of systemd units to read from",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "Minimum priority level to collect. Valid values: emerg, alert, crit, err, warning, notice, info, debug, or a numeric value 0-7",
+                    "maxLength": 16,
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "matches": {
+                    "type": "array",
+                    "description": "Array of journald field match objects for filtering log entries",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "uniqueItems": true
+                    }
+                  }
+                },
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 16384,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "collect_list"
+          ],
+          "additionalProperties": false
         },
         "logGroupNameDefinition": {
           "type": "string",

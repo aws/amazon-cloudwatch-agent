@@ -271,6 +271,28 @@
             "auto_removal": true
           }
         ]
+      },
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "system-logs",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 7,
+            "units": ["systemd", "sshd"]
+          },
+          {
+            "log_group_name": "application-logs",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 30,
+            "units": ["nginx", "apache2"],
+            "filters": [
+              {
+                "type": "include",
+                "expression": "error"
+              }
+            ]
+          }
+        ]
       }
     },
     "log_stream_name": "LOG_STREAM_NAME",
