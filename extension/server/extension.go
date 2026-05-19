@@ -6,7 +6,9 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +29,7 @@ type Server struct {
 	httpsServer    *http.Server
 	ctx            context.Context
 	watcher        *tlsInternal.CertWatcher
+	mu             sync.Mutex
 }
 
 var _ extension.Extension = (*Server)(nil)
@@ -83,9 +86,9 @@ func NewServer(logger *zap.Logger, config *Config) *Server {
 func (s *Server) Start(context.Context, component.Host) error {
 	if s.httpsServer != nil {
 		s.logger.Debug("Starting HTTPS server...")
+		srv := s.httpsServer
 		go func() {
-			err := s.httpsServer.ListenAndServeTLS("", "")
-			if err != nil {
+			if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				s.logger.Debug("failed to serve and listen", zap.Error(err))
 			}
 		}()
@@ -103,13 +106,16 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) reloadServer(config *tls.Config) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.logger.Debug("Reloading TLS Server...")
-	// close the current server
+	// Gracefully shut down the current server, waiting for the listener to close
+	// so the port is free before we rebind.
 	if s.httpsServer != nil {
 		// closing the server gracefully
 		ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 		defer cancel()
-		// Use Shutdown instead of Close: Shutdown closes the listener before returning,
+		// Use Shutdown instead of Close: Shutdown closes the listener before returning
 		if err := s.httpsServer.Shutdown(ctx); err != nil {
 			s.logger.Error("Failed to shutdown HTTPS server", zap.Error(err))
 		}
@@ -117,16 +123,16 @@ func (s *Server) reloadServer(config *tls.Config) error {
 	// Create a new HTTP server with the new router and updated TLS config
 	httpsRouter := gin.New()
 	s.setRouter(httpsRouter)
-	s.httpsServer = &http.Server{
+	newServer := &http.Server{
 		Addr:              s.config.ListenAddress,
 		Handler:           httpsRouter,
-		TLSConfig:         config,
+		TLSConfig:         config.Clone(),
 		ReadHeaderTimeout: 90 * time.Second,
 	}
+	s.httpsServer = newServer
 
 	go func() {
-		err := s.httpsServer.ListenAndServeTLS("", "")
-		if err != nil {
+		if err := newServer.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("failed to serve and listen", zap.Error(err))
 		}
 	}()
