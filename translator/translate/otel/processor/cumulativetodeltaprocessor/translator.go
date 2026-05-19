@@ -26,6 +26,7 @@ const (
 var (
 	netKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.NetKey)
 	diskioKey  = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.DiskIOKey)
+	efaKey     = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.EfaKey)
 	otlpKey    = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey, common.OtlpKey)
 	otlpEmfKey = common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.OtlpKey)
 
@@ -39,7 +40,7 @@ var (
 )
 
 func WithDefaultKeys() common.TranslatorOption {
-	return WithConfigKeys(diskioKey, netKey, otlpKey, otlpEmfKey)
+	return WithConfigKeys(diskioKey, netKey, efaKey, otlpKey, otlpEmfKey)
 }
 
 func WithConfigKeys(keys ...string) common.TranslatorOption {

@@ -195,6 +195,25 @@ func TestTranslator(t *testing.T) {
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
 		},
+		"WithDeltaMetricsAndEfa": {
+			input: map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"net": map[string]interface{}{},
+						"efa": map[string]interface{}{},
+					},
+				},
+			},
+			pipelineName: common.PipelineNameHostDeltaMetrics,
+			mode:         config.ModeEC2,
+			want: &want{
+				pipelineID: "metrics/hostDeltaMetrics",
+				receivers:  []string{"nop", "other"},
+				processors: []string{"cumulativetodelta/hostDeltaMetrics", "transform/hostDeltaMetrics", "awsentity/resource"},
+				exporters:  []string{"awscloudwatch"},
+				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
+			},
+		},
 		"WithMetricsKeyStatsD": {
 			input: map[string]interface{}{
 				"metrics": map[string]interface{}{
