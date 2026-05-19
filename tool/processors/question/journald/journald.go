@@ -57,7 +57,7 @@ func monitorJournald(ctx *runtime.Context, config *data.Config) {
 		// Units (optional)
 		var units []string
 		if util.Yes("Do you want to filter by specific systemd units?") {
-			fmt.Println("Common systemd units: (sshd, docker, nginx, apache2, systemd-networkd, amazon-ssm-agent, crond)")
+			fmt.Println("Common systemd units: (sshd, nginx, apache2, systemd-networkd, amazon-ssm-agent, crond)")
 			unitsInput := util.Ask("Enter unit names to monitor (comma-separated):")
 			if unitsInput != "" {
 				for _, unit := range strings.Split(unitsInput, ",") {
