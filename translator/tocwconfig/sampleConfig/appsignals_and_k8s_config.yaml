@@ -14,7 +14,7 @@ connectors:
             - metrics/application_signals_metrics_logs_destination
         error_mode: ignore
         table:
-            - condition: attributes["Telemetry.Source"] == "Telemend"
+            - condition: attributes["Telemetry.Source"] == "ServiceEvents"
               context: datapoint
               pipelines:
                 - metrics/application_signals_metrics_otlp_destination
