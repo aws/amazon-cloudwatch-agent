@@ -87,52 +87,47 @@ jobs:
       - name: Verify Terraform version
         run: terraform --version
 
-      # nick-fields/retry@v2 starts at base dir
       - name: Terraform apply
         id: terraform_apply
         continue-on-error: true
-        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
-        with:
-          max_attempts: 2
-          timeout_minutes: 60
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd ${{inputs.test_dir}}
-            fi
+        timeout-minutes: 60
+        run: |
+          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
+            cd "${{ matrix.arrays.terraform_dir }}"
+          else
+            cd ${{inputs.test_dir}}
+          fi
 
-            terraform init
-            if terraform apply --auto-approve \
-              -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
-              -var="ami=${{ matrix.arrays.ami }}" \
-              -var="arc=${{ matrix.arrays.arc }}" \
-              -var="binary_name=${{ matrix.arrays.binaryName }}" \
-              -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-              -var="cwa_github_sha=${{inputs.build_id}}" \
-              -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-              -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
-              -var="github_test_repo=${{ inputs.test_repo_url }}" \
-              -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
-              -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-              -var="is_selinux_test=${{ inputs.is_selinux_test }}" \
-              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
-              -var="local_stack_host_name=${{ inputs.localstack_host }}" \
-              -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
-              -var="region=${{ inputs.region }}" \
-              -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
-              -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
-              -var="ssh_key_name=${{env.KEY_NAME}}" \
-              -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
-              -var="test_dir=${{ matrix.arrays.test_dir }}" \
-              -var="test_name=${{ matrix.arrays.os }}" \
-              -var="is_onprem=${{ inputs.is_onprem_test }}" \
-              -var="user=${{ matrix.arrays.username }}"; then
-              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
-            else
-              terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
-            fi
+          terraform init
+          if terraform apply --auto-approve \
+            -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
+            -var="ami=${{ matrix.arrays.ami }}" \
+            -var="arc=${{ matrix.arrays.arc }}" \
+            -var="binary_name=${{ matrix.arrays.binaryName }}" \
+            -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
+            -var="cwa_github_sha=${{inputs.build_id}}" \
+            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+            -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
+            -var="github_test_repo=${{ inputs.test_repo_url }}" \
+            -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
+            -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
+            -var="is_selinux_test=${{ inputs.is_selinux_test }}" \
+            -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
+            -var="local_stack_host_name=${{ inputs.localstack_host }}" \
+            -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
+            -var="region=${{ inputs.region }}" \
+            -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
+            -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
+            -var="ssh_key_name=${{env.KEY_NAME}}" \
+            -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="test_name=${{ matrix.arrays.os }}" \
+            -var="is_onprem=${{ inputs.is_onprem_test }}" \
+            -var="user=${{ matrix.arrays.username }}"; then
+            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+          else
+            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
+          fi
       
       - name: "[WIP] ✅ Passed"
         if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
