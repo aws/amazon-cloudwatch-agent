@@ -664,11 +664,13 @@
               "properties": {
                 "log_group_name": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "maxLength": 512
                 },
                 "log_stream_name": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "maxLength": 512
                 }
               },
               "additionalProperties": true
