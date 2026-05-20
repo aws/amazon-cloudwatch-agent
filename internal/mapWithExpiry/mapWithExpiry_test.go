@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMapWithExpiry_add(t *testing.T) {
@@ -36,7 +37,7 @@ func TestMapWithExpiry_delete(t *testing.T) {
 }
 
 func TestMapWithExpiry_cleanup(t *testing.T) {
-	store := NewMapWithExpiry(time.Second)
+	store := NewMapWithExpiry(50 * time.Millisecond)
 	store.Set("key1", "value1")
 
 	store.CleanUp(time.Now())
@@ -45,10 +46,11 @@ func TestMapWithExpiry_cleanup(t *testing.T) {
 	assert.Equal(t, "value1", val.(string))
 	assert.Equal(t, 1, store.Size())
 
-	time.Sleep(time.Second)
-	store.CleanUp(time.Now())
+	require.Eventually(t, func() bool {
+		store.CleanUp(time.Now())
+		return store.Size() == 0
+	}, time.Second, 50*time.Millisecond)
 	val, ok = store.Get("key1")
 	assert.Equal(t, false, ok)
 	assert.Equal(t, nil, val)
-	assert.Equal(t, 0, store.Size())
 }

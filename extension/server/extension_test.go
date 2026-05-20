@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -314,7 +316,16 @@ func TestServerStartAndShutdown(t *testing.T) {
 			err := server.Start(ctx, nil)
 			assert.NoError(t, err)
 
-			time.Sleep(1 * time.Second)
+			if server.httpsServer != nil {
+				require.Eventually(t, func() bool {
+					conn, err := net.DialTimeout("tcp", tt.config.ListenAddress, 50*time.Millisecond)
+					if err != nil {
+						return false
+					}
+					conn.Close()
+					return true
+				}, 1*time.Second, 50*time.Millisecond)
+			}
 
 			err = server.Shutdown(ctx)
 			assert.NoError(t, err)

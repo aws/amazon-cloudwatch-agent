@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -57,7 +58,7 @@ func scrapeAndValidateMetrics(t *testing.T, cfg *sanityTestConfig) {
 	err := receiver.start(ctx, nil)
 	as.NoError(err)
 
-	otelMetrics := scrapeMetrics(as, ctx, receiver, sink, cfg)
+	otelMetrics := scrapeMetrics(ctx, t, as, receiver, sink, cfg)
 
 	err = receiver.shutdown(ctx)
 	as.NoError(err)
@@ -86,7 +87,7 @@ func getInitializedReceiver(as *assert.Assertions, plugin string, testConfig str
 	return newAdaptedReceiver(a.Config.Inputs[0], ctx, consumer, zap.NewNop())
 }
 
-func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *AdaptedReceiver, sink *consumertest.MetricsSink, cfg *sanityTestConfig) pmetric.Metrics {
+func scrapeMetrics(ctx context.Context, t *testing.T, as *assert.Assertions, receiver *AdaptedReceiver, sink *consumertest.MetricsSink, cfg *sanityTestConfig) pmetric.Metrics {
 
 	var err error
 	var otelMetrics pmetric.Metrics
@@ -98,22 +99,17 @@ func scrapeMetrics(as *assert.Assertions, ctx context.Context, receiver *Adapted
 		as.NoError(err)
 		as.NoError(conn.Close())
 
-		for {
+		require.Eventually(t, func() bool {
 			otelMetrics = pmetric.NewMetrics()
 			for _, metric := range sink.AllMetrics() {
 				metric.ResourceMetrics().MoveAndAppendTo(otelMetrics.ResourceMetrics())
 			}
-			as.NoError(err)
-
-			time.Sleep(time.Second)
-			if otelMetrics.ResourceMetrics().Len() > 0 {
-				break
-			}
-		}
+			return otelMetrics.ResourceMetrics().Len() > 0
+		}, time.Second, 50*time.Millisecond)
 	} else {
 		for i := 0; i < cfg.regularInputConfig.scrapeCount; i++ {
 			if i != 0 {
-				time.Sleep(time.Second)
+				time.Sleep(50 * time.Millisecond)
 			}
 			otelMetrics, err = receiver.scrape(ctx)
 			as.NoError(err)

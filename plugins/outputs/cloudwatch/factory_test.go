@@ -15,6 +15,7 @@ import (
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
+	t.Parallel()
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig()
 	assert.NotNil(t, cfg, "failed to create default config")
@@ -22,6 +23,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 }
 
 func TestCreateExporter(t *testing.T) {
+	t.Parallel()
 	factory := NewFactory()
 
 	cfg := factory.CreateDefaultConfig()

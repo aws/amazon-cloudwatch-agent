@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.uber.org/zap"
 
@@ -23,6 +24,7 @@ var emptyResourceAttributes = pcommon.NewMap()
 var logger, _ = zap.NewDevelopment()
 
 func TestAdmitAndRollup(t *testing.T) {
+	t.Parallel()
 	config := &awsapplicationsignalsconfig.LimiterConfig{
 		Threshold:         2,
 		Disabled:          false,
@@ -61,6 +63,7 @@ func TestAdmitAndRollup(t *testing.T) {
 }
 
 func TestAdmitByTopK(t *testing.T) {
+	t.Parallel()
 	config := awsapplicationsignalsconfig.LimiterConfig{
 		Threshold:         100,
 		Disabled:          false,
@@ -91,6 +94,7 @@ func TestAdmitByTopK(t *testing.T) {
 }
 
 func TestAdmitLowCardinalityAttributes(t *testing.T) {
+	t.Parallel()
 	config := awsapplicationsignalsconfig.LimiterConfig{
 		Threshold:         10,
 		Disabled:          false,
@@ -111,6 +115,7 @@ func TestAdmitLowCardinalityAttributes(t *testing.T) {
 }
 
 func TestAdmitReservedMetrics(t *testing.T) {
+	t.Parallel()
 	config := awsapplicationsignalsconfig.LimiterConfig{
 		Threshold:         10,
 		Disabled:          false,
@@ -140,7 +145,9 @@ func TestAdmitReservedMetrics(t *testing.T) {
 }
 
 func TestClearStaleService(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
 
 	config := awsapplicationsignalsconfig.LimiterConfig{
 		Threshold:         10,
@@ -148,8 +155,8 @@ func TestClearStaleService(t *testing.T) {
 		LogDroppedMetrics: false,
 
 		ParentContext:             ctx,
-		RotationInterval:          time.Second,
-		GarbageCollectionInterval: time.Second,
+		RotationInterval:          50 * time.Millisecond,
+		GarbageCollectionInterval: 50 * time.Millisecond,
 	}
 	limiter := NewMetricsLimiter(&config, logger)
 
@@ -160,24 +167,24 @@ func TestClearStaleService(t *testing.T) {
 		limiter.Admit(appName, attr, emptyResourceAttributes)
 	}
 
-	time.Sleep(10 * time.Second)
-	cancel()
-
 	metricsLimiter := limiter.(*MetricsLimiter)
-	serviceCount := 0
-	metricsLimiter.services.Range(func(_, _ interface{}) bool {
-		serviceCount++
-		return true
-	})
-	assert.Equal(t, 0, serviceCount)
+	require.Eventually(t, func() bool {
+		serviceCount := 0
+		metricsLimiter.services.Range(func(_, _ interface{}) bool {
+			serviceCount++
+			return true
+		})
+		return serviceCount == 0
+	}, 6*time.Second, 50*time.Millisecond)
 }
 
 func TestInheritanceAfterRotation(t *testing.T) {
+	t.Parallel()
 	config := awsapplicationsignalsconfig.LimiterConfig{
 		Threshold:         10,
 		Disabled:          false,
 		LogDroppedMetrics: true,
-		RotationInterval:  5 * time.Second,
+		RotationInterval:  50 * time.Millisecond,
 	}
 	config.Validate()
 
@@ -191,7 +198,15 @@ func TestInheritanceAfterRotation(t *testing.T) {
 	}
 
 	// wait for rotation
-	time.Sleep(6 * time.Second)
+	ml := limiter.(*MetricsLimiter)
+	svcVal, _ := ml.services.Load("app")
+	svc := svcVal.(*service)
+	require.Eventually(t, func() bool {
+		svc.rwLock.RLock()
+		defer svc.rwLock.RUnlock()
+		return svc.rotations >= 1
+	}, 3*time.Second, 50*time.Millisecond)
+
 	// validate 0-10 are admitted
 	for i := 0; i < 10; i++ {
 		attr := newFixedAttributes(i)
@@ -210,9 +225,13 @@ func TestInheritanceAfterRotation(t *testing.T) {
 	}
 
 	// wait for rotation
-	time.Sleep(6 * time.Second)
+	require.Eventually(t, func() bool {
+		svc.rwLock.RLock()
+		defer svc.rwLock.RUnlock()
+		return svc.rotations >= 2
+	}, 3*time.Second, 50*time.Millisecond)
 
-	// validate 1--20 are admitted
+	// validate 10-20 are admitted
 	for i := 10; i < 20; i++ {
 		attr := newFixedAttributes(i)
 		ok, _ := limiter.Admit("latency", attr, emptyResourceAttributes)
@@ -221,22 +240,31 @@ func TestInheritanceAfterRotation(t *testing.T) {
 }
 
 func TestRotationInterval(t *testing.T) {
-	svc := newService("test", 1, 5*time.Second, context.Background(), logger)
-	// wait for secondary to be created
-	time.Sleep(7 * time.Second)
+	t.Parallel()
+	svc := newService("test", 1, 200*time.Millisecond, context.Background(), logger)
+	// wait for secondary to be created (first rotation)
+	require.Eventually(t, func() bool {
+		svc.rwLock.RLock()
+		defer svc.rwLock.RUnlock()
+		return svc.secondaryCMS != nil
+	}, 3*time.Second, 50*time.Millisecond)
+
 	for i := 0; i < 5; i++ {
 		svc.rwLock.Lock()
 		svc.secondaryCMS.matrix[0][0] = 1
 		svc.rwLock.Unlock()
 
-		// wait for rotation
-		time.Sleep(5 * time.Second)
+		// wait for rotation to promote secondary to primary
+		require.Eventually(t, func() bool {
+			svc.rwLock.RLock()
+			defer svc.rwLock.RUnlock()
+			return svc.primaryCMS.matrix[0][0] == 1 && svc.secondaryCMS.matrix[0][0] == 0
+		}, 3*time.Second, 50*time.Millisecond)
 
-		// verify secondary is promoted to primary
-		svc.rwLock.Lock()
+		svc.rwLock.RLock()
 		assert.Equal(t, 0, svc.secondaryCMS.matrix[0][0])
 		assert.Equal(t, 1, svc.primaryCMS.matrix[0][0])
-		svc.rwLock.Unlock()
+		svc.rwLock.RUnlock()
 	}
 }
 

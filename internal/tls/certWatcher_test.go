@@ -13,18 +13,15 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-)
-
-const (
-	// Set up paths for test certificates
-	testCertPath = "./testdata/server.crt"
-	testKeyPath  = "./testdata/server.key"
-	testCAPath   = "./testdata/tls-ca.crt"
 )
 
 func createRootCert(caPath string) (*x509.Certificate, *rsa.PrivateKey, error) {
@@ -138,102 +135,91 @@ func writeCerts(certPath, keyPath, caPath, ip string) error {
 	return nil
 }
 
-func TestMain(m *testing.M) {
-	// Setup
-	err := Init()
-	if err != nil {
-		panic(err)
-	}
-
-	// Run tests
-	code := m.Run()
-
-	// Teardown (if needed)
-	// You can add cleanup code here
-
-	// Exit with the test result code
-	os.Exit(code)
-}
-
-func Init() error {
-
-	// Generate test certificates
-	err := writeCerts(testCertPath, testKeyPath, testCAPath, "127.0.0.1")
-	if err != nil {
-		return err
-	}
-
-	return nil
+func setupCerts(t *testing.T) (string, string, string) {
+	t.Helper()
+	dir := t.TempDir()
+	certPath := filepath.Join(dir, "server.crt")
+	keyPath := filepath.Join(dir, "server.key")
+	caPath := filepath.Join(dir, "tls-ca.crt")
+	require.NoError(t, writeCerts(certPath, keyPath, caPath, "127.0.0.1"))
+	return certPath, keyPath, caPath
 }
 
 func TestNewCertWatcher(t *testing.T) {
-	// Setup
+	t.Parallel()
+	certPath, keyPath, caPath := setupCerts(t)
 	logger := zaptest.NewLogger(t)
 
-	// Test case: Create a new CertWatcher
-	cw, err := NewCertWatcher(testCertPath, testKeyPath, testCAPath, logger)
+	cw, err := NewCertWatcher(certPath, keyPath, caPath, logger)
 	assert.NoError(t, err, "Failed to create CertWatcher")
 
-	// Check if the initial TLS config was loaded correctly
 	assert.NotNil(t, cw.GetTLSConfig(), "TLS config was not loaded correctly")
 }
 
 func TestRegisterCallback(t *testing.T) {
-	// Setup
+	t.Parallel()
+	certPath, keyPath, caPath := setupCerts(t)
 	logger := zaptest.NewLogger(t)
 
-	cw, err := NewCertWatcher(testCertPath, testKeyPath, testCAPath, logger)
+	cw, err := NewCertWatcher(certPath, keyPath, caPath, logger)
 	assert.NoError(t, err, "Failed to create CertWatcher")
 
-	// Test case: Register a callback
-	callbackCalled := false
+	var callbackCalled atomic.Bool
 	callback := func() {
-		callbackCalled = true
+		callbackCalled.Store(true)
 	}
 	cw.RegisterCallback(callback)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		err := cw.Start(ctx)
 		assert.NoError(t, err, "Failed to start CertWatcher")
 	}()
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
 
-	// Trigger a certificate change event
-	_, _, err = createRootCert(testCAPath)
+	_, _, err = createRootCert(caPath)
 	assert.NoError(t, err, "Failed to update root certificate")
 
-	// Wait for the callback to be called
-	time.Sleep(1 * time.Second)
-
-	assert.True(t, callbackCalled)
+	require.Eventually(t, func() bool {
+		return callbackCalled.Load()
+	}, 1*time.Second, 50*time.Millisecond)
 }
 
 func TestWatchCertificateChanges(t *testing.T) {
-	// Setup
+	t.Parallel()
+	certPath, keyPath, caPath := setupCerts(t)
 	logger := zaptest.NewLogger(t)
 
-	cw, err := NewCertWatcher(testCertPath, testKeyPath, testCAPath, logger)
+	cw, err := NewCertWatcher(certPath, keyPath, caPath, logger)
 	assert.NoError(t, err, "Failed to create CertWatcher")
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		err := cw.Start(ctx)
 		assert.NoError(t, err, "Failed to start CertWatcher")
 	}()
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
 
 	beforeTLSConfig := cw.GetTLSConfig()
 
-	// Trigger a certificate change event
-	_, _, err = createRootCert(testCAPath)
+	_, _, err = createRootCert(caPath)
 	assert.NoError(t, err, "Failed to update root certificate")
 
-	// Wait for the certificate change to be processed
-	time.Sleep(2 * time.Second)
-
-	// Check if the TLS config was updated
-	assert.True(t, beforeTLSConfig != cw.GetTLSConfig(), "TLS config was not updated after certificate change")
+	require.Eventually(t, func() bool {
+		return beforeTLSConfig != cw.GetTLSConfig()
+	}, 2*time.Second, 50*time.Millisecond, "TLS config was not updated after certificate change")
 }

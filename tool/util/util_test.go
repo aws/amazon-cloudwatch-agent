@@ -27,6 +27,7 @@ var expectResult = `{
 }`
 
 func TestCurOS(t *testing.T) {
+	t.Parallel()
 	assert.Equal(t, runtime.GOOS, CurOS())
 }
 
@@ -39,6 +40,7 @@ func TestReadConfigFromJsonFile(t *testing.T) {
 }
 
 func TestSerializeResultMapToJsonByteArray(t *testing.T) {
+	t.Parallel()
 	resultMap := make(map[string]interface{})
 
 	agentMap := make(map[string]interface{})
@@ -53,7 +55,6 @@ func TestSerializeResultMapToJsonByteArray(t *testing.T) {
 
 	bytes := SerializeResultMapToJsonByteArray(resultMap)
 	assert.Equal(t, expectResult, string(bytes))
-
 }
 
 func TestSaveResultByteArrayToJsonFile(t *testing.T) {
@@ -143,6 +144,7 @@ func TestChoiceIndex(t *testing.T) {
 }
 
 func TestBackupConfigFile(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	configFilePath := filepath.Join(tmpDir, "testConfig.json")
 	err := os.WriteFile(configFilePath, []byte(`{"key":"value"}`), 0644)
@@ -159,10 +161,9 @@ func TestBackupConfigFile(t *testing.T) {
 		backupFileContents, err := os.ReadFile(filepath.Join(backupDirPath, files[0].Name()))
 		assert.Nil(t, err)
 		assert.Equal(t, `{"key":"value"}`, string(backupFileContents))
-		time.Sleep(time.Second)
+		time.Sleep(10 * time.Millisecond)
 	}
 	files, err := os.ReadDir(backupDirPath)
 	assert.Nil(t, err)
 	assert.Equal(t, 10, len(files))
-
 }

@@ -360,8 +360,8 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 	}
 }
 
-// backoffSleep sleeps some amount of time based on number of retries done.
-func (c *CloudWatch) backoffSleep() {
+// backoffDuration calculates the next backoff duration with jitter and increments the retry counter.
+func (c *CloudWatch) backoffDuration() time.Duration {
 	d := 1 * time.Minute
 	if c.retries <= c.config.MaxRetryCount {
 		d = c.config.BackoffRetryBase * time.Duration(1<<c.retries)
@@ -375,7 +375,11 @@ func (c *CloudWatch) backoffSleep() {
 			c.retries, d.Milliseconds())
 	}
 	c.retries++
-	time.Sleep(d)
+	return d
+}
+
+func (c *CloudWatch) backoffSleep() {
+	time.Sleep(c.backoffDuration())
 }
 
 func createEntityMetricData(entityToMetrics map[string][]*cloudwatch.MetricDatum) []*cloudwatch.EntityMetricData {

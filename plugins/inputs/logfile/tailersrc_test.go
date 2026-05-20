@@ -120,8 +120,10 @@ func TestTailerSrc(t *testing.T) {
 	}
 	file.Sync()
 
-	// Give the tailer some time to process the file
-	time.Sleep(10 * time.Second)
+	// Wait for the tailer to process all lines
+	require.Eventually(t, func() bool {
+		return len(eventCh) >= len(lines)
+	}, 10*time.Second, 100*time.Millisecond)
 
 	// Check the received events
 	close(eventCh)
@@ -205,7 +207,7 @@ func TestEventDoneCallback(t *testing.T) {
 
 	done := make(chan struct{})
 
-	i := 0
+	var count atomic.Int32
 	ts.SetOutput(func(evt logs.LogEvent) {
 		if evt == nil {
 			close(done)
@@ -214,45 +216,49 @@ func TestEventDoneCallback(t *testing.T) {
 		sle, ok := evt.(logs.StatefulLogEvent)
 		assert.True(t, ok)
 		sle.Done()
-		i++
-		switch i {
+		n := int(count.Load()) + 1
+		switch n {
 		case 10:
 			// Test before first truncate
-			time.Sleep(1 * time.Second)
-			b, err := os.ReadFile(stateFilePath)
-			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
-			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
-			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
-			require.Equal(t, offset, 1010, fmt.Sprintf("Wrong offset %v is written to state file, expecting 1010", offset))
+			require.Eventually(t, func() bool {
+				b, err := os.ReadFile(stateFilePath)
+				if err != nil {
+					return false
+				}
+				offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+				return err == nil && offset == 1010
+			}, 1*time.Second, 50*time.Millisecond)
 		case 15:
 			// Test after first truncate, saved offset should decrease
-			time.Sleep(1 * time.Second)
-			log.Println(stateFilePath)
-			b, err := os.ReadFile(stateFilePath)
-			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
-			file_parts := bytes.Split(b, []byte("\n"))
-			log.Println("file_parts: ", file_parts)
-			file_string := string(file_parts[0])
-			log.Println("file_string: ", file_string)
-			offset, err := strconv.Atoi(file_string)
-			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
-			require.Equal(t, offset, 505, fmt.Sprintf("Wrong offset %v is written to state file, after truncate and write shorter logs expecting 505", offset))
+			require.Eventually(t, func() bool {
+				b, err := os.ReadFile(stateFilePath)
+				if err != nil {
+					return false
+				}
+				offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+				return err == nil && offset == 505
+			}, 1*time.Second, 50*time.Millisecond)
 		case 35:
-			time.Sleep(1 * time.Second)
-			b, err := os.ReadFile(stateFilePath)
-			require.NoError(t, err, fmt.Sprintf("Failed to read state file: %v", err))
-			offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
-			require.NoError(t, err, fmt.Sprintf("Failed to parse offset: %v, from '%s'", err, b))
-			require.Equal(t, offset, 2020, fmt.Sprintf("Wrong offset %v is written to state file, after truncate and write shorter logs expecting 2022", offset))
+			require.Eventually(t, func() bool {
+				b, err := os.ReadFile(stateFilePath)
+				if err != nil {
+					return false
+				}
+				offset, err := strconv.Atoi(string(bytes.Split(b, []byte("\n"))[0]))
+				return err == nil && offset == 2020
+			}, 1*time.Second, 50*time.Millisecond)
 		}
+		count.Add(1)
 	})
 
 	// Write 100 lines (save state should record 1010 bytes)
 	for i := 0; i < 10; i++ {
 		fmt.Fprintln(file, logLine("A", 100, time.Now()))
 	}
-	log.Println("Wait 1 seconds before truncate")
-	time.Sleep(1 * time.Second)
+	log.Println("Wait for tailer to process before truncate")
+	require.Eventually(t, func() bool {
+		return count.Load() >= 10
+	}, 1*time.Second, 50*time.Millisecond)
 
 	// First truncate then write 50 lines (save state should record 505 bytes)
 
@@ -268,8 +274,10 @@ func TestEventDoneCallback(t *testing.T) {
 		fmt.Fprintln(file, logLine("B", 100, time.Now()))
 	}
 
-	log.Println("Wait 5 seconds before truncate")
-	time.Sleep(5 * time.Second)
+	log.Println("Wait for tailer to process before truncate")
+	require.Eventually(t, func() bool {
+		return count.Load() >= 15
+	}, 5*time.Second, 100*time.Millisecond)
 	log.Println("Truncate then write 20 lines")
 
 	// Second truncate then write 20 lines (save state should record 2020 bytes)
@@ -281,14 +289,16 @@ func TestEventDoneCallback(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		fmt.Fprintln(file, logLine("C", 100, time.Now()))
 	}
-	time.Sleep(3 * time.Second)
+	require.Eventually(t, func() bool {
+		return count.Load() >= 35
+	}, 3*time.Second, 100*time.Millisecond)
 
 	// Removal of log file should stop tailersrc
 	err = os.Remove(file.Name())
 	require.NoError(t, err, fmt.Sprintf("failed to remove log file '%v': %v", file.Name(), err))
 
 	<-done
-	require.GreaterOrEqual(t, i, 35, fmt.Sprintf("Not enough logs have been processed, only %v are processed", i))
+	require.GreaterOrEqual(t, int(count.Load()), 35, fmt.Sprintf("Not enough logs have been processed, only %v are processed", count.Load()))
 }
 
 func TestTailerSrcFiltersSingleLineLogs(t *testing.T) {
@@ -333,7 +343,7 @@ func TestTailerSrcFiltersMultiLineLogs(t *testing.T) {
 
 	unmatchedLog := "This should not be matched." + strings.Repeat("\nbar", 5)
 
-	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 100)
+	publishLogsToFile(resources.file, matchedLog, unmatchedLog, n, 20)
 
 	// Removal of log file should stop tailersrc
 	err := os.Remove(resources.file.Name())
