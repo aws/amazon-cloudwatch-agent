@@ -1458,7 +1458,7 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/service-events/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
+                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/service-events/", resource.attributes["service.name"]], ""))
                 - replace_pattern(resource.attributes["aws.cloudwatch.log_group.destination"], "<nil>", "undefined")
         metric_statements: []
         trace_statements: []

@@ -453,8 +453,6 @@ func templateToLiteral(segments []templateSegment) string {
 // not expected in log stream names for application_signals customers, so collisions
 // with literal "<nil>" are not a concern while still a possibility.
 func buildOTTLSetStatements(metadataKey string, segments []templateSegment) []string {
-	whereGuard := fmt.Sprintf(` where resource.attributes["%s"] == nil`, metadataKey)
-
 	var parts []string
 	for _, seg := range segments {
 		if seg.attribute != "" {
@@ -465,7 +463,7 @@ func buildOTTLSetStatements(metadataKey string, segments []templateSegment) []st
 	}
 
 	return []string{
-		fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")) + whereGuard,
+		fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")),
 		fmt.Sprintf(`replace_pattern(resource.attributes["%s"], "<nil>", "undefined")`, metadataKey),
 	}
 }
