@@ -145,7 +145,7 @@ var (
 	AppSignalsConfigKeys = map[pipeline.Signal][]string{
 		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
-		pipeline.SignalLogs:    {AppSignalsLogs, AppSignalsLogsFallback},
+		pipeline.SignalLogs:    {AppSignalsLogs},
 	}
 	SystemMetricsEnabledConfigKey = ConfigKey(AgentKey, SystemMetricsEnabledKey)
 	JmxConfigKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)

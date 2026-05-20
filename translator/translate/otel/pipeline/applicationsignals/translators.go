@@ -10,19 +10,15 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-func isLogsDisabled(conf *confmap.Conf, configKeys []string) bool {
-	for _, key := range configKeys {
-		if v, ok := common.GetBool(conf, common.ConfigKey(key, "disable")); ok && v {
-			return true
-		}
-	}
-	return false
+func isLogsDisabled(conf *confmap.Conf) bool {
+	v, ok := common.GetBool(conf, common.ConfigKey(common.AppSignalsLogs, "disabled"))
+	return ok && v
 }
 
 // NewTranslators returns pipeline translators for Application Signals.
 // For traces, returns a single pipeline. For metrics/logs, returns 3 pipelines
 // (receive, export_1, export_2) connected via a routing connector.
-func NewTranslators(_ *confmap.Conf, signal pipeline.Signal) common.PipelineTranslatorMap {
+func NewTranslators(conf *confmap.Conf, signal pipeline.Signal) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 
 	switch signal {
@@ -33,6 +29,9 @@ func NewTranslators(_ *confmap.Conf, signal pipeline.Signal) common.PipelineTran
 		translators.Set(NewTranslator(signal, SetVariant(metricsVariantLogDest)))
 		translators.Set(NewTranslator(signal, SetVariant(metricsVariantOtlpDest)))
 	case pipeline.SignalLogs:
+		if isLogsDisabled(conf) {
+			break
+		}
 		translators.Set(NewTranslator(signal, SetVariant(logsVariantRoute)))
 		translators.Set(NewTranslator(signal, SetVariant(logsVariantBatch)))
 		translators.Set(NewTranslator(signal, SetVariant(logsVariantNoBatch)))

@@ -287,18 +287,12 @@ func TestNewTranslatorsLogsDisabled(t *testing.T) {
 			},
 			"logs_collected": map[string]interface{}{
 				"application_signals": map[string]interface{}{
-					"disable": true,
+					"disabled": true,
 				},
 			},
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
 	translators := NewTranslators(conf, pipeline.SignalLogs)
-	// Translators are always registered; Translate returns error when disabled
-	assert.Equal(t, 3, translators.Len())
-	translators.Range(func(pt common.PipelineTranslator) {
-		result, err := pt.Translate(conf)
-		assert.Nil(t, result)
-		assert.Error(t, err)
-	})
+	assert.Equal(t, 0, translators.Len())
 }

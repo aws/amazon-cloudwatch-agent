@@ -95,19 +95,16 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if conf == nil {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 	}
-	if !conf.IsSet(configKey[0]) && !conf.IsSet(configKey[1]) {
+	if !conf.IsSet(configKey[0]) && (len(configKey) < 2 || !conf.IsSet(configKey[1])) {
 		// For logs: also activate if metrics is enabled (auto-opt-in)
 		if t.signal == pipeline.SignalLogs {
 			metricsKey := common.AppSignalsConfigKeys[pipeline.SignalMetrics]
-			if !conf.IsSet(metricsKey[0]) && !conf.IsSet(metricsKey[1]) {
+			if !conf.IsSet(metricsKey[0]) && (len(metricsKey) < 2 || !conf.IsSet(metricsKey[1])) {
 				return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 			}
 		} else {
 			return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 		}
-	}
-	if t.signal == pipeline.SignalLogs && isLogsDisabled(conf, configKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 	}
 
 	switch t.signal {

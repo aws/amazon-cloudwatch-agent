@@ -36,7 +36,7 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
-	cfg := attributestocontextprocessor.NewFactory().CreateDefaultConfig()
+	cfg := t.factory.CreateDefaultConfig()
 	var actionsList []interface{}
 	for _, a := range t.actions {
 		actionsList = append(actionsList, map[string]interface{}{
