@@ -4,14 +4,19 @@
 package applicationsignals
 
 import (
+	gocontext "context"
 	"fmt"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pipeline"
+	"go.opentelemetry.io/collector/processor/processortest"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -477,4 +482,89 @@ func TestServiceEndpoint(t *testing.T) {
 			assert.Equal(t, tt.expected, serviceEndpoint(tt.service, tt.region, tt.path))
 		})
 	}
+}
+
+func TestBuildOTTLSetStatementsNilPlaceholder(t *testing.T) {
+	statements := buildOTTLSetStatements("aws.cloudwatch.log_group.destination", parseTemplate("/aws/service-events/{service.name}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	// service.name NOT set — Concat produces "<nil>", replace_pattern fixes it
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	val, found := attrs.Get("aws.cloudwatch.log_group.destination")
+	require.True(t, found, "destination attribute should be set")
+	assert.Equal(t, "/aws/service-events/undefined", val.Str())
+}
+
+func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
+	statements := buildOTTLSetStatements("aws.cloudwatch.log_group.destination", parseTemplate("/aws/service-events/{service.name}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	// service.name IS set — Concat resolves normally, replace_pattern is no-op
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.Resource().Attributes().PutStr("service.name", "my-service")
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	val, found := attrs.Get("aws.cloudwatch.log_group.destination")
+	require.True(t, found)
+	assert.Equal(t, "/aws/service-events/my-service", val.Str())
 }

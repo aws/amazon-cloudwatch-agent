@@ -284,12 +284,12 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	var attrActions []attributestocontext.ActionMapping
 
 	if hasPlaceholders(logGroupTemplate) {
-		statements = append(statements, buildOTTLSetStatement(metadataKeyLogGroup, logGroupTemplate))
+		statements = append(statements, buildOTTLSetStatements(metadataKeyLogGroup, logGroupTemplate)...)
 		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
 	}
 
 	if hasPlaceholders(logStreamTemplate) {
-		statements = append(statements, buildOTTLSetStatement(metadataKeyLogStream, logStreamTemplate))
+		statements = append(statements, buildOTTLSetStatements(metadataKeyLogStream, logStreamTemplate)...)
 		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
 	}
 
@@ -447,7 +447,12 @@ func templateToLiteral(segments []templateSegment) string {
 	return sb.String()
 }
 
-func buildOTTLSetStatement(metadataKey string, segments []templateSegment) string {
+// buildOTTLSetStatements generates OTTL statements that resolve a template into a
+// resource attribute. After Concat, any "<nil>" in the resolved string is replaced
+// with "undefined" via replace_pattern. "<nil>" is invalid for log group names and
+// not expected in log stream names for application_signals customers, so collisions
+// with literal "<nil>" are not a concern while still a possibility.
+func buildOTTLSetStatements(metadataKey string, segments []templateSegment) []string {
 	whereGuard := fmt.Sprintf(` where resource.attributes["%s"] == nil`, metadataKey)
 
 	var parts []string
@@ -458,7 +463,11 @@ func buildOTTLSetStatement(metadataKey string, segments []templateSegment) strin
 			parts = append(parts, fmt.Sprintf(`"%s"`, seg.literal))
 		}
 	}
-	return fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")) + whereGuard
+
+	return []string{
+		fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")) + whereGuard,
+		fmt.Sprintf(`replace_pattern(resource.attributes["%s"], "<nil>", "undefined")`, metadataKey),
+	}
 }
 
 // SetVariant implements common.TranslatorOption for setting the pipeline variant.

@@ -91,7 +91,9 @@ processors:
               error_mode: propagate
               statements:
                 - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], "")) where resource.attributes["aws.cloudwatch.log_group.destination"] == nil
+                - replace_pattern(resource.attributes["aws.cloudwatch.log_group.destination"], "<nil>", "undefined")
                 - set(resource.attributes["aws.cloudwatch.log_stream.destination"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], "")) where resource.attributes["aws.cloudwatch.log_stream.destination"] == nil
+                - replace_pattern(resource.attributes["aws.cloudwatch.log_stream.destination"], "<nil>", "undefined")
         metric_statements: []
         trace_statements: []
 receivers:
