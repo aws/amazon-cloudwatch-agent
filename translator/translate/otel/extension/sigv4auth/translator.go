@@ -14,7 +14,6 @@ import (
 )
 
 type translator struct {
-	name    string
 	service string
 	factory extension.Factory
 }
@@ -26,11 +25,11 @@ func NewTranslator() common.ComponentTranslator {
 }
 
 func NewTranslatorWithService(service string) common.ComponentTranslator {
-	return &translator{name: service, service: service, factory: sigv4authextension.NewFactory()}
+	return &translator{service: service, factory: sigv4authextension.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.service)
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
