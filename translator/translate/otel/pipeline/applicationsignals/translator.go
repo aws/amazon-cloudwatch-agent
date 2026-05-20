@@ -242,12 +242,11 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 
 	translators.Receivers.Set(connectorTranslator)
 
-	translators.Processors.Set(batchproc.NewTranslator(common.WithName(metricsVariantOtlpDest), batchproc.WithTelemetrySection(common.LogsKey)))
+	translators.Processors.Set(batchproc.NewTranslator(common.WithName(metricsVariantOtlpDest), batchproc.WithTelemetrySection(common.MetricsKey)))
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(metricsVariantOtlpDest, metricsEndpoint,
 		otlphttp.WithAuthenticator(sigv4ID),
 	))
 	translators.Extensions.Set(sigv4auth.NewTranslatorWithService("monitoring"))
-	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 
 	return translators, nil
 }
@@ -274,7 +273,7 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	// receiver config since both resolve to the same OTLP receiver (auto-opt-in
 	// doesn't create logs.logs_collected.application_signals in the JSON config).
 	receiverSignal := pipeline.SignalLogs.String()
-	if !conf.IsSet(configKeys[0]) && !conf.IsSet(configKeys[1]) {
+	if !conf.IsSet(configKeys[0]) && (len(configKeys) < 2 || !conf.IsSet(configKeys[1])) {
 		receiverSignal = pipeline.SignalMetrics.String()
 	}
 

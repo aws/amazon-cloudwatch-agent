@@ -50,16 +50,3 @@ func TestTranslatorWithAuthenticator(t *testing.T) {
 	assert.Equal(t, authID, otlpCfg.ClientConfig.Auth.AuthenticatorID)
 }
 
-func TestTranslatorWithHeaders(t *testing.T) {
-	tr := NewTranslatorWithName("headers_test", EndpointConfig{},
-		WithHeaders(map[string]string{
-			"x-custom-header": "value",
-		}),
-	)
-
-	cfg, err := tr.Translate(nil)
-	require.NoError(t, err)
-
-	otlpCfg := cfg.(*otlphttpexporter.Config)
-	assert.Contains(t, otlpCfg.ClientConfig.Headers, "x-custom-header")
-}

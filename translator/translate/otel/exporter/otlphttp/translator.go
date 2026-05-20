@@ -7,7 +7,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configauth"
 	"go.opentelemetry.io/collector/config/configcompression"
-	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
@@ -29,7 +28,6 @@ type translator struct {
 	factory       exporter.Factory
 	endpoint      EndpointConfig
 	authenticator component.ID
-	headers       map[string]string
 }
 
 type Option func(*translator)
@@ -38,13 +36,6 @@ type Option func(*translator)
 func WithAuthenticator(id component.ID) Option {
 	return func(t *translator) {
 		t.authenticator = id
-	}
-}
-
-// WithHeaders sets static HTTP headers on the exporter.
-func WithHeaders(headers map[string]string) Option {
-	return func(t *translator) {
-		t.headers = headers
 	}
 }
 
@@ -85,12 +76,6 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.ClientConfig.Compression = configcompression.TypeGzip
 	cfg.ClientConfig.Auth = &configauth.Authentication{
 		AuthenticatorID: t.authenticator,
-	}
-
-	if len(t.headers) > 0 {
-		for k, v := range t.headers {
-			cfg.ClientConfig.Headers[k] = configopaque.String(v)
-		}
 	}
 
 	return cfg, nil
