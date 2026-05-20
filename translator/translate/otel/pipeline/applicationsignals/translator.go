@@ -326,7 +326,6 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
 	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), logsComponentName)
 	logsEndpoint := otlphttp.EndpointConfig{
-		BaseEndpoint: serviceEndpoint("logs", region, ""),
 		LogsEndpoint: serviceEndpoint("logs", region, "/v1/logs"),
 	}
 

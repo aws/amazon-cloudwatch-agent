@@ -189,7 +189,6 @@ exporters:
             authenticator: headers_setter/application_signals_logs
         compression: gzip
         encoding: proto
-        endpoint: https://logs.us-east-1.amazonaws.com
         idle_conn_timeout: 1m30s
         logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
         max_idle_conns: 100

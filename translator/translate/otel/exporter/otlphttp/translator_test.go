@@ -19,7 +19,6 @@ func TestTranslatorID(t *testing.T) {
 
 func TestTranslatorWithEndpoints(t *testing.T) {
 	endpoint := EndpointConfig{
-		BaseEndpoint:    "https://logs.us-west-2.amazonaws.com",
 		LogsEndpoint:    "https://logs.us-west-2.amazonaws.com/v1/logs",
 		MetricsEndpoint: "https://monitoring.us-west-2.amazonaws.com/v1/metrics",
 		TracesEndpoint:  "https://xray.us-west-2.amazonaws.com/v1/traces",
@@ -30,7 +29,6 @@ func TestTranslatorWithEndpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	otlpCfg := cfg.(*otlphttpexporter.Config)
-	assert.Equal(t, "https://logs.us-west-2.amazonaws.com", otlpCfg.ClientConfig.Endpoint)
 	assert.Equal(t, "https://logs.us-west-2.amazonaws.com/v1/logs", otlpCfg.LogsEndpoint)
 	assert.Equal(t, "https://monitoring.us-west-2.amazonaws.com/v1/metrics", otlpCfg.MetricsEndpoint)
 	assert.Equal(t, "https://xray.us-west-2.amazonaws.com/v1/traces", otlpCfg.TracesEndpoint)

@@ -14,11 +14,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-// EndpointConfig specifies the base endpoint and signal-specific endpoint for
-// the otlphttp exporter.
+// EndpointConfig specifies signal-specific endpoints for the otlphttp exporter.
 type EndpointConfig struct {
-	BaseEndpoint    string // e.g. "https://logs.us-east-1.amazonaws.com"
-	LogsEndpoint    string // e.g. "https://logs.us-east-1.amazonaws.com/v1/logs"
+	LogsEndpoint    string
 	MetricsEndpoint string
 	TracesEndpoint  string
 }
@@ -45,10 +43,9 @@ var _ common.ComponentTranslator = (*translator)(nil)
 // endpoint configuration.
 func NewTranslatorWithName(name string, endpoint EndpointConfig, opts ...Option) common.ComponentTranslator {
 	t := &translator{
-		name:          name,
-		factory:       otlphttpexporter.NewFactory(),
-		endpoint:      endpoint,
-		authenticator: component.NewID(component.MustNewType(common.SigV4Auth)),
+		name:     name,
+		factory:  otlphttpexporter.NewFactory(),
+		endpoint: endpoint,
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -63,7 +60,6 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*otlphttpexporter.Config)
 
-	cfg.ClientConfig.Endpoint = t.endpoint.BaseEndpoint
 	if t.endpoint.LogsEndpoint != "" {
 		cfg.LogsEndpoint = t.endpoint.LogsEndpoint
 	}
@@ -74,8 +70,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		cfg.TracesEndpoint = t.endpoint.TracesEndpoint
 	}
 	cfg.ClientConfig.Compression = configcompression.TypeGzip
-	cfg.ClientConfig.Auth = &configauth.Authentication{
-		AuthenticatorID: t.authenticator,
+	if t.authenticator.Type().String() != "" {
+		cfg.ClientConfig.Auth = &configauth.Authentication{
+			AuthenticatorID: t.authenticator,
+		}
 	}
 
 	return cfg, nil
