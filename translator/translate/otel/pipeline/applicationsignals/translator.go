@@ -228,7 +228,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 	}
 
 	connectorTranslator := newMetricsRoutingConnectorTranslator()
-	sigv4ID := component.NewIDWithName(component.MustNewType("sigv4auth"), "monitoring")
+	sigv4Ext := sigv4auth.NewTranslatorWithService("monitoring")
 	metricsEndpoint := otlphttp.EndpointConfig{
 		MetricsEndpoint: serviceEndpoint("monitoring", region, "/v1/metrics"),
 	}
@@ -244,9 +244,9 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 
 	translators.Processors.Set(batchproc.NewTranslator(common.WithName(metricsVariantOtlpDest), batchproc.WithTelemetrySection(common.MetricsKey)))
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(metricsVariantOtlpDest, metricsEndpoint,
-		otlphttp.WithAuthenticator(sigv4ID),
+		otlphttp.WithAuthenticator(sigv4Ext.ID()),
 	))
-	translators.Extensions.Set(sigv4auth.NewTranslatorWithService("monitoring"))
+	translators.Extensions.Set(sigv4Ext)
 
 	return translators, nil
 }
@@ -322,7 +322,7 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	configKeys := common.AppSignalsConfigKeys[pipeline.SignalLogs]
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
 
-	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), "logs")
+	sigv4Ext := sigv4auth.NewTranslatorWithService("logs")
 	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
 	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), logsComponentName)
 	logsEndpoint := otlphttp.EndpointConfig{
@@ -380,8 +380,8 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 		translators.Exporters.Set(debug.NewTranslator(common.WithName(logsComponentName)))
 	}
 
-	translators.Extensions.Set(sigv4auth.NewTranslatorWithService("logs"))
-	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4AuthID))
+	translators.Extensions.Set(sigv4Ext)
+	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4Ext.ID()))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 
 	return translators, nil
