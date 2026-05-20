@@ -13,15 +13,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-type Option func(*translator)
-
-// WithService sets the AWS service for sigv4 signing (e.g. "logs").
-func WithService(service string) Option {
-	return func(t *translator) {
-		t.service = service
-	}
-}
-
 type translator struct {
 	name    string
 	service string
@@ -30,16 +21,12 @@ type translator struct {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(opts ...Option) common.ComponentTranslator {
-	return NewTranslatorWithName("", opts...)
+func NewTranslator() common.ComponentTranslator {
+	return &translator{factory: sigv4authextension.NewFactory()}
 }
 
-func NewTranslatorWithName(name string, opts ...Option) common.ComponentTranslator {
-	t := &translator{name: name, factory: sigv4authextension.NewFactory()}
-	for _, opt := range opts {
-		opt(t)
-	}
-	return t
+func NewTranslatorWithService(service string) common.ComponentTranslator {
+	return &translator{name: service, service: service, factory: sigv4authextension.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {

@@ -228,7 +228,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 	}
 
 	connectorTranslator := newMetricsRoutingConnectorTranslator()
-	sigv4ID := component.NewIDWithName(component.MustNewType("sigv4auth"), metricsComponentName)
+	sigv4ID := component.NewIDWithName(component.MustNewType("sigv4auth"), "monitoring")
 	metricsEndpoint := otlphttp.EndpointConfig{
 		MetricsEndpoint: serviceEndpoint("monitoring", region, "/v1/metrics"),
 	}
@@ -246,7 +246,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(metricsVariantOtlpDest, metricsEndpoint,
 		otlphttp.WithAuthenticator(sigv4ID),
 	))
-	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(metricsComponentName, sigv4auth.WithService("monitoring")))
+	translators.Extensions.Set(sigv4auth.NewTranslatorWithService("monitoring"))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 
 	return translators, nil
@@ -261,7 +261,7 @@ func newLogsRoutingConnectorTranslator() common.ComponentTranslator {
 		routing.WithDefaultPipelines(batchPipelineID),
 		routing.WithTable(routingconnector.RoutingTableItem{
 			Context:   "log",
-			Condition: `attributes["event.name"] == "aws.telemend.aggregate_profile"`,
+			Condition: `attributes["event.name"] == "aws.service_events.aggregate_profile"`,
 			Pipelines: []pipeline.ID{noBatchPipelineID},
 		}),
 	)
@@ -323,7 +323,7 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	configKeys := common.AppSignalsConfigKeys[pipeline.SignalLogs]
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
 
-	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), logsComponentName)
+	sigv4AuthID := component.NewIDWithName(component.MustNewType("sigv4auth"), "logs")
 	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
 	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), logsComponentName)
 	logsEndpoint := otlphttp.EndpointConfig{
@@ -382,7 +382,7 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 		translators.Exporters.Set(debug.NewTranslator(common.WithName(logsComponentName)))
 	}
 
-	translators.Extensions.Set(sigv4auth.NewTranslatorWithName(logsComponentName, sigv4auth.WithService("logs")))
+	translators.Extensions.Set(sigv4auth.NewTranslatorWithService("logs"))
 	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4AuthID))
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 

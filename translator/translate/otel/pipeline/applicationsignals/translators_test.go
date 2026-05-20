@@ -125,7 +125,7 @@ func TestTranslatorMetricsRouteToOtlp(t *testing.T) {
 	assert.Equal(t, []string{"routing/application_signals_metrics"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Equal(t, []string{"batch/application_signals_metrics_otlp_destination"}, collections.MapSlice(got.Processors.Keys(), component.ID.String))
 	assert.Equal(t, []string{"otlphttp/application_signals_metrics_otlp_destination"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_metrics")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/monitoring")
 }
 
 func TestTranslatorLogsReceiveToRoute(t *testing.T) {
@@ -170,7 +170,7 @@ func TestTranslatorLogsRouteToOtlpBatch(t *testing.T) {
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals_logs")
 	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/logs")
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals_logs")
 }
 
@@ -194,7 +194,7 @@ func TestTranslatorLogsRouteToOtlpNoBatch(t *testing.T) {
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Empty(t, got.Processors.Keys())
 	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
-	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
+	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/logs")
 }
 
 func TestTranslatorLogsReceiveToRouteDynamic(t *testing.T) {
