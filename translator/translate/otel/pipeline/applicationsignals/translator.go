@@ -464,22 +464,6 @@ func templateToLiteral(segments []templateSegment) string {
 func buildOTTLSetStatement(metadataKey string, segments []templateSegment) string {
 	whereGuard := fmt.Sprintf(` where resource.attributes["%s"] == nil`, metadataKey)
 
-	hasAttributes := false
-	for _, seg := range segments {
-		if seg.attribute != "" {
-			hasAttributes = true
-			break
-		}
-	}
-
-	if !hasAttributes {
-		var literal string
-		for _, seg := range segments {
-			literal += seg.literal
-		}
-		return fmt.Sprintf(`set(resource.attributes["%s"], "%s")`, metadataKey, literal) + whereGuard
-	}
-
 	var parts []string
 	for _, seg := range segments {
 		if seg.attribute != "" {
