@@ -1462,6 +1462,16 @@ processors:
                 - replace_pattern(resource.attributes["aws.cloudwatch.log_group.destination"], "<nil>", "undefined")
         metric_statements: []
         trace_statements: []
+    transform/application_signals_logs_cleanup:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - delete_key(resource.attributes, "aws.cloudwatch.log_group.destination")
+        metric_statements: []
+        trace_statements: []
 receivers:
     otlp/grpc_0_0_0_0_4315:
         protocols:
@@ -1514,6 +1524,7 @@ service:
             processors:
                 - transform/application_signals_logs
                 - attributestocontext
+                - transform/application_signals_logs_cleanup
             receivers:
                 - otlp/grpc_0_0_0_0_4315
                 - otlp/http_0_0_0_0_4316

@@ -278,17 +278,19 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	}
 
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
-	dynamic := hasPlaceholders(logGroupTemplate) || hasPlaceholders(logStreamTemplate)
+	logGroupHasPlaceholders := hasPlaceholders(logGroupTemplate)
+	logStreamHasPlaceholders := hasPlaceholders(logStreamTemplate)
+	dynamic := logGroupHasPlaceholders || logStreamHasPlaceholders
 
 	var statements []string
 	var attrActions []attributestocontext.ActionMapping
 
-	if hasPlaceholders(logGroupTemplate) {
+	if logGroupHasPlaceholders {
 		statements = append(statements, buildOTTLSetStatements(metadataKeyLogGroup, logGroupTemplate)...)
 		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
 	}
 
-	if hasPlaceholders(logStreamTemplate) {
+	if logStreamHasPlaceholders {
 		statements = append(statements, buildOTTLSetStatements(metadataKeyLogStream, logStreamTemplate)...)
 		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
 	}
@@ -305,6 +307,12 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	if dynamic {
 		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName, transformproc.WithLogStatements(statements)))
 		translators.Processors.Set(attributestocontext.NewTranslator(attrActions))
+
+		var cleanupStatements []string
+		for _, action := range attrActions {
+			cleanupStatements = append(cleanupStatements, fmt.Sprintf(`delete_key(resource.attributes, "%s")`, action.Key))
+		}
+		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName+"_cleanup", transformproc.WithLogStatements(cleanupStatements)))
 	}
 
 	translators.Exporters.Set(connectorTranslator)

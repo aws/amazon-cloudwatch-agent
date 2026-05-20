@@ -375,7 +375,7 @@ func TestTranslatorLogsRoute(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
-				processors: []string{"transform/application_signals_logs", "attributestocontext"},
+				processors: []string{"transform/application_signals_logs", "attributestocontext", "transform/application_signals_logs_cleanup"},
 				exporters:  []string{"routing/application_signals_logs"},
 				connectors: []string{"routing/application_signals_logs"},
 			},
