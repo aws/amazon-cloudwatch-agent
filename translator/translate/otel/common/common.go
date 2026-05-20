@@ -140,7 +140,6 @@ var (
 	AppSignalsLogs            = ConfigKey(LogsKey, LogsCollectedKey, AppSignals)
 	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
 	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
-	AppSignalsLogsFallback    = ConfigKey(LogsKey, LogsCollectedKey, AppSignalsFallback)
 
 	AppSignalsConfigKeys = map[pipeline.Signal][]string{
 		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
