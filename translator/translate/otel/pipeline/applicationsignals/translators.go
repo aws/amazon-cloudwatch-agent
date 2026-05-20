@@ -29,7 +29,7 @@ func NewTranslators(conf *confmap.Conf, signal pipeline.Signal) common.PipelineT
 		translators.Set(NewTranslator(signal, SetVariant(metricsVariantLogDest)))
 		translators.Set(NewTranslator(signal, SetVariant(metricsVariantOtlpDest)))
 	case pipeline.SignalLogs:
-		if isLogsDisabled(conf) {
+		if conf == nil || isLogsDisabled(conf) {
 			break
 		}
 		translators.Set(NewTranslator(signal, SetVariant(logsVariantRoute)))
