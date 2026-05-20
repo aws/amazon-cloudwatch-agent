@@ -323,8 +323,7 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	logGroupTemplate, logStreamTemplate := resolveLogConfig(conf, configKeys)
 
 	sigv4Ext := sigv4auth.NewTranslatorWithService("logs")
-	provisionerID := component.MustNewID("awscloudwatchlogsprovisioner")
-	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), logsComponentName)
+	provisionerExt := awscloudwatchlogsprovisioner.NewTranslator(sigv4Ext.ID())
 	logsEndpoint := otlphttp.EndpointConfig{
 		LogsEndpoint: serviceEndpoint("logs", region, "/v1/logs"),
 	}
@@ -368,20 +367,21 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 		))
 	}
 
-	translators.Exporters.Set(otlphttp.NewTranslatorWithName(logsComponentName, logsEndpoint,
-		otlphttp.WithAuthenticator(headersSetterID),
-	))
-	translators.Extensions.Set(headerssetter.NewTranslatorWithName(logsComponentName,
-		headerssetter.WithAdditionalAuth(provisionerID),
+	headersSetterExt := headerssetter.NewTranslatorWithName(logsComponentName,
+		headerssetter.WithAdditionalAuth(provisionerExt.ID()),
 		headerssetter.WithHeaders(headerMappings),
+	)
+	translators.Exporters.Set(otlphttp.NewTranslatorWithName(logsComponentName, logsEndpoint,
+		otlphttp.WithAuthenticator(headersSetterExt.ID()),
 	))
+	translators.Extensions.Set(headersSetterExt)
 
 	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
 		translators.Exporters.Set(debug.NewTranslator(common.WithName(logsComponentName)))
 	}
 
 	translators.Extensions.Set(sigv4Ext)
-	translators.Extensions.Set(awscloudwatchlogsprovisioner.NewTranslator(sigv4Ext.ID()))
+	translators.Extensions.Set(provisionerExt)
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 
 	return translators, nil
