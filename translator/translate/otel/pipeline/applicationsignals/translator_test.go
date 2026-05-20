@@ -441,3 +441,40 @@ func TestTranslatorLogsNoBatch(t *testing.T) {
 	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/application_signals_logs")
 }
+
+func TestServiceEndpoint(t *testing.T) {
+	tests := []struct {
+		service  string
+		region   string
+		path     string
+		expected string
+	}{
+		// Standard partition
+		{"logs", "us-east-1", "/v1/logs", "https://logs.us-east-1.amazonaws.com/v1/logs"},
+		{"logs", "eu-west-1", "/v1/logs", "https://logs.eu-west-1.amazonaws.com/v1/logs"},
+		{"monitoring", "us-west-2", "/v1/metrics", "https://monitoring.us-west-2.amazonaws.com/v1/metrics"},
+		{"monitoring", "ap-southeast-1", "/v1/metrics", "https://monitoring.ap-southeast-1.amazonaws.com/v1/metrics"},
+		// China partition
+		{"logs", "cn-north-1", "/v1/logs", "https://logs.cn-north-1.amazonaws.com.cn/v1/logs"},
+		{"logs", "cn-northwest-1", "/v1/logs", "https://logs.cn-northwest-1.amazonaws.com.cn/v1/logs"},
+		{"monitoring", "cn-north-1", "/v1/metrics", "https://monitoring.cn-north-1.amazonaws.com.cn/v1/metrics"},
+		{"monitoring", "cn-northwest-1", "/v1/metrics", "https://monitoring.cn-northwest-1.amazonaws.com.cn/v1/metrics"},
+		// GovCloud partition
+		{"logs", "us-gov-west-1", "/v1/logs", "https://logs.us-gov-west-1.amazonaws.com/v1/logs"},
+		{"logs", "us-gov-east-1", "/v1/logs", "https://logs.us-gov-east-1.amazonaws.com/v1/logs"},
+		{"monitoring", "us-gov-west-1", "/v1/metrics", "https://monitoring.us-gov-west-1.amazonaws.com/v1/metrics"},
+		{"monitoring", "us-gov-east-1", "/v1/metrics", "https://monitoring.us-gov-east-1.amazonaws.com/v1/metrics"},
+		// ISO partition
+		{"logs", "us-iso-east-1", "/v1/logs", "https://logs.us-iso-east-1.c2s.ic.gov/v1/logs"},
+		{"monitoring", "us-iso-east-1", "/v1/metrics", "https://monitoring.us-iso-east-1.c2s.ic.gov/v1/metrics"},
+		// ISOB partition
+		{"logs", "us-isob-east-1", "/v1/logs", "https://logs.us-isob-east-1.sc2s.sgov.gov/v1/logs"},
+		{"monitoring", "us-isob-east-1", "/v1/metrics", "https://monitoring.us-isob-east-1.sc2s.sgov.gov/v1/metrics"},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s/%s", tt.service, tt.region), func(t *testing.T) {
+			assert.Equal(t, tt.expected, serviceEndpoint(tt.service, tt.region, tt.path))
+		})
+	}
+}
