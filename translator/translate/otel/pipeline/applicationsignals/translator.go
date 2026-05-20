@@ -267,11 +267,6 @@ func newLogsRoutingConnectorTranslator() common.ComponentTranslator {
 }
 
 func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	region := agent.Global_Config.Region
-	if region == "" {
-		return nil, fmt.Errorf("region is required for %s logs pipeline", common.AppSignals)
-	}
-
 	configKeys := common.AppSignalsConfigKeys[pipeline.SignalLogs]
 
 	// Use logs receiver config if explicitly set; otherwise fall back to metrics
@@ -337,7 +332,6 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 
 	logGroupHasPlaceholders := hasPlaceholders(logGroupTemplate)
 	logStreamHasPlaceholders := hasPlaceholders(logStreamTemplate)
-	dynamic := logGroupHasPlaceholders || logStreamHasPlaceholders
 
 	var metadataKeys []string
 	var headerMappings []headerssetter.HeaderMapping
@@ -368,18 +362,11 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	translators.Receivers.Set(connectorTranslator)
 
 	if batch {
-		if dynamic {
-			translators.Processors.Set(batchproc.NewTranslator(
-				common.WithName(logsComponentName),
-				batchproc.WithMetadataKeys(metadataKeys),
-				batchproc.WithTelemetrySection(common.LogsKey),
-			))
-		} else {
-			translators.Processors.Set(batchproc.NewTranslator(
-				common.WithName(logsComponentName),
-				batchproc.WithTelemetrySection(common.LogsKey),
-			))
-		}
+		translators.Processors.Set(batchproc.NewTranslator(
+			common.WithName(logsComponentName),
+			batchproc.WithMetadataKeys(metadataKeys),
+			batchproc.WithTelemetrySection(common.LogsKey),
+		))
 	}
 
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(logsComponentName, logsEndpoint,
