@@ -4,7 +4,7 @@ connectors:
             - logs/application_signals_logs_batch
         error_mode: ignore
         table:
-            - condition: attributes["event.name"] == "aws.telemend.aggregate_profile"
+            - condition: attributes["event.name"] == "aws.service_events.aggregate_profile"
               context: log
               pipelines:
                 - logs/application_signals_logs_nobatch
@@ -48,7 +48,7 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/application_signals_logs
+        additional_auth: sigv4auth/logs
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
@@ -64,7 +64,7 @@ extensions:
             - action: upsert
               key: x-aws-log-stream
               value: my-stream
-    sigv4auth/application_signals_logs:
+    sigv4auth/logs:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
@@ -99,7 +99,7 @@ receivers:
 service:
     extensions:
         - headers_setter/application_signals_logs
-        - sigv4auth/application_signals_logs
+        - sigv4auth/logs
         - awscloudwatchlogsprovisioner
         - agenthealth/logs
         - entitystore

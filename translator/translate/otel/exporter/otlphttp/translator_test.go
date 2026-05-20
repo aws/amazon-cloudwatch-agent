@@ -49,4 +49,3 @@ func TestTranslatorWithAuthenticator(t *testing.T) {
 	require.NotNil(t, otlpCfg.ClientConfig.Auth)
 	assert.Equal(t, authID, otlpCfg.ClientConfig.Auth.AuthenticatorID)
 }
-

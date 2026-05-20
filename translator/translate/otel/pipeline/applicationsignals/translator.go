@@ -96,11 +96,11 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	if conf == nil {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 	}
-	if !conf.IsSet(configKey[0]) && (len(configKey) < 2 || !conf.IsSet(configKey[1])) {
+	if !conf.IsSet(configKey[0]) && (t.signal == pipeline.SignalLogs || !conf.IsSet(configKey[1])) {
 		// For logs: also activate if metrics is enabled (auto-opt-in)
 		if t.signal == pipeline.SignalLogs {
 			metricsKey := common.AppSignalsConfigKeys[pipeline.SignalMetrics]
-			if !conf.IsSet(metricsKey[0]) && (len(metricsKey) < 2 || !conf.IsSet(metricsKey[1])) {
+			if !conf.IsSet(metricsKey[0]) && !conf.IsSet(metricsKey[1]) {
 				return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: configKey[0]}
 			}
 		} else {
@@ -273,7 +273,7 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	// receiver config since both resolve to the same OTLP receiver (auto-opt-in
 	// doesn't create logs.logs_collected.application_signals in the JSON config).
 	receiverSignal := pipeline.SignalLogs.String()
-	if !conf.IsSet(configKeys[0]) && (len(configKeys) < 2 || !conf.IsSet(configKeys[1])) {
+	if !conf.IsSet(configKeys[0]) {
 		receiverSignal = pipeline.SignalMetrics.String()
 	}
 

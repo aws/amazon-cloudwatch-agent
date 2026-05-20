@@ -4,7 +4,7 @@ connectors:
             - logs/application_signals_logs_batch
         error_mode: ignore
         table:
-            - condition: attributes["event.name"] == "aws.telemend.aggregate_profile"
+            - condition: attributes["event.name"] == "aws.service_events.aggregate_profile"
               context: log
               pipelines:
                 - logs/application_signals_logs_nobatch
@@ -322,7 +322,7 @@ exporters:
         write_buffer_size: 524288
     otlphttp/application_signals_metrics_otlp_destination:
         auth:
-            authenticator: sigv4auth/application_signals_metrics
+            authenticator: sigv4auth/monitoring
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -372,7 +372,7 @@ extensions:
                 mode: K8E
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/application_signals_logs
+        additional_auth: sigv4auth/logs
         logs_provision_failure_backoff: 30s
         logs_provision_timeout: 10s
         region: us-east-1
@@ -417,12 +417,12 @@ extensions:
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
-    sigv4auth/application_signals_logs:
+    sigv4auth/logs:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
         service: logs
-    sigv4auth/application_signals_metrics:
+    sigv4auth/monitoring:
         assume_role:
             sts_region: us-east-1
         region: us-east-1
@@ -463,7 +463,7 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
         send_batch_size: 8192
-        timeout: 5s
+        timeout: 1m0s
     batch/containerinsights:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -1668,9 +1668,9 @@ service:
         - awsproxy/application_signals
         - agenthealth/traces
         - k8smetadata
-        - sigv4auth/application_signals_metrics
+        - sigv4auth/monitoring
         - headers_setter/application_signals_logs
-        - sigv4auth/application_signals_logs
+        - sigv4auth/logs
         - awscloudwatchlogsprovisioner
         - entitystore
         - server
