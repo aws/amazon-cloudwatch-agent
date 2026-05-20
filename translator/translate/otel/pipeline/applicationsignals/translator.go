@@ -73,7 +73,7 @@ type translator struct {
 
 var _ common.PipelineTranslator = (*translator)(nil)
 
-func NewTranslator(signal pipeline.Signal, opts ...common.TranslatorOption) common.PipelineTranslator {
+func newTranslator(signal pipeline.Signal, opts ...common.TranslatorOption) common.PipelineTranslator {
 	t := &translator{signal: signal}
 	for _, opt := range opts {
 		opt(t)
@@ -471,7 +471,7 @@ func buildOTTLSetStatements(metadataKey string, segments []templateSegment) []st
 }
 
 // SetVariant implements common.TranslatorOption for setting the pipeline variant.
-func SetVariant(variant string) common.TranslatorOption {
+func setVariant(variant string) common.TranslatorOption {
 	return func(target any) {
 		if t, ok := target.(*translator); ok {
 			t.variant = variant

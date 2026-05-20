@@ -34,7 +34,7 @@ func TestTranslatorTraces(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalTraces)
+	tt := newTranslator(pipeline.SignalTraces)
 	assert.EqualValues(t, "traces/application_signals", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
@@ -106,7 +106,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantLogDest))
+	tt := newTranslator(pipeline.SignalMetrics, setVariant(metricsVariantLogDest))
 	assert.EqualValues(t, "metrics/application_signals_metrics_logs_destination", tt.ID().String())
 	testCases := map[string]struct {
 		input          map[string]interface{}
@@ -202,7 +202,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantLogDest))
+	tt := newTranslator(pipeline.SignalMetrics, setVariant(metricsVariantLogDest))
 	assert.EqualValues(t, "metrics/application_signals_metrics_logs_destination", tt.ID().String())
 	testCases := map[string]struct {
 		input      map[string]interface{}
@@ -279,7 +279,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 		exporters  []string
 		extensions []string
 	}
-	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantLogDest))
+	tt := newTranslator(pipeline.SignalMetrics, setVariant(metricsVariantLogDest))
 	assert.EqualValues(t, "metrics/application_signals_metrics_logs_destination", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
@@ -354,7 +354,7 @@ func TestTranslatorLogsRoute(t *testing.T) {
 		connectors []string
 	}
 	agent.Global_Config.Region = "us-west-2"
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantRoute))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantRoute))
 	assert.EqualValues(t, "logs/application_signals_logs_route", tt.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
@@ -401,7 +401,7 @@ func TestTranslatorLogsRoute(t *testing.T) {
 
 func TestTranslatorLogsBatch(t *testing.T) {
 	agent.Global_Config.Region = "us-west-2"
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantBatch))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantBatch))
 	assert.EqualValues(t, "logs/application_signals_logs_batch", tt.ID().String())
 
 	input := map[string]interface{}{
@@ -426,7 +426,7 @@ func TestTranslatorLogsBatch(t *testing.T) {
 
 func TestTranslatorLogsNoBatch(t *testing.T) {
 	agent.Global_Config.Region = "us-west-2"
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantNoBatch))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantNoBatch))
 	assert.EqualValues(t, "logs/application_signals_logs_nobatch", tt.ID().String())
 
 	input := map[string]interface{}{

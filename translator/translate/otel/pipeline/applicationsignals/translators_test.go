@@ -92,7 +92,7 @@ func TestTranslatorMetricsReceiveToRoute(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantRoute))
+	tt := newTranslator(pipeline.SignalMetrics, setVariant(metricsVariantRoute))
 	assert.EqualValues(t, "metrics/application_signals_metrics_route", tt.ID().String())
 
 	got, err := tt.Translate(conf)
@@ -115,7 +115,7 @@ func TestTranslatorMetricsRouteToOtlp(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalMetrics, SetVariant(metricsVariantOtlpDest))
+	tt := newTranslator(pipeline.SignalMetrics, setVariant(metricsVariantOtlpDest))
 	assert.EqualValues(t, "metrics/application_signals_metrics_otlp_destination", tt.ID().String())
 
 	got, err := tt.Translate(conf)
@@ -138,7 +138,7 @@ func TestTranslatorLogsReceiveToRoute(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantRoute))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantRoute))
 	assert.EqualValues(t, "logs/application_signals_logs_route", tt.ID().String())
 
 	got, err := tt.Translate(conf)
@@ -160,7 +160,7 @@ func TestTranslatorLogsRouteToOtlpBatch(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantBatch))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantBatch))
 	assert.EqualValues(t, "logs/application_signals_logs_batch", tt.ID().String())
 
 	got, err := tt.Translate(conf)
@@ -184,7 +184,7 @@ func TestTranslatorLogsRouteToOtlpNoBatch(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantNoBatch))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantNoBatch))
 	assert.EqualValues(t, "logs/application_signals_logs_nobatch", tt.ID().String())
 
 	got, err := tt.Translate(conf)
@@ -207,7 +207,7 @@ func TestTranslatorLogsReceiveToRouteDynamic(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantRoute))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantRoute))
 
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestTranslatorLogsReceiveToRouteStatic(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantRoute))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantRoute))
 
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
@@ -267,7 +267,7 @@ func TestTranslatorLogsRouteToOtlpBatchStatic(t *testing.T) {
 		},
 	}
 	conf := confmap.NewFromStringMap(input)
-	tt := NewTranslator(pipeline.SignalLogs, SetVariant(logsVariantBatch))
+	tt := newTranslator(pipeline.SignalLogs, setVariant(logsVariantBatch))
 
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)

@@ -23,18 +23,18 @@ func NewTranslators(conf *confmap.Conf, signal pipeline.Signal) common.PipelineT
 
 	switch signal {
 	case pipeline.SignalTraces:
-		translators.Set(NewTranslator(signal))
+		translators.Set(newTranslator(signal))
 	case pipeline.SignalMetrics:
-		translators.Set(NewTranslator(signal, SetVariant(metricsVariantRoute)))
-		translators.Set(NewTranslator(signal, SetVariant(metricsVariantLogDest)))
-		translators.Set(NewTranslator(signal, SetVariant(metricsVariantOtlpDest)))
+		translators.Set(newTranslator(signal, setVariant(metricsVariantRoute)))
+		translators.Set(newTranslator(signal, setVariant(metricsVariantLogDest)))
+		translators.Set(newTranslator(signal, setVariant(metricsVariantOtlpDest)))
 	case pipeline.SignalLogs:
 		if conf == nil || isLogsDisabled(conf) {
 			break
 		}
-		translators.Set(NewTranslator(signal, SetVariant(logsVariantRoute)))
-		translators.Set(NewTranslator(signal, SetVariant(logsVariantBatch)))
-		translators.Set(NewTranslator(signal, SetVariant(logsVariantNoBatch)))
+		translators.Set(newTranslator(signal, setVariant(logsVariantRoute)))
+		translators.Set(newTranslator(signal, setVariant(logsVariantBatch)))
+		translators.Set(newTranslator(signal, setVariant(logsVariantNoBatch)))
 	}
 
 	return translators
