@@ -485,7 +485,7 @@ func TestServiceEndpoint(t *testing.T) {
 }
 
 func TestBuildOTTLSetStatementsNilPlaceholder(t *testing.T) {
-	statements := buildOTTLSetStatements("aws.cloudwatch.log_group.destination", parseTemplate("/aws/service-events/{service.name}"))
+	statements := buildOTTLSetStatements(metadataKeyLogGroup, parseTemplate("/aws/service-events/{service.name}"))
 
 	factory := transformprocessor.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
@@ -521,13 +521,13 @@ func TestBuildOTTLSetStatementsNilPlaceholder(t *testing.T) {
 	result := sink.AllLogs()
 	require.Equal(t, 1, len(result))
 	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
-	val, found := attrs.Get("aws.cloudwatch.log_group.destination")
+	val, found := attrs.Get(metadataKeyLogGroup)
 	require.True(t, found, "destination attribute should be set")
 	assert.Equal(t, "/aws/service-events/undefined", val.Str())
 }
 
 func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
-	statements := buildOTTLSetStatements("aws.cloudwatch.log_group.destination", parseTemplate("/aws/service-events/{service.name}"))
+	statements := buildOTTLSetStatements(metadataKeyLogGroup, parseTemplate("/aws/service-events/{service.name}"))
 
 	factory := transformprocessor.NewFactory()
 	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
@@ -564,7 +564,7 @@ func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
 	result := sink.AllLogs()
 	require.Equal(t, 1, len(result))
 	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
-	val, found := attrs.Get("aws.cloudwatch.log_group.destination")
+	val, found := attrs.Get(metadataKeyLogGroup)
 	require.True(t, found)
 	assert.Equal(t, "/aws/service-events/my-service", val.Str())
 }

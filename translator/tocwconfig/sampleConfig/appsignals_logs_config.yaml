@@ -58,10 +58,10 @@ extensions:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
             - action: upsert
-              from_context: aws.cloudwatch.log_group.destination
+              from_context: aws.log.group.name
               key: x-aws-log-group
             - action: upsert
-              from_context: aws.cloudwatch.log_stream.destination
+              from_context: aws.log.stream.name
               key: x-aws-log-stream
     sigv4auth/logs:
         assume_role:
@@ -71,15 +71,15 @@ extensions:
 processors:
     attributestocontext:
         actions:
-            - from_resource_attribute: aws.cloudwatch.log_group.destination
-              key: aws.cloudwatch.log_group.destination
-            - from_resource_attribute: aws.cloudwatch.log_stream.destination
-              key: aws.cloudwatch.log_stream.destination
+            - from_resource_attribute: aws.log.group.name
+              key: aws.log.group.name
+            - from_resource_attribute: aws.log.stream.name
+              key: aws.log.stream.name
     batch/application_signals_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
-            - aws.cloudwatch.log_group.destination
-            - aws.cloudwatch.log_stream.destination
+            - aws.log.group.name
+            - aws.log.stream.name
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -90,10 +90,10 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], ""))
-                - replace_pattern(resource.attributes["aws.cloudwatch.log_group.destination"], "<nil>", "undefined")
-                - set(resource.attributes["aws.cloudwatch.log_stream.destination"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], ""))
-                - replace_pattern(resource.attributes["aws.cloudwatch.log_stream.destination"], "<nil>", "undefined")
+                - set(resource.attributes["aws.log.group.name"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], ""))
+                - replace_pattern(resource.attributes["aws.log.group.name"], "<nil>", "undefined")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], ""))
+                - replace_pattern(resource.attributes["aws.log.stream.name"], "<nil>", "undefined")
         metric_statements: []
         trace_statements: []
     transform/application_signals_logs_cleanup:
@@ -103,8 +103,8 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - delete_key(resource.attributes, "aws.cloudwatch.log_group.destination")
-                - delete_key(resource.attributes, "aws.cloudwatch.log_stream.destination")
+                - delete_key(resource.attributes, "aws.log.group.name")
+                - delete_key(resource.attributes, "aws.log.stream.name")
         metric_statements: []
         trace_statements: []
 receivers:

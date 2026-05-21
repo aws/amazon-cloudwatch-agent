@@ -402,7 +402,7 @@ extensions:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
             - action: upsert
-              from_context: aws.cloudwatch.log_group.destination
+              from_context: aws.log.group.name
               key: x-aws-log-group
             - action: upsert
               key: x-aws-log-stream
@@ -429,8 +429,8 @@ extensions:
 processors:
     attributestocontext:
         actions:
-            - from_resource_attribute: aws.cloudwatch.log_group.destination
-              key: aws.cloudwatch.log_group.destination
+            - from_resource_attribute: aws.log.group.name
+              key: aws.log.group.name
     awsapplicationsignals:
         limiter:
             disabled: false
@@ -454,7 +454,7 @@ processors:
     batch/application_signals_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
-            - aws.cloudwatch.log_group.destination
+            - aws.log.group.name
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
@@ -1604,8 +1604,8 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - set(resource.attributes["aws.cloudwatch.log_group.destination"], Concat(["/aws/service-events/", resource.attributes["service.name"]], ""))
-                - replace_pattern(resource.attributes["aws.cloudwatch.log_group.destination"], "<nil>", "undefined")
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/service-events/", resource.attributes["service.name"]], ""))
+                - replace_pattern(resource.attributes["aws.log.group.name"], "<nil>", "undefined")
         metric_statements: []
         trace_statements: []
     transform/application_signals_logs_cleanup:
@@ -1615,7 +1615,7 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - delete_key(resource.attributes, "aws.cloudwatch.log_group.destination")
+                - delete_key(resource.attributes, "aws.log.group.name")
         metric_statements: []
         trace_statements: []
 receivers:

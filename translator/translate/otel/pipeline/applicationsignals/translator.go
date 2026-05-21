@@ -57,8 +57,8 @@ const (
 	defaultLogGroupName  = "/aws/service-events/{service.name}"
 	defaultLogStreamName = "default"
 
-	metadataKeyLogGroup  = "aws.cloudwatch.log_group.destination"
-	metadataKeyLogStream = "aws.cloudwatch.log_stream.destination"
+	metadataKeyLogGroup  = "aws.log.group.name"
+	metadataKeyLogStream = "aws.log.stream.name"
 )
 
 type templateSegment struct {
