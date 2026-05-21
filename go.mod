@@ -17,6 +17,7 @@ replace (
 
 replace (
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260521173229-510795fdd8b4
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260521173229-510795fdd8b4
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260521173229-510795fdd8b4
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260521173229-510795fdd8b4
 )
@@ -46,6 +47,7 @@ replace (
 replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20260521173229-510795fdd8b4
 
 replace (
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260521173229-510795fdd8b4
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260521173229-510795fdd8b4
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260521173229-510795fdd8b4
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20260521173229-510795fdd8b4
@@ -646,7 +648,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
-
-replace github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260521173229-510795fdd8b4
-
-replace github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260521173229-510795fdd8b4
