@@ -6,6 +6,7 @@ package attributestocontext
 import (
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,7 @@ func TestTranslatorID(t *testing.T) {
 }
 
 func TestTranslatorTranslate(t *testing.T) {
-	actions := []ActionMapping{
+	actions := []attributestocontextprocessor.ActionKeyValue{
 		{Key: "log_group", FromResourceAttribute: "aws.cloudwatch.log_group.destination"},
 		{Key: "log_stream", FromResourceAttribute: "aws.cloudwatch.log_stream.destination"},
 	}

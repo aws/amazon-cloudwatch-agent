@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -283,16 +284,16 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	dynamic := logGroupHasPlaceholders || logStreamHasPlaceholders
 
 	var statements []string
-	var attrActions []attributestocontext.ActionMapping
+	var attrActions []attributestocontextprocessor.ActionKeyValue
 
 	if logGroupHasPlaceholders {
 		statements = append(statements, buildOTTLSetStatements(metadataKeyLogGroup, logGroupTemplate)...)
-		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
+		attrActions = append(attrActions, attributestocontextprocessor.ActionKeyValue{Key: metadataKeyLogGroup, FromResourceAttribute: metadataKeyLogGroup})
 	}
 
 	if logStreamHasPlaceholders {
 		statements = append(statements, buildOTTLSetStatements(metadataKeyLogStream, logStreamTemplate)...)
-		attrActions = append(attrActions, attributestocontext.ActionMapping{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
+		attrActions = append(attrActions, attributestocontextprocessor.ActionKeyValue{Key: metadataKeyLogStream, FromResourceAttribute: metadataKeyLogStream})
 	}
 
 	connectorTranslator := newLogsRoutingConnectorTranslator()
