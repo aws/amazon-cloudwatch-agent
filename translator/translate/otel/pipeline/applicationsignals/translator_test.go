@@ -523,7 +523,7 @@ func TestBuildOTTLSetStatementsNilPlaceholder(t *testing.T) {
 	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
 	val, found := attrs.Get(metadataKeyLogGroup)
 	require.True(t, found, "destination attribute should be set")
-	assert.Equal(t, "/aws/service-events/undefined", val.Str())
+	assert.Equal(t, "/aws/service-events/unknown_service", val.Str())
 }
 
 func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
@@ -567,4 +567,217 @@ func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
 	val, found := attrs.Get(metadataKeyLogGroup)
 	require.True(t, found)
 	assert.Equal(t, "/aws/service-events/my-service", val.Str())
+}
+
+func TestBuildOTTLSetStatementsUnknownServiceTruncation(t *testing.T) {
+	statements := buildOTTLSetStatements(metadataKeyLogGroup, parseTemplate("/aws/service-events/{service.name}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	// service.name is "unknown_service:java" — should be truncated to "unknown_service"
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.Resource().Attributes().PutStr("service.name", "unknown_service:java")
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	val, found := attrs.Get(metadataKeyLogGroup)
+	require.True(t, found)
+	assert.Equal(t, "/aws/service-events/unknown_service", val.Str())
+}
+
+func TestBuildOTTLSetStatementsNonServiceNameNil(t *testing.T) {
+	statements := buildOTTLSetStatements(metadataKeyLogStream, parseTemplate("{host.name}/{service.instance.id}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	val, found := attrs.Get(metadataKeyLogStream)
+	require.True(t, found)
+	assert.Equal(t, "unknown/unknown", val.Str())
+}
+
+func TestBuildOTTLSetStatementsPartialNil(t *testing.T) {
+	statements := buildOTTLSetStatements(metadataKeyLogStream, parseTemplate("{host.name}/{service.instance.id}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.Resource().Attributes().PutStr("host.name", "my-host")
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	val, found := attrs.Get(metadataKeyLogStream)
+	require.True(t, found)
+	assert.Equal(t, "my-host/unknown", val.Str())
+}
+
+func TestBuildOTTLSetStatementsSourceNotMutated(t *testing.T) {
+	statements := buildOTTLSetStatements(metadataKeyLogGroup, parseTemplate("/aws/service-events/{service.name}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.Resource().Attributes().PutStr("service.name", "unknown_service:python")
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	srcVal, found := attrs.Get("service.name")
+	require.True(t, found)
+	assert.Equal(t, "unknown_service:python", srcVal.Str())
+	destVal, found := attrs.Get(metadataKeyLogGroup)
+	require.True(t, found)
+	assert.Equal(t, "/aws/service-events/unknown_service", destVal.Str())
+}
+
+func TestBuildOTTLSetStatementsUnknownServiceWithoutColon(t *testing.T) {
+	statements := buildOTTLSetStatements(metadataKeyLogGroup, parseTemplate("/aws/service-events/{service.name}"))
+
+	factory := transformprocessor.NewFactory()
+	cfg := factory.CreateDefaultConfig().(*transformprocessor.Config)
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	cfgMap := map[string]interface{}{
+		"log_statements": []interface{}{
+			map[string]interface{}{
+				"context":    "resource",
+				"error_mode": "propagate",
+				"statements": stmts,
+			},
+		},
+	}
+	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
+
+	sink := new(consumertest.LogsSink)
+	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	require.NoError(t, err)
+	require.NoError(t, proc.Start(gocontext.Background(), nil))
+	defer proc.Shutdown(gocontext.Background())
+
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	rl.Resource().Attributes().PutStr("service.name", "unknown_service")
+	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	require.NoError(t, err)
+
+	result := sink.AllLogs()
+	require.Equal(t, 1, len(result))
+	attrs := result[0].ResourceLogs().At(0).Resource().Attributes()
+	val, found := attrs.Get(metadataKeyLogGroup)
+	require.True(t, found)
+	assert.Equal(t, "/aws/service-events/unknown_service", val.Str())
 }

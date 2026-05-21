@@ -90,10 +90,17 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - set(resource.attributes["aws.log.group.name"], Concat(["/", resource.attributes["deployment.environment"], "/prefix/", resource.attributes["service.name"]], ""))
-                - replace_pattern(resource.attributes["aws.log.group.name"], "<nil>", "undefined")
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], "/", resource.attributes["service.instance.id"]], ""))
-                - replace_pattern(resource.attributes["aws.log.stream.name"], "<nil>", "undefined")
+                - set(resource.attributes["temporary_key.deployment.environment"], resource.attributes["deployment.environment"])
+                - set(resource.attributes["temporary_key.deployment.environment"], "unknown") where resource.attributes["temporary_key.deployment.environment"] == nil
+                - set(resource.attributes["temporary_key.service.name"], resource.attributes["service.name"])
+                - set(resource.attributes["temporary_key.service.name"], "unknown_service") where resource.attributes["temporary_key.service.name"] == nil
+                - replace_pattern(resource.attributes["temporary_key.service.name"], "^unknown_service:.*", "unknown_service")
+                - set(resource.attributes["aws.log.group.name"], Concat(["/", resource.attributes["temporary_key.deployment.environment"], "/prefix/", resource.attributes["temporary_key.service.name"]], ""))
+                - set(resource.attributes["temporary_key.host.name"], resource.attributes["host.name"])
+                - set(resource.attributes["temporary_key.host.name"], "unknown") where resource.attributes["temporary_key.host.name"] == nil
+                - set(resource.attributes["temporary_key.service.instance.id"], resource.attributes["service.instance.id"])
+                - set(resource.attributes["temporary_key.service.instance.id"], "unknown") where resource.attributes["temporary_key.service.instance.id"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["temporary_key.host.name"], "/", resource.attributes["temporary_key.service.instance.id"]], ""))
         metric_statements: []
         trace_statements: []
     transform/application_signals_logs_cleanup:
@@ -105,6 +112,10 @@ processors:
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
+                - delete_key(resource.attributes, "temporary_key.deployment.environment")
+                - delete_key(resource.attributes, "temporary_key.service.name")
+                - delete_key(resource.attributes, "temporary_key.host.name")
+                - delete_key(resource.attributes, "temporary_key.service.instance.id")
         metric_statements: []
         trace_statements: []
 receivers:

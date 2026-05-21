@@ -1449,8 +1449,10 @@ processors:
             - context: resource
               error_mode: propagate
               statements:
-                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/service-events/", resource.attributes["service.name"]], ""))
-                - replace_pattern(resource.attributes["aws.log.group.name"], "<nil>", "undefined")
+                - set(resource.attributes["temporary_key.service.name"], resource.attributes["service.name"])
+                - set(resource.attributes["temporary_key.service.name"], "unknown_service") where resource.attributes["temporary_key.service.name"] == nil
+                - replace_pattern(resource.attributes["temporary_key.service.name"], "^unknown_service:.*", "unknown_service")
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/service-events/", resource.attributes["temporary_key.service.name"]], ""))
         metric_statements: []
         trace_statements: []
     transform/application_signals_logs_cleanup:
@@ -1461,6 +1463,7 @@ processors:
               error_mode: propagate
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
+                - delete_key(resource.attributes, "temporary_key.service.name")
         metric_statements: []
         trace_statements: []
 receivers:

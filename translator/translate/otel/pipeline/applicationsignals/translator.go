@@ -312,6 +312,16 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 		for _, action := range attrActions {
 			cleanupStatements = append(cleanupStatements, fmt.Sprintf(`delete_key(resource.attributes, "%s")`, action.Key))
 		}
+		if logGroupHasPlaceholders {
+			for _, key := range tempKeysFromSegments(logGroupTemplate) {
+				cleanupStatements = append(cleanupStatements, fmt.Sprintf(`delete_key(resource.attributes, "%s")`, key))
+			}
+		}
+		if logStreamHasPlaceholders {
+			for _, key := range tempKeysFromSegments(logStreamTemplate) {
+				cleanupStatements = append(cleanupStatements, fmt.Sprintf(`delete_key(resource.attributes, "%s")`, key))
+			}
+		}
 		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName+"_cleanup", transformproc.WithLogStatements(cleanupStatements)))
 	}
 
@@ -455,25 +465,53 @@ func templateToLiteral(segments []templateSegment) string {
 	return sb.String()
 }
 
-// buildOTTLSetStatements generates OTTL statements that resolve a template into a
-// resource attribute. After Concat, any "<nil>" in the resolved string is replaced
-// with "undefined" via replace_pattern. "<nil>" is invalid for log group names and
-// not expected in log stream names for application_signals customers, so collisions
-// with literal "<nil>" are not a concern while still a possibility.
+const tempAttrPrefix = "temporary_key."
+
+// buildOTTLSetStatements generates OTTL statements that resolve a template into
+// a resource attribute using temporary variables. Each placeholder attribute is
+// copied to a temp var, defaulted if nil, then used in Concat. This avoids
+// mutating the original resource attributes.
+// - service.name: nil -> "unknown_service", "unknown_service:*" -> "unknown_service"
+// - all other attributes: nil -> "unknown"
 func buildOTTLSetStatements(metadataKey string, segments []templateSegment) []string {
+	var statements []string
 	var parts []string
+
 	for _, seg := range segments {
 		if seg.attribute != "" {
-			parts = append(parts, fmt.Sprintf(`resource.attributes["%s"]`, seg.attribute))
+			tempKey := tempAttrPrefix + seg.attribute
+			statements = append(statements, fmt.Sprintf(
+				`set(resource.attributes["%s"], resource.attributes["%s"])`, tempKey, seg.attribute))
+			if seg.attribute == "service.name" {
+				statements = append(statements, fmt.Sprintf(
+					`set(resource.attributes["%s"], "unknown_service") where resource.attributes["%s"] == nil`, tempKey, tempKey))
+				statements = append(statements, fmt.Sprintf(
+					`replace_pattern(resource.attributes["%s"], "^unknown_service:.*", "unknown_service")`, tempKey))
+			} else {
+				statements = append(statements, fmt.Sprintf(
+					`set(resource.attributes["%s"], "unknown") where resource.attributes["%s"] == nil`, tempKey, tempKey))
+			}
+			parts = append(parts, fmt.Sprintf(`resource.attributes["%s"]`, tempKey))
 		} else {
 			parts = append(parts, fmt.Sprintf(`"%s"`, seg.literal))
 		}
 	}
 
-	return []string{
-		fmt.Sprintf(`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")),
-		fmt.Sprintf(`replace_pattern(resource.attributes["%s"], "<nil>", "undefined")`, metadataKey),
+	statements = append(statements, fmt.Sprintf(
+		`set(resource.attributes["%s"], Concat([%s], ""))`, metadataKey, strings.Join(parts, ", ")))
+
+	return statements
+}
+
+// tempKeysFromSegments returns the temp attribute keys that need cleanup.
+func tempKeysFromSegments(segments []templateSegment) []string {
+	var keys []string
+	for _, seg := range segments {
+		if seg.attribute != "" {
+			keys = append(keys, tempAttrPrefix+seg.attribute)
+		}
 	}
+	return keys
 }
 
 // SetVariant implements common.TranslatorOption for setting the pipeline variant.
