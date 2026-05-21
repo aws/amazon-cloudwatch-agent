@@ -137,12 +137,14 @@ const (
 var (
 	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
 	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsLogs            = ConfigKey(LogsKey, LogsCollectedKey, AppSignals)
 	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
 	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
 
 	AppSignalsConfigKeys = map[pipeline.Signal][]string{
 		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
+		pipeline.SignalLogs:    {AppSignalsLogs},
 	}
 	SystemMetricsEnabledConfigKey = ConfigKey(AgentKey, SystemMetricsEnabledKey)
 	JmxConfigKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
@@ -274,6 +276,7 @@ type ComponentTranslators struct {
 	Processors ComponentTranslatorMap
 	Exporters  ComponentTranslatorMap
 	Extensions ComponentTranslatorMap
+	Connectors ComponentTranslatorMap
 }
 
 // PipelineTranslator is a Translator that converts a JSON config into a pipeline
