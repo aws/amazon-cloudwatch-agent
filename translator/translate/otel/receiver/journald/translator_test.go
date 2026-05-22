@@ -12,90 +12,52 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/confmap"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/filestorage"
 )
 
-func TestTranslator(t *testing.T) {
+func TestTranslatorWithConfig(t *testing.T) {
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		want    *journaldreceiver.JournaldConfig
-		wantErr error
+		units    []string
+		priority string
+		matches  []journald.MatchConfig
+		want     *journaldreceiver.JournaldConfig
 	}{
-		"WithValidConfig": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"logs_collected": map[string]interface{}{
-						"journald": map[string]interface{}{
-							"collect_list": []interface{}{
-								map[string]interface{}{
-									"log_group_name":    "system-logs",
-									"log_stream_name":   "{instance_id}",
-									"retention_in_days": 7,
-									"units":             []interface{}{"systemd", "kernel", "sshd"},
-									"priority":          "err",
-									"matches":           []interface{}{map[string]interface{}{"_PID": "1"}},
-									"filters": []interface{}{
-										map[string]interface{}{
-											"type":       "exclude",
-											"expression": ".*debug.*",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+		"WithAllFields": {
+			units:    []string{"sshd", "systemd"},
+			priority: "err",
+			matches:  []journald.MatchConfig{{"_PID": "1"}},
 			want: &journaldreceiver.JournaldConfig{
 				InputConfig: journald.Config{
-					Units:    []string{"systemd", "kernel", "sshd"},
+					Units:    []string{"sshd", "systemd"},
 					Priority: "err",
 					Matches:  []journald.MatchConfig{{"_PID": "1"}},
 				},
 			},
 		},
 		"WithDefaultPriority": {
-			input: map[string]interface{}{
-				"logs": map[string]interface{}{
-					"logs_collected": map[string]interface{}{
-						"journald": map[string]interface{}{
-							"collect_list": []interface{}{
-								map[string]interface{}{
-									"log_group_name":  "default-logs",
-									"log_stream_name": "{instance_id}",
-								},
-							},
-						},
-					},
-				},
-			},
+			units: nil,
 			want: &journaldreceiver.JournaldConfig{
 				InputConfig: journald.Config{
 					Priority: "info",
 				},
 			},
 		},
-		"WithMissingConfig": {
-			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{},
+		"WithUnitsOnly": {
+			units: []string{"sshd"},
+			want: &journaldreceiver.JournaldConfig{
+				InputConfig: journald.Config{
+					Units:    []string{"sshd"},
+					Priority: "info",
+				},
+			},
 		},
 	}
 
-	for name, testCase := range testCases {
+	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			filestorage.NewTranslator() // initialize StorageID before Translate
-			conf := confmap.NewFromStringMap(testCase.input)
-			translator := NewTranslator()
-			got, err := translator.Translate(conf)
-
-			if testCase.wantErr != nil {
-				assert.Error(t, err)
-				assert.Nil(t, got)
-				return
-			}
+			translator := NewTranslatorWithConfig("test", tc.units, tc.priority, tc.matches)
+			got, err := translator.Translate(nil)
 
 			require.NoError(t, err)
 			require.NotNil(t, got)
@@ -103,14 +65,16 @@ func TestTranslator(t *testing.T) {
 			gotCfg, ok := got.(*journaldreceiver.JournaldConfig)
 			require.True(t, ok)
 
-			if testCase.want != nil {
-				assert.Equal(t, testCase.want.InputConfig.Units, gotCfg.InputConfig.Units)
-				assert.Equal(t, testCase.want.InputConfig.Priority, gotCfg.InputConfig.Priority)
-				assert.Equal(t, testCase.want.InputConfig.Matches, gotCfg.InputConfig.Matches)
-				// Storage is configured for cursor persistence
-				assert.NotNil(t, gotCfg.StorageID)
-				assert.Equal(t, filestorage.StorageID, *gotCfg.StorageID)
-			}
+			assert.Equal(t, tc.want.InputConfig.Units, gotCfg.InputConfig.Units)
+			assert.Equal(t, tc.want.InputConfig.Priority, gotCfg.InputConfig.Priority)
+			assert.Equal(t, tc.want.InputConfig.Matches, gotCfg.InputConfig.Matches)
+			assert.NotNil(t, gotCfg.StorageID)
+			assert.Equal(t, filestorage.StorageComponentID(), *gotCfg.StorageID)
 		})
 	}
+}
+
+func TestTranslatorID(t *testing.T) {
+	translator := NewTranslatorWithConfig("journald_0", nil, "", nil)
+	assert.Equal(t, "journald/journald_0", translator.ID().String())
 }

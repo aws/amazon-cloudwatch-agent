@@ -82,6 +82,8 @@ func (t *filterTranslator) Translate(_ *confmap.Conf) (component.Config, error) 
 		case "exclude":
 			ottlExpr = fmt.Sprintf(`IsMatch(body, "%s")`, filter.Expression)
 		case "include":
+			// The filter processor drops records matching the condition.
+			// To "include" only matching records, we drop records that do NOT match.
 			ottlExpr = fmt.Sprintf(`not IsMatch(body, "%s")`, filter.Expression)
 		default:
 			return nil, fmt.Errorf("unsupported filter type: %s", filter.Type)

@@ -1190,8 +1190,8 @@
                   },
                   "priority": {
                     "type": "string",
-                    "description": "Minimum priority level to collect. Valid values: emerg, alert, crit, err, warning, notice, info, debug, or a numeric value 0-7",
-                    "maxLength": 16,
+                    "description": "Minimum priority level to collect",
+                    "enum": ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug", "0", "1", "2", "3", "4", "5", "6", "7"],
                     "minItems": 1,
                     "uniqueItems": true
                   },
@@ -1208,6 +1208,7 @@
                     }
                   }
                 },
+                "required": ["log_group_name"],
                 "additionalProperties": false
               },
               "minItems": 1,

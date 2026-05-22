@@ -14,29 +14,28 @@ import (
 
 const (
 	directory = "/opt/aws/amazon-cloudwatch-agent/logs/state"
+	name      = "journald"
 )
 
 type translator struct {
-	name    string
 	factory extension.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-// StorageID is the component.ID for the file_storage/journald extension, exported for use by the receiver.
-var StorageID component.ID
+// StorageComponentID returns the component.ID for the file_storage/journald extension.
+func StorageComponentID() component.ID {
+	return component.NewIDWithName(filestorage.NewFactory().Type(), name)
+}
 
 func NewTranslator() common.ComponentTranslator {
-	t := &translator{
-		name:    "journald",
+	return &translator{
 		factory: filestorage.NewFactory(),
 	}
-	StorageID = t.ID()
-	return t
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), name)
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {

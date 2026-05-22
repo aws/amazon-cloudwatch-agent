@@ -105,8 +105,8 @@ func TestTranslator_Translate_WithDefaultValues(t *testing.T) {
 	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)
 
-	assert.Equal(t, "journald-logs", cfg.LogGroupName)  // Default value
-	assert.Equal(t, "{instance_id}", cfg.LogStreamName) // Default {instance_id} not resolved without metadata
+	assert.Equal(t, "journald-logs", cfg.LogGroupName) // Default value
+	assert.Equal(t, "i-UNKNOWN", cfg.LogStreamName)    // Default {instance_id} resolved without metadata
 }
 
 func TestTranslator_Translate_WithCredentials(t *testing.T) {

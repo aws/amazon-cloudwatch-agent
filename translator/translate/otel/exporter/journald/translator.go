@@ -107,7 +107,7 @@ func (t *translator) setJournaldFieldsFromConfig(cfg *awscloudwatchlogsexporter.
 		cfg.LogStreamName = logsutil.ResolvePlaceholder(logStreamName, globallogs.GlobalLogConfig.MetadataInfo)
 	} else {
 		// Default log stream name if not specified
-		cfg.LogStreamName = "{instance_id}"
+		cfg.LogStreamName = logsutil.ResolvePlaceholder("{instance_id}", globallogs.GlobalLogConfig.MetadataInfo)
 	}
 
 	// Set retention in days if available
