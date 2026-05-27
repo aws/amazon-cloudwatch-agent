@@ -1,0 +1,7 @@
+{
+  "opentelemetry": {
+    "collect": {
+      "host_insights": {}
+    }
+  }
+}
