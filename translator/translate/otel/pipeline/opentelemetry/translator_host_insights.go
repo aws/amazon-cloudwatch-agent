@@ -4,17 +4,12 @@
 package opentelemetry
 
 import (
-	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/systemmetrics"
 )
@@ -42,27 +37,15 @@ func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: hostInsightsKey}
 	}
 
-	region := agent.Global_Config.Region
-	if region == "" {
-		return nil, fmt.Errorf("region is required for %s pipeline", pipelineNameHostInsights)
+	defaults, err := newPipelineDefaults(pipelineNameHostInsights)
+	if err != nil {
+		return nil, err
 	}
-	metricsEndpoint := serviceEndpoint("monitoring", region, "/v1/metrics")
-
-	sigv4Ext := sigv4auth.NewTranslatorWithService("monitoring")
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](systemmetrics.NewTranslator()),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator()),
-		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName(pipelineNameHostInsights, otlphttp.EndpointConfig{MetricsEndpoint: metricsEndpoint}, otlphttp.WithAuthenticator(sigv4Ext.ID()))),
-		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName(pipelineNameHostInsights, defaults.Endpoint, otlphttp.WithAuthenticator(defaults.AuthID))),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](defaults.SigV4Ext),
 	}, nil
-}
-
-func serviceEndpoint(service, region, path string) string {
-	partition, _ := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	dnsSuffix := partition.DNSSuffix()
-	if dnsSuffix == "" {
-		dnsSuffix = "amazonaws.com"
-	}
-	return fmt.Sprintf("https://%s.%s.%s%s", service, region, dnsSuffix, path)
 }
