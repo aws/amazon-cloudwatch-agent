@@ -38,11 +38,21 @@ func WithTimeout(timeout time.Duration) common.TranslatorOption {
 	}
 }
 
+// WithMetadataKeys sets the metadata_keys for per-key batching.
+func WithMetadataKeys(keys []string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.metadataKeys = keys
+		}
+	}
+}
+
 type translator struct {
 	factory processor.Factory
 	common.NameProvider
 	telemetrySectionKey string
 	timeout             *time.Duration
+	metadataKeys        []string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -72,12 +82,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	// First check if we have a timeout override
 	if t.timeout != nil {
 		cfg.Timeout = *t.timeout
-	} else if duration, ok := common.GetDuration(conf, common.ConfigKey(t.telemetrySectionKey, common.ForceFlushIntervalKey)); ok {
-		cfg.Timeout = duration
-	} else if defaultDuration, ok := defaultForceFlushInterval[t.telemetrySectionKey]; ok {
-		cfg.Timeout = defaultDuration
-	} else {
-		return cfg, fmt.Errorf("default force_flush_interval not defined for %s", t.telemetrySectionKey)
+	} else if t.telemetrySectionKey != "" {
+		if duration, ok := common.GetDuration(conf, common.ConfigKey(t.telemetrySectionKey, common.ForceFlushIntervalKey)); ok {
+			cfg.Timeout = duration
+		} else if defaultDuration, ok := defaultForceFlushInterval[t.telemetrySectionKey]; ok {
+			cfg.Timeout = defaultDuration
+		} else {
+			return cfg, fmt.Errorf("default force_flush_interval not defined for %s", t.telemetrySectionKey)
+		}
+	}
+
+	if len(t.metadataKeys) > 0 {
+		cfg.MetadataKeys = t.metadataKeys
 	}
 	return cfg, nil
 }
