@@ -47,12 +47,32 @@ func WithMetadataKeys(keys []string) common.TranslatorOption {
 	}
 }
 
+// WithSendBatchSize sets the preferred number of items per batch export.
+func WithSendBatchSize(size uint32) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.sendBatchSize = size
+		}
+	}
+}
+
+// WithSendBatchMaxSize sets the maximum number of items per batch export.
+func WithSendBatchMaxSize(size uint32) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.sendBatchMaxSize = size
+		}
+	}
+}
+
 type translator struct {
 	factory processor.Factory
 	common.NameProvider
 	telemetrySectionKey string
 	timeout             *time.Duration
 	metadataKeys        []string
+	sendBatchSize       uint32
+	sendBatchMaxSize    uint32
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -94,6 +114,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	if len(t.metadataKeys) > 0 {
 		cfg.MetadataKeys = t.metadataKeys
+	}
+	if t.sendBatchSize > 0 {
+		cfg.SendBatchSize = t.sendBatchSize
+	}
+	if t.sendBatchMaxSize > 0 {
+		cfg.SendBatchMaxSize = t.sendBatchMaxSize
 	}
 	return cfg, nil
 }
