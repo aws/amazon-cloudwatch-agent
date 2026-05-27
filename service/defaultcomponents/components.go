@@ -56,6 +56,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
 	"go.opentelemetry.io/collector/connector"
+	"go.opentelemetry.io/collector/connector/forwardconnector"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
@@ -187,6 +188,7 @@ func Factories() (otelcol.Factories, error) {
 	}
 
 	if factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory](
+		forwardconnector.NewFactory(),
 		routingconnector.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err

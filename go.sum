@@ -1706,6 +1706,8 @@ go.opentelemetry.io/collector/connector v0.124.0 h1:/Wk8A4gOqjhE+WvKCMqCFhzUIvSi
 go.opentelemetry.io/collector/connector v0.124.0/go.mod h1:dnYcXgUZp8ZmT7nbBPf38+mP2DD3T47m9jyGbdaCEXc=
 go.opentelemetry.io/collector/connector/connectortest v0.124.0 h1:gAD2jt7Th6DD8tDTU72Sv2xXvqJEGSjfncr9nTSVCg8=
 go.opentelemetry.io/collector/connector/connectortest v0.124.0/go.mod h1:0017vT2aCY1NmYXEepxvEfMA9YufKUoBM3/qtD6k9UM=
+go.opentelemetry.io/collector/connector/forwardconnector v0.124.0 h1:195mSilJkhRe3DCBYHaNbn2hkwvxHp4KKZo36ACFOdI=
+go.opentelemetry.io/collector/connector/forwardconnector v0.124.0/go.mod h1:tAqHM6MsN+CAXNAh3ZC6Ja8ZN5098SD9Zu9kMIWvcvY=
 go.opentelemetry.io/collector/connector/xconnector v0.124.0 h1:rdjwSfajHjJVRznw/NKGGzY0PKBTKBypZngGxOaJuEg=
 go.opentelemetry.io/collector/connector/xconnector v0.124.0/go.mod h1:rOhdUXPzTZbJ2L8VV43r7Rz/ZBfgWxQ+RI9mcqlzz5g=
 go.opentelemetry.io/collector/consumer v1.30.0 h1:Nn6kFTH+EJbv13E0W+sNvWrTgbiFCRv8f6DaA2F1DQs=

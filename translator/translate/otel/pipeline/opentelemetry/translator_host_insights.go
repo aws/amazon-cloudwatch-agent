@@ -9,14 +9,11 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/systemmetrics"
 )
 
-const (
-	pipelineNameHostInsights = "host_insights"
-)
+const pipelineNameHostInsights = "host_insights"
 
 var hostInsightsKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey)
 
@@ -37,15 +34,13 @@ func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: hostInsightsKey}
 	}
 
-	defaults, err := newPipelineDefaults(pipelineNameHostInsights)
-	if err != nil {
-		return nil, err
-	}
+	fwdConnector := forward.NewTranslator("otel")
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](systemmetrics.NewTranslator()),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator()),
-		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName(pipelineNameHostInsights, defaults.Endpoint, otlphttp.WithAuthenticator(defaults.AuthID))),
-		Extensions: common.NewTranslatorMap[component.Config, component.ID](defaults.SigV4Ext),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
 }
