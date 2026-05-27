@@ -275,8 +275,6 @@ require (
 	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 )
 
-require go.opentelemetry.io/collector/connector/forwardconnector v0.124.0
-
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
