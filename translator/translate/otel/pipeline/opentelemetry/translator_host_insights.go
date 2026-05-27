@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/systemmetrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 )
 
 const pipelineNameHostInsights = "host_insights"
@@ -37,7 +37,7 @@ func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	fwdConnector := forward.NewTranslator("otel")
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](systemmetrics.NewTranslator()),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator()),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),

@@ -14,9 +14,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-func TestOtelRootTranslator(t *testing.T) {
-	tt := NewOtelRootTranslator()
-	assert.EqualValues(t, "metrics/opentelemetry_root", tt.ID().String())
+func TestBaseMetricsTranslator(t *testing.T) {
+	tt := NewBaseMetricsTranslator()
+	assert.EqualValues(t, "metrics/opentelemetry", tt.ID().String())
 
 	testCases := map[string]struct {
 		input   map[string]interface{}
@@ -59,7 +59,7 @@ func TestOtelRootTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/otel", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/opentelemetry_root", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlphttp/opentelemetry", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "sigv4auth/monitoring", got.Extensions.Keys()[0].String())
 				assert.Equal(t, "forward/otel", got.Connectors.Keys()[0].String())
 			}
@@ -67,9 +67,9 @@ func TestOtelRootTranslator(t *testing.T) {
 	}
 }
 
-func TestOtelRootTranslatorEmptyRegion(t *testing.T) {
+func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
 	agent.Global_Config.Region = ""
-	tt := NewOtelRootTranslator()
+	tt := NewBaseMetricsTranslator()
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{},
@@ -94,11 +94,11 @@ func TestServiceEndpoint(t *testing.T) {
 			path:    "/v1/metrics",
 			want:    "https://monitoring.us-east-1.amazonaws.com/v1/metrics",
 		},
-		"ChinaPartition": {
+		"GovCloudPartition": {
 			service: "monitoring",
-			region:  "cn-north-1",
+			region:  "us-gov-west-1",
 			path:    "/v1/metrics",
-			want:    "https://monitoring.cn-north-1.amazonaws.com.cn/v1/metrics",
+			want:    "https://monitoring.us-gov-west-1.amazonaws.com/v1/metrics",
 		},
 	}
 	for name, tc := range testCases {

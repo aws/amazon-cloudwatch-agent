@@ -58,7 +58,7 @@ func TestHostInsightsTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 0, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
-				assert.Equal(t, "systemmetrics", got.Receivers.Keys()[0].String())
+				assert.Equal(t, "hostmetrics", got.Receivers.Keys()[0].String())
 				assert.Equal(t, "forward/otel", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "forward/otel", got.Connectors.Keys()[0].String())
 			}

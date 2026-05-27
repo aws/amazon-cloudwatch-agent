@@ -210,6 +210,7 @@ require (
 	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.30.0
 	go.opentelemetry.io/collector/confmap/xconfmap v0.124.0
 	go.opentelemetry.io/collector/connector v0.124.0
+	go.opentelemetry.io/collector/connector/forwardconnector v0.124.0
 	go.opentelemetry.io/collector/consumer v1.30.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.124.0
 	go.opentelemetry.io/collector/exporter v0.124.0
@@ -266,8 +267,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-00010101000000-000000000000
 	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
 )
-
-require go.opentelemetry.io/collector/connector/forwardconnector v0.124.0
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect

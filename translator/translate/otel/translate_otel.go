@@ -82,7 +82,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Set(systemmetrics.NewTranslator())
-	translators.Set(opentelemetry.NewOtelRootTranslator())
+	translators.Set(opentelemetry.NewBaseMetricsTranslator())
 	translators.Set(opentelemetry.NewHostInsightsTranslator())
 	translators.Merge(registry)
 	pipelines, err := pipelinetranslator.NewTranslator(translators).Translate(conf)
