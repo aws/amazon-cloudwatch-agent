@@ -101,6 +101,7 @@ func TestComponents(t *testing.T) {
 	}
 
 	wantConnectors := []string{
+		"forward",
 		"routing",
 	}
 	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)

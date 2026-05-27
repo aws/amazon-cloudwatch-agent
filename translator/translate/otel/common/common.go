@@ -29,6 +29,8 @@ const (
 	MetricsCollectedKey                            = "metrics_collected"
 	LogsCollectedKey                               = "logs_collected"
 	TracesCollectedKey                             = "traces_collected"
+	OpenTelemetryKey                               = "opentelemetry"
+	CollectKey                                     = "collect"
 	MetricsDestinationsKey                         = "metrics_destinations"
 	ECSKey                                         = "ecs"
 	KubernetesKey                                  = "kubernetes"
