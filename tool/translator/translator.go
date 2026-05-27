@@ -6,12 +6,14 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	userutil "github.com/aws/amazon-cloudwatch-agent/internal/util/user"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
@@ -103,6 +105,12 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	tomlConfigDir := filepath.Dir(tomlConfigPath)
 	yamlConfigPath := filepath.Join(tomlConfigDir, yamlConfigFileName)
 
+	// Load existing env-config.json so environment variables are available during translation.
+	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
+	if err := envconfig.LoadEnvConfigFile(envConfigPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Printf("W! Failed to load env config file: %v", err)
+	}
+
 	mergedJSONConfigMap, err := cmdutil.GenerateMergedJsonConfigMap(ct.ctx)
 	onlyYAML := errors.Is(err, cmdutil.ErrOnlyYAML)
 	if err != nil && !onlyYAML {
@@ -151,7 +159,6 @@ func (ct *ConfigTranslator) Translate() (err error) {
 		log.Println(exitSuccessMessage)
 	}
 
-	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
 	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
 
 	return nil

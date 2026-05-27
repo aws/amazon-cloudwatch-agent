@@ -4,8 +4,9 @@
 package toenvconfig
 
 import (
-	"encoding/json"
+	"maps"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -242,10 +243,7 @@ func TestToEnvConfig(t *testing.T) {
 
 			tt.contextSetup()
 			result := ToEnvConfig(tt.input)
-			var actualEnv map[string]string
-			err := json.Unmarshal(result, &actualEnv)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedEnv, actualEnv)
+			assert.Equal(t, tt.expectedEnv, result)
 		})
 	}
 }
@@ -310,10 +308,40 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 			context.CurrentContext().SetProxy(map[string]string{})
 			context.CurrentContext().SetSSL(map[string]string{})
 			result := ToEnvConfig(tt.input)
-			var actualEnv map[string]string
-			err := json.Unmarshal(result, &actualEnv)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedEnv, actualEnv)
+			assert.Equal(t, tt.expectedEnv, result)
 		})
 	}
+}
+
+func TestManagedKeys_CoversAllToEnvConfigKeys(t *testing.T) {
+	// Set up context to trigger proxy/SSL keys
+	context.CurrentContext().SetProxy(map[string]string{
+		"http_proxy":  "http://proxy",
+		"https_proxy": "https://proxy",
+		"no_proxy":    "localhost",
+	})
+	context.CurrentContext().SetSSL(map[string]string{
+		"ca_bundle_path": "/ca.pem",
+	})
+	defer func() {
+		context.CurrentContext().SetProxy(map[string]string{})
+		context.CurrentContext().SetSSL(map[string]string{})
+	}()
+
+	t.Setenv(envconfig.CWAgentLogsBackpressureMode, "drop")
+
+	// Input that triggers all agent-section keys
+	input := map[string]any{
+		"agent": map[string]any{
+			"user_agent":             "test",
+			"debug":                  true,
+			"aws_sdk_log_level":      "LogDebug",
+			"usage_data":             false,
+			"use_dualstack_endpoint": true,
+		},
+	}
+
+	result := ToEnvConfig(input)
+	assert.ElementsMatch(t, ManagedKeys, slices.Collect(maps.Keys(result)),
+		"ManagedKeys must exactly match the keys ToEnvConfig can produce")
 }

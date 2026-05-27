@@ -1077,10 +1077,7 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 	translator.SetTargetPlatform(targetOs)
 	err := json.Unmarshal([]byte(jsonStr), &input)
 	if err == nil {
-		envVarsBytes := toenvconfig.ToEnvConfig(input)
-		var actualEnvVars = make(map[string]string)
-		err := json.Unmarshal(envVarsBytes, &actualEnvVars)
-		assert.NoError(t, err)
+		actualEnvVars := toenvconfig.ToEnvConfig(input)
 		assert.Equal(t, expectedEnvVars, actualEnvVars, "Expect to be equal")
 	} else {
 		t.Logf("Got error %v", err)

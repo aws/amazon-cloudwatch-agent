@@ -19,8 +19,8 @@ import (
 )
 
 func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
-	jsonConfigValue := map[string]interface{}{
-		"agent": map[string]interface{}{
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
 			"user_agent":        "cwagent",
 			"debug":             true,
 			"aws_sdk_log_level": "loglevel",
@@ -31,8 +31,8 @@ func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
 
 	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
-	var actualJson map[string]interface{}
-	var expectedJson map[string]interface{}
+	var actualJson map[string]any
+	var expectedJson map[string]any
 	actual, _ := os.ReadFile(envConfigPath)
 	expected, _ := os.ReadFile(expectedFile)
 	json.Unmarshal(actual, actualJson)
@@ -41,6 +41,94 @@ func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
 	assert.Equal(t, expectedJson[envconfig.CWAGENT_USER_AGENT], actualJson[envconfig.CWAGENT_USER_AGENT])
 	assert.Equal(t, expectedJson[envconfig.CWAGENT_LOG_LEVEL], actualJson[envconfig.CWAGENT_LOG_LEVEL])
 	assert.Equal(t, expectedJson[envconfig.AWS_SDK_LOG_LEVEL], actualJson[envconfig.AWS_SDK_LOG_LEVEL])
+}
+
+func TestTranslateJsonMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Pre-populate env-config.json with existing values
+	existing := map[string]string{
+		"MY_CUSTOM_VAR": "custom_value",
+		"ENV_REGION":    "us-west-2",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0644))
+
+	// Translate with new values
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
+			"debug": true,
+		},
+	}
+	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	// Verify merged result
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	assert.Equal(t, "custom_value", result["MY_CUSTOM_VAR"])
+	assert.Equal(t, "us-west-2", result["ENV_REGION"])
+	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
+}
+
+func TestTranslateJsonMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Pre-populate with a value that translation will also produce
+	existing := map[string]string{
+		"CWAGENT_LOG_LEVEL": "WARN",
+		"MY_CUSTOM_VAR":     "keep_me",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0644))
+
+	// Translate with debug=true which sets CWAGENT_LOG_LEVEL=DEBUG
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
+			"debug": true,
+		},
+	}
+	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
+	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
+}
+
+func TestTranslateJsonMapToEnvConfigFile_ClearsStaleManagedKeys(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Simulate a previous translation that set CWAGENT_USER_AGENT
+	existing := map[string]string{
+		envconfig.CWAGENT_USER_AGENT: "old-agent",
+		"MY_CUSTOM_VAR":              "keep_me",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0644))
+
+	// Re-translate without user_agent so CWAGENT_USER_AGENT should be cleared
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{},
+	}
+	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	_, exists := result[envconfig.CWAGENT_USER_AGENT]
+	assert.False(t, exists)
+	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
 }
 
 func TestAgentConfig(t *testing.T) {
