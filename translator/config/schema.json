@@ -1762,6 +1762,9 @@
                 }
               },
               "additionalProperties": false
+            },
+            "host_insights": {
+              "type": "object"
             }
           },
           "additionalProperties": false
