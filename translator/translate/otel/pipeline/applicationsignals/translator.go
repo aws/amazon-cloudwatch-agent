@@ -243,7 +243,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 
 	translators.Receivers.Set(connectorTranslator)
 
-	translators.Processors.Set(batchproc.NewTranslator(common.WithName(metricsVariantOtlpDest), batchproc.WithTelemetrySection(common.MetricsKey)))
+	translators.Processors.Set(batchproc.NewTranslator(common.WithName(metricsVariantOtlpDest), batchproc.WithTelemetrySection(common.MetricsKey), batchproc.WithSendBatchMaxSize(1000), batchproc.WithSendBatchSize(1000)))
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(metricsVariantOtlpDest, metricsEndpoint,
 		otlphttp.WithAuthenticator(sigv4Ext.ID()),
 	))

@@ -333,8 +333,8 @@ processors:
         timeout: 5s
     batch/application_signals_metrics_otlp_destination:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
+        send_batch_max_size: 1000
+        send_batch_size: 1000
         timeout: 1m0s
     metricstransform/application_signals:
         transforms:
