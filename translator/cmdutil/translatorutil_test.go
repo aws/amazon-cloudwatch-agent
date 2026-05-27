@@ -18,7 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
+func TestTranslateJSONMapToEnvConfigFile(t *testing.T) {
 	jsonConfigValue := map[string]any{
 		"agent": map[string]any{
 			"user_agent":        "cwagent",
@@ -29,21 +29,21 @@ func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
 	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 	expectedFile := "testdata/env-config.json"
 
-	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
-	var actualJson map[string]any
-	var expectedJson map[string]any
+	var actualJSON map[string]any
+	var expectedJSON map[string]any
 	actual, _ := os.ReadFile(envConfigPath)
 	expected, _ := os.ReadFile(expectedFile)
-	json.Unmarshal(actual, actualJson)
-	json.Unmarshal(expected, expectedJson)
+	json.Unmarshal(actual, &actualJSON)
+	json.Unmarshal(expected, &expectedJSON)
 
-	assert.Equal(t, expectedJson[envconfig.CWAGENT_USER_AGENT], actualJson[envconfig.CWAGENT_USER_AGENT])
-	assert.Equal(t, expectedJson[envconfig.CWAGENT_LOG_LEVEL], actualJson[envconfig.CWAGENT_LOG_LEVEL])
-	assert.Equal(t, expectedJson[envconfig.AWS_SDK_LOG_LEVEL], actualJson[envconfig.AWS_SDK_LOG_LEVEL])
+	assert.Equal(t, expectedJSON[envconfig.CWAGENT_USER_AGENT], actualJSON[envconfig.CWAGENT_USER_AGENT])
+	assert.Equal(t, expectedJSON[envconfig.CWAGENT_LOG_LEVEL], actualJSON[envconfig.CWAGENT_LOG_LEVEL])
+	assert.Equal(t, expectedJSON[envconfig.AWS_SDK_LOG_LEVEL], actualJSON[envconfig.AWS_SDK_LOG_LEVEL])
 }
 
-func TestTranslateJsonMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
+func TestTranslateJSONMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
 	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 
 	// Pre-populate env-config.json with existing values
@@ -53,7 +53,7 @@ func TestTranslateJsonMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
 	}
 	existingBytes, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0644))
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
 
 	// Translate with new values
 	jsonConfigValue := map[string]any{
@@ -61,7 +61,7 @@ func TestTranslateJsonMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
 			"debug": true,
 		},
 	}
-	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
 	// Verify merged result
 	result := map[string]string{}
@@ -74,7 +74,7 @@ func TestTranslateJsonMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
 	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
 }
 
-func TestTranslateJsonMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T) {
+func TestTranslateJSONMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T) {
 	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 
 	// Pre-populate with a value that translation will also produce
@@ -84,7 +84,7 @@ func TestTranslateJsonMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T)
 	}
 	existingBytes, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0644))
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
 
 	// Translate with debug=true which sets CWAGENT_LOG_LEVEL=DEBUG
 	jsonConfigValue := map[string]any{
@@ -92,7 +92,7 @@ func TestTranslateJsonMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T)
 			"debug": true,
 		},
 	}
-	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
 	result := map[string]string{}
 	actual, err := os.ReadFile(envConfigPath)
@@ -103,7 +103,7 @@ func TestTranslateJsonMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T)
 	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
 }
 
-func TestTranslateJsonMapToEnvConfigFile_ClearsStaleManagedKeys(t *testing.T) {
+func TestTranslateJSONMapToEnvConfigFile_ClearsStaleManagedKeys(t *testing.T) {
 	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 
 	// Simulate a previous translation that set CWAGENT_USER_AGENT
@@ -113,13 +113,13 @@ func TestTranslateJsonMapToEnvConfigFile_ClearsStaleManagedKeys(t *testing.T) {
 	}
 	existingBytes, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0644))
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
 
 	// Re-translate without user_agent so CWAGENT_USER_AGENT should be cleared
 	jsonConfigValue := map[string]any{
 		"agent": map[string]any{},
 	}
-	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
 	result := map[string]string{}
 	actual, err := os.ReadFile(envConfigPath)

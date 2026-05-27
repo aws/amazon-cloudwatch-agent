@@ -159,7 +159,7 @@ func (ct *ConfigTranslator) Translate() (err error) {
 		log.Println(exitSuccessMessage)
 	}
 
-	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
+	cmdutil.TranslateJSONMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
 
 	return nil
 }

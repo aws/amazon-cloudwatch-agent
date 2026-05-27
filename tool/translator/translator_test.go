@@ -59,7 +59,7 @@ func TestTranslate_LoadsExistingEnvConfig(t *testing.T) {
 	require.NoError(t, os.WriteFile(
 		filepath.Join(tmpDir, "env-config.json"),
 		[]byte(`{"MY_RETAINED_VAR":"retained_value"}`),
-		0644,
+		0600,
 	))
 
 	t.Setenv("MY_RETAINED_VAR", "")

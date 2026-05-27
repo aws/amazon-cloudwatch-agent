@@ -39,9 +39,9 @@ const (
 
 var ErrOnlyYAML = errors.New("only YAML files detected")
 
-// TranslateJsonMapToEnvConfigFile populates env-config.json based on the input json config.
+// TranslateJSONMapToEnvConfigFile populates env-config.json based on the input json config.
 // Keys managed by translation are always overwritten; other keys are retained.
-func TranslateJsonMapToEnvConfigFile(jsonConfigValue map[string]any, envConfigPath string) {
+func TranslateJSONMapToEnvConfigFile(jsonConfigValue map[string]any, envConfigPath string) {
 	if envConfigPath == "" {
 		return
 	}

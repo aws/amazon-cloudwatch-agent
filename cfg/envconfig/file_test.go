@@ -18,7 +18,7 @@ import (
 func TestReadEnvConfigFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	content := `{"KEY1": "val1", "KEY2": "val2"}`
-	require.NoError(t, os.WriteFile(path, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
 
 	result, err := ReadEnvConfigFile(path)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestReadEnvConfigFile_MissingFile(t *testing.T) {
 func TestLoadEnvConfigFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	content := `{"MY_TEST_VAR": "hello", "MY_OTHER_VAR": "world"}`
-	require.NoError(t, os.WriteFile(path, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
 
 	t.Setenv("MY_TEST_VAR", "")
 	t.Setenv("MY_OTHER_VAR", "")
@@ -64,7 +64,7 @@ func TestMergeEnvConfigFile(t *testing.T) {
 	existing := map[string]string{"KEEP_ME": "original", "OVERWRITE_ME": "old"}
 	data, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0644))
+	require.NoError(t, os.WriteFile(path, data, 0600))
 
 	require.NoError(t, MergeEnvConfigFile(path, map[string]string{
 		"OVERWRITE_ME": "new",
@@ -90,7 +90,7 @@ func TestMergeEnvConfigFile_CreatesIfMissing(t *testing.T) {
 
 func TestMergeEnvConfigFile_CorruptExistingFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
-	require.NoError(t, os.WriteFile(path, []byte("not valid json"), 0644))
+	require.NoError(t, os.WriteFile(path, []byte("not valid json"), 0600))
 
 	err := MergeEnvConfigFile(path, map[string]string{"KEY": "value"})
 	assert.Error(t, err)
@@ -105,7 +105,7 @@ func TestReplaceEnvConfigFile(t *testing.T) {
 	existing := map[string]string{"STALE_KEY": "old", "KEEP_ME": "retained"}
 	data, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(path, data, 0644))
+	require.NoError(t, os.WriteFile(path, data, 0600))
 
 	err = ReplaceEnvConfigFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"})
 	require.NoError(t, err)

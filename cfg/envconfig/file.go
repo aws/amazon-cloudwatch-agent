@@ -67,5 +67,5 @@ func ReplaceEnvConfigFile(path string, values map[string]string, keysToRemove []
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, bytes, 0644)
+	return os.WriteFile(path, bytes, 0644) //nolint:gosec // retains existing permissions
 }
