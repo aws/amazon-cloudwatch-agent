@@ -1,4 +1,11 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300069.0 (2026-05-28)
+========================================================================
+Enhancements:
+* [ApplicationSignals] Add support for Service Events logs and metrics pipelines
+* [ContainerInsights] Extended OTLP enrichment with additional metric attributes and logs support
+
+========================================================================
 Amazon CloudWatch Agent 1.300068.0 (2026-05-11)
 ========================================================================
 New Features
