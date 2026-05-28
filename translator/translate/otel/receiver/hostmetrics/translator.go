@@ -6,12 +6,11 @@ package hostmetrics
 import (
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -44,14 +43,18 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), "")
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	scrapers := make(map[string]map[string]any, len(defaultScrapers))
 	for _, s := range defaultScrapers {
 		scrapers[s] = map[string]any{}
 	}
+	intervalKeyChain := []string{
+		common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey, common.MetricsCollectionIntervalKey),
+		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
+	}
 	return &hostMetricsConfig{
 		ControllerConfig: scraperhelper.ControllerConfig{
-			CollectionInterval: 60 * time.Second,
+			CollectionInterval: common.GetOrDefaultDuration(conf, intervalKeyChain, 60*time.Second),
 			InitialDelay:       time.Second,
 		},
 		Scrapers: scrapers,
