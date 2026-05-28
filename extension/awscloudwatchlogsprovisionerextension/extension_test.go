@@ -196,7 +196,7 @@ func TestRoundTripper_400DoesNotExist_EvictsAndReturnsError(t *testing.T) {
 	resp, err := rt.RoundTrip(req)
 	assert.Nil(t, resp)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not exist")
+	assert.Contains(t, err.Error(), "no longer exists")
 	assert.Equal(t, int32(1), mockClient.streamCalls.Load())
 }
 

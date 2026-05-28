@@ -4,6 +4,7 @@
 package awscloudwatchlogsprovisionerextension // import "github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -159,13 +160,15 @@ func (rt *provisionerRoundTripper) RoundTrip(req *http.Request) (*http.Response,
 		if resp.StatusCode == http.StatusBadRequest {
 			body, readErr := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			if readErr == nil && strings.Contains(string(body), "does not exist") {
-				rt.ext.evictSuccessfulEntry(logGroup, logStream)
-				if wasProvisioned {
-					return nil, errors.New("destination log group/stream (that did exist) does not exist, evicted cache entry for re-provisioning for next retry")
+			if readErr == nil {
+				if strings.Contains(string(body), "does not exist") {
+					rt.ext.evictSuccessfulEntry(logGroup, logStream)
+					if wasProvisioned {
+						return nil, errors.New("log group/stream no longer exists; evicted cache entry for re-provisioning on retry")
+					}
 				}
+				resp.Body = io.NopCloser(bytes.NewReader(body))
 			}
-			resp.Body = io.NopCloser(strings.NewReader(string(body)))
 		}
 
 		return resp, nil
@@ -196,6 +199,9 @@ func (e *provisionerExtension) ensure(ctx context.Context, logGroup, logStream s
 		}
 	}
 
+	// All three return values are intentionally discarded: the func always
+	// returns (nil, nil), and the shared flag is irrelevant because the cache
+	// is the authoritative source of truth checked after Do returns.
 	_, _, _ = e.sfGroup.Do(key, func() (any, error) {
 		// Double-check cache after acquiring singleflight.
 		if entry, ok := e.cache.Load(key); ok {
