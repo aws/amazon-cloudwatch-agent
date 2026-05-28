@@ -14,69 +14,33 @@
           }
         ]
       },
-      "syslog": [
-        {
-          "listen_address": "tcp://0.0.0.0:514",
-          "log_group_name": "/syslog/tcp/default",
-          "log_stream_name": "tcp-default",
-          "retention_in_days": 30,
-          "filters": [
-            {
-              "type": "exclude",
-              "expression": "healthcheck"
-            }
-          ],
-          "routing": [
-            {
-              "match": { "hostname": "web-*" },
-              "log_group_name": "/syslog/tcp/web",
-              "log_stream_name": "web-stream",
-              "retention_in_days": 7,
-              "filters": [
-                {
-                  "type": "include",
-                  "expression": "error|warn|crit"
-                }
-              ]
-            },
-            {
-              "match": { "facility": 4 },
-              "log_group_name": "/syslog/tcp/auth",
-              "log_stream_name": "auth-stream"
-            }
-          ]
-        },
-        {
-          "listen_address": "udp://0.0.0.0:514",
-          "protocol": "rfc3164",
-          "log_group_name": "/syslog/udp/default",
-          "log_stream_name": "udp-default",
-          "routing": [
-            {
-              "match": { "app_name": "nginx" },
-              "log_group_name": "/syslog/udp/nginx",
-              "log_stream_name": "nginx-stream",
-              "filters": [
-                {
-                  "type": "exclude",
-                  "expression": "GET /favicon"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "listen_address": "tcp://0.0.0.0:1514",
-          "tls": {
-            "cert_file": "/etc/ssl/cert.pem",
-            "key_file": "/etc/ssl/key.pem",
-            "ca_file": "/etc/ssl/ca.pem",
-            "min_version": "1.3"
+      "syslog": {
+        "listeners": [
+          {"listen_address": "tcp://0.0.0.0:514"},
+          {"listen_address": "udp://0.0.0.0:514", "protocol": "rfc3164"},
+          {"listen_address": "tcp://0.0.0.0:1514", "tls": {"cert_file": "/etc/ssl/cert.pem", "key_file": "/etc/ssl/key.pem", "ca_file": "/etc/ssl/ca.pem", "min_version": "1.3"}}
+        ],
+        "log_group_name": "/syslog/default",
+        "log_stream_name": "default",
+        "retention_in_days": 30,
+        "filters": [
+          {"type": "exclude", "expression": "healthcheck"}
+        ],
+        "routing": [
+          {
+            "match": {"hostname": "web-*"},
+            "log_group_name": "/syslog/web",
+            "log_stream_name": "web-stream",
+            "retention_in_days": 7,
+            "filters": [{"type": "include", "expression": "error|warn|crit"}]
           },
-          "log_group_name": "/syslog/tls/default",
-          "log_stream_name": "tls-default"
-        }
-      ]
+          {
+            "match": {"facility": 4},
+            "log_group_name": "/syslog/auth",
+            "log_stream_name": "auth-stream"
+          }
+        ]
+      }
     }
   }
 }

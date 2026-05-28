@@ -42,16 +42,13 @@ func TestSyslogSchema_MultipleListeners(t *testing.T) {
 	result := validateJSON(t, `{
 		"logs": {
 			"logs_collected": {
-				"syslog": [
-					{
-						"listen_address": "tcp://0.0.0.0:514",
-						"log_group_name": "/test/tcp"
-					},
-					{
-						"listen_address": "udp://0.0.0.0:514",
-						"log_group_name": "/test/udp"
-					}
-				]
+				"syslog": {
+					"listeners": [
+						{"listen_address": "tcp://0.0.0.0:514"},
+						{"listen_address": "udp://0.0.0.0:514"}
+					],
+					"log_group_name": "/test/syslog"
+				}
 			}
 		}
 	}`)
@@ -101,14 +98,18 @@ func TestSyslogSchema_WithTLS(t *testing.T) {
 		"logs": {
 			"logs_collected": {
 				"syslog": {
-					"listen_address": "tcp://0.0.0.0:514",
-					"log_group_name": "/test/tls",
-					"tls": {
-						"cert_file": "/etc/ssl/cert.pem",
-						"key_file": "/etc/ssl/key.pem",
-						"ca_file": "/etc/ssl/ca.pem",
-						"min_version": "1.3"
-					}
+					"listeners": [
+						{
+							"listen_address": "tcp://0.0.0.0:514",
+							"tls": {
+								"cert_file": "/etc/ssl/cert.pem",
+								"key_file": "/etc/ssl/key.pem",
+								"ca_file": "/etc/ssl/ca.pem",
+								"min_version": "1.3"
+							}
+						}
+					],
+					"log_group_name": "/test/tls"
 				}
 			}
 		}
@@ -121,8 +122,12 @@ func TestSyslogSchema_WithProtocol(t *testing.T) {
 		"logs": {
 			"logs_collected": {
 				"syslog": {
-					"listen_address": "udp://0.0.0.0:514",
-					"protocol": "rfc3164",
+					"listeners": [
+						{
+							"listen_address": "udp://0.0.0.0:514",
+							"protocol": "rfc3164"
+						}
+					],
 					"log_group_name": "/test/bsd"
 				}
 			}
@@ -157,34 +162,34 @@ func TestSyslogSchema_FullConfig(t *testing.T) {
 	result := validateJSON(t, `{
 		"logs": {
 			"logs_collected": {
-				"syslog": [
-					{
-						"listen_address": "tcp://0.0.0.0:514",
-						"log_group_name": "/test/default",
-						"log_stream_name": "default",
-						"retention_in_days": 30,
-						"filters": [{"type": "exclude", "expression": "healthcheck"}],
-						"routing": [
-							{
-								"match": {"hostname": "web-*", "facility": 1},
-								"log_group_name": "/test/web",
-								"log_stream_name": "web",
-								"retention_in_days": 7,
-								"filters": [{"type": "include", "expression": "error|warn"}]
-							}
-						]
-					},
-					{
-						"listen_address": "udp://0.0.0.0:514",
-						"protocol": "rfc3164",
-						"log_group_name": "/test/udp"
-					},
-					{
-						"listen_address": "tcp://0.0.0.0:1514",
-						"log_group_name": "/test/tls",
-						"tls": {"cert_file": "/cert.pem", "key_file": "/key.pem"}
-					}
-				]
+				"syslog": {
+					"listeners": [
+						{
+							"listen_address": "tcp://0.0.0.0:514"
+						},
+						{
+							"listen_address": "udp://0.0.0.0:514",
+							"protocol": "rfc3164"
+						},
+						{
+							"listen_address": "tcp://0.0.0.0:1514",
+							"tls": {"cert_file": "/cert.pem", "key_file": "/key.pem"}
+						}
+					],
+					"log_group_name": "/test/default",
+					"log_stream_name": "default",
+					"retention_in_days": 30,
+					"filters": [{"type": "exclude", "expression": "healthcheck"}],
+					"routing": [
+						{
+							"match": {"hostname": "web-*", "facility": 1},
+							"log_group_name": "/test/web",
+							"log_stream_name": "web",
+							"retention_in_days": 7,
+							"filters": [{"type": "include", "expression": "error|warn"}]
+						}
+					]
+				}
 			}
 		}
 	}`)
@@ -237,9 +242,13 @@ func TestSyslogSchema_InvalidProtocol(t *testing.T) {
 		"logs": {
 			"logs_collected": {
 				"syslog": {
-					"listen_address": "tcp://0.0.0.0:514",
-					"log_group_name": "/test/default",
-					"protocol": "rfc9999"
+					"listeners": [
+						{
+							"listen_address": "tcp://0.0.0.0:514",
+							"protocol": "rfc9999"
+						}
+					],
+					"log_group_name": "/test/default"
 				}
 			}
 		}
@@ -252,9 +261,13 @@ func TestSyslogSchema_InvalidTLSMinVersion(t *testing.T) {
 		"logs": {
 			"logs_collected": {
 				"syslog": {
-					"listen_address": "tcp://0.0.0.0:514",
-					"log_group_name": "/test/default",
-					"tls": { "min_version": "2.0" }
+					"listeners": [
+						{
+							"listen_address": "tcp://0.0.0.0:514",
+							"tls": { "min_version": "2.0" }
+						}
+					],
+					"log_group_name": "/test/default"
 				}
 			}
 		}
@@ -367,9 +380,13 @@ func TestSyslogSchema_UnknownTLSField(t *testing.T) {
 		"logs": {
 			"logs_collected": {
 				"syslog": {
-					"listen_address": "tcp://0.0.0.0:514",
-					"log_group_name": "/test/default",
-					"tls": { "cipher_suites": ["TLS_AES_128"] }
+					"listeners": [
+						{
+							"listen_address": "tcp://0.0.0.0:514",
+							"tls": { "cipher_suites": ["TLS_AES_128"] }
+						}
+					],
+					"log_group_name": "/test/default"
 				}
 			}
 		}
@@ -382,14 +399,18 @@ func TestSyslogSchema_WithClientCAFile(t *testing.T) {
 		"logs": {
 			"logs_collected": {
 				"syslog": {
-					"listen_address": "tcp://0.0.0.0:6514",
-					"log_group_name": "/test/mtls",
-					"tls": {
-						"cert_file": "/etc/ssl/cert.pem",
-						"key_file": "/etc/ssl/key.pem",
-						"client_ca_file": "/etc/ssl/client-ca.pem",
-						"min_version": "1.2"
-					}
+					"listeners": [
+						{
+							"listen_address": "tcp://0.0.0.0:6514",
+							"tls": {
+								"cert_file": "/etc/ssl/cert.pem",
+								"key_file": "/etc/ssl/key.pem",
+								"client_ca_file": "/etc/ssl/client-ca.pem",
+								"min_version": "1.2"
+							}
+						}
+					],
+					"log_group_name": "/test/mtls"
 				}
 			}
 		}
@@ -413,4 +434,80 @@ func TestSyslogSchema_UnknownMatchField(t *testing.T) {
 		}
 	}`)
 	assert.False(t, result.Valid(), "unknown match field should fail")
+}
+
+func TestSyslogSchema_ArrayForm_SingleSection(t *testing.T) {
+	result := validateJSON(t, `{
+		"logs": {
+			"logs_collected": {
+				"syslog": [
+					{
+						"listen_address": "tcp://0.0.0.0:514",
+						"log_group_name": "/test/syslog"
+					}
+				]
+			}
+		}
+	}`)
+	assert.True(t, result.Valid(), "array with single syslog section should be valid: %v", result.Errors())
+}
+
+func TestSyslogSchema_ArrayForm_MultipleSections(t *testing.T) {
+	result := validateJSON(t, `{
+		"logs": {
+			"logs_collected": {
+				"syslog": [
+					{
+						"listeners": [
+							{"listen_address": "tcp://0.0.0.0:514"}
+						],
+						"log_group_name": "/syslog/infra/default",
+						"retention_in_days": 30,
+						"routing": [
+							{"match": {"facility": 4}, "log_group_name": "/syslog/infra/auth"}
+						]
+					},
+					{
+						"listeners": [
+							{"listen_address": "tcp://0.0.0.0:1514"},
+							{"listen_address": "udp://0.0.0.0:1514", "protocol": "rfc3164"}
+						],
+						"log_group_name": "/syslog/apps/default",
+						"retention_in_days": 7,
+						"filters": [{"type": "exclude", "expression": "healthcheck"}],
+						"routing": [
+							{"match": {"hostname": "web-*"}, "log_group_name": "/syslog/apps/web"}
+						]
+					}
+				]
+			}
+		}
+	}`)
+	assert.True(t, result.Valid(), "array with multiple syslog sections should be valid: %v", result.Errors())
+}
+
+func TestSyslogSchema_ArrayForm_EmptyArray(t *testing.T) {
+	result := validateJSON(t, `{
+		"logs": {
+			"logs_collected": {
+				"syslog": []
+			}
+		}
+	}`)
+	assert.False(t, result.Valid(), "empty syslog array should fail (minItems: 1)")
+}
+
+func TestSyslogSchema_ArrayForm_InvalidSection(t *testing.T) {
+	result := validateJSON(t, `{
+		"logs": {
+			"logs_collected": {
+				"syslog": [
+					{
+						"listen_address": "tcp://0.0.0.0:514"
+					}
+				]
+			}
+		}
+	}`)
+	assert.False(t, result.Valid(), "array section missing log_group_name should fail")
 }

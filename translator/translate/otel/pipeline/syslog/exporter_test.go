@@ -4,6 +4,7 @@
 package syslog
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
@@ -201,4 +202,55 @@ func TestCWLExporterTranslator_Translate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOTLPExporterTranslator_ID(t *testing.T) {
+	tr := newOTLPExporterTranslator("syslog_default")
+	assert.Equal(t, "otlphttp/syslog_default", tr.ID().String())
+}
+
+func TestOTLPExporterTranslator_Translate(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tr := newOTLPExporterTranslator("syslog_default")
+	cfg, err := tr.Translate(confmap.New())
+	require.NoError(t, err)
+
+	out := confmap.New()
+	require.NoError(t, out.Marshal(cfg))
+	assert.Equal(t, "https://logs.us-west-2.amazonaws.com/v1/logs", out.Get("logs_endpoint"))
+	assert.Contains(t, fmt.Sprint(out.Get("compression")), "gzip")
+	assert.Equal(t, "awscloudwatchlogsprovisioner/syslog_default", out.Get("auth::authenticator"))
+}
+
+func TestOTLPExporterTranslator_EndpointOverride(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	tr := newOTLPExporterTranslator("syslog_rule_0")
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{"endpoint_override": "https://custom.endpoint.example.com/v1/logs"},
+	})
+	cfg, err := tr.Translate(conf)
+	require.NoError(t, err)
+
+	out := confmap.New()
+	require.NoError(t, out.Marshal(cfg))
+	assert.Equal(t, "https://custom.endpoint.example.com/v1/logs", out.Get("logs_endpoint"))
+}
+
+func TestNewExporterTranslator_Dispatch(t *testing.T) {
+	conf := confmap.New()
+
+	t.Run("PLE mode returns CWL exporter", func(t *testing.T) {
+		tr := newExporterTranslator("test", "/group", "stream", 7, deliveryModePLE, conf)
+		assert.Equal(t, "awscloudwatchlogs/test", tr.ID().String())
+	})
+
+	t.Run("OTLP mode returns OTLP exporter", func(t *testing.T) {
+		tr := newExporterTranslator("test", "/group", "stream", 7, deliveryModeOTLP, conf)
+		assert.Equal(t, "otlphttp/test", tr.ID().String())
+	})
+
+	t.Run("empty mode defaults to PLE", func(t *testing.T) {
+		tr := newExporterTranslator("test", "/group", "stream", 7, "", conf)
+		assert.Equal(t, "awscloudwatchlogs/test", tr.ID().String())
+	})
 }
