@@ -16,7 +16,7 @@ replace (
 
 replace (
 	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260515160158-c86549cf773d
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260515160158-c86549cf773d
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => ./extension/awscloudwatchlogsprovisionerextension
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260515160158-c86549cf773d
 )
 
@@ -133,6 +133,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/oklog/run v1.1.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.124.1
@@ -256,7 +257,10 @@ require (
 	k8s.io/klog/v2 v2.130.1
 )
 
-require github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+require (
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+	go.opentelemetry.io/collector/connector v0.124.0
+)
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect
@@ -566,7 +570,6 @@ require (
 	go.opentelemetry.io/collector/config/configretry v1.30.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.30.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.30.0 // indirect
-	go.opentelemetry.io/collector/connector v0.124.0 // indirect
 	go.opentelemetry.io/collector/connector/connectortest v0.124.0 // indirect
 	go.opentelemetry.io/collector/connector/xconnector v0.124.0 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.124.0 // indirect

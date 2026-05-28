@@ -56,6 +56,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 			"listen_address": address,
 		},
 		"protocol": t.protocol,
+		"on_error": "drop",
 	}
 
 	// TLS only applies to TCP listeners

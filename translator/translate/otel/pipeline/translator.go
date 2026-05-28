@@ -52,6 +52,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			Processors: common.NewTranslatorMap[component.Config, component.ID](),
 			Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
 			Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+			Connectors: common.NewTranslatorMap[component.Config, component.ID](),
 		},
 	}
 	t.translators.Range(func(pt common.PipelineTranslator) {
@@ -65,6 +66,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			translation.Translators.Processors.Merge(pipeline.Processors)
 			translation.Translators.Exporters.Merge(pipeline.Exporters)
 			translation.Translators.Extensions.Merge(pipeline.Extensions)
+			if pipeline.Connectors != nil {
+				translation.Translators.Connectors.Merge(pipeline.Connectors)
+			}
 		}
 	})
 	if len(translation.Pipelines) == 0 {

@@ -76,7 +76,11 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Set(applicationsignals.NewTranslator(pipeline.SignalMetrics))
 	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
-	translators.Merge(syslog.NewTranslators(conf))
+	syslogTranslators, err := syslog.NewTranslators(conf)
+	if err != nil {
+		return nil, err
+	}
+	translators.Merge(syslogTranslators)
 	translators.Set(xray.NewTranslator())
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
@@ -102,6 +106,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		Receivers:  map[component.ID]component.Config{},
 		Exporters:  map[component.ID]component.Config{},
 		Processors: map[component.ID]component.Config{},
+		Connectors: map[component.ID]component.Config{},
 		Extensions: map[component.ID]component.Config{},
 		Service: service.Config{
 			Telemetry: telemetry.Config{
@@ -163,13 +168,36 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 
 // build uses the pipelines and extensions defined in the config to build the components.
 func build(conf *confmap.Conf, cfg *otelcol.Config, translators common.ComponentTranslators) error {
-	errs := buildComponents(conf, cfg.Service.Extensions, cfg.Extensions, translators.Extensions.Get)
+	// Build connectors first so we know which IDs to skip in receivers/exporters
+	var errs error
+	if translators.Connectors != nil && translators.Connectors.Len() > 0 {
+		errs = buildComponents(conf, translators.Connectors.Keys(), cfg.Connectors, translators.Connectors.Get)
+	}
+
+	errs = multierr.Append(errs, buildComponents(conf, cfg.Service.Extensions, cfg.Extensions, translators.Extensions.Get))
 	for _, p := range cfg.Service.Pipelines {
-		errs = multierr.Append(errs, buildComponents(conf, p.Receivers, cfg.Receivers, translators.Receivers.Get))
+		// Filter out connector IDs from receivers and exporters since they're built separately
+		receivers := filterOutConnectors(p.Receivers, cfg.Connectors)
+		exporters := filterOutConnectors(p.Exporters, cfg.Connectors)
+		errs = multierr.Append(errs, buildComponents(conf, receivers, cfg.Receivers, translators.Receivers.Get))
 		errs = multierr.Append(errs, buildComponents(conf, p.Processors, cfg.Processors, translators.Processors.Get))
-		errs = multierr.Append(errs, buildComponents(conf, p.Exporters, cfg.Exporters, translators.Exporters.Get))
+		errs = multierr.Append(errs, buildComponents(conf, exporters, cfg.Exporters, translators.Exporters.Get))
 	}
 	return errs
+}
+
+// filterOutConnectors removes IDs that exist in the connectors map from the given slice.
+func filterOutConnectors(ids []component.ID, connectors map[component.ID]component.Config) []component.ID {
+	if len(connectors) == 0 {
+		return ids
+	}
+	var filtered []component.ID
+	for _, id := range ids {
+		if _, isConnector := connectors[id]; !isConnector {
+			filtered = append(filtered, id)
+		}
+	}
+	return filtered
 }
 
 // buildComponents attempts to translate a component for each ID in the set.

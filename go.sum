@@ -1232,6 +1232,8 @@ github.com/onsi/gomega v1.13.0/go.mod h1:lRk9szgn8TxENtWd0Tp4c3wjlRfMTMH27I+3Je4
 github.com/onsi/gomega v1.35.1 h1:Cwbd75ZBPxFSuZ6T+rN/WCb/gOc6YgFBXLlZLhC7Ds4=
 github.com/onsi/gomega v1.35.1/go.mod h1:PvZbdDc8J6XJEpDK4HCuRBm8a6Fzp9/DmhC9C7yFlog=
 github.com/op/go-logging v0.0.0-20160315200505-970db520ece7/go.mod h1:HzydrMdWErDVzsI23lYNej1Htcns9BCg93Dk0bBINWk=
+github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.124.1 h1:xnu/h8g7ekHwGCKPydc3KPZkV5+gB9jsjNZLwP3sM1o=
+github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.124.1/go.mod h1:y78Q4wvDnWHuTQge+eXaBJhmGy5Jv0nsOoixxXbj4uI=
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.124.1 h1:WMEB86bjqPtbbYLu8vhuy0g9vK+6M5aTy13jwUwQZ1s=
 github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.124.1/go.mod h1:AwoFFkNgtHnOczLkEwlGAPhu54t2LtrOGOg8zxKpPgo=
 github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.124.1 h1:uV7jdTAvpuivYA2w4lGvRf4zSJS5fwhyiLENvVuuTbs=

@@ -54,7 +54,6 @@ func TestComponents(t *testing.T) {
 		"awsdevicepodcorrelation",
 		"awsentity",
 		"awsneuron",
-		"awssyslogrouter",
 		"batch",
 		"cumulativetodelta",
 		"deltatocumulative",
@@ -120,5 +119,14 @@ func TestComponents(t *testing.T) {
 	assert.Equal(t, len(wantExtensions), len(gotExtensions))
 	for _, typeStr := range wantExtensions {
 		assert.Contains(t, gotExtensions, typeStr)
+	}
+
+	wantConnectors := []string{
+		"routing",
+	}
+	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
+	assert.Equal(t, len(wantConnectors), len(gotConnectors))
+	for _, typeStr := range wantConnectors {
+		assert.Contains(t, gotConnectors, typeStr)
 	}
 }

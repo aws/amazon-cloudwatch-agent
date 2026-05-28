@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
@@ -20,6 +21,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 )
+
+// deliveryModePLE and deliveryModeOTLP are retained to support future OTLP delivery mode.
+const (
+	deliveryModePLE  = "PutLogEvents"
+	deliveryModeOTLP = "OTLP"
+)
+
+// newExporterTranslator is retained as dead code to support future OTLP delivery mode.
+func newExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int64, deliveryMode string, conf *confmap.Conf) common.ComponentTranslator {
+	if deliveryMode == deliveryModeOTLP {
+		return newOTLPExporterTranslator(name)
+	}
+	return newCWLExporterTranslator(name, logGroupName, logStreamName, retentionInDays)
+}
+
+// CWL (PutLogEvents) exporter
 
 type cwlExporterTranslator struct {
 	name            string
@@ -75,5 +92,51 @@ func (t *cwlExporterTranslator) Translate(c *confmap.Conf) (component.Config, er
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.LocalMode = true
 	}
+	return cfg, nil
+}
+
+// OTLP exporter — retained as dead code to support future OTLP delivery mode.
+
+type otlpExporterTranslator struct {
+	name    string
+	factory exporter.Factory
+}
+
+var _ common.ComponentTranslator = (*otlpExporterTranslator)(nil)
+
+func newOTLPExporterTranslator(name string) common.ComponentTranslator {
+	return &otlpExporterTranslator{
+		name:    name,
+		factory: otlphttpexporter.NewFactory(),
+	}
+}
+
+func (t *otlpExporterTranslator) ID() component.ID {
+	return component.NewIDWithName(t.factory.Type(), t.name)
+}
+
+func (t *otlpExporterTranslator) Translate(c *confmap.Conf) (component.Config, error) {
+	region := agent.Global_Config.Region
+	logsEndpoint := fmt.Sprintf("https://logs.%s.amazonaws.com/v1/logs", region)
+	endpointKey := common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
+	if ep, ok := common.GetString(c, endpointKey); ok {
+		logsEndpoint = ep
+	}
+
+	provisionerID := component.NewIDWithName(component.MustNewType("awscloudwatchlogsprovisioner"), t.name)
+
+	cfgMap := map[string]any{
+		"logs_endpoint": logsEndpoint,
+		"compression":   "gzip",
+		"auth": map[string]any{
+			"authenticator": provisionerID.String(),
+		},
+	}
+
+	cfg := t.factory.CreateDefaultConfig()
+	if err := confmap.NewFromStringMap(cfgMap).Unmarshal(cfg); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }

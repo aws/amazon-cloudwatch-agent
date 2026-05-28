@@ -661,10 +661,10 @@
             },
             "syslog": {
               "oneOf": [
-                { "$ref": "#/definitions/logsDefinition/definitions/syslogListenerDefinition" },
+                { "$ref": "#/definitions/logsDefinition/definitions/syslogDefinition" },
                 {
                   "type": "array",
-                  "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogListenerDefinition" },
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogDefinition" },
                   "minItems": 1
                 }
               ]
@@ -1220,6 +1220,69 @@
             }
           }
         },
+        "syslogDefinition": {
+          "type": "object",
+          "description": "Configuration for syslog collection",
+          "oneOf": [
+            {
+              "properties": {
+                "listen_address": {
+                  "type": "string",
+                  "description": "Listen address in format tcp://host:port or udp://host:port",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "log_group_name": {
+                  "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+                },
+                "log_stream_name": {
+                  "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+                },
+                "retention_in_days": {
+                  "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                },
+                "filters": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/filterDefinition" }
+                },
+                "routing": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogRoutingRuleDefinition" }
+                }
+              },
+              "required": ["listen_address", "log_group_name"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "listeners": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogListenerDefinition" },
+                  "minItems": 1
+                },
+                "log_group_name": {
+                  "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+                },
+                "log_stream_name": {
+                  "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+                },
+                "retention_in_days": {
+                  "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                },
+                "filters": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/filterDefinition" }
+                },
+                "routing": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogRoutingRuleDefinition" }
+                }
+              },
+              "required": ["listeners", "log_group_name"],
+              "additionalProperties": false
+            }
+          ]
+        },
         "syslogListenerDefinition": {
           "type": "object",
           "description": "Configuration for a syslog listener",
@@ -1235,15 +1298,6 @@
               "description": "Syslog message format",
               "enum": ["rfc5424", "rfc3164"]
             },
-            "log_group_name": {
-              "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
-            },
-            "log_stream_name": {
-              "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
-            },
-            "retention_in_days": {
-              "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
-            },
             "tls": {
               "type": "object",
               "properties": {
@@ -1254,21 +1308,9 @@
                 "min_version": { "type": "string", "enum": ["1.0", "1.1", "1.2", "1.3"] }
               },
               "additionalProperties": false
-            },
-            "filters": {
-              "type": "array",
-              "items": { "$ref": "#/definitions/logsDefinition/definitions/filterDefinition" }
-            },
-            "routing": {
-              "type": "array",
-              "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogRoutingRuleDefinition" }
-            },
-            "queue_size": {
-              "type": "integer",
-              "minimum": 1
             }
           },
-          "required": ["listen_address", "log_group_name"],
+          "required": ["listen_address"],
           "additionalProperties": false
         },
         "syslogRoutingRuleDefinition": {

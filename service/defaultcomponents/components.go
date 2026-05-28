@@ -4,6 +4,7 @@
 package defaultcomponents
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -53,6 +54,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
+	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
@@ -81,7 +83,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/kueueattributes"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
-	"github.com/aws/amazon-cloudwatch-agent/processor/syslogrouterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 )
@@ -146,7 +147,6 @@ func Factories() (otelcol.Factories, error) {
 		resourcedetectionprocessor.NewFactory(),
 		rollupprocessor.NewFactory(),
 		spanprocessor.NewFactory(),
-		syslogrouterprocessor.NewFactory(),
 		tailsamplingprocessor.NewFactory(),
 		transformprocessor.NewFactory(),
 	); err != nil {
@@ -180,6 +180,12 @@ func Factories() (otelcol.Factories, error) {
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
+	); err != nil {
+		return otelcol.Factories{}, err
+	}
+
+	if factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory](
+		routingconnector.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
