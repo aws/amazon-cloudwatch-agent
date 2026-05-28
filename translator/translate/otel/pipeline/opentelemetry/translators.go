@@ -10,7 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
+func NewTranslators(_ *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	translators.Set(NewBaseMetricsTranslator())
 	translators.Set(NewBaseLogsTranslator())
