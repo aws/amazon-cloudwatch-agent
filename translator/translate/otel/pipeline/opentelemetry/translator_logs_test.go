@@ -79,3 +79,31 @@ func TestBaseLogsTranslatorEmptyRegion(t *testing.T) {
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "region is required")
 }
+
+func TestServiceEndpointLogs(t *testing.T) {
+	testCases := map[string]struct {
+		service string
+		region  string
+		path    string
+		want    string
+	}{
+		"StandardPartition": {
+			service: "logs",
+			region:  "us-east-1",
+			path:    "/v1/logs",
+			want:    "https://logs.us-east-1.amazonaws.com/v1/logs",
+		},
+		"GovCloudPartition": {
+			service: "logs",
+			region:  "us-gov-west-1",
+			path:    "/v1/logs",
+			want:    "https://logs.us-gov-west-1.amazonaws.com/v1/logs",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := serviceEndpoint(tc.service, tc.region, tc.path)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}

@@ -59,7 +59,7 @@ func TestBaseMetricsTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/otel", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/opentelemetry", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlphttp/metrics", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "sigv4auth/monitoring", got.Extensions.Keys()[0].String())
 				assert.Equal(t, "forward/otel", got.Connectors.Keys()[0].String())
 			}

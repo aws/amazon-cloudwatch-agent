@@ -48,7 +48,7 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		return nil, fmt.Errorf("region is required for %s logs pipeline", pipelineNameBaseLogs)
 	}
 
-	logsEndpoint := serviceEndpoint("logs", region, "")
+	logsEndpoint := serviceEndpoint("logs", region, "/v1/logs")
 
 	// Extensions
 	sigv4Ext := sigv4auth.NewTranslatorWithService("logs")
