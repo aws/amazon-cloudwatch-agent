@@ -57,12 +57,12 @@ func (t *simplePipelineTranslator) Translate(_ *confmap.Conf) (*common.Component
 
 // inputPipelineTranslator produces the input pipeline: receivers → [filter] → routing connector
 type inputPipelineTranslator struct {
-	pipelineID         pipeline.ID
-	receivers          []common.ComponentTranslator
-	processors         []common.ComponentTranslator
+	pipelineID          pipeline.ID
+	receivers           []common.ComponentTranslator
+	processors          []common.ComponentTranslator
 	connectorExporterID common.ComponentTranslator // routing connector appears as exporter in this pipeline
-	extensions         []common.ComponentTranslator
-	connectors         []common.ComponentTranslator
+	extensions          []common.ComponentTranslator
+	connectors          []common.ComponentTranslator
 }
 
 var _ common.PipelineTranslator = (*inputPipelineTranslator)(nil)
@@ -99,11 +99,11 @@ func (t *inputPipelineTranslator) Translate(_ *confmap.Conf) (*common.ComponentT
 
 // outputPipelineTranslator produces rule/default pipelines: routing connector (as receiver) → [processors] → exporter
 type outputPipelineTranslator struct {
-	pipelineID         pipeline.ID
+	pipelineID          pipeline.ID
 	connectorReceiverID common.ComponentTranslator // routing connector appears as receiver
-	processors         []common.ComponentTranslator
-	exporter           common.ComponentTranslator
-	extensions         []common.ComponentTranslator
+	processors          []common.ComponentTranslator
+	exporter            common.ComponentTranslator
+	extensions          []common.ComponentTranslator
 }
 
 var _ common.PipelineTranslator = (*outputPipelineTranslator)(nil)
