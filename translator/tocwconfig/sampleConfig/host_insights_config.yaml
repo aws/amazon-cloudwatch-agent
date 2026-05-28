@@ -1,0 +1,456 @@
+connectors:
+    forward/opentelemetry: {}
+exporters:
+    otlphttp/logs:
+        auth:
+            authenticator: headers_setter/logs
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/metrics:
+        auth:
+            authenticator: sigv4auth/monitoring
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: https://monitoring.us-west-2.amazonaws.com/v1/metrics
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+extensions:
+    awscloudwatchlogsprovisioner:
+        additional_auth: sigv4auth/logs
+        logs_provision_failure_backoff: 30s
+        logs_provision_timeout: 10s
+        region: us-west-2
+    entitystore:
+        mode: ec2
+        region: us-west-2
+    headers_setter/logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              from_context: aws.log.group.name
+              key: x-aws-log-group
+            - action: upsert
+              from_context: aws.log.stream.name
+              key: x-aws-log-stream
+    sigv4auth/logs:
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
+        service: logs
+    sigv4auth/monitoring:
+        assume_role:
+            sts_region: us-west-2
+        region: us-west-2
+        service: monitoring
+processors:
+    attributestocontext:
+        actions:
+            - from_resource_attribute: aws.log.group.name
+              key: aws.log.group.name
+            - from_resource_attribute: aws.log.stream.name
+              key: aws.log.stream.name
+    batch/logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    batch/opentelemetry:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    resourcedetection:
+        aks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        azure:
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            tags: []
+        consul:
+            address: ""
+            datacenter: ""
+            namespace: ""
+            resource_attributes:
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            token_file: ""
+        detectors:
+            - eks
+            - env
+            - ec2
+        docker:
+            resource_attributes:
+                host.name:
+                    enabled: true
+                os.type:
+                    enabled: true
+        ec2:
+            fail_on_missing_metadata: false
+            max_attempts: 3
+            max_backoff: 20s
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+            tags:
+                - ^kubernetes.io/cluster/.*$
+                - ^aws:autoscaling:groupName
+        ecs:
+            resource_attributes:
+                aws.ecs.cluster.arn:
+                    enabled: true
+                aws.ecs.launchtype:
+                    enabled: true
+                aws.ecs.task.arn:
+                    enabled: true
+                aws.ecs.task.family:
+                    enabled: true
+                aws.ecs.task.id:
+                    enabled: true
+                aws.ecs.task.revision:
+                    enabled: true
+                aws.log.group.arns:
+                    enabled: true
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.arns:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+        eks:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: false
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        elasticbeanstalk:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                deployment.environment:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.version:
+                    enabled: true
+        gcp:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.id:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+                gcp.cloud_run.job.execution:
+                    enabled: true
+                gcp.cloud_run.job.task_index:
+                    enabled: true
+                gcp.gce.instance.hostname:
+                    enabled: false
+                gcp.gce.instance.name:
+                    enabled: false
+                gcp.gce.instance_group_manager.name:
+                    enabled: true
+                gcp.gce.instance_group_manager.region:
+                    enabled: true
+                gcp.gce.instance_group_manager.zone:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        heroku:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                heroku.app.id:
+                    enabled: true
+                heroku.dyno.id:
+                    enabled: true
+                heroku.release.commit:
+                    enabled: true
+                heroku.release.creation_timestamp:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.name:
+                    enabled: true
+                service.version:
+                    enabled: true
+        idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
+        kubeadm:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            resource_attributes:
+                k8s.cluster.name:
+                    enabled: true
+                k8s.cluster.uid:
+                    enabled: true
+        lambda:
+            resource_attributes:
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.max_memory:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+        max_idle_conns: 100
+        middleware: agenthealth/statuscode
+        openshift:
+            address: ""
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+            tls: {}
+            token: ""
+        override: true
+        system:
+            resource_attributes:
+                host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.ip:
+                    enabled: false
+                host.mac:
+                    enabled: false
+                host.name:
+                    enabled: true
+                os.description:
+                    enabled: false
+                os.type:
+                    enabled: true
+                os.version:
+                    enabled: false
+        timeout: 2s
+    transform/logs_cleanup:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - delete_key(resource.attributes, "aws.log.group.name")
+                - delete_key(resource.attributes, "aws.log.stream.name")
+        metric_statements: []
+        trace_statements: []
+receivers:
+    hostmetrics:
+        collection_interval: 10s
+        initial_delay: 1s
+        scrapers:
+            cpu: null
+            disk: null
+            filesystem: null
+            load: null
+            memory: null
+            network: null
+            processes: null
+        timeout: 0s
+service:
+    extensions:
+        - sigv4auth/monitoring
+        - sigv4auth/logs
+        - awscloudwatchlogsprovisioner
+        - headers_setter/logs
+        - entitystore
+    pipelines:
+        logs/opentelemetry:
+            exporters:
+                - otlphttp/logs
+            processors:
+                - attributestocontext
+                - transform/logs_cleanup
+                - batch/logs
+            receivers:
+                - forward/opentelemetry
+        metrics/host_insights:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - hostmetrics
+        metrics/opentelemetry:
+            exporters:
+                - otlphttp/metrics
+            processors:
+                - resourcedetection
+                - batch/opentelemetry
+            receivers:
+                - forward/opentelemetry
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

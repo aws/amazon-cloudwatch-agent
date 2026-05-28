@@ -14,5 +14,6 @@ func NewTranslators(_ *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	translators.Set(NewBaseMetricsTranslator())
 	translators.Set(NewBaseLogsTranslator())
+	translators.Set(NewHostInsightsTranslator())
 	return translators
 }
