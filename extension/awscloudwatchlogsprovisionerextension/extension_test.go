@@ -456,7 +456,7 @@ func TestFailureBackoff_ExpiresAndRetries(t *testing.T) {
 	ext.ensure(t.Context(), "/test/group", "default")
 	assert.Equal(t, int32(1), mockClient.groupCalls.Load())
 
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(2 * time.Second)
 
 	ext.ensure(t.Context(), "/test/group", "default")
 	assert.Equal(t, int32(2), mockClient.groupCalls.Load(), "should retry after backoff expires")

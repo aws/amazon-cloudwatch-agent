@@ -59,6 +59,9 @@ func newExtension(logger *zap.Logger, cfg *Config) *provisionerExtension {
 }
 
 func (e *provisionerExtension) Start(ctx context.Context, host component.Host) error {
+	if err := e.cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
+	}
 	e.host = host
 
 	client, err := newDefaultCWLogsClient(ctx, e.cfg.Region, e.cfg.LogsProvisionTimeout)
