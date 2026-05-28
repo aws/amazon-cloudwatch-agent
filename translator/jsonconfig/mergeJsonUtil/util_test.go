@@ -327,3 +327,38 @@ func TestMergeArrayOrObjectConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestSectionMergeRule(t *testing.T) {
+	rule := NewSectionMergeRule("opentelemetry", "/")
+	assert.Equal(t, "opentelemetry", rule.SectionKey)
+	assert.Equal(t, "/opentelemetry/", rule.Path)
+	assert.NotNil(t, rule.MergeMap)
+}
+
+func TestSectionMergeRule_Merge(t *testing.T) {
+	rule := NewSectionMergeRule("opentelemetry", "/")
+	child := NewSectionMergeRule("collect", rule.Path)
+	rule.MergeMap[child.SectionKey] = child
+
+	source1 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{},
+			},
+		},
+	}
+	source2 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"host_insights": map[string]interface{}{},
+			},
+		},
+	}
+
+	rule.Merge(source1, source2)
+
+	otel := source2["opentelemetry"].(map[string]interface{})
+	collect := otel["collect"].(map[string]interface{})
+	assert.Contains(t, collect, "host_insights")
+	assert.Contains(t, collect, "database_insights")
+}

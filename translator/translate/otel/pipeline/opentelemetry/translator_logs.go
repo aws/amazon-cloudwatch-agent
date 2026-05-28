@@ -24,8 +24,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
 
-const pipelineNameBaseLogs = "opentelemetry"
-
 type baseLogsTranslator struct{}
 
 var _ common.PipelineTranslator = (*baseLogsTranslator)(nil)
@@ -35,7 +33,7 @@ func NewBaseLogsTranslator() common.PipelineTranslator {
 }
 
 func (t *baseLogsTranslator) ID() pipeline.ID {
-	return pipeline.NewIDWithName(pipeline.SignalLogs, pipelineNameBaseLogs)
+	return pipeline.NewIDWithName(pipeline.SignalLogs, common.OpenTelemetryKey)
 }
 
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
@@ -45,10 +43,10 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 
 	region := agent.Global_Config.Region
 	if region == "" {
-		return nil, fmt.Errorf("region is required for %s logs pipeline", pipelineNameBaseLogs)
+		return nil, fmt.Errorf("region is required for %s logs pipeline", common.OpenTelemetryKey)
 	}
 
-	logsEndpoint := serviceEndpoint("logs", region, "/v1/logs")
+	logsEndpoint := common.ServiceEndpoint("logs", region, "/v1/logs")
 
 	// Extensions
 	sigv4Ext := sigv4auth.NewTranslatorWithService("logs")
@@ -62,7 +60,7 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	)
 
 	// Connector
-	fwdConnector := forward.NewTranslator("otel_logs")
+	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	// Processors
 	attrCtx := attributestocontext.NewTranslator([]attributestocontextprocessor.ActionKeyValue{

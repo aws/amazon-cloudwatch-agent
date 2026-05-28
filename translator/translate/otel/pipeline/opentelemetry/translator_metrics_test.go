@@ -58,10 +58,10 @@ func TestBaseMetricsTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 1, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
-				assert.Equal(t, "forward/otel", got.Receivers.Keys()[0].String())
+				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
 				assert.Equal(t, "otlphttp/metrics", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "sigv4auth/monitoring", got.Extensions.Keys()[0].String())
-				assert.Equal(t, "forward/otel", got.Connectors.Keys()[0].String())
+				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 			}
 		})
 	}
@@ -81,30 +81,4 @@ func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
 	assert.Contains(t, err.Error(), "region is required")
 }
 
-func TestServiceEndpoint(t *testing.T) {
-	testCases := map[string]struct {
-		service string
-		region  string
-		path    string
-		want    string
-	}{
-		"StandardPartition": {
-			service: "monitoring",
-			region:  "us-east-1",
-			path:    "/v1/metrics",
-			want:    "https://monitoring.us-east-1.amazonaws.com/v1/metrics",
-		},
-		"GovCloudPartition": {
-			service: "monitoring",
-			region:  "us-gov-west-1",
-			path:    "/v1/metrics",
-			want:    "https://monitoring.us-gov-west-1.amazonaws.com/v1/metrics",
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := serviceEndpoint(tc.service, tc.region, tc.path)
-			assert.Equal(t, tc.want, got)
-		})
-	}
-}
+

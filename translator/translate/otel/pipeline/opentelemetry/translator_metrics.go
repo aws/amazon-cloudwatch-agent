@@ -6,7 +6,6 @@ package opentelemetry
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -20,8 +19,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 )
 
-const pipelineNameBaseMetrics = "opentelemetry"
-
 var otelCollectKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey)
 
 type baseMetricsTranslator struct{}
@@ -33,7 +30,7 @@ func NewBaseMetricsTranslator() common.PipelineTranslator {
 }
 
 func (t *baseMetricsTranslator) ID() pipeline.ID {
-	return pipeline.NewIDWithName(pipeline.SignalMetrics, pipelineNameBaseMetrics)
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, common.OpenTelemetryKey)
 }
 
 // Translate creates the shared metrics export pipeline. It activates when any
@@ -46,27 +43,18 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 
 	region := agent.Global_Config.Region
 	if region == "" {
-		return nil, fmt.Errorf("region is required for %s pipeline", pipelineNameBaseMetrics)
+		return nil, fmt.Errorf("region is required for %s pipeline", common.OpenTelemetryKey)
 	}
-	metricsEndpoint := serviceEndpoint("monitoring", region, "/v1/metrics")
+	metricsEndpoint := common.ServiceEndpoint("monitoring", region, "/v1/metrics")
 	sigv4Ext := sigv4auth.NewTranslatorWithService("monitoring")
 
-	fwdConnector := forward.NewTranslator("otel")
+	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), batchprocessor.NewTranslator(common.WithName(pipelineNameBaseMetrics))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("metrics", otlphttp.EndpointConfig{MetricsEndpoint: metricsEndpoint}, otlphttp.WithAuthenticator(sigv4Ext.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
-}
-
-func serviceEndpoint(service, region, path string) string {
-	partition, _ := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	dnsSuffix := partition.DNSSuffix()
-	if dnsSuffix == "" {
-		dnsSuffix = "amazonaws.com"
-	}
-	return fmt.Sprintf("https://%s.%s.%s%s", service, region, dnsSuffix, path)
 }
