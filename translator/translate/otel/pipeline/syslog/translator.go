@@ -17,8 +17,6 @@ import (
 	syslogreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/syslog"
 )
 
-var syslogKey = common.ConfigKey(common.LogsKey, common.LogsCollectedKey, "syslog")
-
 // simplePipelineTranslator produces a direct pipeline without routing: receivers → processors → exporter
 type simplePipelineTranslator struct {
 	pipelineID pipeline.ID
@@ -135,11 +133,11 @@ func (t *outputPipelineTranslator) Translate(_ *confmap.Conf) (*common.Component
 // Supports both single-object and array forms for the syslog config key.
 func NewTranslators(conf *confmap.Conf) (common.PipelineTranslatorMap, error) {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-	if conf == nil || !conf.IsSet(syslogKey) {
+	if conf == nil || !conf.IsSet(common.SyslogConfigKey) {
 		return translators, nil
 	}
 
-	sections := normalizeSyslogSections(conf.Get(syslogKey))
+	sections := normalizeSyslogSections(conf.Get(common.SyslogConfigKey))
 	if err := validateUniqueListeners(sections); err != nil {
 		return translators, err
 	}
@@ -399,10 +397,11 @@ func buildOTTLCondition(matchMap map[string]any) string {
 }
 
 func buildAttributeCondition(attr, value string) string {
+	escaped := escapeOTTL(value)
 	if isGlobPattern(value) {
-		return fmt.Sprintf(`IsMatch(attributes["%s"], "%s")`, attr, value)
+		return fmt.Sprintf(`IsMatch(attributes["%s"], "%s")`, attr, escaped)
 	}
-	return fmt.Sprintf(`attributes["%s"] == "%s"`, attr, value)
+	return fmt.Sprintf(`attributes["%s"] == "%s"`, attr, escaped)
 }
 
 // isGlobPattern detects if a string contains glob characters.
@@ -414,6 +413,10 @@ func deriveReceiverName(listenAddress string) string {
 	name := strings.ReplaceAll(listenAddress, "://", "_")
 	name = strings.ReplaceAll(name, ".", "_")
 	name = strings.ReplaceAll(name, ":", "_")
+	// IPv6 addresses are wrapped in brackets (e.g. [::1]); strip them so the
+	// resulting component name contains only alphanumerics and underscores.
+	name = strings.ReplaceAll(name, "[", "")
+	name = strings.ReplaceAll(name, "]", "")
 	return name
 }
 

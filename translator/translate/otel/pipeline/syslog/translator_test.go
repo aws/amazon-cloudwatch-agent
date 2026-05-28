@@ -145,6 +145,7 @@ func TestOutputPipelineTranslate(t *testing.T) {
 func TestDeriveReceiverName(t *testing.T) {
 	assert.Equal(t, "tcp_0_0_0_0_514", deriveReceiverName("tcp://0.0.0.0:514"))
 	assert.Equal(t, "udp_127_0_0_1_6515", deriveReceiverName("udp://127.0.0.1:6515"))
+	assert.Equal(t, "tcp___1_514", deriveReceiverName("tcp://[::1]:514"))
 }
 
 func TestBuildOTTLCondition(t *testing.T) {
