@@ -80,5 +80,3 @@ func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "region is required")
 }
-
-
