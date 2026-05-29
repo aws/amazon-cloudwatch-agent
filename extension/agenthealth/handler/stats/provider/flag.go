@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"

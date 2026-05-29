@@ -7,6 +7,7 @@ package volume
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -36,7 +37,7 @@ func newHostProvider() Provider {
 	}
 }
 
-func (p *hostProvider) DeviceToSerialMap() (map[string]string, error) {
+func (p *hostProvider) DeviceToSerialMap(context.Context) (map[string]string, error) {
 	result := map[string]string{}
 	dirs, err := p.osReadDir(sysBlockPath)
 	if err != nil {

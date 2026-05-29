@@ -4,86 +4,185 @@
 package aws
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-func TestConfusedDeputyHeaders(t *testing.T) {
-	tests := []struct {
-		name                  string
-		envSourceArn          string
-		envSourceAccount      string
-		expectedHeaderArn     string
-		expectedHeaderAccount string
-	}{
-		{
-			name:                  "unpopulated",
-			envSourceArn:          "",
-			envSourceAccount:      "",
-			expectedHeaderArn:     "",
-			expectedHeaderAccount: "",
-		},
-		{
-			name:                  "both populated",
-			envSourceArn:          "arn:aws:ec2:us-east-1:474668408639:instance/i-08293cd9825754f7c",
-			envSourceAccount:      "539247453986",
-			expectedHeaderArn:     "arn:aws:ec2:us-east-1:474668408639:instance/i-08293cd9825754f7c",
-			expectedHeaderAccount: "539247453986",
-		},
-		{
-			name:                  "only source arn populated",
-			envSourceArn:          "arn:aws:ec2:us-east-1:474668408639:instance/i-08293cd9825754f7c",
-			envSourceAccount:      "",
-			expectedHeaderArn:     "",
-			expectedHeaderAccount: "",
-		},
-		{
-			name:                  "only source account populated",
-			envSourceArn:          "",
-			envSourceAccount:      "539247453986",
-			expectedHeaderArn:     "",
-			expectedHeaderAccount: "",
+func TestCredentialsConfig_LoadConfig(t *testing.T) {
+	t.Run("FromStatic", func(t *testing.T) {
+		config := &CredentialsConfig{
+			Region:    testRegion,
+			AccessKey: "StaticAccess",
+			SecretKey: "StaticSecret",
+		}
+
+		cfg, err := config.LoadConfig(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "us-east-1", cfg.Region)
+		assert.NotNil(t, cfg.Credentials)
+		cache, ok := cfg.Credentials.(*aws.CredentialsCache)
+		assert.True(t, ok)
+		assert.True(t, cache.IsCredentialsProvider(credentials.StaticCredentialsProvider{}))
+		got, err := cfg.Credentials.Retrieve(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, "StaticAccess", got.AccessKeyID)
+		assert.Equal(t, "StaticSecret", got.SecretAccessKey)
+	})
+
+	t.Run("FromRefreshable", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		tmpFile, err := os.CreateTemp(tmpDir, "credential")
+		require.NoError(t, err)
+		tmpFilename := tmpFile.Name()
+		require.NoError(t, tmpFile.Close())
+
+		content, err := os.ReadFile(filepath.Join("testdata", "credential_original"))
+		require.NoError(t, err)
+		err = os.WriteFile(tmpFilename, content, 0600)
+		require.NoError(t, err)
+
+		config := &CredentialsConfig{
+			Region:   testRegion,
+			Filename: tmpFilename,
+			Profile:  testProfile,
+		}
+
+		cfg, err := config.LoadConfig(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "us-east-1", cfg.Region)
+		assert.NotNil(t, cfg.Credentials)
+		cache, ok := cfg.Credentials.(*aws.CredentialsCache)
+		assert.True(t, ok)
+		assert.True(t, cache.IsCredentialsProvider(RefreshableSharedCredentialsProvider{}))
+		got, err := cfg.Credentials.Retrieve(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, "ASIAIKJ", got.AccessKeyID)
+		assert.Equal(t, "o1rLD3ykKN09", got.SecretAccessKey)
+	})
+
+	t.Run("FromRoleARN", func(t *testing.T) {
+		original := newAssumeRoleClient
+		t.Cleanup(func() {
+			newAssumeRoleClient = original
+		})
+
+		marc := new(mockAssumeRoleClient)
+		marc.On("AssumeRole", mock.Anything, mock.Anything, mock.Anything).Return(&sts.AssumeRoleOutput{
+			Credentials: &types.Credentials{
+				AccessKeyId:     aws.String("AssumedAccess"),
+				SecretAccessKey: aws.String("AssumedSecret"),
+				SessionToken:    aws.String("AssumedToken"),
+				Expiration:      aws.Time(time.Now().Add(5 * time.Minute)),
+			},
+		}, nil).Once()
+		newAssumeRoleClient = func(aws.Config) stscreds.AssumeRoleAPIClient {
+			return marc
+		}
+
+		config := &CredentialsConfig{
+			Region:    testRegion,
+			AccessKey: "StaticAccess",
+			SecretKey: "StaticSecret",
+			RoleARN:   testRoleARN,
+		}
+
+		cfg, err := config.LoadConfig(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "us-east-1", cfg.Region)
+		assert.NotNil(t, cfg.Credentials)
+		cache, ok := cfg.Credentials.(*aws.CredentialsCache)
+		assert.True(t, ok)
+		assert.True(t, cache.IsCredentialsProvider(&stsCredentialsProvider{}))
+		got, err := cfg.Credentials.Retrieve(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, "AssumedAccess", got.AccessKeyID)
+		assert.Equal(t, "AssumedSecret", got.SecretAccessKey)
+		assert.Equal(t, "AssumedToken", got.SessionToken)
+		marc.AssertExpectations(t)
+	})
+}
+
+func TestOverwriteCredentialsChain(t *testing.T) {
+	originalChain := CredentialsChain()
+	t.Cleanup(func() {
+		OverwriteCredentialsChain(originalChain...)
+	})
+
+	mcp := new(mockCredentialsProvider)
+	customProvider := CredentialsProvider{
+		Name: func() string { return "MockProvider" },
+		Provider: func(c *CredentialsConfig) aws.CredentialsProvider {
+			if c.Token != "" {
+				return mcp
+			}
+			return nil
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
 
-			t.Setenv(envconfig.AmzSourceAccount, tt.envSourceAccount)
-			t.Setenv(envconfig.AmzSourceArn, tt.envSourceArn)
+	OverwriteCredentialsChain(customProvider)
+	chain := CredentialsChain()
+	assert.Len(t, chain, 1)
+	assert.Equal(t, "MockProvider", chain[0].Name())
 
-			client := newStsClient(mock.Session, &aws.Config{
-				// These are examples credentials pulled from:
-				// https://docs.aws.amazon.com/STS/latest/APIReference/API_GetAccessKeyInfo.html
-				Credentials: credentials.NewStaticCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", ""),
-				Region:      aws.String("us-east-1"),
-			})
+	cfg := &CredentialsConfig{}
+	provider := cfg.fromChain()
+	assert.Nil(t, provider)
+	cfg.Token = "T"
+	provider = cfg.fromChain()
+	assert.IsType(t, mcp, provider)
+}
 
-			request, _ := client.AssumeRoleRequest(&sts.AssumeRoleInput{
-				// We aren't going to actually make the assume role call, we are just going
-				// to verify the headers are present once signed so the RoleArn and RoleSessionName
-				// arguments are irrelevant. Fill them out with something so the request is valid.
-				RoleArn:         aws.String("arn:aws:iam::012345678912:role/XXXXXXXX"),
-				RoleSessionName: aws.String("MockSession"),
-			})
+func TestDefaultCredentialsChain(t *testing.T) {
+	testCases := map[string]struct {
+		cfg          *CredentialsConfig
+		wantProvider aws.CredentialsProvider
+	}{
+		"Static": {
+			cfg: &CredentialsConfig{
+				AccessKey: "A",
+				SecretKey: "S",
+				Token:     "T",
+				Profile:   "P",
+				Filename:  "F",
+			},
+			wantProvider: credentials.StaticCredentialsProvider{},
+		},
+		"Refreshable": {
+			cfg: &CredentialsConfig{
+				AccessKey: "A",
+				Profile:   "P",
+				Filename:  "F",
+			},
+			wantProvider: RefreshableSharedCredentialsProvider{},
+		},
+		"NotInChain": {
+			cfg:          &CredentialsConfig{},
+			wantProvider: nil,
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			provider := testCase.cfg.fromChain()
 
-			// Headers are generated after the request is signed (but before it's sent)
-			err := request.Sign()
-			require.NoError(t, err)
-
-			headerSourceArn := request.HTTPRequest.Header.Get(SourceArnHeaderKey)
-			assert.Equal(t, tt.expectedHeaderArn, headerSourceArn)
-
-			headerSourceAccount := request.HTTPRequest.Header.Get(SourceAccountHeaderKey)
-			assert.Equal(t, tt.expectedHeaderAccount, headerSourceAccount)
+			if testCase.wantProvider != nil {
+				assert.NotNil(t, provider)
+				cache, ok := provider.(*aws.CredentialsCache)
+				assert.True(t, ok)
+				assert.True(t, cache.IsCredentialsProvider(testCase.wantProvider))
+			} else {
+				assert.Nil(t, provider)
+			}
 		})
 	}
-
 }

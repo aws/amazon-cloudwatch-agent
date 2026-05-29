@@ -4,24 +4,26 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
 const (
-	DEFAULT_PROFILE = "AmazonCloudWatchAgent"
+	DefaultProfile = "AmazonCloudWatchAgent"
 )
 
 var DetectRegion = detectRegion
@@ -29,36 +31,36 @@ var DetectCredentialsPath = detectCredentialsPath
 var DefaultEC2Region = defaultEC2Region
 var DefaultECSRegion = defaultECSRegion
 var IsEKS = isEKS
-var runInAws = os.Getenv(config.RUN_IN_AWS)
-var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
+var runInAws = os.Getenv(translatorconfig.RUN_IN_AWS)
+var runWithIrsa = os.Getenv(translatorconfig.RUN_WITH_IRSA)
 
 func DetectAgentMode(configuredMode string) string {
 	if configuredMode != "auto" {
 		return configuredMode
 	}
 
-	if runInAws == config.RUN_IN_AWS_TRUE {
+	if runInAws == translatorconfig.RUN_IN_AWS_TRUE {
 		fmt.Println("I! Detected from ENV instance is EC2")
-		return config.ModeEC2
+		return translatorconfig.ModeEC2
 	}
 
-	if runWithIrsa == config.RUN_WITH_IRSA_TRUE {
+	if runWithIrsa == translatorconfig.RUN_WITH_IRSA_TRUE {
 		fmt.Println("I! Detected from ENV RUN_WITH_IRSA is True")
-		return config.ModeWithIRSA
+		return translatorconfig.ModeWithIRSA
 	}
 
 	if DefaultEC2Region() != "" {
 		fmt.Println("I! Detected the instance is EC2")
-		return config.ModeEC2
+		return translatorconfig.ModeEC2
 	}
 
 	if DefaultECSRegion() != "" {
 		fmt.Println("I! Detected the instance is ECS")
-		return config.ModeEC2
+		return translatorconfig.ModeEC2
 	}
 
 	fmt.Println("I! Detected the instance is OnPremise")
-	return config.ModeOnPrem
+	return translatorconfig.ModeOnPrem
 }
 
 func DetectKubernetesMode(configuredMode string) string {
@@ -69,42 +71,43 @@ func DetectKubernetesMode(configuredMode string) string {
 	}
 
 	if isEKS.Value {
-		return config.ModeEKS
+		return translatorconfig.ModeEKS
 	}
 
-	if configuredMode == config.ModeEC2 {
-		return config.ModeK8sEC2
+	if configuredMode == translatorconfig.ModeEC2 {
+		return translatorconfig.ModeK8sEC2
 	}
 
-	return config.ModeK8sOnPrem
+	return translatorconfig.ModeK8sOnPrem
 
 }
 
-func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) (region string) {
-
+func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) string {
 	credsMap := GetCredentials(mode, credsConfig)
-	profile, profile_ok := credsMap[commonconfig.CredentialProfile]
-	sharedConfigFile, sharedConfigFile_ok := credsMap[commonconfig.CredentialFile]
-	if !profile_ok && !sharedConfigFile_ok {
+	profile, profileOK := credsMap[commonconfig.CredentialProfile]
+	sharedConfigFile, sharedConfigFileOK := credsMap[commonconfig.CredentialFile]
+	if !profileOK && !sharedConfigFileOK {
 		return ""
 	}
 
-	opts := session.Options{}
-	if profile_ok {
-		opts.Profile = profile
-	}
-	if sharedConfigFile_ok {
-		exPath := filepath.Dir(sharedConfigFile)
-		opts.SharedConfigFiles = []string{sharedConfigFile, exPath + "/config"}
-	}
 	CheckAndSetHomeDir()
-	opts.SharedConfigState = session.SharedConfigEnable
-	ses, err := session.NewSessionWithOptions(opts)
+
+	var opts []func(*config.LoadOptions) error
+	if profileOK {
+		opts = append(opts, config.WithSharedConfigProfile(profile))
+	}
+	if sharedConfigFileOK {
+		exPath := filepath.Dir(sharedConfigFile)
+		opts = append(opts, config.WithSharedConfigFiles([]string{sharedConfigFile, filepath.Join(exPath, "config")}))
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.Background(), opts...)
 	if err != nil {
 		return ""
 	}
-	if ses.Config != nil && ses.Config.Region != nil {
-		region = *ses.Config.Region
+
+	region := cfg.Region
+	if region != "" {
 		fmt.Println("I! SDKRegionWithCredsMap region: ", region)
 	}
 	return region
@@ -122,34 +125,34 @@ func isEKS() eksdetector.IsEKSCache {
 	return eksdetector.IsEKS()
 }
 
-func detectRegion(mode string, credsConfig map[string]string) (region string, regionType string) {
-	region = SDKRegionWithCredsMap(mode, credsConfig)
-	regionType = config.RegionTypeNotFound
+func detectRegion(mode string, credsConfig map[string]string) (string, string) {
+	region := SDKRegionWithCredsMap(mode, credsConfig)
+	regionType := translatorconfig.RegionTypeNotFound
 	if region != "" {
-		regionType = config.RegionTypeCredsMap
+		regionType = translatorconfig.RegionTypeCredsMap
 	}
 
 	// For ec2, fallback to metadata when no region info found in credential profile.
-	if region == "" && mode == config.ModeEC2 {
+	if region == "" && mode == translatorconfig.ModeEC2 {
 
 		fmt.Println("I! Trying to detect region from ec2")
-		region = DefaultEC2Region()
-		regionType = config.RegionTypeEC2Metadata
+		region = util.DefaultEC2Region(context.Background())
+		regionType = translatorconfig.RegionTypeEC2Metadata
 	}
 
 	// try to get region from ecs metadata
-	if region == "" && mode == config.ModeEC2 {
+	if region == "" && mode == translatorconfig.ModeEC2 {
 		fmt.Println("I! Trying to detect region from ecs")
 		region = DefaultECSRegion()
-		regionType = config.RegionTypeECSMetadata
+		regionType = translatorconfig.RegionTypeECSMetadata
 	}
 
-	return
+	return region, regionType
 }
 
 func CheckAndSetHomeDir() {
 	homeDir := detectHomeDirectory()
-	if runtime.GOOS == config.OS_TYPE_WINDOWS {
+	if runtime.GOOS == translatorconfig.OS_TYPE_WINDOWS {
 		os.Setenv("USERPROFILE", homeDir)
 		fmt.Println("I! Set home dir windows: " + homeDir)
 	} else {
@@ -158,14 +161,14 @@ func CheckAndSetHomeDir() {
 	}
 }
 
-func detectCredentialsPath() (credentialsPath string) {
+func detectCredentialsPath() string {
 	homeDir := detectHomeDirectory()
 	return filepath.Join(homeDir, ".aws", "credentials")
 }
 
 func detectHomeDirectory() string {
 	var homeDir string
-	if runtime.GOOS == config.OS_TYPE_WINDOWS {
+	if runtime.GOOS == translatorconfig.OS_TYPE_WINDOWS {
 		// the cwagent process is always running under user "System"
 		systemDrivePath := GetWindowsSystemDrivePath() // C:
 		homeDir = systemDrivePath + "\\Users\\Administrator"
@@ -174,7 +177,7 @@ func detectHomeDirectory() string {
 			homeDir = usr.HomeDir
 		}
 		if homeDir == "" {
-			if runtime.GOOS == config.OS_TYPE_DARWIN {
+			if runtime.GOOS == translatorconfig.OS_TYPE_DARWIN {
 				homeDir = "/var/root"
 			} else {
 				homeDir = "/root"
@@ -189,8 +192,8 @@ func detectHomeDirectory() string {
 	return homeDir
 }
 
-func GetCredentials(mode string, credsConfig map[string]string) (result map[string]string) {
-	result = map[string]string{}
+func GetCredentials(mode string, credsConfig map[string]string) map[string]string {
+	result := map[string]string{}
 
 	for k, v := range credsConfig {
 		result[k] = v
@@ -199,8 +202,8 @@ func GetCredentials(mode string, credsConfig map[string]string) (result map[stri
 	profile, hasProfile := credsConfig[commonconfig.CredentialProfile]
 	if hasProfile {
 		result[commonconfig.CredentialProfile] = profile
-	} else if (mode == config.ModeOnPrem) || (mode == config.ModeOnPremise) {
-		result[commonconfig.CredentialProfile] = DEFAULT_PROFILE
+	} else if (mode == translatorconfig.ModeOnPrem) || (mode == translatorconfig.ModeOnPremise) {
+		result[commonconfig.CredentialProfile] = DefaultProfile
 	}
-	return
+	return result
 }

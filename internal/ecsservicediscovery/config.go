@@ -25,7 +25,7 @@ type ServiceNameForTasksConfig struct {
 
 	containerNameRegex *regexp.Regexp
 	serviceNameRegex   *regexp.Regexp
-	metricsPortList    []int
+	metricsPortList    []int32
 	taskArnList        []string
 }
 
@@ -44,7 +44,7 @@ type TaskDefinitionConfig struct {
 
 	containerNameRegex *regexp.Regexp
 	taskDefRegex       *regexp.Regexp
-	metricsPortList    []int
+	metricsPortList    []int32
 }
 
 func (t *TaskDefinitionConfig) String() string {
@@ -66,10 +66,10 @@ func (t *TaskDefinitionConfig) init() {
 
 	ports := strings.Split(t.MetricsPorts, portSeparator)
 	for _, v := range ports {
-		if port, err := strconv.Atoi(strings.TrimSpace(v)); err != nil || port < 0 {
+		if port, err := strconv.Atoi(strings.TrimSpace(v)); err != nil || port < 0 || port > 65535 {
 			continue
 		} else {
-			t.metricsPortList = append(t.metricsPortList, port)
+			t.metricsPortList = append(t.metricsPortList, int32(port)) // #nosec G109 -- port is validated to be in range 0-65535
 		}
 	}
 }
@@ -93,10 +93,10 @@ func (s *ServiceNameForTasksConfig) init() {
 
 	ports := strings.Split(s.MetricsPorts, portSeparator)
 	for _, v := range ports {
-		if port, err := strconv.Atoi(strings.TrimSpace(v)); err != nil || port < 0 {
+		if port, err := strconv.Atoi(strings.TrimSpace(v)); err != nil || port < 0 || port > 65535 {
 			continue
 		} else {
-			s.metricsPortList = append(s.metricsPortList, port)
+			s.metricsPortList = append(s.metricsPortList, int32(port)) // #nosec G109 -- port is validated to be in range 0-65535
 		}
 	}
 }

@@ -4,11 +4,13 @@
 package retryer
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	"github.com/aws/smithy-go"
 	"github.com/influxdata/telegraf"
 )
 
@@ -23,8 +25,11 @@ type LogThrottleRetryer struct {
 	throttleChan chan throttleEvent
 	done         chan struct{}
 
-	client.DefaultRetryer
+	// Embed the standard retryer for default behavior
+	*retry.Standard
 }
+
+var _ aws.RetryerV2 = (*LogThrottleRetryer)(nil)
 
 type throttleEvent struct {
 	Operation string
@@ -37,27 +42,28 @@ func (te throttleEvent) String() string {
 
 func NewLogThrottleRetryer(logger telegraf.Logger) *LogThrottleRetryer {
 	r := &LogThrottleRetryer{
-		Log:            logger,
-		throttleChan:   make(chan throttleEvent, 1),
-		done:           make(chan struct{}),
-		DefaultRetryer: client.DefaultRetryer{NumMaxRetries: client.DefaultRetryerMaxNumRetries},
+		Log:          logger,
+		throttleChan: make(chan throttleEvent, 1),
+		done:         make(chan struct{}),
+		Standard:     retry.NewStandard(),
 	}
 
 	go r.watchThrottleEvents()
 	return r
 }
 
-func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
-	if req.IsErrorThrottle() {
-		te := throttleEvent{Err: req.Error}
-		if req.Operation != nil {
-			te.Operation = req.Operation.Name
+func (r *LogThrottleRetryer) IsErrorRetryable(err error) bool {
+	if IsErrThrottle(err) {
+		te := throttleEvent{Err: err}
+		var oe *smithy.OperationError
+		if errors.As(err, &oe) {
+			te.Operation = oe.OperationName
 		}
 		r.throttleChan <- te
 	}
 
 	// Fallback to SDK's built in retry rules
-	return r.DefaultRetryer.ShouldRetry(req)
+	return r.Standard.IsErrorRetryable(err)
 }
 
 func (r *LogThrottleRetryer) Stop() {
@@ -100,4 +106,9 @@ func (r *LogThrottleRetryer) watchThrottleEvents() {
 			return
 		}
 	}
+}
+
+// IsErrThrottle is a wrapper for the default throttle error code check for the AWS SDK retry logic.
+func IsErrThrottle(err error) bool {
+	return retry.IsErrorThrottles(retry.DefaultThrottles).IsErrorThrottle(err) == aws.TrueTernary
 }

@@ -4,49 +4,83 @@
 package aws
 
 import (
+	"bytes"
+	"log"
+	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/smithy-go/logging"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetSDKLogLevel(t *testing.T) {
-	cases := []struct {
-		sdkLogLevelString string
-		expectedVal       aws.LogLevelType
+	testCases := []struct {
+		input string
+		want  aws.ClientLogMode
 	}{
-		// sdkLogLevelString does not match
-		{"FOO", aws.LogOff},
+		// Invalid input
+		{input: "FOO", want: aws.ClientLogMode(0)},
 		// Wrong case.
-		{"logDEBUG", aws.LogOff},
+		{input: "logrequest", want: aws.ClientLogMode(0)},
 		// Extra char.
-		{"LogDebug1", aws.LogOff},
+		{input: "LogRequest1", want: aws.ClientLogMode(0)},
 		// Single match.
-		{"LogDebug", aws.LogDebug},
-		{"LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
-		{"LogDebugWithHTTPBody", aws.LogDebugWithHTTPBody},
-		{"LogDebugWithRequestRetries", aws.LogDebugWithRequestRetries},
-		{"LogDebugWithRequestErrors", aws.LogDebugWithRequestErrors},
-		{"LogDebugWithEventStreamBody", aws.LogDebugWithEventStreamBody},
+		{input: "LogRequest", want: aws.LogRequest},
+		{input: "LogResponse", want: aws.LogResponse},
+		{input: "LogSigning", want: aws.LogSigning},
+		{input: "LogRequestWithBody", want: aws.LogRequestWithBody},
+		{input: "LogResponseWithBody", want: aws.LogResponseWithBody},
+		{input: "LogRetries", want: aws.LogRetries},
+		{input: "LogRequestEventMessage", want: aws.LogRequestEventMessage},
+		{input: "LogResponseEventMessage", want: aws.LogResponseEventMessage},
+		{input: "LogDeprecatedUsage", want: aws.LogDeprecatedUsage},
+		// v1 compatibility
+		{input: "LogDebug", want: aws.LogRequest | aws.LogResponse},
+		{input: "LogDebugWithSigning", want: aws.LogRequest | aws.LogResponse | aws.LogSigning},
+		{input: "LogDebugWithHTTPBody", want: aws.LogRequestWithBody | aws.LogResponseWithBody},
+		{input: "LogDebugWithRequestRetries", want: aws.LogRequest | aws.LogResponse | aws.LogRetries},
+		{input: "LogDebugWithRequestErrors", want: aws.LogRequest | aws.LogResponse},
+		{input: "LogDebugWithEventStreamBody", want: aws.LogRequestEventMessage | aws.LogResponseEventMessage},
 		// Extra space around is allowed.
-		{"   LogDebug  ", aws.LogDebug},
+		{input: "   LogRequest  ", want: aws.LogRequest},
 		// Multiple matches.
-		{"LogDebugWithEventStreamBody|LogDebugWithHTTPBody",
-			aws.LogDebugWithEventStreamBody | aws.LogDebugWithHTTPBody},
-		{"  LogDebugWithHTTPBody  |  LogDebugWithEventStreamBody  ",
-			aws.LogDebugWithEventStreamBody | aws.LogDebugWithHTTPBody},
-		{"LogDebugWithRequestRetries|LogDebugWithEventStreamBody",
-			aws.LogDebugWithEventStreamBody | aws.LogDebugWithRequestRetries},
-		{"LogDebugWithRequestRetries|LogDebugWithRequestErrors",
-			aws.LogDebugWithRequestRetries | aws.LogDebugWithRequestErrors},
-		{"LogDebugWithRequestRetries|LogDebugWithRequestErrors|LogDebugWithEventStreamBody",
-			aws.LogDebugWithRequestRetries | aws.LogDebugWithRequestErrors | aws.LogDebugWithEventStreamBody},
+		{input: "LogRequest|LogResponse", want: aws.LogRequest | aws.LogResponse},
+		{input: "  LogRequestWithBody  |  LogResponseWithBody  ", want: aws.LogRequestWithBody | aws.LogResponseWithBody},
+		{input: "LogRetries|LogSigning", want: aws.LogRetries | aws.LogSigning},
+		{input: "LogRequest|LogResponse|LogSigning", want: aws.LogRequest | aws.LogResponse | aws.LogSigning},
 	}
 
-	for _, tc := range cases {
-		SetSDKLogLevel(tc.sdkLogLevelString)
-		// check the internal var
-		if *SDKLogLevel() != tc.expectedVal {
-			t.Errorf("input: %v, actual: %v", tc, sdkLogLevel)
-		}
+	for _, testCase := range testCases {
+		SetSDKLogLevel(testCase.input)
+		assert.Equal(t, testCase.want, SDKLogLevel())
+	}
+}
+
+func TestSDKLogger(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(os.Stderr)
+
+	logger := SDKLogger{}
+
+	tests := []struct {
+		classification logging.Classification
+		expectedPrefix string
+	}{
+		{classification: logging.Debug, expectedPrefix: "D!"},
+		{classification: logging.Warn, expectedPrefix: "W!"},
+		{classification: logging.Classification("TEST"), expectedPrefix: "I!"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.classification), func(t *testing.T) {
+			buf.Reset()
+			logger.Logf(tt.classification, "test message: %s", "arg")
+
+			output := buf.String()
+			assert.Contains(t, output, tt.expectedPrefix)
+			assert.Contains(t, output, "test message: arg")
+		})
 	}
 }

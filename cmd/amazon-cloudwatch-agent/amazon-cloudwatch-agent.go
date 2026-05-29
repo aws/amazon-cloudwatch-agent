@@ -262,12 +262,12 @@ func runAgent(ctx context.Context,
 	// we cannot change the sdk log level without restarting the Agent.
 	// For example CloudWatch.Connect().
 	sdkLogLevel := os.Getenv(envconfig.AWS_SDK_LOG_LEVEL)
-	configaws.SetSDKLogLevel(sdkLogLevel)
 	if sdkLogLevel == "" {
 		log.Println("I! AWS SDK log level not set")
 	} else {
 		log.Printf("I! AWS SDK log level, %s\n", sdkLogLevel)
 	}
+	configaws.SetSDKLogLevel(sdkLogLevel)
 
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second

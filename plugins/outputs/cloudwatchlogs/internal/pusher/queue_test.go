@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,8 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/smithy-go"
 	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -21,50 +24,49 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 type stubLogsService struct {
-	ple func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
-	clg func(input *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
-	cls func(input *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
-	prp func(input *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
-	dlg func(input *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
+	ple func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)
+	clg func(context.Context, *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error)
+	cls func(context.Context, *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error)
+	prp func(context.Context, *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error)
+	dlg func(context.Context, *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error)
 }
 
-func (s *stubLogsService) PutLogEvents(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+func (s *stubLogsService) PutLogEvents(ctx context.Context, in *cloudwatchlogs.PutLogEventsInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutLogEventsOutput, error) {
 	if s.ple != nil {
-		return s.ple(in)
+		return s.ple(ctx, in)
 	}
 	return nil, nil
 }
 
-func (s *stubLogsService) CreateLogGroup(in *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+func (s *stubLogsService) CreateLogGroup(ctx context.Context, in *cloudwatchlogs.CreateLogGroupInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogGroupOutput, error) {
 	if s.clg != nil {
-		return s.clg(in)
+		return s.clg(ctx, in)
 	}
 	return nil, nil
 }
 
-func (s *stubLogsService) CreateLogStream(in *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+func (s *stubLogsService) CreateLogStream(ctx context.Context, in *cloudwatchlogs.CreateLogStreamInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 	if s.cls != nil {
-		return s.cls(in)
+		return s.cls(ctx, in)
 	}
 	return nil, nil
 }
 
-func (s *stubLogsService) PutRetentionPolicy(in *cloudwatchlogs.PutRetentionPolicyInput) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
+func (s *stubLogsService) PutRetentionPolicy(ctx context.Context, in *cloudwatchlogs.PutRetentionPolicyInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.PutRetentionPolicyOutput, error) {
 	if s.prp != nil {
-		return s.prp(in)
+		return s.prp(ctx, in)
 	}
 	return nil, nil
 }
 
-func (s *stubLogsService) DescribeLogGroups(in *cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+func (s *stubLogsService) DescribeLogGroups(ctx context.Context, in *cloudwatchlogs.DescribeLogGroupsInput, _ ...func(*cloudwatchlogs.Options)) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 	if s.dlg != nil {
-		return s.dlg(in)
+		return s.dlg(ctx, in)
 	}
 	return nil, nil
 }
@@ -95,20 +97,20 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	var wg sync.WaitGroup
 	var s stubLogsService
 	var called atomic.Bool
-	expectedEntity := &cloudwatchlogs.Entity{
-		Attributes: map[string]*string{
-			"PlatformType":         aws.String("AWS::EC2"),
-			"EC2.InstanceId":       aws.String("i-123456789"),
-			"EC2.AutoScalingGroup": aws.String("test-group"),
+	expectedEntity := &types.Entity{
+		Attributes: map[string]string{
+			"PlatformType":         "AWS::EC2",
+			"EC2.InstanceId":       "i-123456789",
+			"EC2.AutoScalingGroup": "test-group",
 		},
-		KeyAttributes: map[string]*string{
-			"Name":         aws.String("myService"),
-			"Environment":  aws.String("myEnvironment"),
-			"AwsAccountId": aws.String("123456789"),
+		KeyAttributes: map[string]string{
+			"Name":         "myService",
+			"Environment":  "myEnvironment",
+			"AwsAccountId": "123456789",
 		},
 	}
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		called.Store(true)
 
 		if *in.LogGroupName != "G" || *in.LogStreamName != "S" {
@@ -145,7 +147,7 @@ func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
 	var s stubLogsService
 	var called atomic.Bool
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		called.Store(true)
 
 		if *in.LogGroupName != "G" || *in.LogStreamName != "S" {
@@ -182,7 +184,7 @@ func TestStopQueueWouldDoFinalSend(t *testing.T) {
 	var s stubLogsService
 	var called atomic.Bool
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		called.Store(true)
 		if len(in.LogEvents) != 1 {
 			t.Errorf("PutLogEvents called with incorrect number of message, expecting 1, but %v received", len(in.LogEvents))
@@ -209,8 +211,8 @@ func TestStopPusherWouldStopRetries(t *testing.T) {
 	var wg sync.WaitGroup
 	var s stubLogsService
 
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, &types.ServiceUnavailableException{}
 	}
 
 	logSink := testutil.NewLogSink()
@@ -242,7 +244,7 @@ func TestLongMessageHandling(t *testing.T) {
 	// We now verify that long messages are passed through without modification
 	longMsg := strings.Repeat("x", 10000) // A long message that would have been truncated before
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if len(in.LogEvents) != 1 {
 			t.Fatalf("PutLogEvents called with incorrect number of message, expecting 1, but %v received", len(in.LogEvents))
 		}
@@ -272,7 +274,7 @@ func TestRequestIsLessThan1MB(t *testing.T) {
 	// Use a large message but less than the AWS CloudWatch Logs limit
 	longMsg := strings.Repeat("x", 200000) // 200KB
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		length := 0
 		for _, le := range in.LogEvents {
 			length += len(*le.Message) + perEventHeaderBytes
@@ -303,7 +305,7 @@ func TestRequestIsLessThan10kEvents(t *testing.T) {
 	var s stubLogsService
 	msg := "m"
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if len(in.LogEvents) > 10000 {
 			t.Fatalf("PutLogEvents called with more than 10k events, %v received", len(in.LogEvents))
 		}
@@ -329,7 +331,7 @@ func TestTimestampPopulation(t *testing.T) {
 	var wg sync.WaitGroup
 	var s stubLogsService
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if len(in.LogEvents) > 10000 {
 			t.Fatalf("PutLogEvents called with more than 10k events, %v received", len(in.LogEvents))
 		}
@@ -355,7 +357,7 @@ func TestIgnoreOutOfTimeRangeEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var s stubLogsService
 
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		t.Errorf("PutLogEvents should not be called for out of range events")
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
@@ -384,7 +386,7 @@ func TestAddMultipleEvents(t *testing.T) {
 	var wg sync.WaitGroup
 	var s stubLogsService
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if *in.LogGroupName != "G" || *in.LogStreamName != "S" {
 			t.Errorf("PutLogEvents called with wrong group and stream: %v/%v", *in.LogGroupName, *in.LogStreamName)
 		}
@@ -436,7 +438,7 @@ func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {
 	var s stubLogsService
 	var ci atomic.Int32
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if ci.Load() == 0 {
 			if len(in.LogEvents) != 3 {
 				t.Errorf("PutLogEvents called with incorrect number of message, expecting 3, but %v received", len(in.LogEvents))
@@ -486,7 +488,7 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	var s stubLogsService
 	var cnt atomic.Int32
 
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if cnt.Load() == 0 {
 			cnt.Add(1)
 			return nil, errors.New("unhandled error")
@@ -516,13 +518,13 @@ func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 	var s stubLogsService
 
 	var plec, clgc, clsc atomic.Int32
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		var e error
 		switch plec.Load() {
 		case 0:
-			e = &cloudwatchlogs.ResourceNotFoundException{}
+			e = &types.ResourceNotFoundException{}
 		case 1:
-			e = awserr.New("Unknown Error", "", nil)
+			e = &smithy.GenericAPIError{Code: "Unknown Error", Message: ""}
 		case 2:
 			return &cloudwatchlogs.PutLogEventsOutput{}, nil
 		default:
@@ -532,11 +534,11 @@ func TestCreateLogGroupAndLogStreamWhenNotFound(t *testing.T) {
 		return nil, e
 	}
 
-	s.clg = func(*cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+	s.clg = func(context.Context, *cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
 		clgc.Add(1)
 		return nil, nil
 	}
-	s.cls = func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+	s.cls = func(context.Context, *cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 		clsc.Add(1)
 		return nil, nil
 	}
@@ -569,12 +571,12 @@ func TestLogRejectedLogEntryInfo(t *testing.T) {
 	var wg sync.WaitGroup
 	var s stubLogsService
 
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		return &cloudwatchlogs.PutLogEventsOutput{
-			RejectedLogEventsInfo: &cloudwatchlogs.RejectedLogEventsInfo{
-				TooOldLogEventEndIndex:   aws.Int64(100),
-				TooNewLogEventStartIndex: aws.Int64(200),
-				ExpiredLogEventEndIndex:  aws.Int64(300),
+			RejectedLogEventsInfo: &types.RejectedLogEventsInfo{
+				TooOldLogEventEndIndex:   aws.Int32(100),
+				TooNewLogEventStartIndex: aws.Int32(200),
+				ExpiredLogEventEndIndex:  aws.Int32(300),
 			},
 		}, nil
 	}
@@ -614,7 +616,7 @@ func TestAddEventNonBlocking(t *testing.T) {
 	var s stubLogsService
 	const N = 100
 
-	s.ple = func(in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if len(in.LogEvents) != N {
 			t.Errorf("PutLogEvents called with incorrect number of message, only %v received", len(in.LogEvents))
 		}
@@ -652,9 +654,9 @@ func TestResendWouldStopAfterExhaustedRetries(t *testing.T) {
 	var s stubLogsService
 	var cnt atomic.Int32
 
-	s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		cnt.Add(1)
-		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+		return nil, &types.ServiceUnavailableException{}
 	}
 
 	logSink := testutil.NewLogSink()
@@ -681,7 +683,7 @@ func triggerSend(t *testing.T, q *queue) {
 
 func testPreparation(
 	t *testing.T,
-	retention int,
+	retention int32,
 	service cloudWatchLogsService,
 	flushTimeout time.Duration,
 	retryDuration time.Duration,
@@ -703,7 +705,7 @@ func testPreparation(
 func testPreparationWithLogger(
 	t *testing.T,
 	logger telegraf.Logger,
-	retention int,
+	retention int32,
 	service cloudWatchLogsService,
 	flushTimeout time.Duration,
 	retryDuration time.Duration,
@@ -731,7 +733,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 		var called bool
 
 		// Mock the PutLogEvents method to verify the batch has callbacks registered
-		s.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 			called = true
 			return &cloudwatchlogs.PutLogEventsOutput{}, nil
 		}
@@ -743,7 +745,8 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			assert.NotEmpty(t, batch.doneCallbacks, "Regular callbacks should be registered")
 			assert.Empty(t, batch.stateCallbacks, "State callbacks should not be registered")
 
-			s.PutLogEvents(batch.build())
+			_, err := s.PutLogEvents(t.Context(), batch.build())
+			assert.NoError(t, err)
 		}).Return()
 
 		logger := testutil.NewNopLogger()

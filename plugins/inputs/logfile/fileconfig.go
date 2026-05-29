@@ -81,7 +81,7 @@ type FileConfig struct {
 	TruncateSuffix string `toml:"truncate_suffix"`
 
 	//Indicate retention in days for log group
-	RetentionInDays int `toml:"retention_in_days"`
+	RetentionInDays int32 `toml:"retention_in_days"`
 
 	Filters []*LogFilter `toml:"filters"`
 

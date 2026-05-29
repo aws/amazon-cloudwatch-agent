@@ -4,6 +4,7 @@
 package volume
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -15,7 +16,7 @@ type mockProvider struct {
 	err       error
 }
 
-func (m *mockProvider) DeviceToSerialMap() (map[string]string, error) {
+func (m *mockProvider) DeviceToSerialMap(context.Context) (map[string]string, error) {
 	return m.serialMap, m.err
 }
 
@@ -66,7 +67,7 @@ func TestMergeProvider(t *testing.T) {
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
 			p := newMergeProvider(testCase.providers)
-			got, err := p.DeviceToSerialMap()
+			got, err := p.DeviceToSerialMap(t.Context())
 			assert.ErrorIs(t, err, testCase.wantErr)
 			assert.Equal(t, testCase.wantSerialMap, got)
 		})
