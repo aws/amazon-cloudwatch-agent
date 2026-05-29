@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
 package postgresql
 
 import (
@@ -8,34 +11,37 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type Option func(*translator)
 
 type translator struct {
-	factory              receiver.Factory
-	name                 string
-	endpoint             string
-	username             string
-	passfile             string
-	caFile               string
-	isLocalhost          bool
-	index                int
-	querySampleInterval  time.Duration
-	maxRowsPerQuery      int64
+	factory             receiver.Factory
+	name                string
+	endpoint            string
+	username            string
+	passfile            string
+	caFile              string
+	isLocalhost         bool
+	index               int
+	querySampleInterval time.Duration
+	maxRowsPerQuery     int64
 }
 
-func WithName(name string) Option           { return func(t *translator) { t.name = name } }
-func WithEndpoint(ep string) Option         { return func(t *translator) { t.endpoint = ep } }
-func WithUsername(u string) Option          { return func(t *translator) { t.username = u } }
-func WithPassfile(p string) Option          { return func(t *translator) { t.passfile = p } }
-func WithCAFile(ca string) Option           { return func(t *translator) { t.caFile = ca } }
-func WithIsLocalhost(b bool) Option         { return func(t *translator) { t.isLocalhost = b } }
-func WithIndex(i int) Option                { return func(t *translator) { t.index = i } }
-func WithQuerySampleInterval(d time.Duration) Option { return func(t *translator) { t.querySampleInterval = d } }
-func WithMaxRowsPerQuery(n int64) Option    { return func(t *translator) { t.maxRowsPerQuery = n } }
+func WithName(name string) Option   { return func(t *translator) { t.name = name } }
+func WithEndpoint(ep string) Option { return func(t *translator) { t.endpoint = ep } }
+func WithUsername(u string) Option  { return func(t *translator) { t.username = u } }
+func WithPassfile(p string) Option  { return func(t *translator) { t.passfile = p } }
+func WithCAFile(ca string) Option   { return func(t *translator) { t.caFile = ca } }
+func WithIsLocalhost(b bool) Option { return func(t *translator) { t.isLocalhost = b } }
+func WithIndex(i int) Option        { return func(t *translator) { t.index = i } }
+func WithQuerySampleInterval(d time.Duration) Option {
+	return func(t *translator) { t.querySampleInterval = d }
+}
+func WithMaxRowsPerQuery(n int64) Option { return func(t *translator) { t.maxRowsPerQuery = n } }
 
 func NewTranslator(opts ...Option) common.ComponentTranslator {
 	t := &translator{
