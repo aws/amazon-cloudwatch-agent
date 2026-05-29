@@ -12,7 +12,7 @@ import (
 
 const (
 	envAwsSdkLoadConfig         = "AWS_SDK_LOAD_CONFIG"
-	envAwsSharedCredentialsFile = "AWS_SHARED_CREDENTIALS_FILE"
+	envAwsSharedCredentialsFile = "AWS_SHARED_CREDENTIALS_FILE" // nolint:gosec
 	envAwsSharedConfigFile      = "AWS_CONFIG_FILE"
 )
 

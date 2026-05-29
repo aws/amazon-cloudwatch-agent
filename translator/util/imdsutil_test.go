@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"gotest.tools/v3/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
