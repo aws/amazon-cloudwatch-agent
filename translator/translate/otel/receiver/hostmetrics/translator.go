@@ -17,14 +17,16 @@ import (
 
 var defaultScrapers = []string{"cpu", "disk", "filesystem", "memory", "network", "load", "processes"}
 
-// hostMetricsConfig is a serializable representation of the hostmetrics receiver
-// config. The upstream Config uses mapstructure:"-" on Scrapers which prevents
-// serialization, so we define our own struct with an explicit scrapers field.
+// hostMetricsConfig is a serializable representation of
+// hostmetricsreceiver.Config. The upstream type uses mapstructure:"-" on its
+// Scrapers field which prevents confmap serialization, so we define our own
+// struct with an explicit scrapers field.
 type hostMetricsConfig struct {
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
 	Scrapers                       map[string]map[string]any `mapstructure:"scrapers"`
 }
 
+// Validate is intentionally a no-op; the upstream hostmetricsreceiver handles its own validation.
 func (c *hostMetricsConfig) Validate() error {
 	return nil
 }
@@ -46,7 +48,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	scrapers := make(map[string]map[string]any, len(defaultScrapers))
 	for _, s := range defaultScrapers {
-		scrapers[s] = map[string]any{}
+		scrapers[s] = nil
 	}
 	intervalKeyChain := []string{
 		common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey, common.MetricsCollectionIntervalKey),
