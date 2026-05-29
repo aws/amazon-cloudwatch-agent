@@ -38,11 +38,41 @@ func WithTimeout(timeout time.Duration) common.TranslatorOption {
 	}
 }
 
+// WithMetadataKeys sets the metadata_keys for per-key batching.
+func WithMetadataKeys(keys []string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.metadataKeys = keys
+		}
+	}
+}
+
+// WithSendBatchSize sets the preferred number of items per batch export.
+func WithSendBatchSize(size uint32) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.sendBatchSize = size
+		}
+	}
+}
+
+// WithSendBatchMaxSize sets the maximum number of items per batch export.
+func WithSendBatchMaxSize(size uint32) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.sendBatchMaxSize = size
+		}
+	}
+}
+
 type translator struct {
 	factory processor.Factory
 	common.NameProvider
 	telemetrySectionKey string
 	timeout             *time.Duration
+	metadataKeys        []string
+	sendBatchSize       uint32
+	sendBatchMaxSize    uint32
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -72,12 +102,24 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	// First check if we have a timeout override
 	if t.timeout != nil {
 		cfg.Timeout = *t.timeout
-	} else if duration, ok := common.GetDuration(conf, common.ConfigKey(t.telemetrySectionKey, common.ForceFlushIntervalKey)); ok {
-		cfg.Timeout = duration
-	} else if defaultDuration, ok := defaultForceFlushInterval[t.telemetrySectionKey]; ok {
-		cfg.Timeout = defaultDuration
-	} else {
-		return cfg, fmt.Errorf("default force_flush_interval not defined for %s", t.telemetrySectionKey)
+	} else if t.telemetrySectionKey != "" {
+		if duration, ok := common.GetDuration(conf, common.ConfigKey(t.telemetrySectionKey, common.ForceFlushIntervalKey)); ok {
+			cfg.Timeout = duration
+		} else if defaultDuration, ok := defaultForceFlushInterval[t.telemetrySectionKey]; ok {
+			cfg.Timeout = defaultDuration
+		} else {
+			return cfg, fmt.Errorf("default force_flush_interval not defined for %s", t.telemetrySectionKey)
+		}
+	}
+
+	if len(t.metadataKeys) > 0 {
+		cfg.MetadataKeys = t.metadataKeys
+	}
+	if t.sendBatchSize > 0 {
+		cfg.SendBatchSize = t.sendBatchSize
+	}
+	if t.sendBatchMaxSize > 0 {
+		cfg.SendBatchMaxSize = t.sendBatchMaxSize
 	}
 	return cfg, nil
 }

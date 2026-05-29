@@ -66,9 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*Translation, error) {
 			translation.Translators.Processors.Merge(pipeline.Processors)
 			translation.Translators.Exporters.Merge(pipeline.Exporters)
 			translation.Translators.Extensions.Merge(pipeline.Extensions)
-			if pipeline.Connectors != nil {
-				translation.Translators.Connectors.Merge(pipeline.Connectors)
-			}
+			translation.Translators.Connectors.Merge(pipeline.Connectors)
 		}
 	})
 	if len(translation.Pipelines) == 0 {

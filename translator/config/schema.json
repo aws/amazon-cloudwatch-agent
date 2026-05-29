@@ -668,6 +668,25 @@
                   "minItems": 1
                 }
               ]
+            },
+            "application_signals": {
+              "type": "object",
+              "properties": {
+                "log_group_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "log_stream_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "disabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
             }
           },
           "minProperties": 1,

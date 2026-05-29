@@ -72,8 +72,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Merge(logsHostTranslators)
 	containerInsightsTranslators := containerinsights.NewTranslators(conf)
 	translators.Merge(containerInsightsTranslators)
-	translators.Set(applicationsignals.NewTranslator(pipeline.SignalTraces))
-	translators.Set(applicationsignals.NewTranslator(pipeline.SignalMetrics))
+	translators.Merge(applicationsignals.NewTranslators(conf, pipeline.SignalTraces))
+	translators.Merge(applicationsignals.NewTranslators(conf, pipeline.SignalMetrics))
+	translators.Merge(applicationsignals.NewTranslators(conf, pipeline.SignalLogs))
+
 	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
 	syslogTranslators, err := syslog.NewTranslators(conf)
@@ -168,20 +170,66 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 
 // build uses the pipelines and extensions defined in the config to build the components.
 func build(conf *confmap.Conf, cfg *otelcol.Config, translators common.ComponentTranslators) error {
-	// Build connectors first so we know which IDs to skip in receivers/exporters
+  // Build connectors first so we know which IDs to skip in receivers/exporters
 	var errs error
 	if translators.Connectors != nil && translators.Connectors.Len() > 0 {
 		errs = buildComponents(conf, translators.Connectors.Keys(), cfg.Connectors, translators.Connectors.Get)
 	}
-
+  
+	errs := buildConnectors(conf, cfg, translators)
 	errs = multierr.Append(errs, buildComponents(conf, cfg.Service.Extensions, cfg.Extensions, translators.Extensions.Get))
 	for _, p := range cfg.Service.Pipelines {
-		// Filter out connector IDs from receivers and exporters since they're built separately
+    // Filter out connector IDs from receivers and exporters since they're built separately
 		receivers := filterOutConnectors(p.Receivers, cfg.Connectors)
 		exporters := filterOutConnectors(p.Exporters, cfg.Connectors)
-		errs = multierr.Append(errs, buildComponents(conf, receivers, cfg.Receivers, translators.Receivers.Get))
+		errs = multierr.Append(errs, buildComponents(conf, p.Receivers, cfg.Receivers, translators.Receivers.Get, cfg.Connectors))
 		errs = multierr.Append(errs, buildComponents(conf, p.Processors, cfg.Processors, translators.Processors.Get))
-		errs = multierr.Append(errs, buildComponents(conf, exporters, cfg.Exporters, translators.Exporters.Get))
+		errs = multierr.Append(errs, buildComponents(conf, p.Exporters, cfg.Exporters, translators.Exporters.Get, cfg.Connectors))
+	}
+	return errs
+}
+
+// buildConnectors builds connector configs. Connectors appear as exporters in source
+// pipelines and receivers in destination pipelines, so we look in both places.
+func buildConnectors(conf *confmap.Conf, cfg *otelcol.Config, translators common.ComponentTranslators) error {
+	var errs error
+	for _, p := range cfg.Service.Pipelines {
+		for _, id := range p.Receivers {
+			if _, ok := cfg.Receivers[id]; ok {
+				continue
+			}
+			if _, ok := cfg.Connectors[id]; ok {
+				continue
+			}
+			translator, ok := translators.Connectors.Get(id)
+			if !ok {
+				continue
+			}
+			connCfg, err := translator.Translate(conf)
+			if err != nil {
+				errs = multierr.Append(errs, err)
+				continue
+			}
+			cfg.Connectors[id] = connCfg
+		}
+		for _, id := range p.Exporters {
+			if _, ok := cfg.Exporters[id]; ok {
+				continue
+			}
+			if _, ok := cfg.Connectors[id]; ok {
+				continue
+			}
+			translator, ok := translators.Connectors.Get(id)
+			if !ok {
+				continue
+			}
+			connCfg, err := translator.Translate(conf)
+			if err != nil {
+				errs = multierr.Append(errs, err)
+				continue
+			}
+			cfg.Connectors[id] = connCfg
+		}
 	}
 	return errs
 }
@@ -201,14 +249,23 @@ func filterOutConnectors(ids []component.ID, connectors map[component.ID]compone
 }
 
 // buildComponents attempts to translate a component for each ID in the set.
+// IDs that exist in connectors are skipped since they are handled separately.
 func buildComponents[C component.Config, ID common.TranslatorID](
 	conf *confmap.Conf,
 	ids []ID,
 	components map[ID]C,
 	getTranslator func(ID) (common.Translator[C, ID], bool),
+	connectors ...map[component.ID]component.Config,
 ) error {
 	var errs error
 	for _, id := range ids {
+		if len(connectors) > 0 && connectors[0] != nil {
+			if cID, ok := any(id).(component.ID); ok {
+				if _, isConnector := connectors[0][cID]; isConnector {
+					continue
+				}
+			}
+		}
 		translator, ok := getTranslator(id)
 		if !ok {
 			errs = multierr.Append(errs, fmt.Errorf("missing translator for %v", id.Name()))

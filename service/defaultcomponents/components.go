@@ -11,12 +11,14 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor"
@@ -121,6 +123,7 @@ func Factories() (otelcol.Factories, error) {
 
 	if factories.Processors, err = otelcol.MakeFactoryMap[processor.Factory](
 		attributesprocessor.NewFactory(),
+		attributestocontextprocessor.NewFactory(),
 		awsapplicationsignals.NewFactory(),
 		awsattributelimitprocessor.NewFactory(),
 		awsentity.NewFactory(),
@@ -170,6 +173,7 @@ func Factories() (otelcol.Factories, error) {
 		agenthealth.NewFactory(),
 		awscloudwatchlogsprovisionerextension.NewFactory(),
 		awsproxy.NewFactory(),
+		headerssetterextension.NewFactory(),
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
 		nodemetadatacache.NewFactory(),

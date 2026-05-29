@@ -32,7 +32,7 @@ const (
 var (
 	logKey           = common.ConfigKey(common.LogsKey, common.LogsCollectedKey)
 	metricKey        = common.ConfigKey(common.MetricsKey, common.MetricsCollectedKey)
-	skipInputSet     = collections.NewSet[string](files.SectionKey, windowsevents.SectionKey, common.SyslogKey)
+	skipInputSet     = collections.NewSet[string](files.SectionKey, windowsevents.SectionKey, common.AppSignals, common.AppSignalsFallback, common.SyslogKey)
 	multipleInputSet = collections.NewSet[string](procstat.SectionKey)
 	// Order by PidFile, ExeKey, Pattern Key according to the public documents
 	// if multiple configuration is specified
