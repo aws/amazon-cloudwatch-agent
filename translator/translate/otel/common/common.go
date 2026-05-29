@@ -132,6 +132,20 @@ const (
 	AppSignalsRules                  = "rules"
 )
 
+// DBI (Database Insights) constants
+const (
+	DatabaseInsightsKey = "database_insights"
+	PostgreSQLKey       = "postgresql"
+
+	// DBI component names
+	DbiTransformFixStartTime = "dbi_fix_start_time"
+	DbiTransformResource     = "dbi_resource"
+	DbiTransformLogs         = "dbi_logs"
+	DbiFilterExcludeMonitor  = "dbi_exclude_monitor"
+	DbiConnectorDbload       = "dbi_dbload"
+	DbiConnectorTopsql       = "dbi_topsql"
+)
+
 const (
 	DiskIOPrefix = "diskio_"
 )

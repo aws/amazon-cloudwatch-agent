@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package databaseinsights
+package signaltometrics
 
 import (
 	"testing"
@@ -9,18 +9,20 @@ import (
 	signaltometricsconfig "github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslatorID(t *testing.T) {
-	tr := NewTranslator("postgresql", 0)
-	assert.Equal(t, "signaltometrics/topsql_0", tr.ID().String())
+	tr := NewTranslator(common.DbiConnectorTopsql, 0)
+	assert.Equal(t, "signaltometrics/dbi_topsql_0", tr.ID().String())
 
-	tr = NewTranslator("postgresql", 2)
-	assert.Equal(t, "signaltometrics/topsql_2", tr.ID().String())
+	tr = NewTranslator(common.DbiConnectorTopsql, 2)
+	assert.Equal(t, "signaltometrics/dbi_topsql_2", tr.ID().String())
 }
 
-func TestTranslatePostgresql(t *testing.T) {
-	tr := NewTranslator("postgresql", 0)
+func TestTranslateTopsql(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsql, 0)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
@@ -32,9 +34,9 @@ func TestTranslatePostgresql(t *testing.T) {
 	assert.Equal(t, "postgresql.local_blks_read", stmCfg.Logs[7].Name)
 }
 
-func TestTranslateUnsupportedEngine(t *testing.T) {
+func TestTranslateUnsupported(t *testing.T) {
 	tr := NewTranslator("unsupported", 0)
 	_, err := tr.Translate(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unable to read signaltometrics connector config for engine unsupported")
+	assert.Contains(t, err.Error(), "unsupported signaltometrics connector config")
 }

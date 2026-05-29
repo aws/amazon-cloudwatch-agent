@@ -74,3 +74,62 @@ func TestJmxTranslate(t *testing.T) {
 	sort.Strings(actualCfg.MetricStatements[0].Statements)
 	assert.Equal(t, string(actualCfg.ErrorMode), "propagate")
 }
+
+func TestDbiFixStartTimeTranslate(t *testing.T) {
+	transl := NewTranslatorWithName(common.DbiTransformFixStartTime)
+	assert.Equal(t, "transform/dbi_fix_start_time", transl.ID().String())
+
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+	require.Len(t, actualCfg.MetricStatements, 1)
+	assert.Equal(t, "datapoint", string(actualCfg.MetricStatements[0].Context))
+	require.Len(t, actualCfg.MetricStatements[0].Statements, 7)
+	assert.Equal(t, "set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0", actualCfg.MetricStatements[0].Statements[0])
+	assert.Equal(t, `replace_match(datapoint.attributes["user.name"], "", "unknown")`, actualCfg.MetricStatements[0].Statements[6])
+}
+
+func TestDbiResourceTranslate(t *testing.T) {
+	stmts := []string{
+		`set(resource.attributes["db.system.name"], "postgresql")`,
+		`set(resource.attributes["db.instance.name"], "my-db")`,
+	}
+	transl := NewTranslatorWithName(common.DbiTransformResource+"_0",
+		WithMetricStatements(stmts),
+		WithLogStatements(stmts),
+	)
+	assert.Equal(t, "transform/dbi_resource_0", transl.ID().String())
+
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.MetricStatements, 1)
+	assert.Equal(t, "resource", string(actualCfg.MetricStatements[0].Context))
+	require.Len(t, actualCfg.MetricStatements[0].Statements, 2)
+	assert.Equal(t, `set(resource.attributes["db.system.name"], "postgresql")`, actualCfg.MetricStatements[0].Statements[0])
+	assert.Equal(t, `set(resource.attributes["db.instance.name"], "my-db")`, actualCfg.MetricStatements[0].Statements[1])
+
+	require.Len(t, actualCfg.LogStatements, 1)
+	assert.Equal(t, actualCfg.MetricStatements[0].Statements, actualCfg.LogStatements[0].Statements)
+}
+
+func TestDbiLogDestinationTranslate(t *testing.T) {
+	stmts := []string{
+		`set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")`,
+		`set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-db"], "/"))`,
+	}
+	transl := NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_0", WithLogStatements(stmts))
+	assert.Equal(t, "transform/dbi_logs_raw-events_0", transl.ID().String())
+
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.LogStatements, 1)
+	assert.Equal(t, "resource", string(actualCfg.LogStatements[0].Context))
+	require.Len(t, actualCfg.LogStatements[0].Statements, 2)
+	assert.Equal(t, `set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")`, actualCfg.LogStatements[0].Statements[0])
+	assert.Equal(t, `set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-db"], "/"))`, actualCfg.LogStatements[0].Statements[1])
+	assert.Empty(t, actualCfg.MetricStatements)
+}

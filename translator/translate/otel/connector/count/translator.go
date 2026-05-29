@@ -1,10 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package databaseinsights
+package count
 
 import (
-	"embed"
+	_ "embed"
 	"fmt"
 	"strconv"
 
@@ -16,34 +16,36 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-//go:embed *.yaml
-var configFiles embed.FS
+//go:embed dbi_dbload.yaml
+var dbiDbloadConfig string
 
 type translator struct {
-	engine  string
+	name    string
 	index   int
 	factory connector.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(engine string, index int) common.ComponentTranslator {
+// NewTranslator creates a count connector translator. The name determines which config to load.
+func NewTranslator(name string, index int) common.ComponentTranslator {
 	return &translator{
-		engine:  engine,
+		name:    name,
 		index:   index,
 		factory: countconnector.NewFactory(),
 	}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), "dbload_"+strconv.Itoa(t.index))
+	return component.NewIDWithName(t.factory.Type(), t.name+"_"+strconv.Itoa(t.index))
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*countconnector.Config)
-	data, err := configFiles.ReadFile(fmt.Sprintf("count_%s_dbload.yaml", t.engine))
-	if err != nil {
-		return nil, fmt.Errorf("unable to read count connector config for engine %s: %w", t.engine, err)
+
+	if t.name == common.DbiConnectorDbload {
+		return common.GetYamlFileToYamlConfig(cfg, dbiDbloadConfig)
 	}
-	return common.GetYamlFileToYamlConfig(cfg, string(data))
+
+	return nil, fmt.Errorf("unsupported count connector config: %s", t.name)
 }

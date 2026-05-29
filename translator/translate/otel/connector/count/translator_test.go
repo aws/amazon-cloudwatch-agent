@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package databaseinsights
+package count
 
 import (
 	"testing"
@@ -9,18 +9,20 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 func TestTranslatorID(t *testing.T) {
-	tr := NewTranslator("postgresql", 0)
-	assert.Equal(t, "count/dbload_0", tr.ID().String())
+	tr := NewTranslator(common.DbiConnectorDbload, 0)
+	assert.Equal(t, "count/dbi_dbload_0", tr.ID().String())
 
-	tr = NewTranslator("postgresql", 3)
-	assert.Equal(t, "count/dbload_3", tr.ID().String())
+	tr = NewTranslator(common.DbiConnectorDbload, 3)
+	assert.Equal(t, "count/dbi_dbload_3", tr.ID().String())
 }
 
-func TestTranslatePostgresql(t *testing.T) {
-	tr := NewTranslator("postgresql", 0)
+func TestTranslateDbload(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbload, 0)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
@@ -32,9 +34,9 @@ func TestTranslatePostgresql(t *testing.T) {
 	assert.Contains(t, countCfg.Logs, "postgresql.active_sessions.count")
 }
 
-func TestTranslateUnsupportedEngine(t *testing.T) {
+func TestTranslateUnsupported(t *testing.T) {
 	tr := NewTranslator("unsupported", 0)
 	_, err := tr.Translate(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unable to read count connector config for engine unsupported")
+	assert.Contains(t, err.Error(), "unsupported count connector config")
 }
