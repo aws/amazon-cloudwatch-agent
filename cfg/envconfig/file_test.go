@@ -44,19 +44,32 @@ func TestLoadEnvConfigFile(t *testing.T) {
 	t.Setenv("MY_TEST_VAR", "")
 	t.Setenv("MY_OTHER_VAR", "")
 
-	require.NoError(t, LoadEnvConfigFile(path))
+	require.NoError(t, LoadEnvConfigFile(path, nil))
 
 	assert.Equal(t, "hello", os.Getenv("MY_TEST_VAR"))
 	assert.Equal(t, "world", os.Getenv("MY_OTHER_VAR"))
 }
 
+func TestLoadEnvConfigFile_Visitor(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "env-config.json")
+	content := `{"KEY1": "val1", "KEY2": "val2"}`
+	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
+
+	visited := map[string]string{}
+	require.NoError(t, LoadEnvConfigFile(path, func(key, value string) {
+		visited[key] = value
+	}))
+
+	assert.Equal(t, map[string]string{"KEY1": "val1", "KEY2": "val2"}, visited)
+}
+
 func TestLoadEnvConfigFile_MissingFile(t *testing.T) {
-	err := LoadEnvConfigFile(filepath.Join(t.TempDir(), "nonexistent.json"))
+	err := LoadEnvConfigFile(filepath.Join(t.TempDir(), "nonexistent.json"), nil)
 	assert.True(t, errors.Is(err, fs.ErrNotExist))
 }
 
 func TestLoadEnvConfigFile_EmptyPath(t *testing.T) {
-	assert.NoError(t, LoadEnvConfigFile(""))
+	assert.NoError(t, LoadEnvConfigFile("", nil))
 }
 
 func TestMergeEnvConfigFile(t *testing.T) {

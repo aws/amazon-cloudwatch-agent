@@ -107,7 +107,7 @@ func (ct *ConfigTranslator) Translate() (err error) {
 
 	// Load existing env-config.json so environment variables are available during translation.
 	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
-	if err := envconfig.LoadEnvConfigFile(envConfigPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err = envconfig.LoadEnvConfigFile(envConfigPath, nil); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Printf("W! Failed to load env config file: %v", err)
 	}
 

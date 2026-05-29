@@ -27,13 +27,16 @@ func ReadEnvConfigFile(path string) (map[string]string, error) {
 }
 
 // LoadEnvConfigFile loads environment variables from the given env-config.json into the process environment.
-func LoadEnvConfigFile(path string) error {
+// If visitor is non-nil, it is called for each key-value pair after setting.
+func LoadEnvConfigFile(path string, visitor func(key, value string)) error {
 	envVars, err := ReadEnvConfigFile(path)
 	if err != nil {
 		return err
 	}
 	for k, v := range envVars {
-		os.Setenv(k, v)
+		if os.Setenv(k, v) == nil && visitor != nil {
+			visitor(k, v)
+		}
 	}
 	return nil
 }

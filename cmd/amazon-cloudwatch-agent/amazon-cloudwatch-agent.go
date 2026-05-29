@@ -200,15 +200,9 @@ func reloadLoop(
 // loadEnvironmentVariables updates OS ENV vars with key/val from the given JSON file.
 // The "config-translator" program populates that file.
 func loadEnvironmentVariables(path string) error {
-	envVars, err := envconfig.ReadEnvConfigFile(path)
-	if err != nil {
-		return fmt.Errorf("cannot read env config file %s: %w", path, err)
-	}
-	for key, val := range envVars {
-		os.Setenv(key, val)
-		log.Printf("I! %s is set to \"%s\"\n", key, val)
-	}
-	return nil
+	return envconfig.LoadEnvConfigFile(path, func(key, value string) {
+		log.Printf("I! %s is set to \"%s\"\n", key, value)
+	})
 }
 
 func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
