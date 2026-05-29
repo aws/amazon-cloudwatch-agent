@@ -1048,7 +1048,7 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 }
 
 func resetContext(t *testing.T) {
-	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultMetadataRetries))
 	t.Setenv(envconfig.SystemMetricsEnabled, "false")
 	// sigv4auth.Validate() eagerly resolves a credential provider. Set fake
 	// credentials so validation doesn't fail in environments without them.
