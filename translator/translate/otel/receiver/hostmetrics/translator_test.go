@@ -15,8 +15,13 @@ import (
 func TestTranslate(t *testing.T) {
 	testCases := map[string]struct {
 		input            map[string]interface{}
+		nilInput         bool
 		expectedInterval time.Duration
 	}{
+		"NilConf": {
+			nilInput:         true,
+			expectedInterval: 60 * time.Second,
+		},
 		"DefaultInterval": {
 			input:            map[string]interface{}{},
 			expectedInterval: 60 * time.Second,
@@ -60,7 +65,10 @@ func TestTranslate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			conf := confmap.NewFromStringMap(tc.input)
+			var conf *confmap.Conf
+			if !tc.nilInput {
+				conf = confmap.NewFromStringMap(tc.input)
+			}
 			cfg, err := NewTranslator().Translate(conf)
 			require.NoError(t, err)
 			require.NotNil(t, cfg)

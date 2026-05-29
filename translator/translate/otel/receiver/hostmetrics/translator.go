@@ -46,6 +46,9 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if conf == nil {
+		conf = confmap.NewFromStringMap(map[string]interface{}{})
+	}
 	scrapers := make(map[string]map[string]any, len(defaultScrapers))
 	for _, s := range defaultScrapers {
 		scrapers[s] = nil
