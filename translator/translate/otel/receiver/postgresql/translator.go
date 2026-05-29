@@ -7,11 +7,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
