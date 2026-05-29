@@ -4,14 +4,15 @@
 package pusher
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
@@ -57,7 +58,7 @@ func TestPusherStop(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	target := Target{}
 	service := new(stubLogsService)
-	service.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	service.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 	mockManager := new(mockTargetManager)
@@ -95,7 +96,7 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 	logger := testutil.NewNopLogger()
 	target := Target{Group: "G", Stream: "S", Retention: 7}
 	service := new(stubLogsService)
-	service.ple = func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	service.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		// add latency
 		time.Sleep(50 * time.Millisecond)
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil

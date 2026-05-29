@@ -4,6 +4,7 @@
 package ecsservicediscovery
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
@@ -39,7 +40,7 @@ func NewTargetsExportProcessor(sdConfig *ServiceDiscoveryConfig, s *ProcessorSta
 	}
 }
 
-func (p *TargetsExportProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
+func (p *TargetsExportProcessor) Process(_ context.Context, _ string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	// Dedup Key for Targets: target + metricsPath
 	// e.g. 10.0.0.28:9404/metrics
 	//      10.0.0.28:9404/stats/metrics

@@ -3,6 +3,8 @@
 
 package ecsservicediscovery
 
+import "context"
+
 // Tag the Tasks that matched the Docker Label based SD Discovery
 type DockerLabelDiscoveryProcessor struct {
 	label string
@@ -15,7 +17,7 @@ func NewDockerLabelDiscoveryProcessor(d *DockerLabelConfig) *DockerLabelDiscover
 	return &DockerLabelDiscoveryProcessor{label: d.PortLabel}
 }
 
-func (p *DockerLabelDiscoveryProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
+func (p *DockerLabelDiscoveryProcessor) Process(_ context.Context, _ string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	if p.label == "" {
 		return taskList, nil
 	}

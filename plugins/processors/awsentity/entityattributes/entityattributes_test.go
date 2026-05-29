@@ -6,19 +6,17 @@ package entityattributes
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 	testCases := []struct {
 		name               string
 		resourceAttributes map[string]any
-		wantedAttributes   map[string]*string
+		wantedAttributes   map[string]string
 		leftoverAttributes map[string]any
 	}{
 		{
@@ -27,9 +25,9 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				AttributeEntityServiceName:           "my-service",
 				AttributeEntityDeploymentEnvironment: "my-environment",
 			},
-			wantedAttributes: map[string]*string{
-				ServiceName:           aws.String("my-service"),
-				DeploymentEnvironment: aws.String("my-environment"),
+			wantedAttributes: map[string]string{
+				ServiceName:           "my-service",
+				DeploymentEnvironment: "my-environment",
 			},
 			leftoverAttributes: make(map[string]any),
 		},
@@ -41,11 +39,11 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				AttributeEntityWorkload:     "my-workload",
 				AttributeEntityPlatformType: "AWS::EKS",
 			},
-			wantedAttributes: map[string]*string{
-				NamespaceField: aws.String("my-namespace"),
-				Node:           aws.String("my-node"),
-				Workload:       aws.String("my-workload"),
-				Platform:       aws.String("AWS::EKS"),
+			wantedAttributes: map[string]string{
+				NamespaceField: "my-namespace",
+				Node:           "my-node",
+				Workload:       "my-workload",
+				Platform:       "AWS::EKS",
 			},
 			leftoverAttributes: make(map[string]any),
 		},
@@ -59,13 +57,13 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				AttributeEntityWorkload:              "my-workload",
 				AttributeEntityPlatformType:          "K8s",
 			},
-			wantedAttributes: map[string]*string{
-				ServiceName:           aws.String("my-service"),
-				DeploymentEnvironment: aws.String("my-environment"),
-				NamespaceField:        aws.String("my-namespace"),
-				Node:                  aws.String("my-node"),
-				Workload:              aws.String("my-workload"),
-				Platform:              aws.String("K8s"),
+			wantedAttributes: map[string]string{
+				ServiceName:           "my-service",
+				DeploymentEnvironment: "my-environment",
+				NamespaceField:        "my-namespace",
+				Node:                  "my-node",
+				Workload:              "my-workload",
+				Platform:              "K8s",
 			},
 			leftoverAttributes: make(map[string]any),
 		},
@@ -80,13 +78,13 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				AttributeEntityWorkload:              "my-workload",
 				AttributeEntityPlatformType:          "K8s",
 			},
-			wantedAttributes: map[string]*string{
-				ServiceName:           aws.String("my-service"),
-				DeploymentEnvironment: aws.String("my-environment"),
-				NamespaceField:        aws.String("my-namespace"),
-				Node:                  aws.String("my-node"),
-				Workload:              aws.String("my-workload"),
-				Platform:              aws.String("K8s"),
+			wantedAttributes: map[string]string{
+				ServiceName:           "my-service",
+				DeploymentEnvironment: "my-environment",
+				NamespaceField:        "my-namespace",
+				Node:                  "my-node",
+				Workload:              "my-workload",
+				Platform:              "K8s",
 			},
 			leftoverAttributes: map[string]any{
 				"extra_attribute": "extra_value",
@@ -103,13 +101,13 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				AttributeEntityWorkload:              "my-workload",
 				AttributeEntityPlatformType:          "AWS::EKS",
 			},
-			wantedAttributes: map[string]*string{
-				ServiceName:           aws.String("my-service"),
-				DeploymentEnvironment: aws.String("my-environment"),
-				NamespaceField:        aws.String("my-namespace"),
-				Node:                  aws.String("my-node"),
-				Workload:              aws.String("my-workload"),
-				Platform:              aws.String("AWS::EKS"),
+			wantedAttributes: map[string]string{
+				ServiceName:           "my-service",
+				DeploymentEnvironment: "my-environment",
+				NamespaceField:        "my-namespace",
+				Node:                  "my-node",
+				Workload:              "my-workload",
+				Platform:              "AWS::EKS",
 			},
 			leftoverAttributes: map[string]any{},
 		},
@@ -131,7 +129,7 @@ func TestProcessAndRemoveEntityAttributes(t *testing.T) {
 				entityAttrMap = append(entityAttrMap, attributeEntityToShortNameMap)
 			}
 			assert.Nil(t, err)
-			targetMap := make(map[string]*string)
+			targetMap := make(map[string]string)
 			for _, entityMap := range entityAttrMap {
 				processEntityAttributes(entityMap, targetMap, attrs)
 			}
@@ -154,7 +152,7 @@ func TestCreateCloudWatchEntityFromAttributes_WithoutAccountID(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(AttributeEntityPlatformType, "AWS::EKS")
 	assert.Equal(t, 8, resourceMetrics.Resource().Attributes().Len())
 
-	expectedEntity := cloudwatch.Entity{
+	expectedEntity := types.Entity{
 		KeyAttributes: nil,
 		Attributes:    nil,
 	}
@@ -176,19 +174,19 @@ func TestCreateCloudWatchEntityFromAttributes_WithAccountID(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(AttributeEntityAwsAccountId, "123456789")
 	assert.Equal(t, 9, resourceMetrics.Resource().Attributes().Len())
 
-	expectedEntity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			EntityType:            aws.String(Service),
-			ServiceName:           aws.String("my-service"),
-			DeploymentEnvironment: aws.String("my-environment"),
-			AwsAccountId:          aws.String("123456789"),
+	expectedEntity := types.Entity{
+		KeyAttributes: map[string]string{
+			EntityType:            Service,
+			ServiceName:           "my-service",
+			DeploymentEnvironment: "my-environment",
+			AwsAccountId:          "123456789",
 		},
-		Attributes: map[string]*string{
-			Node:           aws.String("my-node"),
-			EksCluster:     aws.String("my-cluster"),
-			NamespaceField: aws.String("my-namespace"),
-			Workload:       aws.String("my-workload"),
-			Platform:       aws.String("AWS::EKS"),
+		Attributes: map[string]string{
+			Node:           "my-node",
+			EksCluster:     "my-cluster",
+			NamespaceField: "my-namespace",
+			Workload:       "my-workload",
+			Platform:       "AWS::EKS",
 		},
 	}
 	entity := CreateCloudWatchEntityFromAttributes(resourceMetrics.Resource().Attributes())
@@ -211,19 +209,19 @@ func TestCreateCloudWatchEntityFromAttributesOnK8s(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(AttributeEntityAwsAccountId, "123456789")
 	assert.Equal(t, 9, resourceMetrics.Resource().Attributes().Len())
 
-	expectedEntity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			EntityType:            aws.String(Service),
-			ServiceName:           aws.String("my-service"),
-			DeploymentEnvironment: aws.String("my-environment"),
-			AwsAccountId:          aws.String("123456789"),
+	expectedEntity := types.Entity{
+		KeyAttributes: map[string]string{
+			EntityType:            Service,
+			ServiceName:           "my-service",
+			DeploymentEnvironment: "my-environment",
+			AwsAccountId:          "123456789",
 		},
-		Attributes: map[string]*string{
-			Node:           aws.String("my-node"),
-			K8sCluster:     aws.String("my-cluster"),
-			NamespaceField: aws.String("my-namespace"),
-			Workload:       aws.String("my-workload"),
-			Platform:       aws.String("K8s"),
+		Attributes: map[string]string{
+			Node:           "my-node",
+			K8sCluster:     "my-cluster",
+			NamespaceField: "my-namespace",
+			Workload:       "my-workload",
+			Platform:       "K8s",
 		},
 	}
 	entity := CreateCloudWatchEntityFromAttributes(resourceMetrics.Resource().Attributes())
@@ -240,15 +238,15 @@ func TestCreateCloudWatchEntityFromAttributesOnEc2(t *testing.T) {
 	resourceMetrics.Resource().Attributes().PutStr(AttributeEntityAwsAccountId, "123456789")
 	assert.Equal(t, 5, resourceMetrics.Resource().Attributes().Len())
 
-	expectedEntity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			EntityType:            aws.String(Service),
-			ServiceName:           aws.String("my-service"),
-			DeploymentEnvironment: aws.String("my-environment"),
-			AwsAccountId:          aws.String("123456789"),
+	expectedEntity := types.Entity{
+		KeyAttributes: map[string]string{
+			EntityType:            Service,
+			ServiceName:           "my-service",
+			DeploymentEnvironment: "my-environment",
+			AwsAccountId:          "123456789",
 		},
-		Attributes: map[string]*string{
-			Platform: aws.String("AWS::EC2"),
+		Attributes: map[string]string{
+			Platform: "AWS::EC2",
 		},
 	}
 	entity := CreateCloudWatchEntityFromAttributes(resourceMetrics.Resource().Attributes())

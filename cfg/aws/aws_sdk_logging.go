@@ -4,36 +4,50 @@
 package aws
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/smithy-go/logging"
 )
 
 // Hard coded strings that match actual variable names in the AWS SDK.
-// I don't expect these names to change, or their meaning to change.
-// Update this map if/when AWS SDK adds more levels (unlikely).
-var stringToLevelMap map[string]aws.LogLevelType = map[string]aws.LogLevelType{
-	"LogDebug":                    aws.LogDebug,
-	"LogDebugWithSigning":         aws.LogDebugWithSigning,
-	"LogDebugWithHTTPBody":        aws.LogDebugWithHTTPBody,
-	"LogDebugWithRequestRetries":  aws.LogDebugWithRequestRetries,
-	"LogDebugWithRequestErrors":   aws.LogDebugWithRequestErrors,
-	"LogDebugWithEventStreamBody": aws.LogDebugWithEventStreamBody,
+var stringToLevelMap = map[string]aws.ClientLogMode{
+	// AWS SDK v2 Levels
+	"LogRequest":              aws.LogRequest,
+	"LogResponse":             aws.LogResponse,
+	"LogSigning":              aws.LogSigning,
+	"LogRequestWithBody":      aws.LogRequestWithBody,
+	"LogResponseWithBody":     aws.LogResponseWithBody,
+	"LogRetries":              aws.LogRetries,
+	"LogRequestEventMessage":  aws.LogRequestEventMessage,
+	"LogResponseEventMessage": aws.LogResponseEventMessage,
+	"LogDeprecatedUsage":      aws.LogDeprecatedUsage,
+	// AWS SDK v1 Levels
+	"LogDebug":                    aws.LogRequest | aws.LogResponse,
+	"LogDebugWithSigning":         aws.LogRequest | aws.LogResponse | aws.LogSigning,
+	"LogDebugWithHTTPBody":        aws.LogRequestWithBody | aws.LogResponseWithBody,
+	"LogDebugWithRequestRetries":  aws.LogRequest | aws.LogResponse | aws.LogRetries,
+	"LogDebugWithRequestErrors":   aws.LogRequest | aws.LogResponse, // no equivalent in AWS SDK v2
+	"LogDebugWithEventStreamBody": aws.LogRequestEventMessage | aws.LogResponseEventMessage,
 }
-var sdkLogLevel aws.LogLevelType = aws.LogOff
+var sdkLogLevel aws.ClientLogMode
 
 // SetSDKLogLevel sets the global log level which will be used in all AWS SDK calls.
 // The levels are a bit field that is OR'd together.
 // So the user can specify multiple levels and we OR them together.
 // Example: "aws_sdk_log_level": "LogDebugWithSigning | LogDebugWithRequestErrors".
-// JSON string value must contain the levels seperated by "|" and optionally whitespace.
+// JSON string value must contain the levels separated by "|" and optionally whitespace.
 func SetSDKLogLevel(sdkLogLevelString string) {
-	var temp aws.LogLevelType = aws.LogOff
+	var temp aws.ClientLogMode
 
 	levels := strings.Split(sdkLogLevelString, "|")
 	for _, v := range levels {
 		trimmed := strings.TrimSpace(v)
+		if trimmed == "LogDebugWithRequestErrors" {
+			log.Println(`W! AWS SDK log level "LogDebugWithRequestErrors" is no longer supported. This will be evaluated as the equivalent of "LogDebug".`)
+		}
 		// If v not in map, then OR with 0 is harmless.
 		temp |= stringToLevelMap[trimmed]
 	}
@@ -43,17 +57,23 @@ func SetSDKLogLevel(sdkLogLevelString string) {
 
 // SDKLogLevel returns the single global value so it can be used in all
 // AWS SDK calls scattered throughout the Agent.
-func SDKLogLevel() *aws.LogLevelType {
-	return &sdkLogLevel
+func SDKLogLevel() aws.ClientLogMode {
+	return sdkLogLevel
 }
 
 // SDKLogger implements the aws.Logger interface.
 type SDKLogger struct {
 }
 
-// Log is the only method in the aws.Logger interface.
-func (SDKLogger) Log(args ...interface{}) {
-	// Always use info logging level.
-	tempSlice := append([]interface{}{"I!"}, args...)
-	log.Println(tempSlice...)
+var _ logging.Logger = (*SDKLogger)(nil)
+
+func (SDKLogger) Logf(classification logging.Classification, format string, args ...interface{}) {
+	logLevelPrefix := "I!"
+	switch classification {
+	case logging.Debug:
+		logLevelPrefix = "D!"
+	case logging.Warn:
+		logLevelPrefix = "W!"
+	}
+	log.Printf(fmt.Sprintf("%s %s", logLevelPrefix, format), args...)
 }

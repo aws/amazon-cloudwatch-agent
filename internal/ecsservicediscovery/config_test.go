@@ -18,7 +18,7 @@ func Test_TaskDefinitionConfig_init(t *testing.T) {
 	}
 
 	config.init()
-	assert.True(t, reflect.DeepEqual(config.metricsPortList, []int{11, 12, 13, 14}))
+	assert.True(t, reflect.DeepEqual(config.metricsPortList, []int32{11, 12, 13, 14}))
 }
 
 func Test_ServiceNameForTasksConfig_init(t *testing.T) {
@@ -29,5 +29,5 @@ func Test_ServiceNameForTasksConfig_init(t *testing.T) {
 	}
 
 	config.init()
-	assert.True(t, reflect.DeepEqual(config.metricsPortList, []int{11, 12, 13, 14}))
+	assert.True(t, reflect.DeepEqual(config.metricsPortList, []int32{11, 12, 13, 14}))
 }
