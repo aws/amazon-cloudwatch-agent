@@ -317,7 +317,7 @@ func TestGenerateMergedJsonConfigMap_EnvVarJSONWithYAML(t *testing.T) {
 	assert.NotNil(t, result)
 }
 
-func TestOpenTelemetryConfig(t *testing.T) {
+func TestOpenTelemetryHostInsightsSchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validOpenTelemetryHostInsights.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
 	expectedErrorMap["additional_property_not_allowed"] = 1
