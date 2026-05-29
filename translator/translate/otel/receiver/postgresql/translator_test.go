@@ -39,7 +39,7 @@ func TestTranslator_Translate_Defaults(t *testing.T) {
 	assert.True(t, pgCfg.InsecureSkipVerify)
 	assert.Equal(t, time.Second, pgCfg.QuerySampleCollection.CollectionInterval)
 	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
-	assert.Equal(t, int64(5000), pgCfg.TopQueryCollection.TopNQuery)
+	assert.Equal(t, int64(5000), pgCfg.TopNQuery)
 	assert.Equal(t, int64(200), pgCfg.TopQueryCollection.MaxRowsPerQuery)
 }
 

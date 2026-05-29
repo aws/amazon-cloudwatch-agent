@@ -86,14 +86,14 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.Events.DbServerQuerySample.Enabled = true
 	cfg.Events.DbServerTopQuery.Enabled = true
 
-	cfg.QuerySampleCollection.Enabled = true
+	cfg.Enabled = true
 	cfg.QuerySampleCollection.CollectionInterval = t.querySampleInterval
 	cfg.QuerySampleCollection.MaxRowsPerQuery = t.maxRowsPerQuery
 
 	cfg.TopQueryCollection.CollectionInterval = 60 * time.Second
-	cfg.TopQueryCollection.TopNQuery = 5000
+	cfg.TopNQuery = 5000
 	cfg.TopQueryCollection.MaxRowsPerQuery = 200
-	cfg.TopQueryCollection.MaxExplainEachInterval = 0
+	cfg.MaxExplainEachInterval = 0
 
 	return cfg, nil
 }
