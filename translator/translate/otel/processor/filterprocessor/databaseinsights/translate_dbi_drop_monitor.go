@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package database_insights
+package databaseinsights
 
 import (
 	"fmt"
@@ -10,6 +10,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type excludeMonitorTranslator struct {
@@ -17,7 +19,7 @@ type excludeMonitorTranslator struct {
 	index    int
 }
 
-func NewExcludeMonitorTranslator(username string, index int) *excludeMonitorTranslator {
+func NewExcludeMonitorTranslator(username string, index int) common.ComponentTranslator {
 	return &excludeMonitorTranslator{username: username, index: index}
 }
 

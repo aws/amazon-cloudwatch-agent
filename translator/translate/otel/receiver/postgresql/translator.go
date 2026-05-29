@@ -68,11 +68,11 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.Transport = "tcp"
 
 	if t.isLocalhost {
-		cfg.ClientConfig.Insecure = true
-		cfg.ClientConfig.InsecureSkipVerify = true
+		cfg.Insecure = true
+		cfg.InsecureSkipVerify = true
 	} else {
-		cfg.ClientConfig.CAFile = t.caFile
-		cfg.ClientConfig.InsecureSkipVerify = false
+		cfg.CAFile = t.caFile
+		cfg.InsecureSkipVerify = false
 	}
 
 	cfg.Metrics.PostgresqlFunctionCalls.Enabled = false

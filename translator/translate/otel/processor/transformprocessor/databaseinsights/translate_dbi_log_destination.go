@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package database_insights
+package databaseinsights
 
 import (
 	"fmt"
@@ -10,6 +10,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type logsRoutingTranslator struct {
@@ -18,7 +20,7 @@ type logsRoutingTranslator struct {
 	index        int
 }
 
-func NewLogsRoutingTranslator(instanceName, streamType string, index int) *logsRoutingTranslator {
+func NewLogsRoutingTranslator(instanceName, streamType string, index int) common.ComponentTranslator {
 	return &logsRoutingTranslator{instanceName: instanceName, streamType: streamType, index: index}
 }
 

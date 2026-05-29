@@ -35,8 +35,8 @@ func TestTranslator_Translate_Defaults(t *testing.T) {
 	assert.Equal(t, "localhost:5432", pgCfg.Endpoint)
 	assert.Equal(t, "cw_monitor", pgCfg.Username)
 	assert.Equal(t, "/etc/.pgpass", pgCfg.Passfile)
-	assert.True(t, pgCfg.ClientConfig.Insecure)
-	assert.True(t, pgCfg.ClientConfig.InsecureSkipVerify)
+	assert.True(t, pgCfg.Insecure)
+	assert.True(t, pgCfg.InsecureSkipVerify)
 	assert.Equal(t, time.Second, pgCfg.QuerySampleCollection.CollectionInterval)
 	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
 	assert.Equal(t, int64(5000), pgCfg.TopQueryCollection.TopNQuery)
@@ -60,9 +60,9 @@ func TestTranslator_Translate_Events(t *testing.T) {
 	pgCfg := cfg.(*postgresqlreceiver.Config)
 
 	assert.Equal(t, "db.example.com:5432", pgCfg.Endpoint)
-	assert.False(t, pgCfg.ClientConfig.Insecure)
-	assert.False(t, pgCfg.ClientConfig.InsecureSkipVerify)
-	assert.Equal(t, "/etc/ssl/ca.pem", string(pgCfg.ClientConfig.CAFile))
+	assert.False(t, pgCfg.Insecure)
+	assert.False(t, pgCfg.InsecureSkipVerify)
+	assert.Equal(t, "/etc/ssl/ca.pem", string(pgCfg.CAFile))
 	assert.Equal(t, 60*time.Second, pgCfg.QuerySampleCollection.CollectionInterval)
 	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
 }

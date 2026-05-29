@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package database_insights
+package databaseinsights
 
 import (
 	_ "embed"
@@ -10,6 +10,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"gopkg.in/yaml.v3"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 //go:embed transform_dbi_fix_start_time.yaml
@@ -17,7 +19,7 @@ var fixStartTimeConfig []byte
 
 type fixStartTimeTranslator struct{}
 
-func NewFixStartTimeTranslator() *fixStartTimeTranslator {
+func NewFixStartTimeTranslator() common.ComponentTranslator {
 	return &fixStartTimeTranslator{}
 }
 
