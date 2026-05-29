@@ -4,46 +4,44 @@
 package retryer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 const (
-	DefaultImdsRetries = 1
+	DefaultMetadataRetries = 1
 )
 
 type IMDSRetryer struct {
-	client.DefaultRetryer
+	// Embed the standard retryer for default behavior
+	*retry.Standard
 }
 
-// NewIMDSRetryer allows us to retry imds errors
-// otel component layer retries should come from aws config settings
-// translator layer should come from env vars see GetDefaultRetryNumber()
-func NewIMDSRetryer(imdsRetries int) IMDSRetryer {
-	fmt.Printf("I! imds retry client will retry %d times", imdsRetries)
-	return IMDSRetryer{
-		DefaultRetryer: client.DefaultRetryer{
-			NumMaxRetries: imdsRetries,
-		},
+var _ aws.RetryerV2 = (*IMDSRetryer)(nil)
+
+// NewIMDSRetryer allows us to retry IMDS errors
+func NewIMDSRetryer(retries int) *IMDSRetryer {
+	fmt.Printf("D! IMDS retry client will retry %d times\n", retries)
+	return &IMDSRetryer{
+		Standard: retry.NewStandard(func(options *retry.StandardOptions) {
+			options.MaxAttempts = retries + 1 // MaxAttempts include the first attempt
+		}),
 	}
 }
 
-func (r IMDSRetryer) ShouldRetry(req *request.Request) bool {
-	// there is no enum of error codes
-	// EC2MetadataError is not retryable by default
-	// Fallback to SDK's built in retry rules
-	shouldRetry := false
-	if awsError, ok := req.Error.(awserr.Error); r.DefaultRetryer.ShouldRetry(req) || (ok && awsError != nil && awsError.Code() == "EC2MetadataError") {
-		shouldRetry = true
-	}
-	return shouldRetry
+func (r *IMDSRetryer) IsErrorRetryable(err error) bool {
+	// SDKv2 returns a ResponseError on request failure. Any of those errors is considered retryable.
+	// https://github.com/aws/aws-sdk-go-v2/blob/dcbed91b6c6235022f15eda6ea526dbb91e1cb81/feature/ec2/imds/request_middleware.go#L185-L191
+	var responseErr *smithyhttp.ResponseError
+	return errors.As(err, &responseErr) || r.Standard.IsErrorRetryable(err)
 }
 
 func GetDefaultRetryNumber() int {
@@ -52,5 +50,5 @@ func GetDefaultRetryNumber() int {
 	if err == nil && imdsRetry >= 0 {
 		return imdsRetry
 	}
-	return DefaultImdsRetries
+	return DefaultMetadataRetries
 }
