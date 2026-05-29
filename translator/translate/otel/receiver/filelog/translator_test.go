@@ -13,7 +13,7 @@ import (
 )
 
 func TestTranslator_ID(t *testing.T) {
-	tr := NewTranslator(WithIndex(0))
+	tr := NewTranslator(WithNamePrefix("postgresql"), WithIndex(0))
 	assert.Equal(t, component.MustNewIDWithName("filelog", "postgresql_0"), tr.ID())
 }
 

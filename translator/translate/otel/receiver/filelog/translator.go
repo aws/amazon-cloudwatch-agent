@@ -38,7 +38,7 @@ func WithNamePrefix(prefix string) Option {
 }
 
 func NewTranslator(opts ...Option) common.ComponentTranslator {
-	t := &translator{factory: filelogreceiver.NewFactory(), namePrefix: "postgresql"}
+	t := &translator{factory: filelogreceiver.NewFactory()}
 	for _, opt := range opts {
 		opt(t)
 	}
