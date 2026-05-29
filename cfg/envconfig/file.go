@@ -66,9 +66,9 @@ func ReplaceEnvConfigFile(path string, values map[string]string, keysToRemove []
 	for k, v := range values {
 		merged[k] = v
 	}
-	bytes, err := json.MarshalIndent(merged, "", "\t")
+	data, err := json.MarshalIndent(merged, "", "\t")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, bytes, 0644) //nolint:gosec // retains existing permissions
+	return os.WriteFile(path, data, 0644) //nolint:gosec // G306: 0644 is intentional for env-config.json
 }

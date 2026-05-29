@@ -35,8 +35,8 @@ func TestTranslateJSONMapToEnvConfigFile(t *testing.T) {
 	var expectedJSON map[string]any
 	actual, _ := os.ReadFile(envConfigPath)
 	expected, _ := os.ReadFile(expectedFile)
-	json.Unmarshal(actual, &actualJSON)
-	json.Unmarshal(expected, &expectedJSON)
+	require.NoError(t, json.Unmarshal(actual, &actualJSON))
+	require.NoError(t, json.Unmarshal(expected, &expectedJSON))
 
 	assert.Equal(t, expectedJSON[envconfig.CWAGENT_USER_AGENT], actualJSON[envconfig.CWAGENT_USER_AGENT])
 	assert.Equal(t, expectedJSON[envconfig.CWAGENT_LOG_LEVEL], actualJSON[envconfig.CWAGENT_LOG_LEVEL])
