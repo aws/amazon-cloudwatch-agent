@@ -128,6 +128,7 @@ func TestDbiLogDestinationTranslate(t *testing.T) {
 
 	require.Len(t, actualCfg.LogStatements, 1)
 	assert.Equal(t, "resource", string(actualCfg.LogStatements[0].Context))
+	assert.Equal(t, "propagate", string(actualCfg.LogStatements[0].ErrorMode))
 	require.Len(t, actualCfg.LogStatements[0].Statements, 2)
 	assert.Equal(t, `set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")`, actualCfg.LogStatements[0].Statements[0])
 	assert.Equal(t, `set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-db"], "/"))`, actualCfg.LogStatements[0].Statements[1])

@@ -34,13 +34,6 @@ type translator struct {
 	logRecordCondition string
 }
 
-// NewTranslatorWithLogCondition creates a filter translator that drops logs matching the given OTTL condition.
-func NewTranslatorWithLogCondition(name string, condition string) common.ComponentTranslator {
-	t := &translator{factory: filterprocessor.NewFactory(), logRecordCondition: condition}
-	t.SetName(name)
-	return t
-}
-
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
@@ -52,6 +45,13 @@ func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	if t.Index() != -1 {
 		t.SetName(t.Name() + "/" + strconv.Itoa(t.Index()))
 	}
+	return t
+}
+
+// NewTranslatorWithLogCondition creates a filter translator that drops logs matching the given OTTL condition.
+func NewTranslatorWithLogCondition(name string, condition string) common.ComponentTranslator {
+	t := &translator{factory: filterprocessor.NewFactory(), logRecordCondition: condition}
+	t.SetName(name)
 	return t
 }
 

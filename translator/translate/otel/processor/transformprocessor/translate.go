@@ -68,73 +68,21 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 
-	// Dynamic log statements
-	if len(t.logStatements) > 0 {
-		stmts := make([]interface{}, len(t.logStatements))
-		for i, s := range t.logStatements {
-			stmts[i] = s
+	// Dynamic statements (generic path for both metrics and logs)
+	if len(t.logStatements) > 0 || len(t.metricStatements) > 0 {
+		cfgMap := map[string]interface{}{
+			"error_mode": "propagate",
 		}
-
-		// Application Signals: sets log group/stream with propagate error handling
-		if strings.HasPrefix(t.name, "application_signals_logs") {
-			cfgMap := map[string]interface{}{
-				"log_statements": []interface{}{
-					map[string]interface{}{
-						"context":    "resource",
-						"error_mode": "propagate",
-						"statements": stmts,
-					},
-				},
-			}
-			if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
-				return nil, fmt.Errorf("failed to configure transform processor: %w", err)
-			}
-			return cfg, nil
+		if len(t.metricStatements) > 0 {
+			cfgMap["metric_statements"] = []interface{}{buildStatements(t.metricStatements)}
 		}
-
-		// DBI: sets log group/stream with ignore error handling
-		if strings.HasPrefix(t.name, common.DbiTransformLogs) {
-			cfgMap := map[string]interface{}{
-				"error_mode": "propagate",
-				"log_statements": []interface{}{
-					map[string]interface{}{
-						"context":    "resource",
-						"error_mode": "ignore",
-						"statements": stmts,
-					},
-				},
-			}
-			if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
-				return nil, fmt.Errorf("failed to configure transform processor: %w", err)
-			}
-			return cfg, nil
+		if len(t.logStatements) > 0 {
+			cfgMap["log_statements"] = []interface{}{buildStatements(t.logStatements)}
 		}
-	}
-
-	// Dynamic metric statements
-	if len(t.metricStatements) > 0 {
-		stmts := make([]interface{}, len(t.metricStatements))
-		for i, s := range t.metricStatements {
-			stmts[i] = s
+		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
+			return nil, fmt.Errorf("failed to configure transform processor: %w", err)
 		}
-
-		// DBI: sets db.system.name and db.instance.name on both metrics and logs
-		if strings.HasPrefix(t.name, common.DbiTransformResource) {
-			context := map[string]interface{}{
-				"context":    "resource",
-				"error_mode": "ignore",
-				"statements": stmts,
-			}
-			cfgMap := map[string]interface{}{
-				"error_mode":        "propagate",
-				"metric_statements": []interface{}{context},
-				"log_statements":    []interface{}{context},
-			}
-			if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
-				return nil, fmt.Errorf("failed to configure transform processor: %w", err)
-			}
-			return cfg, nil
-		}
+		return cfg, nil
 	}
 
 	// Static YAML configs
@@ -152,4 +100,16 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func buildStatements(statements []string) map[string]interface{} {
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	return map[string]interface{}{
+		"context":    "resource",
+		"error_mode": "propagate",
+		"statements": stmts,
+	}
 }

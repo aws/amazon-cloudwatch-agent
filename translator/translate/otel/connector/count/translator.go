@@ -6,7 +6,6 @@ package count
 import (
 	_ "embed"
 	"fmt"
-	"strconv"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector"
 	"go.opentelemetry.io/collector/component"
@@ -21,23 +20,21 @@ var dbiDbloadConfig string
 
 type translator struct {
 	name    string
-	index   int
 	factory connector.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
 // NewTranslator creates a count connector translator. The name determines which config to load.
-func NewTranslator(name string, index int) common.ComponentTranslator {
+func NewTranslator(name string) common.ComponentTranslator {
 	return &translator{
 		name:    name,
-		index:   index,
 		factory: countconnector.NewFactory(),
 	}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name+"_"+strconv.Itoa(t.index))
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
