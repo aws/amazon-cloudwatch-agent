@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "collect": {
+      "database_insights": {
+        "postgresql": [
+          {
+            "endpoint": "localhost:5432",
+            "instance_name": "pentest-postgres",
+            "username": "cw_monitor",
+            "password_file": "sampleConfig/testdata/.pgpass",
+            "logs": {
+              "file_path": "/var/lib/pgsql/data/log/postgresql-*.log"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
