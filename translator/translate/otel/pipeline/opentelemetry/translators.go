@@ -8,12 +8,14 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	dbi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/databaseinsights"
 )
 
-func NewTranslators(_ *confmap.Conf) common.PipelineTranslatorMap {
+func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	translators.Set(NewBaseMetricsTranslator())
 	translators.Set(NewBaseLogsTranslator())
 	translators.Set(NewHostInsightsTranslator())
+	translators.Merge(dbi.NewTranslators(conf))
 	return translators
 }

@@ -7,7 +7,10 @@
 package tocwconfig
 
 import (
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -81,4 +84,12 @@ func TestDropOriginConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "drop_origin_linux", "linux", expectedEnvVars, "")
+}
+
+func TestDBIConfigLinux(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	require.NoError(t, os.Chmod("sampleConfig/testdata/.pgpass", 0600))
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "dbi_config_linux", "linux", expectedEnvVars, "")
 }

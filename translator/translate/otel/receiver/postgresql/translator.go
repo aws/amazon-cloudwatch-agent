@@ -27,7 +27,6 @@ type translator struct {
 	isLocalhost         bool
 	index               int
 	querySampleInterval time.Duration
-	maxRowsPerQuery     int64
 }
 
 func WithName(name string) Option   { return func(t *translator) { t.name = name } }
@@ -40,14 +39,12 @@ func WithIndex(i int) Option        { return func(t *translator) { t.index = i }
 func WithQuerySampleInterval(d time.Duration) Option {
 	return func(t *translator) { t.querySampleInterval = d }
 }
-func WithMaxRowsPerQuery(n int64) Option { return func(t *translator) { t.maxRowsPerQuery = n } }
 
 func NewTranslator(opts ...Option) common.ComponentTranslator {
 	t := &translator{
 		factory:             postgresqlreceiver.NewFactory(),
 		name:                "metrics",
 		querySampleInterval: time.Second,
-		maxRowsPerQuery:     500,
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -88,7 +85,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	cfg.Enabled = true
 	cfg.QuerySampleCollection.CollectionInterval = t.querySampleInterval
-	cfg.QuerySampleCollection.MaxRowsPerQuery = t.maxRowsPerQuery
+	cfg.QuerySampleCollection.MaxRowsPerQuery = 500
 
 	cfg.TopQueryCollection.CollectionInterval = 60 * time.Second
 	cfg.TopNQuery = 200
