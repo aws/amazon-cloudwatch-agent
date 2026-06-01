@@ -34,6 +34,7 @@ func TestComponents(t *testing.T) {
 		"nop",
 		"otlp",
 		"prometheus",
+		"postgresql",
 		"statsd",
 		"systemmetrics",
 		"tcplog",
@@ -101,8 +102,10 @@ func TestComponents(t *testing.T) {
 	}
 
 	wantConnectors := []string{
+		"count",
 		"forward",
 		"routing",
+		"signaltometrics",
 	}
 	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
 	assert.Equal(t, len(wantConnectors), len(gotConnectors))

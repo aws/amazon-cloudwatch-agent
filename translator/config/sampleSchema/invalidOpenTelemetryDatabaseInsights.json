@@ -1,0 +1,18 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "collect": {
+      "database_insights": {
+        "postgresql": [
+          {
+            "endpoint": "localhost:5432",
+            "instance_name": "my-db",
+            "password_file": "/opt/aws/amazon-cloudwatch-agent/etc/.pgpass"
+          }
+        ]
+      }
+    }
+  }
+}
