@@ -103,5 +103,3 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
 }
-
-

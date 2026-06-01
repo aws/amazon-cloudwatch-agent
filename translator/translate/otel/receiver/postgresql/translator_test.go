@@ -53,7 +53,6 @@ func TestTranslator_Translate_Events(t *testing.T) {
 		WithIsLocalhost(false),
 		WithIndex(0),
 		WithQuerySampleInterval(60*time.Second),
-		WithMaxRowsPerQuery(500),
 	)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
@@ -74,12 +73,11 @@ func TestTranslator_Translate_CustomInterval(t *testing.T) {
 		WithPassfile("p"),
 		WithIsLocalhost(true),
 		WithQuerySampleInterval(5*time.Second),
-		WithMaxRowsPerQuery(200),
 	)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	pgCfg := cfg.(*postgresqlreceiver.Config)
 
 	assert.Equal(t, 5*time.Second, pgCfg.QuerySampleCollection.CollectionInterval)
-	assert.Equal(t, int64(200), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
+	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
 }
