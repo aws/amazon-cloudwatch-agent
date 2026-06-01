@@ -92,8 +92,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			return nil, err
 		}
 	}
-	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms
-	if !ecsutil.GetECSUtilSingleton().IsECS() {
+	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms.
+	// Only add entitystore when pipelines that use the awsentity processor are present.
+	if !ecsutil.GetECSUtilSingleton().IsECS() && (conf.IsSet(common.MetricsKey) || conf.IsSet(common.LogsKey) || conf.IsSet(common.TracesKey)) {
 		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
 	}
 	if context.CurrentContext().KubernetesMode() != "" {

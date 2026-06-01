@@ -29,9 +29,6 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
-    entitystore:
-        mode: ec2
-        region: us-west-2
     sigv4auth/monitoring:
         assume_role:
             sts_region: us-west-2
@@ -340,7 +337,6 @@ receivers:
 service:
     extensions:
         - sigv4auth/monitoring
-        - entitystore
     pipelines:
         metrics/host_insights:
             exporters:
