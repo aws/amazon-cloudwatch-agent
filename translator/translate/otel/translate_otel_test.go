@@ -302,3 +302,40 @@ func TestRegisterPipeline(t *testing.T) {
 	assert.NotEqual(t, first.version, got.(*testTranslator).version)
 	assert.NotEqual(t, original.version, got.(*testTranslator).version)
 }
+
+func TestTranslatorWithAppSignalsConnectors(t *testing.T) {
+	t.Setenv("SYSTEM_METRICS_ENABLED", "false")
+	agent.Global_Config.Region = "us-east-1"
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	eksdetector.IsEKS = eksdetector.TestIsEKSCacheEKS
+
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+		},
+	}
+
+	translator.SetTargetPlatform("linux")
+	got, err := Translate(input, "linux")
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	// Verify connectors are populated
+	assert.NotEmpty(t, got.Connectors)
+
+	// Verify metrics routing connector exists
+	found := false
+	for id := range got.Connectors {
+		if id.Type().String() == "routing" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "expected routing connector in config")
+
+	// Verify metrics pipelines reference the connector
+	metricsRoute := pipeline.NewIDWithName(pipeline.SignalMetrics, "application_signals_metrics_route")
+	assert.Contains(t, got.Service.Pipelines, metricsRoute)
+}

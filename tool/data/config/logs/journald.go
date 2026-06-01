@@ -10,15 +10,13 @@ type Journald struct {
 }
 
 func (config *Journald) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
-	resultMap := make(map[string]interface{})
-
-	collectList := []map[string]interface{}{}
+	resultMap := map[string]interface{}{
+		"collect_list": make([]map[string]interface{}, 0, len(config.JournaldConfigs)),
+	}
 	for i := range config.JournaldConfigs {
 		_, singleJournald := config.JournaldConfigs[i].ToMap(ctx)
-		collectList = append(collectList, singleJournald)
+		resultMap["collect_list"] = append(resultMap["collect_list"].([]map[string]interface{}), singleJournald)
 	}
-	resultMap["collect_list"] = collectList
-
 	return "journald", resultMap
 }
 

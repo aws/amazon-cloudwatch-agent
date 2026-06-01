@@ -9,55 +9,59 @@ replace collectd.org v0.4.0 => github.com/collectd/go-collectd v0.4.0
 // Replace with https://github.com/amazon-contributing/opentelemetry-collector-contrib, there are no requirements for all receivers/processors/exporters
 // to be all replaced since there are some changes that will always be from upstream
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20260511193117-05aea4e97d48
+	github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector => github.com/amazon-contributing/opentelemetry-collector-contrib/connector/routingconnector v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsemfexporter v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter => github.com/amazon-contributing/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.0.0-20260526165114-0e486aa5e699
 )
 
 replace (
-	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260511193117-05aea4e97d48
+	github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension => github.com/amazon-contributing/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260526165114-0e486aa5e699
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/metrics => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/metrics v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/proxy => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/coreinternal v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfig v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kubelet => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/metadataproviders => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20260511193117-05aea4e97d48
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/awsutil => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/containerinsight => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/containerinsight v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/cwlogs => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/cwlogs v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/k8s => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/k8s v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/metrics => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/metrics v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/proxy => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/proxy v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/aws/xray => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/xray v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/coreinternal v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfig v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kubelet => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/metadataproviders => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20260526165114-0e486aa5e699
 )
 
 replace (
 	// For clear resource attributes after copy functionality https://github.com/amazon-contributing/opentelemetry-collector-contrib/pull/148
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20260511193117-05aea4e97d48
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20260526165114-0e486aa5e699
 	// Replace with contrib to revert upstream change https://github.com/open-telemetry/opentelemetry-collector-contrib/pull/20519
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20260511193117-05aea4e97d48
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus => github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20260526165114-0e486aa5e699
 )
 
-replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20260511193117-05aea4e97d48
+replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws => github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20260526165114-0e486aa5e699
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20260511193117-05aea4e97d48
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/cumulativetodeltaprocessor v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20260526165114-0e486aa5e699
 )
 
 replace (
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsefareceiver v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260511193117-05aea4e97d48
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260511193117-05aea4e97d48
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsefareceiver v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260526165114-0e486aa5e699
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260526165114-0e486aa5e699
 )
 
 // Temporary fix, pending PR https://github.com/shirou/gopsutil/pull/957
@@ -132,11 +136,13 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/oklog/run v1.1.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension v0.124.1
@@ -204,6 +210,7 @@ require (
 	go.opentelemetry.io/collector/confmap/provider/envprovider v1.30.0
 	go.opentelemetry.io/collector/confmap/provider/fileprovider v1.30.0
 	go.opentelemetry.io/collector/confmap/xconfmap v0.124.0
+	go.opentelemetry.io/collector/connector v0.124.0
 	go.opentelemetry.io/collector/consumer v1.30.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.124.0
 	go.opentelemetry.io/collector/exporter v0.124.0
@@ -239,10 +246,10 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/exp v0.0.0-20250106191152-7588d65b2ba8
-	golang.org/x/net v0.51.0
-	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.42.0
-	golang.org/x/text v0.34.0
+	golang.org/x/net v0.55.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/sys v0.45.0
+	golang.org/x/text v0.37.0
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -254,7 +261,12 @@ require (
 	k8s.io/klog/v2 v2.130.1
 )
 
-require github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+require (
+	github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension v0.0.0-00010101000000-000000000000
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-00010101000000-000000000000
+	github.com/safchain/ethtool v0.0.0-20210803160452-9aa261dae9b1
+)
 
 require (
 	cloud.google.com/go/auth v0.15.0 // indirect
@@ -271,7 +283,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.23 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.3.3 // indirect
 	github.com/Code-Hex/go-generics-cache v1.5.1 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.30.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0 // indirect
 	github.com/IBM/sarama v1.45.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Microsoft/hcsshim v0.12.9 // indirect
@@ -291,12 +303,14 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/aws/aws-msk-iam-sasl-signer-go v1.0.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.29.14 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.34 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.46.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.211.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
@@ -485,7 +499,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/batchpersignal v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/core/xidutils v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/experimentalmetricmetadata v0.124.1 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/sampling v0.124.1 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/azure v0.124.1 // indirect
@@ -556,13 +569,12 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/collector v0.124.0 // indirect
 	go.opentelemetry.io/collector/component/componentstatus v0.124.0 // indirect
-	go.opentelemetry.io/collector/config/configcompression v1.30.0 // indirect
+	go.opentelemetry.io/collector/config/configcompression v1.30.0
 	go.opentelemetry.io/collector/config/configgrpc v0.124.0 // indirect
 	go.opentelemetry.io/collector/config/confignet v1.30.0 // indirect
 	go.opentelemetry.io/collector/config/configretry v1.30.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.30.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.30.0 // indirect
-	go.opentelemetry.io/collector/connector v0.124.0 // indirect
 	go.opentelemetry.io/collector/connector/connectortest v0.124.0 // indirect
 	go.opentelemetry.io/collector/connector/xconnector v0.124.0 // indirect
 	go.opentelemetry.io/collector/consumer/consumererror v0.124.0 // indirect
@@ -593,37 +605,37 @@ require (
 	go.opentelemetry.io/contrib/zpages v0.60.0 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.11.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.11.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.19.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.35.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.35.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.43.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.35.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.35.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.57.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.17.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.35.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.35.0 // indirect
-	go.opentelemetry.io/otel/log v0.17.0 // indirect
+	go.opentelemetry.io/otel/log v0.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
-	go.opentelemetry.io/otel/sdk/log v0.17.0 // indirect
+	go.opentelemetry.io/otel/sdk/log v0.19.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
+	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/mod v0.32.0 // indirect
+	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
-	gonum.org/v1/gonum v0.16.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
+	gonum.org/v1/gonum v0.17.0 // indirect
 	google.golang.org/api v0.226.0 // indirect
 	google.golang.org/genproto v0.0.0-20240903143218-8af14fe29dc1 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
