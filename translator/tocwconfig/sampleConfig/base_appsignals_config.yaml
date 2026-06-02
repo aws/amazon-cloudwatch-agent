@@ -274,9 +274,16 @@ extensions:
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
+        imds_retries: 1
+        local_mode: true
         logs_provision_failure_backoff: 30s
-        logs_provision_timeout: 10s
+        max_retries: 2
+        num_workers: 8
+        profile: AmazonCloudWatchAgent
         region: us-east-1
+        request_timeout_seconds: 10
+        shared_credentials_file:
+            - fake-path
     awsproxy/application_signals:
         additional_routing_rules:
             - aws_endpoint: https://application-signals.us-east-1.api.aws
@@ -313,15 +320,29 @@ extensions:
               key: x-aws-log-stream
               value: default
     sigv4auth/logs:
-        assume_role:
-            sts_region: us-east-1
+        assume_role: {}
+        imds_retries: 1
+        local_mode: true
+        max_retries: 2
+        num_workers: 8
+        profile: AmazonCloudWatchAgent
         region: us-east-1
+        request_timeout_seconds: 30
         service: logs
+        shared_credentials_file:
+            - fake-path
     sigv4auth/monitoring:
-        assume_role:
-            sts_region: us-east-1
+        assume_role: {}
+        imds_retries: 1
+        local_mode: true
+        max_retries: 2
+        num_workers: 8
+        profile: AmazonCloudWatchAgent
         region: us-east-1
+        request_timeout_seconds: 30
         service: monitoring
+        shared_credentials_file:
+            - fake-path
 processors:
     attributestocontext:
         actions:

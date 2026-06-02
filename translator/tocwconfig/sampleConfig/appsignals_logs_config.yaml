@@ -48,9 +48,12 @@ extensions:
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
+        imds_retries: 1
         logs_provision_failure_backoff: 30s
-        logs_provision_timeout: 10s
+        max_retries: 2
+        num_workers: 8
         region: us-east-1
+        request_timeout_seconds: 10
     entitystore:
         mode: ec2
         region: us-east-1
@@ -64,9 +67,12 @@ extensions:
               from_context: aws.log.stream.name
               key: x-aws-log-stream
     sigv4auth/logs:
-        assume_role:
-            sts_region: us-east-1
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
         region: us-east-1
+        request_timeout_seconds: 30
         service: logs
 processors:
     attributestocontext:
