@@ -15,7 +15,19 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 )
+
+// resetCredentialsContext resets the sigv4auth credential cache and sets static
+// credentials so CanResolveCredentials() resolves to true. Because the cache is
+// process-global, every test that expects the full (credentialed) pipeline must
+// call this so its result does not depend on test execution order (e.g. -shuffle)
+// or the ambient credential environment.
+func resetCredentialsContext(t *testing.T) {
+	sigv4auth.ResetCredentialsCache()
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+}
 
 func TestNewTranslatorsTraces(t *testing.T) {
 	input := map[string]interface{}{
@@ -31,6 +43,7 @@ func TestNewTranslatorsTraces(t *testing.T) {
 }
 
 func TestNewTranslatorsMetrics(t *testing.T) {
+	resetCredentialsContext(t)
 	input := map[string]interface{}{
 		"logs": map[string]interface{}{
 			"metrics_collected": map[string]interface{}{
@@ -44,6 +57,7 @@ func TestNewTranslatorsMetrics(t *testing.T) {
 }
 
 func TestNewTranslatorsLogs(t *testing.T) {
+	resetCredentialsContext(t)
 	input := map[string]interface{}{
 		"logs": map[string]interface{}{
 			"metrics_collected": map[string]interface{}{
@@ -57,6 +71,7 @@ func TestNewTranslatorsLogs(t *testing.T) {
 }
 
 func TestNewTranslatorsLogsNotEnabled(t *testing.T) {
+	resetCredentialsContext(t)
 	input := map[string]interface{}{}
 	conf := confmap.NewFromStringMap(input)
 	translators := NewTranslators(conf, pipeline.SignalLogs)
@@ -70,6 +85,7 @@ func TestNewTranslatorsLogsNotEnabled(t *testing.T) {
 }
 
 func TestNewTranslatorsLogsAutoOptIn(t *testing.T) {
+	resetCredentialsContext(t)
 	input := map[string]interface{}{
 		"logs": map[string]interface{}{
 			"metrics_collected": map[string]interface{}{
@@ -220,6 +236,7 @@ func TestTranslatorLogsReceiveToRouteDynamic(t *testing.T) {
 }
 
 func TestNewTranslatorsNilConf(t *testing.T) {
+	resetCredentialsContext(t)
 	translators := NewTranslators(nil, pipeline.SignalMetrics)
 	// Translators are always registered; Translate returns error when conf is nil
 	assert.Equal(t, 3, translators.Len())
@@ -298,6 +315,7 @@ func TestNewTranslatorsLogsDisabled(t *testing.T) {
 }
 
 func TestNewTranslatorsMetricsNoCredentials(t *testing.T) {
+	sigv4auth.ResetCredentialsCache()
 	// Clear all AWS credential sources to simulate on-prem without credentials
 	t.Setenv("AWS_ACCESS_KEY_ID", "")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "")
@@ -319,6 +337,7 @@ func TestNewTranslatorsMetricsNoCredentials(t *testing.T) {
 }
 
 func TestNewTranslatorsLogsNoCredentials(t *testing.T) {
+	sigv4auth.ResetCredentialsCache()
 	// Clear all AWS credential sources to simulate on-prem without credentials
 	t.Setenv("AWS_ACCESS_KEY_ID", "")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "")

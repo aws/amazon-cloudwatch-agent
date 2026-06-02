@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	systemmetricspipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
@@ -192,6 +193,7 @@ func TestAppSignalsLogsStaticConfig(t *testing.T) {
 
 func TestAppSignalsNoCredentialsConfig(t *testing.T) {
 	resetContext(t)
+	sigv4auth.ResetCredentialsCache()
 	context.CurrentContext().SetRunInContainer(false)
 	context.CurrentContext().SetMode(config.ModeOnPremise)
 	t.Setenv(config.HOST_NAME, "host_name_from_env")
@@ -994,6 +996,7 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 }
 
 func resetContext(t *testing.T) {
+	sigv4auth.ResetCredentialsCache()
 	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
 	t.Setenv(envconfig.SystemMetricsEnabled, "false")
 	// sigv4auth.Validate() eagerly resolves a credential provider. Set fake
