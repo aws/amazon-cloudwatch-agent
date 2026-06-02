@@ -23,10 +23,10 @@ import (
 )
 
 func TestTranslator_ID(t *testing.T) {
-	translator := NewTranslator()
+	translator := NewTranslatorWithConfig("", nil)
 	assert.Equal(t, "awscloudwatchlogs", translator.ID().String())
 
-	translatorWithName := NewTranslatorWithName("test_name")
+	translatorWithName := NewTranslatorWithConfig("test_name", nil)
 	assert.Equal(t, "awscloudwatchlogs/test_name", translatorWithName.ID().String())
 }
 
@@ -35,7 +35,7 @@ func TestTranslator_Translate_BasicConfig(t *testing.T) {
 	resetGlobalConfig()
 	agent.Global_Config.Region = "us-west-2"
 
-	translator := NewTranslator()
+	translator := NewTranslatorWithConfig("", nil)
 	conf := confmap.New()
 
 	// Execute
@@ -119,7 +119,7 @@ func TestTranslator_Translate_WithCredentials(t *testing.T) {
 		"shared_credential_file": "/path/to/credentials",
 	}
 
-	translator := NewTranslator()
+	translator := NewTranslatorWithConfig("", nil)
 	conf := confmap.New()
 
 	// Execute
@@ -142,7 +142,7 @@ func TestTranslator_Translate_WithEndpointOverride(t *testing.T) {
 	resetGlobalConfig()
 	agent.Global_Config.Region = "us-west-2"
 
-	translator := NewTranslator()
+	translator := NewTranslatorWithConfig("", nil)
 
 	// Set endpoint override in config
 	confData := map[string]interface{}{
@@ -163,7 +163,6 @@ func TestTranslator_Translate_WithEndpointOverride(t *testing.T) {
 	require.True(t, ok)
 
 	assert.Equal(t, "https://logs-fips.us-west-2.amazonaws.com", cfg.Endpoint)
-	assert.Equal(t, "https://logs-fips.us-west-2.amazonaws.com", cfg.Endpoint)
 }
 
 func TestTranslator_Translate_WithRoleARNOverride(t *testing.T) {
@@ -172,7 +171,7 @@ func TestTranslator_Translate_WithRoleARNOverride(t *testing.T) {
 	agent.Global_Config.Region = "us-west-2"
 	agent.Global_Config.Role_arn = "arn:aws:iam::123456789012:role/DefaultRole"
 
-	translator := NewTranslator()
+	translator := NewTranslatorWithConfig("", nil)
 
 	// Set role ARN override in logs config
 	confData := map[string]interface{}{
@@ -208,7 +207,9 @@ func TestTranslator_Translate_OnPremMode(t *testing.T) {
 	ctx.SetMode(config.ModeOnPremise)
 	defer ctx.SetMode(config.ModeEC2) // Reset after test
 
-	translator := NewTranslator()
+	// Empty collect config to test default log_stream_name
+	collectConfig := map[string]interface{}{}
+	translator := NewTranslatorWithConfig("", collectConfig)
 	conf := confmap.New()
 
 	// Execute
@@ -222,6 +223,8 @@ func TestTranslator_Translate_OnPremMode(t *testing.T) {
 	require.True(t, ok)
 
 	assert.True(t, cfg.LocalMode)
+	// On-prem mode should default to {hostname}, not {instance_id}
+	assert.Equal(t, "hostname-UNKNOWN", cfg.LogStreamName)
 }
 
 func TestTranslator_Translate_WithCABundle(t *testing.T) {
@@ -236,7 +239,7 @@ func TestTranslator_Translate_WithCABundle(t *testing.T) {
 	testCABundle := "/etc/ssl/certs/ca-bundle.pem"
 	os.Setenv(envconfig.AWS_CA_BUNDLE, testCABundle)
 
-	translator := NewTranslator()
+	translator := NewTranslatorWithConfig("", nil)
 	conf := confmap.New()
 
 	// Execute

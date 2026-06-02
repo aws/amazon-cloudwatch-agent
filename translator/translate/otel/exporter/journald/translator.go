@@ -4,7 +4,6 @@
 package journald
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
@@ -36,14 +35,6 @@ var (
 	endpointOverrideKey = common.ConfigKey(common.LogsKey, common.EndpointOverrideKey)
 )
 
-func NewTranslator() common.ComponentTranslator {
-	return NewTranslatorWithName("")
-}
-
-func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, awscloudwatchlogsexporter.NewFactory(), nil}
-}
-
 func NewTranslatorWithConfig(name string, collectConfig map[string]interface{}) common.ComponentTranslator {
 	return &translator{name, awscloudwatchlogsexporter.NewFactory(), collectConfig}
 }
@@ -72,7 +63,9 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
-		cfg.Profile = fmt.Sprintf("%v", profileKey)
+		if s, ok := profileKey.(string); ok && s != "" {
+			cfg.Profile = s
+		}
 	}
 	cfg.Region = agent.Global_Config.Region
 	cfg.RoleARN = agent.Global_Config.Role_arn
@@ -80,7 +73,9 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		cfg.RoleARN, _ = common.GetString(c, roleARNPathKey)
 	}
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
-		cfg.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+		if s, ok := credentialsFileKey.(string); ok && s != "" {
+			cfg.SharedCredentialsFile = []string{s}
+		}
 	}
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.LocalMode = true
@@ -106,11 +101,14 @@ func (t *translator) setJournaldFieldsFromConfig(cfg *awscloudwatchlogsexporter.
 	if logStreamName, ok := t.collectConfig[common.LogStreamName].(string); ok && logStreamName != "" {
 		cfg.LogStreamName = logsutil.ResolvePlaceholder(logStreamName, globallogs.GlobalLogConfig.MetadataInfo)
 	} else {
-		// Default log stream name if not specified
-		cfg.LogStreamName = logsutil.ResolvePlaceholder("{instance_id}", globallogs.GlobalLogConfig.MetadataInfo)
+		// Default: use {hostname} for on-prem (no instance_id), {instance_id} for EC2
+		if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
+			cfg.LogStreamName = logsutil.ResolvePlaceholder("{hostname}", globallogs.GlobalLogConfig.MetadataInfo)
+		} else {
+			cfg.LogStreamName = logsutil.ResolvePlaceholder("{instance_id}", globallogs.GlobalLogConfig.MetadataInfo)
+		}
 	}
 
-	// Set retention in days if available
 	if retentionInDays, ok := t.collectConfig["retention_in_days"].(float64); ok {
 		cfg.LogRetention = int64(retentionInDays)
 	}

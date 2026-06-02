@@ -52,5 +52,5 @@ func (config *Logs) AddJournald(logGroupName, logStream string, units []string, 
 	if config.LogsCollect == nil {
 		config.LogsCollect = &logs.Collection{}
 	}
-	config.LogsCollect.AddJournald(units, priority, matches, logGroupName, logStream, filters, retention)
+	config.LogsCollect.AddJournald(logGroupName, logStream, units, priority, matches, filters, retention)
 }

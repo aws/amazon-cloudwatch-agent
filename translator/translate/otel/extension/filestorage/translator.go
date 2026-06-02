@@ -4,17 +4,19 @@
 package filestorage
 
 import (
+	"path/filepath"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (
-	directory = "/opt/aws/amazon-cloudwatch-agent/logs/state"
-	name      = "journald"
+	name = "journald"
 )
 
 type translator struct {
@@ -40,7 +42,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filestorage.Config)
-	cfg.Directory = directory
+	cfg.Directory = filepath.Join(paths.AgentDir, "logs", "state")
 	cfg.CreateDirectory = true
 	return cfg, nil
 }

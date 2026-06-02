@@ -16,11 +16,11 @@ func TestJournald_ToMap(t *testing.T) {
 
 	// Add first journald config
 	conf.AddJournald(
+		"system-logs",
+		"{instance_id}",
 		[]string{"systemd", "kernel"},
 		"",
 		nil,
-		"system-logs",
-		"{instance_id}",
 		[]*JournaldFilter{
 			{Type: "exclude", Expression: ".*debug.*"},
 		},
@@ -29,11 +29,11 @@ func TestJournald_ToMap(t *testing.T) {
 
 	// Add second journald config
 	conf.AddJournald(
+		"application-logs",
+		"{instance_id}-apps",
 		[]string{"nginx", "apache2"},
 		"err",
 		[]map[string]string{{"_SYSTEMD_UNIT": "nginx.service"}},
-		"application-logs",
-		"{instance_id}-apps",
 		[]*JournaldFilter{
 			{Type: "include", Expression: ".*error.*"},
 			{Type: "exclude", Expression: ".*trace.*"},
@@ -88,11 +88,11 @@ func TestJournald_ToMap_SingleEntry(t *testing.T) {
 	conf := new(Journald)
 
 	conf.AddJournald(
+		"security-logs",
+		"{hostname}-security",
 		[]string{"ssh"},
 		"",
 		nil,
-		"security-logs",
-		"{hostname}-security",
 		nil,
 		30,
 	)

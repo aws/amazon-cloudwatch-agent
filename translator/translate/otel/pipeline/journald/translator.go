@@ -28,12 +28,8 @@ type translator struct {
 
 var _ common.PipelineTranslator = (*translator)(nil)
 
-const (
-	pipelineName = "journald"
-)
-
 func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
-	t := &translator{name: pipelineName}
+	t := &translator{name: common.JournaldKey}
 	t.SetIndex(-1)
 	for _, opt := range opts {
 		opt(t)
@@ -47,7 +43,7 @@ func NewTranslator(opts ...common.TranslatorOption) common.PipelineTranslator {
 func NewTranslators(conf *confmap.Conf) common.TranslatorMap[*common.ComponentTranslators, pipeline.ID] {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 
-	journaldKey := common.ConfigKey(common.LogsKey, "logs_collected", "journald")
+	journaldKey := common.ConfigKey(common.LogsKey, common.LogsCollectedKey, common.JournaldKey)
 	if conf == nil || !conf.IsSet(journaldKey) {
 		return translators
 	}
@@ -57,7 +53,7 @@ func NewTranslators(conf *confmap.Conf) common.TranslatorMap[*common.ComponentTr
 		return translators
 	}
 
-	if collectList, ok := journaldConf.Get("collect_list").([]any); ok {
+	if collectList, ok := journaldConf.Get(common.CollectListKey).([]any); ok {
 		for index := range collectList {
 			translators.Set(NewTranslator(common.WithIndex(index)))
 		}
@@ -71,9 +67,9 @@ func (t *translator) ID() pipeline.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	journaldKey := common.ConfigKey(common.LogsKey, "logs_collected", "journald")
+	journaldKey := common.ConfigKey(common.LogsKey, common.LogsCollectedKey, common.JournaldKey)
 	if conf == nil || !conf.IsSet(journaldKey) {
-		return nil, &common.MissingKeyError{ID: component.NewID(component.MustNewType("journald")), JsonKey: journaldKey}
+		return nil, &common.MissingKeyError{ID: component.NewID(component.MustNewType(common.JournaldKey)), JsonKey: journaldKey}
 	}
 
 	// Get the journald configuration
@@ -85,9 +81,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		return nil, fmt.Errorf("journald configuration not found")
 	}
 
-	collectList := journaldConf.Get("collect_list")
+	collectList := journaldConf.Get(common.CollectListKey)
 	if collectList == nil {
-		return nil, fmt.Errorf("collect_list not found in journald configuration")
+		return nil, fmt.Errorf("%s not found in journald configuration", common.CollectListKey)
 	}
 
 	collectListSlice, ok := collectList.([]interface{})
@@ -118,20 +114,36 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	// Add journald receiver for this entry
 	receiverName := "journald" + suffix
-	units, _ := entryConfig["units"].([]interface{})
 	var unitStrings []string
-	for _, unit := range units {
-		if unitStr, ok := unit.(string); ok {
-			unitStrings = append(unitStrings, unitStr)
+	if rawUnits, exists := entryConfig["units"]; exists {
+		units, ok := rawUnits.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("units must be an array at collect_list index %d", index)
+		}
+		for _, unit := range units {
+			if unitStr, ok := unit.(string); ok {
+				unitStrings = append(unitStrings, unitStr)
+			}
 		}
 	}
 
 	// Extract priority
-	priority, _ := entryConfig["priority"].(string)
+	var priority string
+	if rawPriority, exists := entryConfig["priority"]; exists {
+		var ok bool
+		priority, ok = rawPriority.(string)
+		if !ok {
+			return nil, fmt.Errorf("priority must be a string at collect_list index %d", index)
+		}
+	}
 
 	// Extract matches
 	var matchConfigs []journaldinput.MatchConfig
-	if matches, ok := entryConfig["matches"].([]interface{}); ok {
+	if rawMatches, exists := entryConfig["matches"]; exists {
+		matches, ok := rawMatches.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("matches must be an array at collect_list index %d", index)
+		}
 		for _, match := range matches {
 			if matchMap, ok := match.(map[string]interface{}); ok {
 				mc := make(journaldinput.MatchConfig)
@@ -150,23 +162,29 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Receivers.Set(journaldreceiver.NewTranslatorWithConfig(receiverName, unitStrings, priority, matchConfigs))
 
 	// Add filter processor if filters are specified
-	if filters, ok := entryConfig["filters"].([]interface{}); ok && len(filters) > 0 {
-		var filterConfigs []journaldfilter.FilterConfig
-		for _, filter := range filters {
-			if filterMap, ok := filter.(map[string]interface{}); ok {
-				filterType, _ := filterMap["type"].(string)
-				expression, _ := filterMap["expression"].(string)
-				if filterType != "" && expression != "" {
-					filterConfigs = append(filterConfigs, journaldfilter.FilterConfig{
-						Type:       filterType,
-						Expression: expression,
-					})
+	if rawFilters, exists := entryConfig["filters"]; exists {
+		filters, ok := rawFilters.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("filters must be an array at collect_list index %d", index)
+		}
+		if len(filters) > 0 {
+			var filterConfigs []journaldfilter.FilterConfig
+			for _, filter := range filters {
+				if filterMap, ok := filter.(map[string]interface{}); ok {
+					filterType, _ := filterMap["type"].(string)
+					expression, _ := filterMap["expression"].(string)
+					if filterType != "" && expression != "" {
+						filterConfigs = append(filterConfigs, journaldfilter.FilterConfig{
+							Type:       filterType,
+							Expression: expression,
+						})
+					}
 				}
 			}
-		}
-		if len(filterConfigs) > 0 {
-			filterName := "journald" + suffix
-			translators.Processors.Set(journaldfilter.NewTranslatorWithFilters(filterName, filterConfigs))
+			if len(filterConfigs) > 0 {
+				filterName := "journald" + suffix
+				translators.Processors.Set(journaldfilter.NewTranslatorWithFilters(filterName, filterConfigs))
+			}
 		}
 	}
 

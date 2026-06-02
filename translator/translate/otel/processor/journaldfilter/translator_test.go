@@ -22,13 +22,6 @@ func TestTranslator(t *testing.T) {
 		want       *filterprocessor.Config
 		wantErr    bool
 	}{
-		"DefaultConfig": {
-			translator: NewTranslator(),
-			input:      map[string]interface{}{},
-			want: &filterprocessor.Config{
-				ErrorMode: "propagate",
-			},
-		},
 		"WithFilters": {
 			translator: NewTranslatorWithFilters("test", []FilterConfig{
 				{Type: "exclude", Expression: "error.*"},
@@ -41,6 +34,59 @@ func TestTranslator(t *testing.T) {
 					LogConditions: []string{
 						`IsMatch(body, "error.*")`,
 						`not IsMatch(body, "info.*")`,
+					},
+				},
+			},
+		},
+		"MultipleIncludes": {
+			translator: NewTranslatorWithFilters("test", []FilterConfig{
+				{Type: "include", Expression: "warn.*"},
+				{Type: "include", Expression: "error.*"},
+			}),
+			input: map[string]interface{}{},
+			want: &filterprocessor.Config{
+				ErrorMode: "propagate",
+				Logs: filterprocessor.LogFilters{
+					LogConditions: []string{
+						`not (IsMatch(body, "warn.*") or IsMatch(body, "error.*"))`,
+					},
+				},
+			},
+		},
+		"SpecialCharactersEscaped": {
+			translator: NewTranslatorWithFilters("test", []FilterConfig{
+				{Type: "exclude", Expression: `error.*"sensitive`},
+				{Type: "exclude", Expression: `path\\to\\file`},
+			}),
+			input: map[string]interface{}{},
+			want: &filterprocessor.Config{
+				ErrorMode: "propagate",
+				Logs: filterprocessor.LogFilters{
+					LogConditions: []string{
+						`IsMatch(body, "error.*\"sensitive")`,
+						`IsMatch(body, "path\\\\to\\\\file")`,
+					},
+				},
+			},
+		},
+		// Mixed exclude+include: filterprocessor drops if ANY condition is true.
+		// Exclude conditions are added first, so a log matching both an exclude
+		// and include pattern will be dropped (exclude takes precedence).
+		// This matches the behavior of file log filters in the legacy Telegraf pipeline.
+		"MixedExcludeAndInclude": {
+			translator: NewTranslatorWithFilters("test", []FilterConfig{
+				{Type: "exclude", Expression: "error.*"},
+				{Type: "exclude", Expression: "debug.*"},
+				{Type: "include", Expression: "important.*"},
+			}),
+			input: map[string]interface{}{},
+			want: &filterprocessor.Config{
+				ErrorMode: "propagate",
+				Logs: filterprocessor.LogFilters{
+					LogConditions: []string{
+						`IsMatch(body, "error.*")`,
+						`IsMatch(body, "debug.*")`,
+						`not IsMatch(body, "important.*")`,
 					},
 				},
 			},

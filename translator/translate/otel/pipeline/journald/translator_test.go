@@ -91,6 +91,78 @@ func TestTranslator(t *testing.T) {
 			translator: NewTranslator(common.WithIndex(1)),
 			wantErr:    false,
 		},
+		"WithInvalidUnitsType": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "test-logs",
+									"units":          "not-an-array",
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
+		},
+		"WithInvalidPriorityType": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "test-logs",
+									"priority":       123,
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
+		},
+		"WithInvalidMatchesType": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "test-logs",
+									"matches":        "not-an-array",
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
+		},
+		"WithInvalidFiltersType": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "test-logs",
+									"filters":        "not-an-array",
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
+		},
 	}
 
 	for name, testCase := range testCases {
@@ -121,14 +193,14 @@ func TestTranslator(t *testing.T) {
 func TestTranslatorID(t *testing.T) {
 	// Without index
 	tt := NewTranslator()
-	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName), tt.ID())
+	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, common.JournaldKey), tt.ID())
 
 	// With index
 	tt = NewTranslator(common.WithIndex(0))
-	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName+"/0"), tt.ID())
+	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, common.JournaldKey+"/0"), tt.ID())
 
 	tt = NewTranslator(common.WithIndex(2))
-	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, pipelineName+"/2"), tt.ID())
+	assert.Equal(t, pipeline.NewIDWithName(pipeline.SignalLogs, common.JournaldKey+"/2"), tt.ID())
 }
 
 func TestNewTranslators(t *testing.T) {
