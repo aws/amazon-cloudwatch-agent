@@ -346,6 +346,36 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 	}
 }
 
+func TestTranslatorMetricsDefault(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(input)
+	tt := newTranslator(pipeline.SignalMetrics, setVariant(metricsVariantDefault))
+	assert.EqualValues(t, "metrics/application_signals_metrics_default", tt.ID().String())
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	// Receives from OTLP (not routing connector)
+	assert.Equal(t, []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
+	// Same processors as logDest variant
+	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "metricstransform/application_signals")
+	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "awsapplicationsignals")
+	// Exports to EMF
+	assert.Equal(t, []string{"awsemf/application_signals"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	// No sigv4auth extension
+	for _, ext := range collections.MapSlice(got.Extensions.Keys(), component.ID.String) {
+		assert.NotContains(t, ext, "sigv4auth")
+	}
+}
+
 func TestTranslatorLogsRoute(t *testing.T) {
 	type want struct {
 		receivers  []string

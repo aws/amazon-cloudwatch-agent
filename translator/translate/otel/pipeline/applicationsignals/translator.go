@@ -45,6 +45,7 @@ const (
 	metricsVariantRoute    = "application_signals_metrics_route"
 	metricsVariantLogDest  = "application_signals_metrics_logs_destination"
 	metricsVariantOtlpDest = "application_signals_metrics_otlp_destination"
+	metricsVariantDefault  = "application_signals_metrics_default"
 )
 
 const (
@@ -127,6 +128,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 			return t.translateMetricsRouteToLogs(conf)
 		case metricsVariantOtlpDest:
 			return t.translateMetricsRouteToOtlp(conf)
+		case metricsVariantDefault:
+			return t.translateMetricsDefault(conf)
 		}
 	}
 
@@ -198,6 +201,40 @@ func (t *translator) translateMetricsRouteToLogs(conf *confmap.Conf) (*common.Co
 	}
 
 	translators.Receivers.Set(connectorTranslator)
+
+	translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.AppSignals))
+	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithSignal(t.signal)))
+	translators.Processors.Set(awsapplicationsignals.NewTranslator(awsapplicationsignals.WithSignal(t.signal)))
+
+	isECS := ecsutil.GetECSUtilSingleton().IsECS()
+	if !isECS {
+		translators.Processors.Set(awsentity.NewTranslatorWithEntityType(awsentity.Service, common.AppSignals, false))
+		if context.CurrentContext().KubernetesMode() != "" {
+			translators.Extensions.Set(k8smetadata.NewTranslator())
+		}
+	}
+
+	if enabled, _ := common.GetBool(conf, common.AgentDebugConfigKey); enabled {
+		translators.Exporters.Set(debug.NewTranslator(common.WithName(common.AppSignals)))
+	}
+
+	translators.Exporters.Set(awsemf.NewTranslatorWithName(common.AppSignals))
+	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
+	translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
+
+	return translators, nil
+}
+
+// translateMetricsDefault creates the AppSignals metrics pipeline without routing.
+// Used when sigv4auth credentials are unavailable (on-prem fallback).
+// All metrics go directly to EMF exporter.
+func (t *translator) translateMetricsDefault(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	translators := &common.ComponentTranslators{
+		Receivers:  otlp.NewTranslators(conf, common.AppSignals, t.signal.String()),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+	}
 
 	translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.AppSignals))
 	translators.Processors.Set(resourcedetection.NewTranslator(resourcedetection.WithSignal(t.signal)))

@@ -296,3 +296,45 @@ func TestNewTranslatorsLogsDisabled(t *testing.T) {
 	translators := NewTranslators(conf, pipeline.SignalLogs)
 	assert.Equal(t, 0, translators.Len())
 }
+
+func TestNewTranslatorsMetricsNoCredentials(t *testing.T) {
+	// Clear all AWS credential sources to simulate on-prem without credentials
+	t.Setenv("AWS_ACCESS_KEY_ID", "")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "")
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/nonexistent")
+	t.Setenv("AWS_CONFIG_FILE", "/nonexistent")
+	agent.Global_Config.Region = "us-east-1"
+
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(input)
+	translators := NewTranslators(conf, pipeline.SignalMetrics)
+	// Should have single default pipeline (no routing, no OTLP)
+	assert.Equal(t, 1, translators.Len())
+}
+
+func TestNewTranslatorsLogsNoCredentials(t *testing.T) {
+	// Clear all AWS credential sources to simulate on-prem without credentials
+	t.Setenv("AWS_ACCESS_KEY_ID", "")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "")
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/nonexistent")
+	t.Setenv("AWS_CONFIG_FILE", "/nonexistent")
+	agent.Global_Config.Region = "us-east-1"
+
+	input := map[string]interface{}{
+		"logs": map[string]interface{}{
+			"metrics_collected": map[string]interface{}{
+				"application_signals": map[string]interface{}{},
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(input)
+	translators := NewTranslators(conf, pipeline.SignalLogs)
+	// Should skip all logs pipelines
+	assert.Equal(t, 0, translators.Len())
+}

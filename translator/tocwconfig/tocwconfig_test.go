@@ -190,6 +190,21 @@ func TestAppSignalsLogsStaticConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_logs_static_config", "linux", expectedEnvVars, "")
 }
 
+func TestAppSignalsNoCredentialsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(false)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	// Clear credentials to simulate on-prem without AWS creds
+	t.Setenv("AWS_ACCESS_KEY_ID", "")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "")
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/nonexistent")
+	t.Setenv("AWS_CONFIG_FILE", "/nonexistent")
+	expectedEnvVars := map[string]string{"CWAGENT_LOG_LEVEL": "DEBUG"}
+	checkTranslation(t, "base_appsignals_no_credentials_config", "linux", expectedEnvVars, "")
+}
+
 func TestAppSignalsFavorOverFallbackConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

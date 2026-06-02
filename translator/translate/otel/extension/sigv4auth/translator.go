@@ -4,6 +4,8 @@
 package sigv4auth
 
 import (
+	"go.opentelemetry.io/collector/confmap/xconfmap"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -43,4 +45,16 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// CanResolveCredentials checks whether sigv4auth credentials can be resolved
+// with the current environment. Returns true if credentials are available,
+// false if the sigv4auth Validate() would fail (e.g. on-prem without AWS creds).
+func CanResolveCredentials() bool {
+	cfg := sigv4authextension.NewFactory().CreateDefaultConfig().(*sigv4authextension.Config)
+	cfg.Region = agent.Global_Config.Region
+	if agent.Global_Config.Role_arn != "" {
+		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
+	}
+	return xconfmap.Validate(cfg) == nil
 }
