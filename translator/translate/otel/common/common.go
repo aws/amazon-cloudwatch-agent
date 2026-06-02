@@ -31,6 +31,7 @@ const (
 	TracesCollectedKey                             = "traces_collected"
 	OpenTelemetryKey                               = "opentelemetry"
 	CollectKey                                     = "collect"
+	HostInsightsKey                                = "host_insights"
 	MetricsDestinationsKey                         = "metrics_destinations"
 	ECSKey                                         = "ecs"
 	KubernetesKey                                  = "kubernetes"

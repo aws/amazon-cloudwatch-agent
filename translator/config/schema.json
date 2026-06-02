@@ -1762,6 +1762,16 @@
                 }
               },
               "additionalProperties": false
+            },
+            "host_insights": {
+              "type": "object",
+              "properties": {
+                "metrics_collection_interval": {
+                  "description": "How often the metrics defined will be collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

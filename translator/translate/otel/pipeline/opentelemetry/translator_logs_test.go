@@ -24,16 +24,26 @@ func TestBaseLogsTranslator(t *testing.T) {
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectLogsKey},
 		},
 		"WithoutCollectKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectLogsKey},
 		},
-		"WithCollectKey": {
+		"WithCollectKeyButNoLogs": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{},
+				},
+			},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectLogsKey},
+		},
+		"WithCollectLogsKey": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"logs": map[string]interface{}{},
+					},
 				},
 			},
 		},
@@ -71,7 +81,9 @@ func TestBaseLogsTranslatorEmptyRegion(t *testing.T) {
 	tt := NewBaseLogsTranslator()
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
-			"collect": map[string]interface{}{},
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
 		},
 	})
 	got, err := tt.Translate(conf)

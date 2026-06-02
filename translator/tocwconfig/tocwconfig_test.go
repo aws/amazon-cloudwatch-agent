@@ -330,6 +330,12 @@ func TestOtlpMetricsConfig(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
 }
 
+func TestHostInsightsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "host_insights_config", "linux", nil, "")
+}
+
 func TestOtlpMetricsConfigKubernetes(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

@@ -15,6 +15,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	translators.Set(NewBaseMetricsTranslator())
 	translators.Set(NewBaseLogsTranslator())
+	translators.Set(NewHostInsightsTranslator())
 	translators.Merge(dbi.NewTranslators(conf))
 	return translators
 }
