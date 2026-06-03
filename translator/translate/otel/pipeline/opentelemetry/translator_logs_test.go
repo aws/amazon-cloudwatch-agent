@@ -47,6 +47,17 @@ func TestBaseLogsTranslator(t *testing.T) {
 				},
 			},
 		},
+		"WithDbiOnly": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"postgresql": []any{map[string]any{"endpoint": "localhost:5432"}},
+						},
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
