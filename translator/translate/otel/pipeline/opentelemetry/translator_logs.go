@@ -32,6 +32,7 @@ var _ common.PipelineTranslator = (*baseLogsTranslator)(nil)
 // The base logs pipeline only activates when at least one log source feeds logs
 // through the forward/opentelemetry connector.
 var otelCollectLogsKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.LogsKey)
+var otelCollectDbiKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.DatabaseInsightsKey)
 
 func NewBaseLogsTranslator() common.PipelineTranslator {
 	return &baseLogsTranslator{}
@@ -42,8 +43,8 @@ func (t *baseLogsTranslator) ID() pipeline.ID {
 }
 
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(otelCollectLogsKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: otelCollectLogsKey}
+	if conf == nil || (!conf.IsSet(otelCollectLogsKey) && !conf.IsSet(otelCollectDbiKey)) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: otelCollectLogsKey + " or " + otelCollectDbiKey}
 	}
 
 	region := agent.Global_Config.Region

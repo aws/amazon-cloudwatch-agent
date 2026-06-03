@@ -56,7 +56,7 @@ func TestBaseMetricsTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Receivers.Len())
 				assert.Equal(t, 2, got.Processors.Len())
 				assert.Equal(t, 1, got.Exporters.Len())
-				assert.Equal(t, 1, got.Extensions.Len())
+				assert.Equal(t, 2, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
 				assert.Equal(t, "otlphttp/metrics", got.Exporters.Keys()[0].String())
