@@ -336,6 +336,13 @@ func TestHostInsightsConfig(t *testing.T) {
 	checkTranslation(t, "host_insights_config", "linux", nil, "")
 }
 
+func TestContainerInsightsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	checkTranslationNoValidation(t, "container_insights_config", "linux", nil, "")
+}
+
 func TestOtlpMetricsConfigKubernetes(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -959,6 +966,43 @@ func checkTranslation(t *testing.T, fileName string, targetPlatform string, expe
 		require.NoError(t, err)
 		checkIfEnvTranslateSucceed(t, string(content), targetPlatform, expectedEnvVars)
 	}
+}
+
+func checkTranslationNoValidation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string) {
+	t.Helper()
+	jsonFilePath := fmt.Sprintf("./sampleConfig/%v.json", fileName)
+	yamlFilePath := fmt.Sprintf("./sampleConfig/%v%v.yaml", fileName, appendString)
+
+	agent.Global_Config = *new(agent.Agent)
+	translator.SetTargetPlatform(targetPlatform)
+	var input interface{}
+	blob, err := os.ReadFile(jsonFilePath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(blob, &input))
+	verifyToYamlTranslationNoValidation(t, input, yamlFilePath)
+
+	if expectedEnvVars != nil {
+		checkIfEnvTranslateSucceed(t, string(blob), targetPlatform, expectedEnvVars)
+	}
+}
+
+func verifyToYamlTranslationNoValidation(t *testing.T, input interface{}, expectedYamlFilePath string) {
+	t.Helper()
+	var expected interface{}
+	bs, err := os.ReadFile(expectedYamlFilePath)
+	require.NoError(t, err)
+	require.NoError(t, yaml.Unmarshal(bs, &expected))
+
+	var actual interface{}
+	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfigNoValidation(input)
+	require.NoError(t, err)
+	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+		return pretty.Sprint(x) < pretty.Sprint(y)
+	})
+	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 }
 
 func checkTranslationForPaths(t *testing.T, jsonFilePath string, expectedTomlFilePath string, expectedYamlFilePath string, targetPlatform string, tokenReplacements ...map[string]string) {
