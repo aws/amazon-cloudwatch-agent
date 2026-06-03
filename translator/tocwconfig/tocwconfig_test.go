@@ -27,6 +27,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -38,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	systemmetricspipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
@@ -994,7 +996,9 @@ func verifyToYamlTranslationNoValidation(t *testing.T, input interface{}, expect
 	require.NoError(t, yaml.Unmarshal(bs, &expected))
 
 	var actual interface{}
-	yamlConfig, err := cmdutil.TranslateJsonMapToYamlConfigNoValidation(input)
+	cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+	require.NoError(t, err)
+	yamlConfig, err := mapstructure.Marshal(cfg)
 	require.NoError(t, err)
 	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))

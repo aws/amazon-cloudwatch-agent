@@ -254,16 +254,6 @@ func TranslateJsonMapToYamlConfig(jsonConfigValue interface{}) (interface{}, err
 	return mapstructure.Marshal(cfg)
 }
 
-// TranslateJsonMapToYamlConfigNoValidation is like TranslateJsonMapToYamlConfig but skips
-// config validation. Use in tests where filesystem-dependent validation would fail.
-func TranslateJsonMapToYamlConfigNoValidation(jsonConfigValue interface{}) (interface{}, error) { //nolint:revive
-	cfg, err := otel.TranslateWithoutValidation(jsonConfigValue, context.CurrentContext().Os())
-	if err != nil {
-		return nil, err
-	}
-	return mapstructure.Marshal(cfg)
-}
-
 func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 	res := totomlconfig.ToTomlConfig(config)
 	return os.WriteFile(tomlConfigFilePath, []byte(res), fileMode)

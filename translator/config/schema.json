@@ -1781,9 +1781,8 @@
                   "type": "string"
                 },
                 "collection_interval": {
-                  "description": "How often metrics are collected in seconds",
-                  "type": "integer",
-                  "minimum": 1
+                  "description": "How often metrics are collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
                 },
                 "mode": {
                   "description": "Pipeline mode: node (daemonset), cluster (deployment), or omit for all",
