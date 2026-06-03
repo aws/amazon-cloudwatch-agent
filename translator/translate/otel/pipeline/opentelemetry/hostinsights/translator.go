@@ -30,14 +30,25 @@ func (t *hostInsightsTranslator) ID() pipeline.ID {
 }
 
 func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(hostInsightsKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: hostInsightsKey}
+	if conf == nil || (!conf.IsSet(hostInsightsKey) && !conf.IsSet(common.DatabaseInsightsConfigKey)) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: hostInsightsKey + " or " + common.DatabaseInsightsConfigKey}
+	}
+
+	var opts []hostmetrics.Option
+	if conf.IsSet(common.DatabaseInsightsConfigKey) {
+		opts = append(opts, hostmetrics.WithProcessScraper(map[string]any{
+			"include": map[string]any{
+				"match_type": "regexp",
+				"names":      []string{"postgres.*"},
+			},
+			"mute_process_all_errors": true,
+		}))
 	}
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator()),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator(opts...)),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),

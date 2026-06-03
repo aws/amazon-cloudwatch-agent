@@ -93,3 +93,20 @@ func TestTranslateDefaultScrapers(t *testing.T) {
 		assert.True(t, exists, "expected scraper %q to be present", s)
 	}
 }
+
+func TestTranslateWithProcessScraper(t *testing.T) {
+	filter := map[string]any{
+		"include": map[string]any{
+			"match_type": "regexp",
+			"names":      []string{"postgres.*"},
+		},
+		"mute_process_all_errors": true,
+	}
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	cfg, err := NewTranslator(WithProcessScraper(filter)).Translate(conf)
+	require.NoError(t, err)
+
+	hmCfg := cfg.(*hostMetricsConfig)
+	assert.Equal(t, 8, len(hmCfg.Scrapers))
+	assert.Equal(t, filter, hmCfg.Scrapers["process"])
+}

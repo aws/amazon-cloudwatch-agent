@@ -710,6 +710,24 @@ receivers:
             max_interval: 30s
         start_at: end
         type: file_input
+    hostmetrics:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        scrapers:
+            cpu: null
+            disk: null
+            filesystem: null
+            load: null
+            memory: null
+            network: null
+            process:
+                include:
+                    match_type: regexp
+                    names:
+                        - postgres.*
+                mute_process_all_errors: true
+            processes: null
+        timeout: 0s
     postgresql/events_0:
         collection_interval: 10s
         endpoint: localhost:5432
@@ -990,6 +1008,12 @@ service:
                 - postgresql/metrics_0
                 - count/dbi_dbload
                 - signaltometrics/dbi_topsql
+        metrics/host_insights:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - hostmetrics
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

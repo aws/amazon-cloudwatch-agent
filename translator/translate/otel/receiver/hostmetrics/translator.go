@@ -32,13 +32,24 @@ func (c *hostMetricsConfig) Validate() error {
 }
 
 type translator struct {
-	factory receiver.Factory
+	factory        receiver.Factory
+	processScraper map[string]any
+}
+
+type Option func(*translator)
+
+func WithProcessScraper(filter map[string]any) Option {
+	return func(t *translator) { t.processScraper = filter }
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.ComponentTranslator {
-	return &translator{factory: hostmetricsreceiver.NewFactory()}
+func NewTranslator(opts ...Option) common.ComponentTranslator {
+	t := &translator{factory: hostmetricsreceiver.NewFactory()}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
@@ -52,6 +63,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	scrapers := make(map[string]map[string]any, len(defaultScrapers))
 	for _, s := range defaultScrapers {
 		scrapers[s] = nil
+	}
+	if t.processScraper != nil {
+		scrapers["process"] = t.processScraper
 	}
 	intervalKeyChain := []string{
 		common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey, common.MetricsCollectionIntervalKey),

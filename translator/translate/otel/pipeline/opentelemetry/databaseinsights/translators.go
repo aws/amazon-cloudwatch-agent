@@ -13,11 +13,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-var (
-	dbiConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.DatabaseInsightsKey)
-	dbiPgKey     = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.DatabaseInsightsKey, common.PostgreSQLKey)
-)
-
 type dbiInstanceConfig struct {
 	endpoint     string
 	username     string
@@ -30,7 +25,7 @@ type dbiInstanceConfig struct {
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-	if conf == nil || !conf.IsSet(dbiConfigKey) {
+	if conf == nil || !conf.IsSet(common.DatabaseInsightsConfigKey) {
 		return translators
 	}
 
@@ -58,7 +53,7 @@ type pgRawInstance struct {
 }
 
 func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
-	arr, _ := conf.Get(dbiPgKey).([]any)
+	arr, _ := conf.Get(common.DatabaseInsightsPostgresKey).([]any)
 	var raw []pgRawInstance
 	if err := mapstructure.Decode(arr, &raw); err != nil {
 		return nil
