@@ -32,6 +32,7 @@ const (
 	OpenTelemetryKey                               = "opentelemetry"
 	CollectKey                                     = "collect"
 	HostInsightsKey                                = "host_insights"
+	OtelContainerInsightsKey                       = "container_insights"
 	MetricsDestinationsKey                         = "metrics_destinations"
 	ECSKey                                         = "ecs"
 	KubernetesKey                                  = "kubernetes"

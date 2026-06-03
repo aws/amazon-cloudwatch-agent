@@ -1772,6 +1772,37 @@
                 }
               },
               "additionalProperties": false
+            },
+            "container_insights": {
+              "type": "object",
+              "properties": {
+                "cluster_name": {
+                  "description": "The name of the EKS cluster",
+                  "type": "string"
+                },
+                "collection_interval": {
+                  "description": "How often metrics are collected in seconds",
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "mode": {
+                  "description": "Pipeline mode: node (daemonset), cluster (deployment), or omit for all",
+                  "type": "string",
+                  "enum": ["node", "cluster"]
+                },
+                "logs": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Whether to collect container and host logs",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": ["cluster_name"],
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

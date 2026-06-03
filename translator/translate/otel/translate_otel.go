@@ -49,6 +49,16 @@ func RegisterPipeline(translators ...pipelinetranslator.Translator) {
 
 // Translate converts a JSON config into an OTEL config.
 func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	return translateInternal(jsonConfig, os, true)
+}
+
+// TranslateWithoutValidation is like Translate but skips config validation.
+// Use in tests where filesystem-dependent validation (e.g. token files) would fail.
+func TranslateWithoutValidation(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	return translateInternal(jsonConfig, os, false)
+}
+
+func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelcol.Config, error) {
 	m, ok := jsonConfig.(map[string]interface{})
 	if !ok {
 		return nil, errors.New("invalid json config")
@@ -120,8 +130,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
 	}
-	if err = xconfmap.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid otel config: %w", err)
+	if validate {
+		if err = xconfmap.Validate(cfg); err != nil {
+			return nil, fmt.Errorf("invalid otel config: %w", err)
+		}
 	}
 	return cfg, nil
 }
