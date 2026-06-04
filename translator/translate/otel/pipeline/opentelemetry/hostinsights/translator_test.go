@@ -55,7 +55,7 @@ func TestHostInsightsTranslator(t *testing.T) {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
-						"host_insights":     map[string]interface{}{},
+						"host_insights": map[string]interface{}{},
 						"database_insights": map[string]interface{}{
 							"postgresql": []interface{}{
 								map[string]interface{}{"endpoint": "localhost:5432", "username": "cwagent"},
