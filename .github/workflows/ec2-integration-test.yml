@@ -117,7 +117,6 @@ jobs:
             -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
             -var="region=${{ inputs.region }}" \
             -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
-            -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
             -var="ssh_key_name=${{env.KEY_NAME}}" \
             -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
             -var="test_dir=${{ matrix.arrays.test_dir }}" \
