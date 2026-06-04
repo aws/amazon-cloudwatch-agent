@@ -10,13 +10,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	ci "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/containerinsights"
 	dbi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/databaseinsights"
+	hi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/hostinsights"
 )
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	translators.Set(NewBaseMetricsTranslator())
 	translators.Set(NewBaseLogsTranslator())
-	translators.Set(NewHostInsightsTranslator())
+	translators.Set(hi.NewTranslator())
 	translators.Merge(dbi.NewTranslators(conf))
 	translators.Merge(ci.NewTranslators(conf))
 	return translators

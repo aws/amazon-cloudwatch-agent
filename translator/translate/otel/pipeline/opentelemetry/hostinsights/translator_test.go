@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package opentelemetry
+package hostinsights
 
 import (
 	"testing"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestHostInsightsTranslator(t *testing.T) {
-	tt := NewHostInsightsTranslator()
+	tt := NewTranslator()
 	assert.EqualValues(t, "metrics/host_insights", tt.ID().String())
 
 	testCases := map[string]struct {

@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package opentelemetry
+package hostinsights
 
 import (
 	"go.opentelemetry.io/collector/component"
@@ -21,7 +21,7 @@ type hostInsightsTranslator struct{}
 
 var _ common.PipelineTranslator = (*hostInsightsTranslator)(nil)
 
-func NewHostInsightsTranslator() common.PipelineTranslator {
+func NewTranslator() common.PipelineTranslator {
 	return &hostInsightsTranslator{}
 }
 
