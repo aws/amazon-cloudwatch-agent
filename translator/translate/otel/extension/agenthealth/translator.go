@@ -41,11 +41,20 @@ var (
 type Name string
 
 var (
-	MetricsName    = Name(pipeline.SignalMetrics.String())
-	LogsName       = Name(pipeline.SignalLogs.String())
-	TracesName     = Name(pipeline.SignalTraces.String())
-	StatusCodeName = Name("statuscode")
+	MetricsName     = Name(pipeline.SignalMetrics.String())
+	OtelMetricsName = Name("otlphttp_metrics")
+	LogsName        = Name(pipeline.SignalLogs.String())
+	TracesName      = Name(pipeline.SignalTraces.String())
+	StatusCodeName  = Name("statuscode")
 )
+
+type Option func(*translator)
+
+func WithAdditionalAuth(id component.ID) Option {
+	return func(t *translator) {
+		t.additionalAuth = &id
+	}
+}
 
 type translator struct {
 	name                string
@@ -53,6 +62,7 @@ type translator struct {
 	isUsageDataEnabled  bool
 	factory             extension.Factory
 	isStatusCodeEnabled bool
+	additionalAuth      *component.ID
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -67,13 +77,17 @@ func NewTranslatorWithStatusCode(name Name, operations []string, isStatusCodeEna
 	}
 }
 
-func NewTranslator(name Name, operations []string) common.ComponentTranslator {
-	return &translator{
+func NewTranslator(name Name, operations []string, opts ...Option) common.ComponentTranslator {
+	t := &translator{
 		name:               string(name),
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
 	}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
@@ -104,6 +118,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.UsageMetadata = slices.Sorted(maps.Keys(usageMetadataSet))
 	}
 	cfg.IsStatusCodeEnabled = t.isStatusCodeEnabled
+	cfg.AdditionalAuth = t.additionalAuth
 	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{
