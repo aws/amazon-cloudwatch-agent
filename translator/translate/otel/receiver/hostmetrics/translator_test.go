@@ -101,6 +101,14 @@ func TestTranslateWithProcessScraper(t *testing.T) {
 			"names":      []string{"postgres.*"},
 		},
 		"mute_process_all_errors": true,
+		"metrics": map[string]any{
+			"process.cpu.utilization": map[string]any{
+				"enabled": true,
+			},
+			"process.memory.utilization": map[string]any{
+				"enabled": true,
+			},
+		},
 	}
 	conf := confmap.NewFromStringMap(map[string]interface{}{})
 	cfg, err := NewTranslator(WithProcessScraper(filter)).Translate(conf)

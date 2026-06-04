@@ -42,6 +42,14 @@ func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.Componen
 				"names":      []string{"postgres.*"},
 			},
 			"mute_process_all_errors": true,
+			"metrics": map[string]any{
+				"process.cpu.utilization": map[string]any{
+					"enabled": true,
+				},
+				"process.memory.utilization": map[string]any{
+					"enabled": true,
+				},
+			},
 		}))
 	}
 

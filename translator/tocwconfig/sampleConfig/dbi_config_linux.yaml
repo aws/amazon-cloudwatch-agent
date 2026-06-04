@@ -725,6 +725,11 @@ receivers:
                     match_type: regexp
                     names:
                         - postgres.*
+                metrics:
+                    process.cpu.utilization:
+                        enabled: true
+                    process.memory.utilization:
+                        enabled: true
                 mute_process_all_errors: true
             processes: null
         timeout: 0s
