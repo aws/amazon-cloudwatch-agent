@@ -48,7 +48,7 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	}
 	metricsEndpoint := common.ServiceEndpoint("monitoring", region, "/v1/metrics")
 	sigv4Ext := sigv4auth.NewTranslatorWithService("monitoring")
-	agentHealthExt := agenthealth.NewTranslator(agenthealth.MetricsName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelMetricsName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
