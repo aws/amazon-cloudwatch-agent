@@ -1013,14 +1013,14 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve\
-            -var="test_dir=${{ matrix.arrays.test_dir }}"\
+          if terraform apply --auto-approve \
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
-            -var="cwagent_image_tag=${{ inputs.build_id }}"\
+            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=${{ inputs.build_id }}" \
             -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
             -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
-            -var="ami=${{ matrix.arrays.ami }}" ; then
+            -var="ami=${{ matrix.arrays.ami }}"; then
             terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
@@ -1089,9 +1089,9 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve\
-            -var="test_dir=${{ matrix.arrays.test_dir }}"\
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}"\
+          if terraform apply --auto-approve \
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=${{ inputs.build_id }}"; then
             terraform destroy -auto-approve
           else
@@ -1166,7 +1166,7 @@ jobs:
       - name: Terraform apply
         id: terraform_apply
         continue-on-error: true
-        timeout-minutes: 90
+        timeout-minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
         env:
           HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
         run: |
@@ -1196,7 +1196,7 @@ jobs:
           fi
 
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}"\
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=${{ inputs.build_id }}" \
             -var="ami_type=${{ matrix.arrays.ami }}" \
@@ -1286,7 +1286,7 @@ jobs:
 
           terraform init
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}"\
+            -var="test_dir=${{ matrix.arrays.test_dir }}" \
             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=${{ inputs.build_id }}" \
             -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
