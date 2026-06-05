@@ -60,9 +60,38 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil {
 		conf = confmap.NewFromStringMap(map[string]interface{}{})
 	}
-	scrapers := make(map[string]map[string]any, len(defaultScrapers))
-	for _, s := range defaultScrapers {
-		scrapers[s] = nil
+	scrapers := map[string]map[string]any{
+		"cpu": {
+			"metrics": map[string]any{
+				"system.cpu.frequency":      map[string]any{"enabled": true},
+				"system.cpu.logical.count":  map[string]any{"enabled": true},
+				"system.cpu.physical.count": map[string]any{"enabled": true},
+				"system.cpu.utilization":    map[string]any{"enabled": true},
+			},
+		},
+		"disk":    nil,
+		"filesystem": {
+			"metrics": map[string]any{
+				"system.filesystem.utilization": map[string]any{"enabled": true},
+			},
+		},
+		"load":    nil,
+		"memory": {
+			"metrics": map[string]any{
+				"system.linux.memory.available": map[string]any{"enabled": true},
+				"system.linux.memory.dirty":     map[string]any{"enabled": true},
+				"system.memory.limit":           map[string]any{"enabled": true},
+				"system.memory.page_size":       map[string]any{"enabled": true},
+				"system.memory.utilization":     map[string]any{"enabled": true},
+			},
+		},
+		"network": {
+			"metrics": map[string]any{
+				"system.network.conntrack.count": map[string]any{"enabled": true},
+				"system.network.conntrack.max":   map[string]any{"enabled": true},
+			},
+		},
+		"processes": nil,
 	}
 	if t.processScraper != nil {
 		scrapers["process"] = t.processScraper

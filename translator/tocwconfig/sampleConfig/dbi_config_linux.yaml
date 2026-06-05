@@ -714,12 +714,40 @@ receivers:
         collection_interval: 1m0s
         initial_delay: 1s
         scrapers:
-            cpu: null
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
             disk: null
-            filesystem: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
             load: null
-            memory: null
-            network: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network:
+                metrics:
+                    system.network.conntrack.count:
+                        enabled: true
+                    system.network.conntrack.max:
+                        enabled: true
             process:
                 include:
                     match_type: regexp
