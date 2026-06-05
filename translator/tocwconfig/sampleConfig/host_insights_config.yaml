@@ -363,12 +363,7 @@ receivers:
                         enabled: true
                     system.memory.utilization:
                         enabled: true
-            network:
-                metrics:
-                    system.network.conntrack.count:
-                        enabled: true
-                    system.network.conntrack.max:
-                        enabled: true
+            network: null
             processes: null
         timeout: 0s
 service:
