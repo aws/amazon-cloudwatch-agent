@@ -8,18 +8,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 )
 
 func TestHostInsightsTranslator(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	tt := NewTranslator()
 	assert.EqualValues(t, "metrics/host_insights", tt.ID().String())
 
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		wantErr error
+		input         map[string]interface{}
+		wantErr       error
+		expectProcess bool
 	}{
 		"WithNilConf": {
 			input:   nil,
@@ -50,6 +56,7 @@ func TestHostInsightsTranslator(t *testing.T) {
 					},
 				},
 			},
+			expectProcess: true,
 		},
 		"WithBothKeys": {
 			input: map[string]interface{}{
@@ -64,6 +71,7 @@ func TestHostInsightsTranslator(t *testing.T) {
 					},
 				},
 			},
+			expectProcess: true,
 		},
 	}
 	for name, tc := range testCases {
@@ -88,6 +96,20 @@ func TestHostInsightsTranslator(t *testing.T) {
 				assert.Equal(t, "hostmetrics", got.Receivers.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
+
+				if tc.expectProcess {
+					// Verify process scraper is configured for DBI
+					rcvTranslator, ok := got.Receivers.Get(component.NewIDWithName(component.MustNewType("hostmetrics"), ""))
+					require.True(t, ok)
+					rcvCfg, err := rcvTranslator.Translate(conf)
+					require.NoError(t, err)
+					hmCfg := rcvCfg.(*hostmetrics.HostMetricsConfig)
+					processCfg, exists := hmCfg.Scrapers["process"]
+					assert.True(t, exists, "expected process scraper")
+					include := processCfg["include"].(map[string]any)
+					assert.Equal(t, "regexp", include["match_type"])
+					assert.Equal(t, []string{"postgres.*"}, include["names"])
+				}
 			}
 		})
 	}

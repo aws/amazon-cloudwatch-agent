@@ -1,0 +1,35 @@
+cpu:
+  metrics:
+    system.cpu.frequency:
+      enabled: true
+    system.cpu.logical.count:
+      enabled: true
+    system.cpu.physical.count:
+      enabled: true
+    system.cpu.utilization:
+      enabled: true
+disk: {}
+filesystem:
+  metrics:
+    system.filesystem.utilization:
+      enabled: true
+load: {}
+memory:
+  metrics:
+    system.linux.memory.available:
+      enabled: true
+    system.linux.memory.dirty:
+      enabled: true
+    system.memory.limit:
+      enabled: true
+    system.memory.page_size:
+      enabled: true
+    system.memory.utilization:
+      enabled: true
+network:
+  metrics:
+    system.network.conntrack.count:
+      enabled: true
+    system.network.conntrack.max:
+      enabled: true
+processes: {}

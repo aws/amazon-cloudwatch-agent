@@ -711,7 +711,7 @@ receivers:
         start_at: end
         type: file_input
     hostmetrics:
-        collection_interval: 1m0s
+        collection_interval: 30s
         initial_delay: 1s
         scrapers:
             cpu:

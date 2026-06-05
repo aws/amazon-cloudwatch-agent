@@ -10,9 +10,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func TestTranslate(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	testCases := map[string]struct {
 		input            map[string]interface{}
 		nilInput         bool
@@ -20,11 +24,11 @@ func TestTranslate(t *testing.T) {
 	}{
 		"NilConf": {
 			nilInput:         true,
-			expectedInterval: 60 * time.Second,
+			expectedInterval: 30 * time.Second,
 		},
 		"DefaultInterval": {
 			input:            map[string]interface{}{},
-			expectedInterval: 60 * time.Second,
+			expectedInterval: 30 * time.Second,
 		},
 		"AgentLevelInterval": {
 			input: map[string]interface{}{
@@ -73,7 +77,7 @@ func TestTranslate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, cfg)
 
-			hmCfg, ok := cfg.(*hostMetricsConfig)
+			hmCfg, ok := cfg.(*HostMetricsConfig)
 			require.True(t, ok)
 			assert.Equal(t, tc.expectedInterval, hmCfg.CollectionInterval)
 		})
@@ -81,11 +85,12 @@ func TestTranslate(t *testing.T) {
 }
 
 func TestTranslateDefaultScrapers(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	conf := confmap.NewFromStringMap(map[string]interface{}{})
 	cfg, err := NewTranslator().Translate(conf)
 	require.NoError(t, err)
 
-	hmCfg := cfg.(*hostMetricsConfig)
+	hmCfg := cfg.(*HostMetricsConfig)
 	expectedScrapers := []string{"cpu", "disk", "filesystem", "memory", "network", "load", "processes"}
 	assert.Equal(t, len(expectedScrapers), len(hmCfg.Scrapers))
 	for _, s := range expectedScrapers {
@@ -95,6 +100,7 @@ func TestTranslateDefaultScrapers(t *testing.T) {
 }
 
 func TestTranslateWithProcessScraper(t *testing.T) {
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	filter := map[string]any{
 		"include": map[string]any{
 			"match_type": "regexp",
@@ -114,7 +120,7 @@ func TestTranslateWithProcessScraper(t *testing.T) {
 	cfg, err := NewTranslator(WithProcessScraper(filter)).Translate(conf)
 	require.NoError(t, err)
 
-	hmCfg := cfg.(*hostMetricsConfig)
+	hmCfg := cfg.(*HostMetricsConfig)
 	assert.Equal(t, 8, len(hmCfg.Scrapers))
 	assert.Equal(t, filter, hmCfg.Scrapers["process"])
 }
