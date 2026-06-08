@@ -77,7 +77,7 @@ func TestTranslate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, cfg)
 
-			hmCfg, ok := cfg.(*HostMetricsConfig)
+			hmCfg, ok := cfg.(*Config)
 			require.True(t, ok)
 			assert.Equal(t, tc.expectedInterval, hmCfg.CollectionInterval)
 		})
@@ -90,7 +90,7 @@ func TestTranslateDefaultScrapers(t *testing.T) {
 	cfg, err := NewTranslator().Translate(conf)
 	require.NoError(t, err)
 
-	hmCfg := cfg.(*HostMetricsConfig)
+	hmCfg := cfg.(*Config)
 	expectedScrapers := []string{"cpu", "disk", "filesystem", "memory", "network", "load", "processes"}
 	assert.Equal(t, len(expectedScrapers), len(hmCfg.Scrapers))
 	for _, s := range expectedScrapers {
@@ -120,7 +120,7 @@ func TestTranslateWithProcessScraper(t *testing.T) {
 	cfg, err := NewTranslator(WithProcessScraper(filter)).Translate(conf)
 	require.NoError(t, err)
 
-	hmCfg := cfg.(*HostMetricsConfig)
+	hmCfg := cfg.(*Config)
 	assert.Equal(t, 8, len(hmCfg.Scrapers))
 	assert.Equal(t, filter, hmCfg.Scrapers["process"])
 }

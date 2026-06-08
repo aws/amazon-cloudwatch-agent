@@ -26,17 +26,17 @@ var scrapersLinuxConfig []byte
 //go:embed scrapers_windows.yaml
 var scrapersWindowsConfig []byte
 
-// HostMetricsConfig is a serializable representation of
+// Config is a serializable representation of
 // hostmetricsreceiver.Config. The upstream type uses mapstructure:"-" on its
 // Scrapers field which prevents confmap serialization, so we define our own
 // struct with an explicit scrapers field.
-type HostMetricsConfig struct {
+type Config struct {
 	scraperhelper.ControllerConfig `mapstructure:",squash"`
 	Scrapers                       map[string]map[string]any `mapstructure:"scrapers"`
 }
 
 // Validate is intentionally a no-op; the upstream hostmetricsreceiver handles its own validation.
-func (c *HostMetricsConfig) Validate() error {
+func (c *Config) Validate() error {
 	return nil
 }
 
@@ -92,7 +92,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey, common.MetricsCollectionIntervalKey),
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
-	return &HostMetricsConfig{
+	return &Config{
 		ControllerConfig: scraperhelper.ControllerConfig{
 			CollectionInterval: common.GetOrDefaultDuration(conf, intervalKeyChain, 30*time.Second),
 			InitialDelay:       time.Second,

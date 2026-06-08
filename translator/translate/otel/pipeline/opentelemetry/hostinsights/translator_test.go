@@ -103,7 +103,7 @@ func TestHostInsightsTranslator(t *testing.T) {
 					require.True(t, ok)
 					rcvCfg, err := rcvTranslator.Translate(conf)
 					require.NoError(t, err)
-					hmCfg := rcvCfg.(*hostmetrics.HostMetricsConfig)
+					hmCfg := rcvCfg.(*hostmetrics.Config)
 					processCfg, exists := hmCfg.Scrapers["process"]
 					assert.True(t, exists, "expected process scraper")
 					include := processCfg["include"].(map[string]any)
