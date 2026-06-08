@@ -35,6 +35,7 @@ func TestComponents(t *testing.T) {
 		"otlp",
 		"prometheus",
 		"statsd",
+		"syslog",
 		"systemmetrics",
 		"tcplog",
 		"udplog",

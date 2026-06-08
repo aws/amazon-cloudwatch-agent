@@ -1,0 +1,46 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC"
+          }
+        ]
+      },
+      "syslog": {
+        "listeners": [
+          {"listen_address": "tcp://0.0.0.0:514"},
+          {"listen_address": "udp://0.0.0.0:514", "protocol": "rfc3164"},
+          {"listen_address": "tcp://0.0.0.0:1514", "tls": {"cert_file": "/etc/ssl/cert.pem", "key_file": "/etc/ssl/key.pem", "ca_file": "/etc/ssl/ca.pem", "min_version": "1.3"}}
+        ],
+        "log_group_name": "/syslog/default",
+        "log_stream_name": "default",
+        "retention_in_days": 30,
+        "filters": [
+          {"type": "exclude", "expression": "healthcheck"}
+        ],
+        "routing": [
+          {
+            "match": {"hostname": "web-*"},
+            "log_group_name": "/syslog/web",
+            "log_stream_name": "web-stream",
+            "retention_in_days": 7,
+            "filters": [{"type": "include", "expression": "error|warn|crit"}]
+          },
+          {
+            "match": {"facility": 4},
+            "log_group_name": "/syslog/auth",
+            "log_stream_name": "auth-stream"
+          }
+        ]
+      }
+    }
+  }
+}

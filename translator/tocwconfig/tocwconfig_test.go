@@ -1087,3 +1087,11 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 		t.Fail()
 	}
 }
+
+func TestSyslogConfig(t *testing.T) {
+	resetContext(t)
+	originalProvider := translateutil.Ec2MetadataInfoProvider
+	translateutil.Ec2MetadataInfoProvider = func() *translateutil.Metadata { return &translateutil.Metadata{} }
+	t.Cleanup(func() { translateutil.Ec2MetadataInfoProvider = originalProvider })
+	checkTranslation(t, "syslog_config", "linux", nil, "")
+}
