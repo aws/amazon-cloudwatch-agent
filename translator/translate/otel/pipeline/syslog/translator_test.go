@@ -573,9 +573,6 @@ func TestProvisionerTranslator_Translate(t *testing.T) {
 	out := confmap.New()
 	require.NoError(t, out.Marshal(cfg))
 	assert.Equal(t, "us-west-2", out.Get("region"))
-	assert.Equal(t, "/syslog/web", out.Get("log_group"))
-	assert.Equal(t, "web-stream", out.Get("log_stream"))
-	assert.Equal(t, int64(30), out.Get("log_retention"))
 	assert.Equal(t, "sigv4auth/syslog", out.Get("additional_auth"))
 }
 
@@ -586,5 +583,61 @@ func TestProvisionerTranslator_ZeroRetention(t *testing.T) {
 
 	out := confmap.New()
 	require.NoError(t, out.Marshal(cfg))
-	assert.Equal(t, int64(0), out.Get("log_retention"))
+	assert.Equal(t, "eu-west-1", out.Get("region"))
+}
+
+func TestHeadersSetterTranslator(t *testing.T) {
+	provisionerID := component.NewIDWithName(component.MustNewType("awscloudwatchlogsprovisioner"), "syslog_0_rule_0")
+	tr := newHeadersSetterTranslator("syslog_0_rule_0", provisionerID, "/syslog/web", "web-stream", 30)
+
+	assert.Equal(t, "headers_setter/syslog_0_rule_0", tr.ID().String())
+
+	cfg, err := tr.Translate(confmap.New())
+	require.NoError(t, err)
+
+	out := confmap.New()
+	require.NoError(t, out.Marshal(cfg))
+	assert.Equal(t, "awscloudwatchlogsprovisioner/syslog_0_rule_0", out.Get("additional_auth"))
+
+	// Verify log group, log stream, and retention headers are set
+	headers, ok := out.Get("headers").([]any)
+	require.True(t, ok, "headers must be a slice")
+	require.Len(t, headers, 3)
+
+	h0 := headers[0].(map[string]any)
+	assert.Equal(t, "x-aws-log-group", h0["key"])
+	assert.Equal(t, "/syslog/web", h0["value"])
+
+	h1 := headers[1].(map[string]any)
+	assert.Equal(t, "x-aws-log-stream", h1["key"])
+	assert.Equal(t, "web-stream", h1["value"])
+
+	h2 := headers[2].(map[string]any)
+	assert.Equal(t, "x-aws-log-retention", h2["key"])
+	assert.Equal(t, "30", h2["value"])
+}
+
+func TestHeadersSetterTranslator_ZeroRetention(t *testing.T) {
+	provisionerID := component.NewIDWithName(component.MustNewType("awscloudwatchlogsprovisioner"), "syslog_0_default")
+	tr := newHeadersSetterTranslator("syslog_0_default", provisionerID, "/logs", "stream", 0)
+
+	cfg, err := tr.Translate(confmap.New())
+	require.NoError(t, err)
+
+	out := confmap.New()
+	require.NoError(t, out.Marshal(cfg))
+	assert.Equal(t, "awscloudwatchlogsprovisioner/syslog_0_default", out.Get("additional_auth"))
+
+	// With zero retention, only log group and log stream headers should be set
+	headers, ok := out.Get("headers").([]any)
+	require.True(t, ok, "headers must be a slice")
+	require.Len(t, headers, 2)
+
+	h0 := headers[0].(map[string]any)
+	assert.Equal(t, "x-aws-log-group", h0["key"])
+	assert.Equal(t, "/logs", h0["value"])
+
+	h1 := headers[1].(map[string]any)
+	assert.Equal(t, "x-aws-log-stream", h1["key"])
+	assert.Equal(t, "stream", h1["value"])
 }
