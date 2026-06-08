@@ -710,6 +710,52 @@ receivers:
             max_interval: 30s
         start_at: end
         type: file_input
+    hostmetrics:
+        collection_interval: 30s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            process:
+                include:
+                    match_type: regexp
+                    names:
+                        - postgres.*
+                metrics:
+                    process.cpu.utilization:
+                        enabled: true
+                    process.memory.utilization:
+                        enabled: true
+                mute_process_all_errors: true
+            processes: null
+        timeout: 0s
     postgresql/events_0:
         collection_interval: 10s
         endpoint: localhost:5432
@@ -990,6 +1036,12 @@ service:
                 - postgresql/metrics_0
                 - count/dbi_dbload
                 - signaltometrics/dbi_topsql
+        metrics/host_insights:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - hostmetrics
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

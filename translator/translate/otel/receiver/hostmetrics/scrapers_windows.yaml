@@ -1,0 +1,23 @@
+cpu:
+  metrics:
+    system.cpu.logical.count:
+      enabled: true
+    system.cpu.physical.count:
+      enabled: true
+    system.cpu.utilization:
+      enabled: true
+disk:
+filesystem:
+  metrics:
+    system.filesystem.utilization:
+      enabled: true
+load:
+memory:
+  metrics:
+    system.memory.limit:
+      enabled: true
+    system.memory.page_size:
+      enabled: true
+    system.memory.utilization:
+      enabled: true
+network:

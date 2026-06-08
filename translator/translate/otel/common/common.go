@@ -148,6 +148,11 @@ const (
 	DbiConnectorTopsql       = "dbi_topsql"
 )
 
+var (
+	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
+	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+)
+
 const (
 	DiskIOPrefix = "diskio_"
 )
@@ -174,6 +179,7 @@ var (
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
 	OTLPLogsKey                     = ConfigKey(LogsKey, MetricsCollectedKey, OtlpKey)
 	OTLPMetricsKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, OtlpKey)
+	OtelCollectLogsConfigKey        = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 )
 
 type TranslatorID interface {

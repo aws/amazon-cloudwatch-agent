@@ -10,9 +10,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func TestTranslate(t *testing.T) {
+	orig := translatorcontext.CurrentContext().Os()
+	t.Cleanup(func() { translatorcontext.CurrentContext().SetOs(orig) })
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	testCases := map[string]struct {
 		input            map[string]interface{}
 		nilInput         bool
@@ -20,11 +26,11 @@ func TestTranslate(t *testing.T) {
 	}{
 		"NilConf": {
 			nilInput:         true,
-			expectedInterval: 60 * time.Second,
+			expectedInterval: 30 * time.Second,
 		},
 		"DefaultInterval": {
 			input:            map[string]interface{}{},
-			expectedInterval: 60 * time.Second,
+			expectedInterval: 30 * time.Second,
 		},
 		"AgentLevelInterval": {
 			input: map[string]interface{}{
@@ -73,7 +79,7 @@ func TestTranslate(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, cfg)
 
-			hmCfg, ok := cfg.(*hostMetricsConfig)
+			hmCfg, ok := cfg.(*Config)
 			require.True(t, ok)
 			assert.Equal(t, tc.expectedInterval, hmCfg.CollectionInterval)
 		})
@@ -81,15 +87,46 @@ func TestTranslate(t *testing.T) {
 }
 
 func TestTranslateDefaultScrapers(t *testing.T) {
+	orig := translatorcontext.CurrentContext().Os()
+	t.Cleanup(func() { translatorcontext.CurrentContext().SetOs(orig) })
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	conf := confmap.NewFromStringMap(map[string]interface{}{})
 	cfg, err := NewTranslator().Translate(conf)
 	require.NoError(t, err)
 
-	hmCfg := cfg.(*hostMetricsConfig)
+	hmCfg := cfg.(*Config)
 	expectedScrapers := []string{"cpu", "disk", "filesystem", "memory", "network", "load", "processes"}
 	assert.Equal(t, len(expectedScrapers), len(hmCfg.Scrapers))
 	for _, s := range expectedScrapers {
 		_, exists := hmCfg.Scrapers[s]
 		assert.True(t, exists, "expected scraper %q to be present", s)
 	}
+}
+
+func TestTranslateWithProcessScraper(t *testing.T) {
+	orig := translatorcontext.CurrentContext().Os()
+	t.Cleanup(func() { translatorcontext.CurrentContext().SetOs(orig) })
+	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
+	filter := map[string]any{
+		"include": map[string]any{
+			"match_type": "regexp",
+			"names":      []string{"postgres.*"},
+		},
+		"mute_process_all_errors": true,
+		"metrics": map[string]any{
+			"process.cpu.utilization": map[string]any{
+				"enabled": true,
+			},
+			"process.memory.utilization": map[string]any{
+				"enabled": true,
+			},
+		},
+	}
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	cfg, err := NewTranslator(WithProcessScraper(filter)).Translate(conf)
+	require.NoError(t, err)
+
+	hmCfg := cfg.(*Config)
+	assert.Equal(t, 8, len(hmCfg.Scrapers))
+	assert.Equal(t, filter, hmCfg.Scrapers["process"])
 }
