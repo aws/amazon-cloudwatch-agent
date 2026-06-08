@@ -29,7 +29,7 @@ const (
 )
 
 // newExporterTranslator is retained as dead code to support future OTLP delivery mode.
-func newExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int64, deliveryMode string, conf *confmap.Conf) common.ComponentTranslator {
+func newExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int64, deliveryMode string, _ *confmap.Conf) common.ComponentTranslator {
 	if deliveryMode == deliveryModeOTLP {
 		return newOTLPExporterTranslator(name)
 	}

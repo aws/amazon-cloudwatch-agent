@@ -185,7 +185,7 @@ func validateUniqueListeners(sections []map[string]any) error {
 }
 
 // buildSectionPipelines creates all pipelines for a single syslog section.
-func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, conf *confmap.Conf) common.PipelineTranslatorMap {
+func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	prefix := fmt.Sprintf("syslog_%d", sectionIdx)
 
