@@ -16,6 +16,8 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
+	orig := translatorcontext.CurrentContext().Os()
+	t.Cleanup(func() { translatorcontext.CurrentContext().SetOs(orig) })
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	testCases := map[string]struct {
 		input            map[string]interface{}
@@ -85,6 +87,8 @@ func TestTranslate(t *testing.T) {
 }
 
 func TestTranslateDefaultScrapers(t *testing.T) {
+	orig := translatorcontext.CurrentContext().Os()
+	t.Cleanup(func() { translatorcontext.CurrentContext().SetOs(orig) })
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	conf := confmap.NewFromStringMap(map[string]interface{}{})
 	cfg, err := NewTranslator().Translate(conf)
@@ -100,6 +104,8 @@ func TestTranslateDefaultScrapers(t *testing.T) {
 }
 
 func TestTranslateWithProcessScraper(t *testing.T) {
+	orig := translatorcontext.CurrentContext().Os()
+	t.Cleanup(func() { translatorcontext.CurrentContext().SetOs(orig) })
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	filter := map[string]any{
 		"include": map[string]any{
