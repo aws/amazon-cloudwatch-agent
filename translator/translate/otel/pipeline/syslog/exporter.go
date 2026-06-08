@@ -123,13 +123,15 @@ func (t *otlpExporterTranslator) Translate(c *confmap.Conf) (component.Config, e
 		logsEndpoint = ep
 	}
 
-	provisionerID := component.NewIDWithName(component.MustNewType("awscloudwatchlogsprovisioner"), t.name)
+	// The auth chain is: otlphttp → headers_setter → provisioner → sigv4auth.
+	// headers_setter injects x-aws-log-group/stream/retention headers.
+	headersSetterID := component.NewIDWithName(component.MustNewType("headers_setter"), t.name)
 
 	cfgMap := map[string]any{
 		"logs_endpoint": logsEndpoint,
 		"compression":   "gzip",
 		"auth": map[string]any{
-			"authenticator": provisionerID.String(),
+			"authenticator": headersSetterID.String(),
 		},
 	}
 

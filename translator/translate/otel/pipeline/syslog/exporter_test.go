@@ -219,7 +219,7 @@ func TestOTLPExporterTranslator_Translate(t *testing.T) {
 	require.NoError(t, out.Marshal(cfg))
 	assert.Equal(t, "https://logs.us-west-2.amazonaws.com/v1/logs", out.Get("logs_endpoint"))
 	assert.Contains(t, fmt.Sprint(out.Get("compression")), "gzip")
-	assert.Equal(t, "awscloudwatchlogsprovisioner/syslog_default", out.Get("auth::authenticator"))
+	assert.Equal(t, "headers_setter/syslog_default", out.Get("auth::authenticator"))
 }
 
 func TestOTLPExporterTranslator_EndpointOverride(t *testing.T) {
