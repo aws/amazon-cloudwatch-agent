@@ -1809,6 +1809,10 @@
                 "config_path": {
                   "description": "Path to the Prometheus scrape configuration file",
                   "type": "string"
+                },
+                "cluster_name": {
+                  "description": "The name of the EKS cluster",
+                  "type": "string"
                 }
               },
               "required": ["config_path"],

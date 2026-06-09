@@ -54,6 +54,12 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {
+		// Validate cluster_name to prevent OTTL injection (must be alphanumeric, hyphens, dots, underscores)
+		for _, c := range clusterName {
+			if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '.' && c != '_' {
+				return nil, fmt.Errorf("cluster_name contains invalid character %q", c)
+			}
+		}
 		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
 			transformprocessor.WithMetricStatements([]string{
 				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
