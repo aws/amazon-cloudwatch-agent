@@ -17,6 +17,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
 
 const (
@@ -29,6 +30,7 @@ const (
 
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
 var configPathKey = common.ConfigKey(prometheusKey, "config_path")
+var clusterNameKey = common.ConfigKey(prometheusKey, "cluster_name")
 
 type translator struct{}
 
@@ -50,9 +52,18 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 	receiver := &prometheusReceiverTranslator{}
 
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {
+		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			transformprocessor.WithMetricStatements([]string{
+				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
+			}),
+		))
+	}
+
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](receiver),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Processors: processors,
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
@@ -92,6 +103,11 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	}
 
 	componentParser := confmap.NewFromStringMap(stringMap)
+	// NOTE: Prometheus relabel configs use $1, $2 for capture group references.
+	// The OTel confmap expandconverter interprets these as environment variable
+	// references (os.Expand), which can cause failures or empty replacements.
+	// This is a known limitation when prometheus configs with relabel_configs
+	// are loaded through the OTel config resolver pipeline.
 	if err := componentParser.Unmarshal(&cfg); err != nil {
 		// Config is in plain prometheus format, not OTel wrapper
 		if !strings.Contains(err.Error(), otelConfigParsingError) {
