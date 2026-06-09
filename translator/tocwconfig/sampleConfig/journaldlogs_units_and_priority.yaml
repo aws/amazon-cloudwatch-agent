@@ -1,0 +1,116 @@
+exporters:
+    awscloudwatchlogs/journald_0:
+        certificate_file_path: ""
+        endpoint: ""
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: journald-sshd-errors
+        log_retention: 7
+        log_stream_name: journald-stream
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: ""
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+extensions:
+    agenthealth/logs:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutLogEvents
+            usage_flags:
+                mode: ""
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: ""
+                region_type: ACJ
+    entitystore:
+        mode: ec2
+        region: us-west-2
+    file_storage/journald:
+        compaction:
+            check_interval: 5s
+            directory: /var/lib/otelcol/file_storage
+            max_transaction_size: 65536
+            rebound_needed_threshold_mib: 100
+            rebound_trigger_threshold_mib: 10
+        create_directory: true
+        directory: /opt/aws/amazon-cloudwatch-agent/logs/state
+        directory_permissions: "0750"
+        timeout: 1s
+processors:
+    batch/journald_0:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 5s
+receivers:
+    journald/journald_0:
+        id: journald_input
+        operators: []
+        priority: err
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        start_at: end
+        storage: file_storage/journald
+        type: journald_input
+        units:
+            - sshd
+            - amazon-ssm-agent
+service:
+    extensions:
+        - agenthealth/logs
+        - agenthealth/statuscode
+        - file_storage/journald
+        - entitystore
+    pipelines:
+        logs/journald/0:
+            exporters:
+                - awscloudwatchlogs/journald_0
+            processors:
+                - batch/journald_0
+            receivers:
+                - journald/journald_0
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
