@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "collect": {
+      "prometheus": {
+        "config_path": "./sampleConfig/prometheus_otel_scrape_config.yaml"
+      }
+    }
+  }
+}

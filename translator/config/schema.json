@@ -1802,6 +1802,17 @@
               },
               "required": ["cluster_name"],
               "additionalProperties": false
+            },
+            "prometheus": {
+              "type": "object",
+              "properties": {
+                "config_path": {
+                  "description": "Path to the Prometheus scrape configuration file",
+                  "type": "string"
+                }
+              },
+              "required": ["config_path"],
+              "additionalProperties": false
             }
           },
           "additionalProperties": false

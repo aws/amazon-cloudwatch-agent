@@ -345,6 +345,12 @@ func TestContainerInsightsConfig(t *testing.T) {
 	checkTranslationNoValidation(t, "container_insights_config", "linux", nil, "")
 }
 
+func TestPrometheusOtelPipelineConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslationNoValidation(t, "prometheus_otel_pipeline_config", "linux", nil, "")
+}
+
 func TestOtlpMetricsConfigKubernetes(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
