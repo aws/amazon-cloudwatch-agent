@@ -6,6 +6,8 @@ package prometheus
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -21,6 +23,8 @@ import (
 const (
 	pipelineName = "otel_prometheus"
 )
+
+var clusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
 var configPathKey = common.ConfigKey(prometheusKey, "config_path")
@@ -48,11 +52,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {
-		// Validate cluster_name to prevent OTTL injection (must be alphanumeric, hyphens, dots, underscores)
-		for _, c := range clusterName {
-			if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '-' && c != '.' && c != '_' {
-				return nil, fmt.Errorf("cluster_name contains invalid character %q", c)
-			}
+		if !clusterNameRegex.MatchString(clusterName) {
+			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
 		}
 		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
 			transformprocessor.WithMetricStatements([]string{
@@ -91,6 +92,7 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	if configPath == "" {
 		return nil, fmt.Errorf("config_path must not be empty for opentelemetry prometheus receiver")
 	}
+	configPath = filepath.Clean(configPath)
 
 	content, err := os.ReadFile(configPath)
 	if err != nil {
