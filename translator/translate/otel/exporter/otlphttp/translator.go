@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configauth"
 	"go.opentelemetry.io/collector/config/configcompression"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
@@ -71,9 +72,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	cfg.ClientConfig.Compression = configcompression.TypeGzip
 	if t.authenticator.Type().String() != "" {
-		cfg.ClientConfig.Auth = &configauth.Authentication{
+		cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{
 			AuthenticatorID: t.authenticator,
-		}
+		})
 	}
 
 	return cfg, nil
