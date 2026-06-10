@@ -18,7 +18,8 @@ remote_write_queue:
 external_labels: {}
 write_buffer_size: 524288
 endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
-headers: {}
+force_attempt_http2: true
+protobuf_message: prometheus.WriteRequest
 target_info:
   enabled: true
 add_metric_suffixes: true
