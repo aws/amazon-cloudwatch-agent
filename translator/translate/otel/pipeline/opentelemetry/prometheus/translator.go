@@ -6,7 +6,6 @@ package prometheus
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -20,8 +19,7 @@ import (
 )
 
 const (
-	pipelineName           = "otel_prometheus"
-	otelConfigParsingError = "has invalid keys: global"
+	pipelineName = "otel_prometheus"
 )
 
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
@@ -110,20 +108,14 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	// references (os.Expand), which can cause failures or empty replacements.
 	// This is a known limitation when prometheus configs with relabel_configs
 	// are loaded through the OTel config resolver pipeline.
-	if err := componentParser.Unmarshal(&cfg); err != nil {
-		// Config is in plain prometheus format, not OTel wrapper
-		if !strings.Contains(err.Error(), otelConfigParsingError) {
-			return nil, fmt.Errorf("unable to unmarshal prometheus config from %s: %w", configPath, err)
-		}
 
-		var promCfg prometheusreceiver.PromConfig
-		if err := componentParser.Unmarshal(&promCfg); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal plain prometheus config from %s: %w", configPath, err)
-		}
-		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
-		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
-		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
+	var promCfg prometheusreceiver.PromConfig
+	if err := componentParser.Unmarshal(&promCfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal prometheus config from %s: %w", configPath, err)
 	}
+	cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
+	cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
+	cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
 
 	return cfg, nil
 }

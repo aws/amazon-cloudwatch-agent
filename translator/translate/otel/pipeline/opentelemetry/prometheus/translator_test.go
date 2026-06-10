@@ -177,11 +177,10 @@ func TestPrometheusReceiverTranslatorMissingFile(t *testing.T) {
 
 func createTempPromConfig(t *testing.T) string {
 	t.Helper()
-	content := []byte(`config:
-  scrape_configs:
-    - job_name: test
-      static_configs:
-        - targets: ['localhost:9090']
+	content := []byte(`scrape_configs:
+  - job_name: test
+    static_configs:
+      - targets: ['localhost:9090']
 `)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "prometheus.yml")
