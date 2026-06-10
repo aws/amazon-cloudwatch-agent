@@ -244,6 +244,7 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotel
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20260728215743-95055c0f9cfd/go.mod h1:zk6PvQyUDsjyvgI0ugtzvfgvSmHRsiq4NsU/Nf43mdY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20260728215743-95055c0f9cfd h1:Q0TzFlLgphKVvKRtUXih3Uzu5rpDq/fVHUiZBdd1ynE=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20260728215743-95055c0f9cfd/go.mod h1:8oXRIBSggiKdi+WFeBwbil2VybfOGNnrcxxS4kxuvuw=
+github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/translator/prometheus v0.0.0-20260607233959-ee44579b1ae3/go.mod h1:Pw6sp3wj1SH3LVvAn4Lwld9j6RDyw/5SxPii8aK8nu4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260728215743-95055c0f9cfd h1:zF3lNp9NV6pU6iM0srEB20FYCBinyXxx5xE4iU4pYyo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260728215743-95055c0f9cfd/go.mod h1:E+PmgeASy3qNX1QRqcPDypclu8EIGqd7QY9EjPkVFKo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260728215743-95055c0f9cfd h1:iCGAxLhjH9URw7+YUX+sJtU0+X9SlfyP4XMt4KHxMsk=
