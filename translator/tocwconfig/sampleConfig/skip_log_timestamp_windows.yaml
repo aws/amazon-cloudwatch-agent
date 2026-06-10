@@ -19,6 +19,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
             output_paths:
                 - c:\tmp\am.log
@@ -31,3 +32,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null

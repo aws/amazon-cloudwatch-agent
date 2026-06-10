@@ -14,15 +14,19 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
     prometheusremotewrite/amp:
         add_metric_suffixes: true
         auth:
             authenticator: sigv4auth
+        disable_scope_info: false
         endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+        force_attempt_http2: true
         idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
         max_idle_conns: 100
         namespace: ""
+        protobuf_message: prometheus.WriteRequest
         remote_write_queue:
             enabled: true
             num_consumers: 5
@@ -30,6 +34,7 @@ exporters:
         resource_to_telemetry_conversion:
             clear_after_copy: true
             enabled: true
+            exclude_service_attributes: false
         retry_on_failure:
             enabled: true
             initial_interval: 50ms
@@ -89,7 +94,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     deltatocumulative/host/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
@@ -107,6 +112,7 @@ processors:
                     - jvm.memory.heap.used
                     - jvm.memory.nonheap.init
                     - kafka.consumer.fetch-rate
+        profiles: {}
         spans: {}
         traces: {}
     resource/jmx:
@@ -132,11 +138,12 @@ processors:
             - context: metric
               error_mode: propagate
               statements:
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
+        profile_statements: []
         trace_statements: []
     transform/jmx:
         error_mode: propagate
@@ -146,20 +153,23 @@ processors:
             - context: metric
               error_mode: propagate
               statements:
+                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
-                - set(name, "kafka.fetch-rate") where name == "kafka.consumer.fetch-rate"
+        profile_statements: []
         trace_statements: []
 receivers:
     jmx:
         aggregate_across_mbeans: true
         collection_interval: 1m0s
         endpoint: localhost:8080
+        initial_delay: 1s
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
         otlp:
             endpoint: 0.0.0.0:0
             timeout: 5s
         target_system: jvm,kafka-consumer
+        timeout: 0s
     telegraf_cpu:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -218,6 +228,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -230,3 +241,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null
