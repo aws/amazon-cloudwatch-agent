@@ -45,7 +45,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &want{
 				pipelineType: "logs/emf_logs",
-				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
+				receivers:    []string{"tcp_log/emf_logs", "udp_log/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -61,7 +61,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &want{
 				pipelineType: "logs/emf_logs",
-				receivers:    []string{"tcplog/emf_logs", "udplog/emf_logs"},
+				receivers:    []string{"tcp_log/emf_logs", "udp_log/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -79,7 +79,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &want{
 				pipelineType: "logs/emf_logs",
-				receivers:    []string{"udplog/emf_logs"},
+				receivers:    []string{"udp_log/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},
@@ -97,7 +97,7 @@ func TestTranslator(t *testing.T) {
 			},
 			want: &want{
 				pipelineType: "logs/emf_logs",
-				receivers:    []string{"tcplog/emf_logs"},
+				receivers:    []string{"tcp_log/emf_logs"},
 				processors:   []string{"batch/emf_logs"},
 				exporters:    []string{"awscloudwatchlogs/emf_logs"},
 				extensions:   []string{"agenthealth/logs", "agenthealth/statuscode"},

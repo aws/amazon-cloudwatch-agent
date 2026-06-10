@@ -33,7 +33,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/amp"),
 			},
 		},
 		"WithLogsWithoutDestinations": {
@@ -45,7 +45,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/cloudwatchlogs"),
 			},
 		},
 		"WithMetricsWithCloudWatchDestination": {
@@ -60,7 +60,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/amp"),
 			},
 		},
 		"WithMetricsWithAMP": {
@@ -77,7 +77,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/amp"),
 			},
 		},
 		"WithLogsWithCloudWatch": {
@@ -94,7 +94,7 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/cloudwatchlogs"),
 			},
 		},
 		"WithMultiple/Destinations": {
@@ -117,8 +117,8 @@ func TestTranslators(t *testing.T) {
 				},
 			},
 			want: []pipeline.ID{
-				pipeline.MustNewIDWithName("metrics", "prometheus/amp"),
-				pipeline.MustNewIDWithName("metrics", "prometheus/cloudwatchlogs"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/amp"),
+				pipeline.NewIDWithName(pipeline.SignalMetrics, "prometheus/cloudwatchlogs"),
 			},
 		},
 	}
