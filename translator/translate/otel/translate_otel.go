@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
-	"go.opentelemetry.io/collector/service/telemetry"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 	otelconfig "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
@@ -138,10 +138,10 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		Connectors: map[component.ID]component.Config{},
 		Extensions: map[component.ID]component.Config{},
 		Service: service.Config{
-			Telemetry: telemetry.Config{
+			Telemetry: &otelconftelemetry.Config{
 				Logs:     getLoggingConfig(conf),
 				Metrics:  getSelfTelemetryConfig(conf),
-				Traces:   telemetry.TracesConfig{Level: configtelemetry.LevelNone},
+				Traces:   otelconftelemetry.TracesConfig{Level: configtelemetry.LevelNone},
 				Resource: getSelfTelemetryResource(conf),
 			},
 			Pipelines:  pipelines.Pipelines,
@@ -172,13 +172,13 @@ func hasSigv4auth(extensions common.ComponentTranslatorMap) bool {
 // getSelfTelemetryConfig turns the root self_telemetry block into the collector's own metrics reader.
 // The suffix and scope options are off so prometheus names survive the round trip through the SDK,
 // keeping series such as prometheus_target_scrape_pool_targets recognizable to a scraper.
-func getSelfTelemetryConfig(conf *confmap.Conf) telemetry.MetricsConfig {
+func getSelfTelemetryConfig(conf *confmap.Conf) otelconftelemetry.MetricsConfig {
 	if !selftelemetry.Enabled(conf) {
-		return telemetry.MetricsConfig{Level: configtelemetry.LevelNone}
+		return otelconftelemetry.MetricsConfig{Level: configtelemetry.LevelNone}
 	}
 	host, port := selftelemetry.Host, selftelemetry.Port(conf)
 	without := true
-	return telemetry.MetricsConfig{
+	return otelconftelemetry.MetricsConfig{
 		Level: configtelemetry.LevelBasic,
 		MeterProvider: otelconfig.MeterProvider{
 			Readers: []otelconfig.MetricReader{{
@@ -240,7 +240,7 @@ func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
 
 // getLoggingConfig uses the given JSON config to determine the correct
 // logging configuration that should go in the YAML.
-func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
+func getLoggingConfig(conf *confmap.Conf) otelconftelemetry.LogsConfig {
 	var outputPaths []string
 	filename := context.CurrentContext().GetAgentLogFile()
 	// A slice with an empty string causes OTEL issues, so avoid it.
@@ -248,12 +248,12 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 		outputPaths = []string{filename}
 	}
 	logLevel := parseAgentLogLevel(conf)
-	return telemetry.LogsConfig{
+	return otelconftelemetry.LogsConfig{
 		OutputPaths: outputPaths,
 		Level:       logLevel,
 		Encoding:    common.Console,
 		// enabled by default with 10 second tick
-		Sampling: &telemetry.LogsSamplingConfig{
+		Sampling: &otelconftelemetry.LogsSamplingConfig{
 			Enabled:    true,
 			Initial:    2,
 			Thereafter: 500,
