@@ -86,7 +86,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 				assert.Equal(t, 4, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/logs", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlp_http/logs", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 			}
 		})
