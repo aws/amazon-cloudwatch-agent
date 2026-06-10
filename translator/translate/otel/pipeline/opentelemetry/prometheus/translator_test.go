@@ -15,7 +15,7 @@ import (
 
 func TestPrometheusTranslator(t *testing.T) {
 	tt := NewTranslator()
-	assert.EqualValues(t, "metrics/prometheus", tt.ID().String())
+	assert.EqualValues(t, "metrics/otel_prometheus", tt.ID().String())
 
 	testCases := map[string]struct {
 		input   map[string]interface{}
@@ -187,4 +187,36 @@ func createTempPromConfig(t *testing.T) string {
 	path := filepath.Join(dir, "prometheus.yml")
 	require.NoError(t, os.WriteFile(path, content, 0600))
 	return path
+}
+
+func createTempPlainPromConfig(t *testing.T) string {
+	t.Helper()
+	content := []byte(`global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: plain_test
+    static_configs:
+      - targets: ['localhost:9090']
+`)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "prometheus.yml")
+	require.NoError(t, os.WriteFile(path, content, 0600))
+	return path
+}
+
+func TestPrometheusReceiverTranslatorPlainFormat(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"config_path": createTempPlainPromConfig(t),
+				},
+			},
+		},
+	})
+
+	receiver := &prometheusReceiverTranslator{}
+	cfg, err := receiver.Translate(conf)
+	require.NoError(t, err)
+	assert.NotNil(t, cfg)
 }

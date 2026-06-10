@@ -38,7 +38,7 @@ receivers:
 service:
     extensions: []
     pipelines:
-        metrics/prometheus:
+        metrics/otel_prometheus:
             exporters:
                 - forward/opentelemetry
             processors: []
