@@ -1,0 +1,16 @@
+{
+    "logs": {
+        "logs_collected": {
+            "journald": {
+                "collect_list": [
+                    {
+                        "log_group_name": "system-logs",
+                        "log_stream_name": "{instance_id}",
+                        "units": 123
+                    }
+                ]
+            }
+        },
+        "log_stream_name": "LOG_STREAM_NAME"
+    }
+}
