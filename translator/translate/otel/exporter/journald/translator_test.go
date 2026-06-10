@@ -80,7 +80,7 @@ func TestTranslator_Translate_WithCollectConfig(t *testing.T) {
 
 	assert.Equal(t, "my-journald-logs", cfg.LogGroupName)
 	assert.Equal(t, "i-UNKNOWN", cfg.LogStreamName) // Placeholder resolved
-	assert.Equal(t, int64(7), cfg.LogRetention)
+	assert.Equal(t, int32(7), cfg.LogRetention)
 	assert.Equal(t, "us-east-1", cfg.Region)
 }
 
