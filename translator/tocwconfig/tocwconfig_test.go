@@ -1054,6 +1054,9 @@ func resetContext(t *testing.T) {
 	// credentials so validation doesn't fail in environments without them.
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	// v0.150 k8sattributesprocessor validates node_from_env_var's env var is set
+	// (production sets K8S_NODE_NAME via the downward API).
+	t.Setenv("K8S_NODE_NAME", "node_name_from_env")
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-west-2", "ACJ"
 	}
