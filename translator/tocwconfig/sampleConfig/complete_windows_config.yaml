@@ -20,25 +20,18 @@ exporters:
             - - d1
             - []
     awscloudwatchlogs/emf_logs:
-        certificate_file_path: ""
         emf_only: true
         endpoint: https://logs-fips.us-west-2.amazonaws.com
-        external_id: ""
         imds_retries: 1
-        local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: LOG_STREAM_NAME
         max_retries: 2
         middleware: agenthealth/logs
-        no_verify_ssl: false
         num_workers: 8
-        profile: ""
-        proxy_address: ""
         raw_log: true
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -56,9 +49,7 @@ exporters:
             sizer: {}
             wait_for_result: false
     awsxray:
-        certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-        external_id: ""
         imds_retries: 1
         index_all_attributes: false
         local_mode: true
@@ -66,7 +57,6 @@ exporters:
         middleware: agenthealth/traces
         no_verify_ssl: true
         num_workers: 1
-        profile: ""
         proxy_address: https://proxy.proxy.com
         region: us-west-2
         request_timeout_seconds: 30
