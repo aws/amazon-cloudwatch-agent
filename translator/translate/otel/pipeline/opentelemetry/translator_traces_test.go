@@ -65,7 +65,7 @@ func TestBaseTracesTranslator(t *testing.T) {
 				assert.Equal(t, 2, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/traces", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlp_http/traces", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "sigv4auth/xray", got.Extensions.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 			}

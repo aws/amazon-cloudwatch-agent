@@ -26,6 +26,7 @@ func TestComponents(t *testing.T) {
 		"awsxray",
 		"collectd",
 		"filelog",
+		"file_log",
 		"hostmetrics",
 		"jaeger",
 		"journald",
@@ -39,7 +40,9 @@ func TestComponents(t *testing.T) {
 		"statsd",
 		"systemmetrics",
 		"tcplog",
+		"tcp_log",
 		"udplog",
+		"udp_log",
 		"zipkin",
 	}
 	gotReceivers := collections.MapSlice(maps.Keys(factories.Receivers), component.Type.String)
@@ -66,10 +69,12 @@ func TestComponents(t *testing.T) {
 		"groupbyattrs",
 		"groupbytrace",
 		"k8sattributes",
+		"k8s_attributes",
 		"kueueattributes",
 		"memory_limiter",
 		"metricsgeneration",
 		"metricstarttime",
+		"metric_start_time",
 		"metricstransform",
 		"nodemetadataenricher",
 		"probabilistic_sampler",
@@ -94,6 +99,7 @@ func TestComponents(t *testing.T) {
 		"debug",
 		"nop",
 		"otlphttp",
+		"otlp_http",
 		"prometheusremotewrite",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
@@ -107,6 +113,7 @@ func TestComponents(t *testing.T) {
 		"forward",
 		"routing",
 		"signaltometrics",
+		"signal_to_metrics",
 	}
 	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
 	assert.Equal(t, len(wantConnectors), len(gotConnectors))
