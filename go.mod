@@ -36,7 +36,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/k8sconfig => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/k8sconfig v0.0.0-20260526165114-0e486aa5e699
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/kubelet => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20260526165114-0e486aa5e699
 	github.com/open-telemetry/opentelemetry-collector-contrib/internal/metadataproviders => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20260526165114-0e486aa5e699
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sqlquery => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/sqlquery v0.0.0-20260522182944-6434433557a0
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/sqlquery => github.com/amazon-contributing/opentelemetry-collector-contrib/internal/sqlquery v0.0.0-20260610175509-69af159e720a
 )
 
 replace (
@@ -64,7 +64,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20260526165114-0e486aa5e699
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260526165114-0e486aa5e699
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260526165114-0e486aa5e699
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260522182944-6434433557a0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260610175509-69af159e720a
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260526165114-0e486aa5e699
 )
 

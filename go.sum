@@ -244,8 +244,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet 
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/kubelet v0.0.0-20260526165114-0e486aa5e699/go.mod h1:N2GwwIf7QhML2Lcdh3UCMxWCK4uViTUa+gx2as1sfo8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20260526165114-0e486aa5e699 h1:RScYxUQy8rm7RjKJ+ZoPmJ60OhVpVgi3M/E3E6yw2mI=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/metadataproviders v0.0.0-20260526165114-0e486aa5e699/go.mod h1:YnKeE9wRjdoReCSbDK5JRqVmusZNRyG/dG2R04WbWCQ=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/sqlquery v0.0.0-20260522182944-6434433557a0 h1:tlNiaF/kNp0T2HURSeGEL4BGi0XTmliv4Cd6gpXy/Sw=
-github.com/amazon-contributing/opentelemetry-collector-contrib/internal/sqlquery v0.0.0-20260522182944-6434433557a0/go.mod h1:ONQIjCIQvfNkzG3d3tHa8Unen0sx1HXv/T3t+J6Dg30=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/sqlquery v0.0.0-20260610175509-69af159e720a h1:N9wIagcCpT8u2BBY26DPH7tMCfWGrNnOIOjq+FBA/f8=
+github.com/amazon-contributing/opentelemetry-collector-contrib/internal/sqlquery v0.0.0-20260610175509-69af159e720a/go.mod h1:ONQIjCIQvfNkzG3d3tHa8Unen0sx1HXv/T3t+J6Dg30=
 github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20260526165114-0e486aa5e699 h1:G7/RG07pK5WTP55OC07cjLChbYeKoCX3aO0L2hlBkas=
 github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws v0.0.0-20260526165114-0e486aa5e699/go.mod h1:jGegGUX4PViU3gFU/dPvLUXuXC8GRiY9EYRpJhlczZA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/resourcetotelemetry v0.0.0-20260526165114-0e486aa5e699 h1:CDgWyY1cBiTif75tc8u73ruxJOHrNsP1vb/7EdzbD6Y=
@@ -276,8 +276,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayr
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260526165114-0e486aa5e699/go.mod h1:gNDpUc9eYHKy9YqGYK8toPIo3QZKdYQFLnaVQDA32A0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260526165114-0e486aa5e699 h1:h7uCjzNpN61JFwi6B3tQ4Xp8G+UOnIMrs9wW+U2Wu7s=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260526165114-0e486aa5e699/go.mod h1:wQV77sHJJdUMIvbJna8LjlNb0omEdiVSrwQnoVAlTMM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260522182944-6434433557a0 h1:UticS5Z8QTIpjTE1hQDLntXDoa8IUASy7ckiN06KOU4=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260522182944-6434433557a0/go.mod h1:iBCFUgRNb+QmgZWN7eb2FQlHRmgDO2bOZZCZj8NdMl8=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260610175509-69af159e720a h1:CTYlyYz/xJ6FQX6uPnHIPN02ve9e0YXWz7QQPqqoAhA=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260610175509-69af159e720a/go.mod h1:iBCFUgRNb+QmgZWN7eb2FQlHRmgDO2bOZZCZj8NdMl8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260526165114-0e486aa5e699 h1:zb8r+37wHSD5QCnbOqE0RzP0M6XyrgpjlcgHD6eFD1w=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260526165114-0e486aa5e699/go.mod h1:pa2WwKwnYyS/Wviu8P/uCm7JmtrxtB+IG1f8+b+VJF0=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=
