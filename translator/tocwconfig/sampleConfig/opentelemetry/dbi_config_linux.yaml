@@ -72,6 +72,9 @@ connectors:
         metrics:
             metric.count:
                 description: The number of metrics observed.
+        profiles:
+            profile.count:
+                description: The number of profiles observed.
         spanevents:
             trace.span.event.count:
                 description: The number of span events observed.
@@ -79,162 +82,209 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql:
+    signal_to_metrics/dbi_topsql:
+        error_mode: propagate
         logs:
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.rolname
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.calls"] != nil
               description: SQL execution count
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.calls
               sum:
+                monotonic: false
                 value: Int(attributes["postgresql.calls"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.rolname
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.total_exec_time"] != nil
               description: Total execution time in ms
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.total_exec_time
               sum:
+                monotonic: false
                 value: Double(attributes["postgresql.total_exec_time"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.rolname
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.total_plan_time"] != nil
               description: Total plan time in ms
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.total_plan_time
               sum:
+                monotonic: false
                 value: Double(attributes["postgresql.total_plan_time"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.rolname
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.rows"] != nil
               description: Rows affected
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.rows
               sum:
+                monotonic: false
                 value: Int(attributes["postgresql.rows"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.shared_blks_hit"] != nil
               description: Shared blocks hit
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.shared_blks_hit
               sum:
+                monotonic: false
                 value: Int(attributes["postgresql.shared_blks_hit"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.shared_blks_read"] != nil
               description: Shared blocks read
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.shared_blks_read
               sum:
+                monotonic: false
                 value: Int(attributes["postgresql.shared_blks_read"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.local_blks_hit"] != nil
               description: Local blocks hit
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.local_blks_hit
               sum:
+                monotonic: false
                 value: Int(attributes["postgresql.local_blks_hit"])
               unit: ""
             - attributes:
                 - key: db.system.name
+                  keys_expression: ""
                   optional: false
                 - key: postgresql.queryid
+                  keys_expression: ""
                   optional: false
                 - key: db.namespace
+                  keys_expression: ""
                   optional: false
               conditions:
                 - attributes["postgresql.local_blks_read"] != nil
               description: Local blocks read
               include_resource_attributes:
                 - key: service.instance.id
+                  keys_expression: ""
                   optional: false
               name: postgresql.local_blks_read
               sum:
+                monotonic: false
                 value: Int(attributes["postgresql.local_blks_read"])
               unit: ""
 exporters:
-    otlphttp/logs:
+    otlp_http/logs:
         auth:
             authenticator: agenthealth/opentelemetry_logs
         compression: gzip
         encoding: proto
+        force_attempt_http2: true
         idle_conn_timeout: 1m30s
         logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
         max_idle_conns: 100
         metrics_endpoint: ""
+        profiles_endpoint: ""
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -243,25 +293,27 @@ exporters:
             multiplier: 1.5
             randomization_factor: 0.5
         sending_queue:
+            batch: null
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 10
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
-    otlphttp/metrics:
+    otlp_http/metrics:
         auth:
             authenticator: agenthealth/opentelemetry_metrics
         compression: gzip
         encoding: proto
+        force_attempt_http2: true
         idle_conn_timeout: 1m30s
         logs_endpoint: ""
         max_idle_conns: 100
         metrics_endpoint: https://monitoring.us-west-2.amazonaws.com/v1/metrics
+        profiles_endpoint: ""
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -270,12 +322,12 @@ exporters:
             multiplier: 1.5
             randomization_factor: 0.5
         sending_queue:
+            batch: null
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 10
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
         timeout: 30s
         traces_endpoint: ""
@@ -339,11 +391,6 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
-    batch/opentelemetry_metrics:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 1000
-        send_batch_size: 1000
-        timeout: 30s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -352,15 +399,41 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 30s
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
         logs:
             log_record:
                 - attributes["user.name"] == "cw_monitor" or attributes["postgresql.rolname"] == "cw_monitor"
         metrics: {}
+        profiles: {}
         spans: {}
         traces: {}
     resourcedetection/opentelemetry:
+        akamai:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         aks:
             resource_attributes:
                 cloud.platform:
@@ -369,6 +442,27 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: false
+        alibaba_ecs:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         azure:
             resource_attributes:
                 azure.resourcegroup.name:
@@ -381,6 +475,8 @@ processors:
                     enabled: true
                 cloud.account.id:
                     enabled: true
+                cloud.availability_zone:
+                    enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
@@ -408,8 +504,22 @@ processors:
             - eks
             - env
             - ec2
+        digitalocean:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
         docker:
             resource_attributes:
+                container.image.name:
+                    enabled: false
+                container.name:
+                    enabled: false
                 host.name:
                     enabled: true
                 os.type:
@@ -440,6 +550,7 @@ processors:
             tags:
                 - ^kubernetes.io/cluster/.*$
                 - ^aws:autoscaling:groupName
+            tags_from_imds: false
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
@@ -473,13 +584,26 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
+            node_from_env_var: HOST_NAME
             resource_attributes:
                 cloud.account.id:
+                    enabled: false
+                cloud.availability_zone:
                     enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
                     enabled: true
+                cloud.region:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.image.id:
+                    enabled: false
+                host.name:
+                    enabled: false
+                host.type:
+                    enabled: false
                 k8s.cluster.name:
                     enabled: false
         elasticbeanstalk:
@@ -494,7 +618,9 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
+        force_attempt_http2: true
         gcp:
+            labels: []
             resource_attributes:
                 cloud.account.id:
                     enabled: true
@@ -505,8 +631,6 @@ processors:
                 cloud.provider:
                     enabled: true
                 cloud.region:
-                    enabled: true
-                faas.id:
                     enabled: true
                 faas.instance:
                     enabled: true
@@ -554,10 +678,68 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
+        hetzner:
+            resource_attributes:
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: false
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        ibmcloud_classic:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        ibmcloud_vpc:
+            protocol: http
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         idle_conn_timeout: 1m30s
+        ignore_detector_errors: true
         k8snode:
             auth_type: serviceAccount
             context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
             kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
@@ -568,6 +750,8 @@ processors:
         kubeadm:
             auth_type: serviceAccount
             context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
             kube_config_path: ""
             resource_attributes:
                 k8s.cluster.name:
@@ -595,6 +779,24 @@ processors:
                 faas.version:
                     enabled: true
         max_idle_conns: 100
+        nova:
+            fail_on_missing_metadata: false
+            labels: []
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         openshift:
             address: ""
             resource_attributes:
@@ -608,7 +810,50 @@ processors:
                     enabled: true
             tls: {}
             token: ""
+        oraclecloud:
+            resource_attributes:
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+                oracle_cloud.realm:
+                    enabled: true
         override: true
+        refresh_interval: 0s
+        scaleway:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         system:
             resource_attributes:
                 host.arch:
@@ -627,19 +872,70 @@ processors:
                     enabled: false
                 host.id:
                     enabled: false
+                host.interface:
+                    enabled: false
                 host.ip:
                     enabled: false
                 host.mac:
                     enabled: false
                 host.name:
                     enabled: true
+                os.build.id:
+                    enabled: false
                 os.description:
+                    enabled: false
+                os.name:
                     enabled: false
                 os.type:
                     enabled: true
                 os.version:
                     enabled: false
+        tencent_cvm:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         timeout: 2s
+        upcloud:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        vultr:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.platform:
+                    enabled: false
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
     transform/dbi_fix_start_time:
         error_mode: ignore
         flatten_data: false
@@ -655,6 +951,7 @@ processors:
                 - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
                 - replace_match(datapoint.attributes["postgresql.query_id"], "", "unknown")
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
+        profile_statements: []
         trace_statements: []
     transform/dbi_logs_raw-events_0:
         error_mode: propagate
@@ -666,6 +963,7 @@ processors:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
+        profile_statements: []
         trace_statements: []
     transform/dbi_logs_server-logs_0:
         error_mode: propagate
@@ -677,6 +975,7 @@ processors:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
+        profile_statements: []
         trace_statements: []
     transform/dbi_resource_0:
         error_mode: propagate
@@ -693,6 +992,7 @@ processors:
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "pentest-postgres")
+        profile_statements: []
         trace_statements: []
     transform/dbi_scope_0:
         error_mode: ignore
@@ -709,6 +1009,7 @@ processors:
               statements:
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "otel-database-insights")
+        profile_statements: []
         trace_statements:
             - context: scope
               error_mode: ignore
@@ -730,6 +1031,7 @@ processors:
               statements:
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        profile_statements: []
         trace_statements:
             - context: scope
               error_mode: ignore
@@ -755,6 +1057,7 @@ processors:
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        profile_statements: []
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -774,6 +1077,7 @@ processors:
                 - delete_key(resource.attributes, "aws.log.stream.name")
                 - delete_key(resource.attributes, "aws.log.source")
         metric_statements: []
+        profile_statements: []
         trace_statements: []
     transform/logs_routing:
         error_mode: ignore
@@ -792,6 +1096,7 @@ processors:
                 - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
                 - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
         metric_statements: []
+        profile_statements: []
         trace_statements: []
 receivers:
     filelog/postgresql_0:
@@ -806,6 +1111,8 @@ receivers:
         initial_buffer_size: 16384
         max_concurrent_files: 1024
         max_log_size: 1048576
+        max_log_size_behavior: split
+        on_truncate: ignore
         operators: []
         poll_interval: 200ms
         retry_on_failure:
@@ -876,10 +1183,19 @@ receivers:
             postgresql.bgwriter.buffers.allocated:
                 enabled: true
             postgresql.bgwriter.buffers.writes:
+                aggregation_strategy: sum
+                attributes:
+                    - source
                 enabled: true
             postgresql.bgwriter.checkpoint.count:
+                aggregation_strategy: sum
+                attributes:
+                    - type
                 enabled: true
             postgresql.bgwriter.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - type
                 enabled: true
             postgresql.bgwriter.maxwritten:
                 enabled: true
@@ -888,6 +1204,9 @@ receivers:
             postgresql.blks_read:
                 enabled: false
             postgresql.blocks_read:
+                aggregation_strategy: sum
+                attributes:
+                    - source
                 enabled: true
             postgresql.commits:
                 enabled: true
@@ -896,28 +1215,48 @@ receivers:
             postgresql.database.count:
                 enabled: true
             postgresql.database.locks:
+                aggregation_strategy: avg
+                attributes:
+                    - relation
+                    - mode
+                    - lock_type
                 enabled: false
             postgresql.db_size:
                 enabled: true
             postgresql.deadlocks:
                 enabled: false
             postgresql.function.calls:
+                aggregation_strategy: sum
+                attributes:
+                    - function
                 enabled: false
             postgresql.index.scans:
                 enabled: true
             postgresql.index.size:
                 enabled: true
             postgresql.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
                 enabled: true
             postgresql.replication.data_delay:
+                aggregation_strategy: avg
+                attributes:
+                    - replication_client
                 enabled: true
             postgresql.rollbacks:
                 enabled: true
             postgresql.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - state
                 enabled: true
             postgresql.sequential_scans:
                 enabled: false
             postgresql.sessions:
+                aggregation_strategy: avg
+                attributes:
+                    - session_state
                 enabled: false
             postgresql.table.count:
                 enabled: true
@@ -942,8 +1281,16 @@ receivers:
             postgresql.wal.age:
                 enabled: true
             postgresql.wal.delay:
+                aggregation_strategy: avg
+                attributes:
+                    - operation
+                    - replication_client
                 enabled: false
             postgresql.wal.lag:
+                aggregation_strategy: avg
+                attributes:
+                    - operation
+                    - replication_client
                 enabled: true
         passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
@@ -989,10 +1336,19 @@ receivers:
             postgresql.bgwriter.buffers.allocated:
                 enabled: true
             postgresql.bgwriter.buffers.writes:
+                aggregation_strategy: sum
+                attributes:
+                    - source
                 enabled: true
             postgresql.bgwriter.checkpoint.count:
+                aggregation_strategy: sum
+                attributes:
+                    - type
                 enabled: true
             postgresql.bgwriter.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - type
                 enabled: true
             postgresql.bgwriter.maxwritten:
                 enabled: true
@@ -1001,6 +1357,9 @@ receivers:
             postgresql.blks_read:
                 enabled: false
             postgresql.blocks_read:
+                aggregation_strategy: sum
+                attributes:
+                    - source
                 enabled: true
             postgresql.commits:
                 enabled: true
@@ -1009,28 +1368,48 @@ receivers:
             postgresql.database.count:
                 enabled: true
             postgresql.database.locks:
+                aggregation_strategy: avg
+                attributes:
+                    - relation
+                    - mode
+                    - lock_type
                 enabled: false
             postgresql.db_size:
                 enabled: true
             postgresql.deadlocks:
                 enabled: false
             postgresql.function.calls:
+                aggregation_strategy: sum
+                attributes:
+                    - function
                 enabled: false
             postgresql.index.scans:
                 enabled: true
             postgresql.index.size:
                 enabled: true
             postgresql.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
                 enabled: true
             postgresql.replication.data_delay:
+                aggregation_strategy: avg
+                attributes:
+                    - replication_client
                 enabled: true
             postgresql.rollbacks:
                 enabled: true
             postgresql.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - state
                 enabled: true
             postgresql.sequential_scans:
                 enabled: false
             postgresql.sessions:
+                aggregation_strategy: avg
+                attributes:
+                    - session_state
                 enabled: false
             postgresql.table.count:
                 enabled: true
@@ -1055,8 +1434,16 @@ receivers:
             postgresql.wal.age:
                 enabled: true
             postgresql.wal.delay:
+                aggregation_strategy: avg
+                attributes:
+                    - operation
+                    - replication_client
                 enabled: false
             postgresql.wal.lag:
+                aggregation_strategy: avg
+                attributes:
+                    - operation
+                    - replication_client
                 enabled: true
         passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
@@ -1099,7 +1486,7 @@ service:
         logs/dbi_postgresql_0:
             exporters:
                 - count/dbi_dbload
-                - signaltometrics/dbi_topsql
+                - signal_to_metrics/dbi_topsql
             processors:
                 - filter/dbi_exclude_monitor_0
             receivers:
@@ -1127,7 +1514,7 @@ service:
                 - filelog/postgresql_0
         logs/opentelemetry:
             exporters:
-                - otlphttp/logs
+                - otlp_http/logs
             processors:
                 - resourcedetection/opentelemetry
                 - transform/identity
@@ -1147,7 +1534,7 @@ service:
             receivers:
                 - postgresql/metrics_0
                 - count/dbi_dbload
-                - signaltometrics/dbi_topsql
+                - signal_to_metrics/dbi_topsql
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -1157,7 +1544,7 @@ service:
                 - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
-                - otlphttp/metrics
+                - otlp_http/metrics
             processors:
                 - resourcedetection/opentelemetry
                 - transform/identity
@@ -1167,6 +1554,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -1179,3 +1567,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null
