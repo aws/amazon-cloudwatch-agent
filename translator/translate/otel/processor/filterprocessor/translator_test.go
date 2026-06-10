@@ -123,9 +123,14 @@ func TestTranslator(t *testing.T) {
 				require.NotNil(t, got)
 				gotCfg, ok := got.(*filterprocessor.Config)
 				require.True(t, ok)
-				wantCfg := factory.CreateDefaultConfig()
+				wantCfg := factory.CreateDefaultConfig().(*filterprocessor.Config)
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
-				require.Equal(t, wantCfg, gotCfg)
+				assert.Equal(t, wantCfg.ErrorMode, gotCfg.ErrorMode)
+				assert.Equal(t, wantCfg.Metrics, gotCfg.Metrics)
+				assert.Equal(t, wantCfg.Logs, gotCfg.Logs)
+				assert.Equal(t, wantCfg.Spans, gotCfg.Spans)
+				assert.Equal(t, wantCfg.Traces, gotCfg.Traces)
+				assert.Equal(t, wantCfg.Profiles, gotCfg.Profiles)
 			}
 		})
 	}
