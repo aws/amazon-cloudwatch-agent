@@ -110,7 +110,7 @@ func (t *translator) setJournaldFieldsFromConfig(cfg *awscloudwatchlogsexporter.
 	}
 
 	if retentionInDays, ok := t.collectConfig["retention_in_days"].(float64); ok {
-		cfg.LogRetention = int64(retentionInDays)
+		cfg.LogRetention = int32(retentionInDays)
 	}
 
 	return nil
