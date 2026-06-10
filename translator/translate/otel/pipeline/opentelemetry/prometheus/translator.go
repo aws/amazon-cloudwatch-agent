@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -23,9 +22,6 @@ import (
 const (
 	pipelineName           = "otel_prometheus"
 	otelConfigParsingError = "has invalid keys: global"
-	defaultTLSCaPath       = "/etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt"
-	defaultTLSCertPath     = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.crt"
-	defaultTLSKeyPath      = "/etc/amazon-cloudwatch-observability-agent-ta-client-cert/client.key"
 )
 
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
@@ -127,21 +123,6 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
 		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
 		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
-	} else {
-		// OTel format — check if target allocator is configured.
-		// Only inject default TLS paths if the customer hasn't provided their own.
-		if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
-			if cfg.TargetAllocator.TLSSetting.CAFile == "" {
-				cfg.TargetAllocator.TLSSetting.CAFile = defaultTLSCaPath
-			}
-			if cfg.TargetAllocator.TLSSetting.CertFile == "" {
-				cfg.TargetAllocator.TLSSetting.CertFile = defaultTLSCertPath
-			}
-			if cfg.TargetAllocator.TLSSetting.KeyFile == "" {
-				cfg.TargetAllocator.TLSSetting.KeyFile = defaultTLSKeyPath
-			}
-			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
-		}
 	}
 
 	return cfg, nil
