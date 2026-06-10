@@ -43,7 +43,7 @@ const (
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
 	JmxKey                                         = "jmx"
-	TLSKey                                         = "tls" //nolint:revive
+	TLSKey                                         = "tls"
 	Endpoint                                       = "endpoint"
 	EndpointOverrideKey                            = "endpoint_override"
 	RegionOverrideKey                              = "region_override"
@@ -81,9 +81,11 @@ const (
 	Region                                         = "region"
 	LogGroupName                                   = "log_group_name"
 	LogStreamName                                  = "log_stream_name"
+	CollectListKey                                 = "collect_list"
 	NameKey                                        = "name"
 	RenameKey                                      = "rename"
 	UnitKey                                        = "unit"
+	JournaldKey                                    = "journald"
 )
 
 const (

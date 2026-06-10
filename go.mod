@@ -188,6 +188,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.124.1
@@ -628,7 +629,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/zap/exp v0.3.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
