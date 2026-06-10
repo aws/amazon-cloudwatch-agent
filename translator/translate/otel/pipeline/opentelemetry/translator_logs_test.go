@@ -24,11 +24,11 @@ func TestBaseLogsTranslator(t *testing.T) {
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey},
 		},
 		"WithoutCollectKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey},
 		},
 		"WithCollectKeyButNoLogs": {
 			input: map[string]interface{}{
@@ -36,7 +36,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 					"collect": map[string]interface{}{},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey},
 		},
 		"WithCollectLogsKey": {
 			input: map[string]interface{}{

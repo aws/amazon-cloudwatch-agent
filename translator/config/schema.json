@@ -1817,6 +1817,21 @@
               },
               "required": ["config_path"],
               "additionalProperties": false
+            },
+            "otlp": {
+              "type": "object",
+              "properties": {
+                "grpc_endpoint": {
+                  "description": "OTLP gRPC receiver endpoint",
+                  "type": "string"
+                },
+                "http_endpoint": {
+                  "description": "OTLP HTTP receiver endpoint",
+                  "type": "string"
+                }
+              },
+              "required": ["grpc_endpoint", "http_endpoint"],
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
