@@ -66,7 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ProxyServer.Endpoint = endpoint
 	}
 	if insecure, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.InsecureKey)); ok {
-		cfg.ProxyServer.TLSSetting.Insecure = insecure
+		cfg.ProxyServer.TLS.Insecure = insecure
 	}
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.ProxyServer.LocalMode = true
