@@ -99,10 +99,10 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 		connectors = append(connectors, c.ID().String())
 	})
 
-	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "postgresql/metrics_perresource_0", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, receivers)
+	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "postgresql/metrics_perresource_0", "count/dbi_dbload", "signal_to_metrics/dbi_topsql"}, receivers)
 	assert.Equal(t, []string{"transform/dbi_scope", "transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
-	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signal_to_metrics/dbi_topsql"}, connectors)
 }
 
 func TestDbiTranslateServerLogs_FilelogConfig(t *testing.T) {
