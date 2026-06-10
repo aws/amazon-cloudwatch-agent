@@ -1,22 +1,15 @@
 exporters:
     awscloudwatchlogs/journald_0:
-        certificate_file_path: ""
         endpoint: ""
-        external_id: ""
         imds_retries: 1
-        local_mode: false
         log_group_name: journald-errors
         log_retention: 7
         log_stream_name: journald-stream
         max_retries: 2
         middleware: agenthealth/logs
-        no_verify_ssl: false
         num_workers: 8
-        profile: ""
-        proxy_address: ""
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -24,14 +17,13 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        role_arn: ""
         sending_queue:
+            batch: null
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 1
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
 extensions:
     agenthealth/logs:
@@ -72,6 +64,7 @@ processors:
 receivers:
     journald/journald_0:
         id: journald_input
+        journalctl_path: journalctl
         operators: []
         priority: err
         retry_on_failure:
@@ -99,6 +92,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -111,3 +105,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null
