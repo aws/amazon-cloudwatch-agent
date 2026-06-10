@@ -14,7 +14,7 @@ import (
 
 func TestTranslatorID(t *testing.T) {
 	tr := NewTranslatorWithName("test", EndpointConfig{})
-	assert.Equal(t, "otlphttp/test", tr.ID().String())
+	assert.Equal(t, "otlp_http/test", tr.ID().String())
 }
 
 func TestTranslatorWithEndpoints(t *testing.T) {
@@ -44,6 +44,6 @@ func TestTranslatorWithAuthenticator(t *testing.T) {
 	require.NoError(t, err)
 
 	otlpCfg := cfg.(*otlphttpexporter.Config)
-	require.NotNil(t, otlpCfg.ClientConfig.Auth)
-	assert.Equal(t, authID, otlpCfg.ClientConfig.Auth.AuthenticatorID)
+	require.True(t, otlpCfg.ClientConfig.Auth.HasValue())
+	assert.Equal(t, authID, otlpCfg.ClientConfig.Auth.Get().AuthenticatorID)
 }
