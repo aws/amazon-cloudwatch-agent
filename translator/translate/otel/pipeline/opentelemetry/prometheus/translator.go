@@ -126,5 +126,11 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
 	cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
 
+	// Reload ensures the config goes through promconfig.Load() which sets the
+	// internal `loaded` flag required by GetScrapeConfigs() in Prometheus v0.308.1+.
+	if err := cfg.PrometheusConfig.Reload(); err != nil {
+		return nil, fmt.Errorf("unable to reload prometheus config from %s: %w", configPath, err)
+	}
+
 	return cfg, nil
 }
