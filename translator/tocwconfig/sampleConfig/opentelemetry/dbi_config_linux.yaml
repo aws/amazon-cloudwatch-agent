@@ -341,17 +341,17 @@ processors:
               key: aws.log.stream.name
     batch/opentelemetry:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 200ms
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 15s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
             - aws.log.group.name
             - aws.log.stream.name
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 1m0s
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 15s
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
         logs:

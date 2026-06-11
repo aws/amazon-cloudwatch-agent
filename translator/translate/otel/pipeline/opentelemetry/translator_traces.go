@@ -52,7 +52,7 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey), batchprocessor.WithSendBatchSize(common.MaxSpansPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxSpansPerRequest), batchprocessor.WithTimeout(common.BatchTimeout))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),

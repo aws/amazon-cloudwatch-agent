@@ -5,7 +5,6 @@ package opentelemetry
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -81,7 +80,9 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	)
 	batch := batchprocessor.NewTranslator(
 		common.WithName("opentelemetry_logs"),
-		batchprocessor.WithTimeout(1*time.Minute),
+		batchprocessor.WithSendBatchSize(common.MaxLogsPerRequest),
+		batchprocessor.WithSendBatchMaxSize(common.MaxLogsPerRequest),
+		batchprocessor.WithTimeout(common.BatchTimeout),
 		batchprocessor.WithMetadataKeys([]string{"aws.log.group.name", "aws.log.stream.name"}),
 	)
 
