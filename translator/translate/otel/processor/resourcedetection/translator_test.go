@@ -4,6 +4,8 @@
 package resourcedetection
 
 import (
+	"embed"
+	"strings"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
@@ -11,11 +13,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
+	"gopkg.in/yaml.v3"
 
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
+
+// resourceDetectionConfigsFS mirrors the set of configs embedded by translator.go so the
+// guard test below iterates exactly the configs shipped by the agent.
+//
+//go:embed configs/*.yaml
+var resourceDetectionConfigsFS embed.FS
 
 func TestTranslate(t *testing.T) {
 	tt := NewTranslator(WithSignal(pipeline.SignalTraces))
@@ -42,8 +51,9 @@ func TestTranslate(t *testing.T) {
 					"ecs",
 					"ec2",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^aws:autoscaling:groupName"},
 				},
@@ -112,8 +122,12 @@ func TestTranslate(t *testing.T) {
 					"env",
 					"ec2",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
+				"eks": map[string]interface{}{
+					"node_from_env_var": "HOST_NAME",
+				},
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^kubernetes.io/cluster/.*$", "^aws:autoscaling:groupName"},
 				},
@@ -132,8 +146,9 @@ func TestTranslate(t *testing.T) {
 					"env",
 					"azure",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
 			}),
 		},
 		"WithAppSignalsEnabledOnAKS": {
@@ -150,8 +165,9 @@ func TestTranslate(t *testing.T) {
 					"aks",
 					"azure",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
 			}),
 		},
 		"WithAppSignalsEnabledOnGCE": {
@@ -244,4 +260,32 @@ func TestTranslate_NonOpenTelemetryKey_HasMiddleware(t *testing.T) {
 	require.NotNil(t, got)
 	gotCfg := got.(*resourcedetectionprocessor.Config)
 	assert.NotNil(t, gotCfg.MiddlewareID)
+}
+
+// TestAllEmbeddedConfigsIgnoreDetectorErrors is a process guard: v0.150 removed the
+// propagateerrors gate, so a detector failure aborts collector startup unless
+// ignore_detector_errors is set. Every embedded resource detection config must therefore
+// opt into log-and-continue. This test fails if any current or future config omits it.
+func TestAllEmbeddedConfigsIgnoreDetectorErrors(t *testing.T) {
+	entries, err := resourceDetectionConfigsFS.ReadDir("configs")
+	require.NoError(t, err)
+
+	var checked int
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+		name := entry.Name()
+		data, err := resourceDetectionConfigsFS.ReadFile("configs/" + name)
+		require.NoErrorf(t, err, "reading embedded config %q", name)
+
+		var cfg map[string]interface{}
+		require.NoErrorf(t, yaml.Unmarshal(data, &cfg), "parsing embedded config %q", name)
+
+		val, ok := cfg["ignore_detector_errors"]
+		require.Truef(t, ok, "embedded config %q must declare ignore_detector_errors", name)
+		assert.Equalf(t, true, val, "embedded config %q must set ignore_detector_errors: true", name)
+		checked++
+	}
+	require.Positive(t, checked, "expected to check at least one embedded resource detection config")
 }
