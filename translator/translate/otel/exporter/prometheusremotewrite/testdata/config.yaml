@@ -22,7 +22,7 @@ force_attempt_http2: true
 protobuf_message: prometheus.WriteRequest
 target_info:
   enabled: true
-add_metric_suffixes: true
+add_metric_suffixes: false
 max_batch_size_bytes: 3000000
 max_conns_per_host: 0
 max_idle_conns: 100
