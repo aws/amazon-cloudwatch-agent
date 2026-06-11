@@ -41,8 +41,9 @@ func TestTranslate(t *testing.T) {
 					"ecs",
 					"ec2",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^aws:autoscaling:groupName"},
 				},
@@ -111,8 +112,12 @@ func TestTranslate(t *testing.T) {
 					"env",
 					"ec2",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
+				"eks": map[string]interface{}{
+					"node_from_env_var": "HOST_NAME",
+				},
 				"ec2": map[string]interface{}{
 					"tags": []interface{}{"^kubernetes.io/cluster/.*$", "^aws:autoscaling:groupName"},
 				},

@@ -1,6 +1,9 @@
 detectors: [eks, env, ec2]
 override: true
 timeout: 2s
+ignore_detector_errors: true
+eks:
+  node_from_env_var: HOST_NAME
 ec2:
   tags:
     - ^kubernetes.io/cluster/.*$

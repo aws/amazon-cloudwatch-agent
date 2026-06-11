@@ -1481,7 +1481,7 @@ processors:
                 host.type:
                     enabled: true
         idle_conn_timeout: 1m30s
-        ignore_detector_errors: false
+        ignore_detector_errors: true
         k8snode:
             auth_type: serviceAccount
             context: ""
