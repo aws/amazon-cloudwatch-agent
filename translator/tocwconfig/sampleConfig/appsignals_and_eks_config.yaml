@@ -371,9 +371,12 @@ extensions:
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
+        imds_retries: 1
         logs_provision_failure_backoff: 30s
-        logs_provision_timeout: 10s
+        max_retries: 2
+        num_workers: 8
         region: us-east-1
+        request_timeout_seconds: 10
     awsproxy/application_signals:
         additional_routing_rules:
             - aws_endpoint: https://application-signals.us-east-1.api.aws
@@ -416,14 +419,20 @@ extensions:
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
     sigv4auth/logs:
-        assume_role:
-            sts_region: us-east-1
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
         region: us-east-1
+        request_timeout_seconds: 30
         service: logs
     sigv4auth/monitoring:
-        assume_role:
-            sts_region: us-east-1
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
         region: us-east-1
+        request_timeout_seconds: 30
         service: monitoring
 processors:
     attributestocontext:
