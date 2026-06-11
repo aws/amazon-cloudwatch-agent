@@ -292,9 +292,12 @@ extensions:
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
+        imds_retries: 1
         logs_provision_failure_backoff: 30s
-        logs_provision_timeout: 10s
+        max_retries: 2
+        num_workers: 8
         region: us-west-2
+        request_timeout_seconds: 10
     headers_setter/logs:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
@@ -305,14 +308,20 @@ extensions:
               from_context: aws.log.stream.name
               key: x-aws-log-stream
     sigv4auth/logs:
-        assume_role:
-            sts_region: us-west-2
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
         region: us-west-2
+        request_timeout_seconds: 30
         service: logs
     sigv4auth/monitoring:
-        assume_role:
-            sts_region: us-west-2
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
         region: us-west-2
+        request_timeout_seconds: 30
         service: monitoring
 processors:
     attributestocontext:
@@ -840,7 +849,7 @@ receivers:
                 enabled: false
             postgresql.wal.lag:
                 enabled: true
-        passfile: sampleConfig/testdata/.pgpass
+        passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
             collection_interval: 1m0s
             enabled: true
@@ -953,7 +962,7 @@ receivers:
                 enabled: false
             postgresql.wal.lag:
                 enabled: true
-        passfile: sampleConfig/testdata/.pgpass
+        passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
             collection_interval: 1s
             enabled: true
