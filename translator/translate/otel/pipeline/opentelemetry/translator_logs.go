@@ -39,7 +39,7 @@ func (t *baseLogsTranslator) ID() pipeline.ID {
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	otlpKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)
 	if conf == nil || (!conf.IsSet(common.OtelCollectLogsConfigKey) && !conf.IsSet(common.DatabaseInsightsConfigKey) && !conf.IsSet(otlpKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.OtelCollectLogsConfigKey}
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + otlpKey}
 	}
 
 	region := agent.Global_Config.Region

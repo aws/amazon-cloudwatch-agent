@@ -24,11 +24,11 @@ func TestBaseLogsTranslator(t *testing.T) {
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
 		},
 		"WithoutCollectKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
 		},
 		"WithCollectKeyButNoLogs": {
 			input: map[string]interface{}{
@@ -36,7 +36,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 					"collect": map[string]interface{}{},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
 		},
 		"WithCollectLogsKey": {
 			input: map[string]interface{}{
