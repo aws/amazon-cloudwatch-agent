@@ -389,7 +389,7 @@ func TestSharedOtlp(t *testing.T) {
 func TestOtlpOtelConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	checkTranslationNoValidation(t, "otlp_otel_config", "linux", nil, "")
+	checkTranslation(t, "otlp_otel_config", "linux", nil, "")
 }
 
 func TestProcstatMemorySwapConfig(t *testing.T) {
