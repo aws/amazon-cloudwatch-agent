@@ -1,6 +1,7 @@
 detectors: [env, ecs, ec2]
 override: true
 timeout: 2s
+ignore_detector_errors: true
 ecs:
   resource_attributes:
     aws.ecs.cluster.arn:
