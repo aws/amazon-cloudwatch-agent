@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awscloudwatchlogsprovisioner"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -64,6 +65,9 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	// Connector
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
+	// Agent health
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.LogsName, []string{"*"}, agenthealth.WithAdditionalAuth(headersExt.ID()))
+
 	// Processors
 	attrCtx := attributestocontext.NewTranslator([]attributestocontextprocessor.ActionKeyValue{
 		{Key: "aws.log.group.name", FromResourceAttribute: "aws.log.group.name"},
@@ -84,8 +88,8 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), attrCtx, logsCleanup, batch),
-		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(headersExt.ID()))),
-		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, provisionerExt, headersExt),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, provisionerExt, headersExt, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
 }

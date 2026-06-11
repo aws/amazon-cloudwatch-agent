@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
@@ -45,14 +46,15 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 	}
 	tracesEndpoint := common.ServiceEndpoint("xray", region, "/v1/traces")
 	sigv4Ext := sigv4auth.NewTranslatorWithService("xray")
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.TracesName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey))),
-		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(sigv4Ext.ID()))),
-		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
 }
