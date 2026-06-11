@@ -323,3 +323,21 @@ func TestOpenTelemetryHostInsightsSchemaValidation(t *testing.T) {
 	expectedErrorMap["additional_property_not_allowed"] = 1
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryCollect.json", false, expectedErrorMap)
 }
+
+func TestOpenTelemetryDatabaseInsightsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryDatabaseInsights.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryDatabaseInsights.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryPrometheusSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryPrometheus.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryPrometheus.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
+}
