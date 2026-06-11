@@ -342,7 +342,35 @@ func TestContainerInsightsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
-	checkTranslationNoValidation(t, "opentelemetry/container_insights_config", "linux", nil, "")
+
+	// Cannot use checkTranslation here because the container_insights prometheus
+	// receiver references /var/run/secrets/kubernetes.io/serviceaccount/token
+	// which only exists inside K8s pods. Translate without collector validation.
+	agent.Global_Config = *new(agent.Agent)
+	translator.SetTargetPlatform("linux")
+	var input interface{}
+	blob, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_config.json")
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(blob, &input))
+	_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
+
+	var expected interface{}
+	bs, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_config.yaml")
+	require.NoError(t, err)
+	require.NoError(t, yaml.Unmarshal(bs, &expected))
+
+	var actual interface{}
+	cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+	require.NoError(t, err)
+	yamlConfig, err := mapstructure.Marshal(cfg)
+	require.NoError(t, err)
+	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+		return pretty.Sprint(x) < pretty.Sprint(y)
+	})
+	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 }
 
 func TestPrometheusOtelPipelineConfig(t *testing.T) {
@@ -979,46 +1007,6 @@ func checkTranslation(t *testing.T, fileName string, targetPlatform string, expe
 		content, err := os.ReadFile(jsonFilePath)
 		require.NoError(t, err)
 		checkIfEnvTranslateSucceed(t, string(content), targetPlatform, expectedEnvVars)
-	}
-}
-
-// checkTranslationNoValidation tests OTel YAML translation without running collector
-// validation. Needed for configs that reference K8s/ECS resources not available in unit tests.
-func checkTranslationNoValidation(t *testing.T, fileName string, targetPlatform string, expectedEnvVars map[string]string, appendString string) {
-	t.Helper()
-	jsonFilePath := fmt.Sprintf("./sampleConfig/%v.json", fileName)
-	yamlFilePath := fmt.Sprintf("./sampleConfig/%v%v.yaml", fileName, appendString)
-
-	agent.Global_Config = *new(agent.Agent)
-	translator.SetTargetPlatform(targetPlatform)
-	var input interface{}
-	blob, err := os.ReadFile(jsonFilePath)
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(blob, &input))
-
-	// Run TOML translation to set Global_Config (region, etc.)
-	_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
-
-	var expected interface{}
-	bs, err := os.ReadFile(yamlFilePath)
-	require.NoError(t, err)
-	require.NoError(t, yaml.Unmarshal(bs, &expected))
-
-	var actual interface{}
-	cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
-	require.NoError(t, err)
-	yamlConfig, err := mapstructure.Marshal(cfg)
-	require.NoError(t, err)
-	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
-	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
-
-	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
-		return pretty.Sprint(x) < pretty.Sprint(y)
-	})
-	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
-
-	if expectedEnvVars != nil {
-		checkIfEnvTranslateSucceed(t, string(blob), targetPlatform, expectedEnvVars)
 	}
 }
 
