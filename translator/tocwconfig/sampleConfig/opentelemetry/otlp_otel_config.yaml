@@ -479,6 +479,7 @@ service:
             exporters:
                 - otlphttp/logs
             processors:
+                - resourcedetection
                 - attributestocontext
                 - transform/logs_cleanup
                 - batch/logs

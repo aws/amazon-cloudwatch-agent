@@ -75,7 +75,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, 1, got.Receivers.Len())
-				assert.Equal(t, 3, got.Processors.Len())
+				assert.Equal(t, 4, got.Processors.Len())
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 3, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
