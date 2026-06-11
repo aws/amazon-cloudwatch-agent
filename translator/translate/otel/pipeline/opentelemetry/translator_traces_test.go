@@ -14,46 +14,28 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-func TestBaseLogsTranslator(t *testing.T) {
-	tt := NewBaseLogsTranslator()
-	assert.EqualValues(t, "logs/opentelemetry", tt.ID().String())
+func TestBaseTracesTranslator(t *testing.T) {
+	tt := NewBaseTracesTranslator()
+	assert.EqualValues(t, "traces/opentelemetry", tt.ID().String())
 
+	otlpTracesKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		wantErr error
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otlpTracesKey},
 		},
-		"WithoutCollectKey": {
+		"WithoutOtlpKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otlpTracesKey},
 		},
-		"WithCollectKeyButNoLogs": {
-			input: map[string]interface{}{
-				"opentelemetry": map[string]interface{}{
-					"collect": map[string]interface{}{},
-				},
-			},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
-		},
-		"WithCollectLogsKey": {
+		"WithOtlpKey": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
-						"logs": map[string]interface{}{},
-					},
-				},
-			},
-		},
-		"WithDbiOnly": {
-			input: map[string]interface{}{
-				"opentelemetry": map[string]interface{}{
-					"collect": map[string]interface{}{
-						"database_insights": map[string]interface{}{
-							"postgresql": []any{map[string]any{"endpoint": "localhost:5432"}},
-						},
+						"otlp": map[string]interface{}{},
 					},
 				},
 			},
@@ -75,25 +57,26 @@ func TestBaseLogsTranslator(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, 1, got.Receivers.Len())
-				assert.Equal(t, 3, got.Processors.Len())
+				assert.Equal(t, 2, got.Processors.Len())
 				assert.Equal(t, 1, got.Exporters.Len())
-				assert.Equal(t, 3, got.Extensions.Len())
+				assert.Equal(t, 1, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/logs", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlphttp/traces", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "sigv4auth/xray", got.Extensions.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 			}
 		})
 	}
 }
 
-func TestBaseLogsTranslatorEmptyRegion(t *testing.T) {
+func TestBaseTracesTranslatorEmptyRegion(t *testing.T) {
 	agent.Global_Config.Region = ""
-	tt := NewBaseLogsTranslator()
+	tt := NewBaseTracesTranslator()
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
-				"logs": map[string]interface{}{},
+				"otlp": map[string]interface{}{},
 			},
 		},
 	})
