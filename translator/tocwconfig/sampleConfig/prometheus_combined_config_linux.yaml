@@ -64,7 +64,7 @@ exporters:
         retain_initial_value_of_delta_metric: false
         version: "0"
     prometheusremotewrite/amp:
-        add_metric_suffixes: true
+        add_metric_suffixes: false
         auth:
             authenticator: sigv4auth
         disable_scope_info: false

@@ -13,7 +13,7 @@ exporters:
             enabled: true
             exclude_service_attributes: false
     prometheusremotewrite/amp:
-        add_metric_suffixes: true
+        add_metric_suffixes: false
         auth:
             authenticator: sigv4auth
         disable_scope_info: false
