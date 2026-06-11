@@ -10,7 +10,7 @@
             "endpoint": "localhost:5432",
             "instance_name": "pentest-postgres",
             "username": "cw_monitor",
-            "password_file": "sampleConfig/testdata/.pgpass",
+            "password_file": "sampleConfig/opentelemetry/testdata/.pgpass",
             "logs": {
               "file_path": "/var/lib/pgsql/data/log/postgresql-*.log"
             }

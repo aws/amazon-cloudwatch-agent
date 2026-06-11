@@ -89,9 +89,9 @@ func TestDropOriginConfig(t *testing.T) {
 func TestDBIConfigLinux(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	require.NoError(t, os.Chmod("sampleConfig/testdata/.pgpass", 0600))
+	require.NoError(t, os.Chmod("sampleConfig/opentelemetry/testdata/.pgpass", 0600))
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "dbi_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "opentelemetry/dbi_config_linux", "linux", expectedEnvVars, "")
 }
 
 func TestJournaldLogsUnits(t *testing.T) {

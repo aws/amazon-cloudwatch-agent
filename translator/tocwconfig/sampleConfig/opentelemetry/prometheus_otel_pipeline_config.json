@@ -5,7 +5,7 @@
   "opentelemetry": {
     "collect": {
       "prometheus": {
-        "config_path": "./sampleConfig/prometheus_otel_scrape_config.yaml"
+        "config_path": "./sampleConfig/opentelemetry/prometheus_otel_scrape_config.yaml"
       }
     }
   }

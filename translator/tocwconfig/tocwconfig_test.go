@@ -335,20 +335,20 @@ func TestOtlpMetricsConfig(t *testing.T) {
 func TestHostInsightsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	checkTranslation(t, "host_insights_config", "linux", nil, "")
+	checkTranslation(t, "opentelemetry/host_insights_config", "linux", nil, "")
 }
 
 func TestContainerInsightsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
-	checkTranslationNoValidation(t, "container_insights_config", "linux", nil, "")
+	checkTranslationNoValidation(t, "opentelemetry/container_insights_config", "linux", nil, "")
 }
 
 func TestPrometheusOtelPipelineConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	checkTranslationNoValidation(t, "prometheus_otel_pipeline_config", "linux", nil, "")
+	checkTranslationNoValidation(t, "opentelemetry/prometheus_otel_pipeline_config", "linux", nil, "")
 }
 
 func TestOtlpMetricsConfigKubernetes(t *testing.T) {
@@ -389,7 +389,7 @@ func TestSharedOtlp(t *testing.T) {
 func TestOtlpOtelConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	checkTranslation(t, "otlp_otel_config", "linux", nil, "")
+	checkTranslation(t, "opentelemetry/otlp_otel_config", "linux", nil, "")
 }
 
 func TestProcstatMemorySwapConfig(t *testing.T) {
