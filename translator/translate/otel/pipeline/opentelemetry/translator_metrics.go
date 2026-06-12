@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
 
 var otelCollectKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey)
@@ -54,7 +55,7 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.Identity), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("metrics", otlphttp.EndpointConfig{MetricsEndpoint: metricsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),

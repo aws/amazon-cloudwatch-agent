@@ -676,6 +676,10 @@ processors:
             - k8s.pod.name
             - k8s.namespace.name
             - k8s.container.name
+    groupbyattrs/logs:
+        keys:
+            - aws.log.group.name
+            - aws.log.stream.name
     k8sattributes/cw_k8s_ci_v0_node:
         auth_type: serviceAccount
         context: ""
@@ -1519,8 +1523,134 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         trace_statements: []
+    transform/identity:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
+                - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["resource.opentelemetry.io/service.name"]) where resource.attributes["service.name"] == nil and resource.attributes["resource.opentelemetry.io/service.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["app.kubernetes.io/instance"]) where resource.attributes["service.name"] == nil and resource.attributes["app.kubernetes.io/instance"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["app.kubernetes.io/name"]) where resource.attributes["service.name"] == nil and resource.attributes["app.kubernetes.io/name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.job.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.statefulset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.daemonset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.job.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.job.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.cronjob.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.cronjob.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.cronjob.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.replicaset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["service.instance.id"], resource.attributes["resource.opentelemetry.io/service.instance.id"]) where resource.attributes["service.instance.id"] == nil and resource.attributes["resource.opentelemetry.io/service.instance.id"] != nil
+                - set(resource.attributes["service.instance.id"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["k8s.pod.name"], resource.attributes["k8s.container.name"]], "/")) where resource.attributes["service.instance.id"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["service.version"], resource.attributes["resource.opentelemetry.io/service.version"]) where resource.attributes["service.version"] == nil and resource.attributes["resource.opentelemetry.io/service.version"] != nil
+                - set(resource.attributes["service.version"], resource.attributes["app.kubernetes.io/version"]) where resource.attributes["service.version"] == nil and resource.attributes["app.kubernetes.io/version"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.namespace")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.name")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.instance.id")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.version")
+                - delete_key(resource.attributes, "app.kubernetes.io/instance")
+                - delete_key(resource.attributes, "app.kubernetes.io/name")
+                - delete_key(resource.attributes, "app.kubernetes.io/version")
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
+                - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["resource.opentelemetry.io/service.name"]) where resource.attributes["service.name"] == nil and resource.attributes["resource.opentelemetry.io/service.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["app.kubernetes.io/instance"]) where resource.attributes["service.name"] == nil and resource.attributes["app.kubernetes.io/instance"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["app.kubernetes.io/name"]) where resource.attributes["service.name"] == nil and resource.attributes["app.kubernetes.io/name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.job.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.statefulset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.daemonset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.job.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.job.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.cronjob.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.cronjob.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.cronjob.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.replicaset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["service.instance.id"], resource.attributes["resource.opentelemetry.io/service.instance.id"]) where resource.attributes["service.instance.id"] == nil and resource.attributes["resource.opentelemetry.io/service.instance.id"] != nil
+                - set(resource.attributes["service.instance.id"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["k8s.pod.name"], resource.attributes["k8s.container.name"]], "/")) where resource.attributes["service.instance.id"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["service.version"], resource.attributes["resource.opentelemetry.io/service.version"]) where resource.attributes["service.version"] == nil and resource.attributes["resource.opentelemetry.io/service.version"] != nil
+                - set(resource.attributes["service.version"], resource.attributes["app.kubernetes.io/version"]) where resource.attributes["service.version"] == nil and resource.attributes["app.kubernetes.io/version"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.namespace")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.name")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.instance.id")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.version")
+                - delete_key(resource.attributes, "app.kubernetes.io/instance")
+                - delete_key(resource.attributes, "app.kubernetes.io/name")
+                - delete_key(resource.attributes, "app.kubernetes.io/version")
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
+                - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["resource.opentelemetry.io/service.name"]) where resource.attributes["service.name"] == nil and resource.attributes["resource.opentelemetry.io/service.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["app.kubernetes.io/instance"]) where resource.attributes["service.name"] == nil and resource.attributes["app.kubernetes.io/instance"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["app.kubernetes.io/name"]) where resource.attributes["service.name"] == nil and resource.attributes["app.kubernetes.io/name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.job.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.statefulset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.daemonset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.job.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.job.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.cronjob.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.cronjob.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.cronjob.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.replicaset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+                - set(resource.attributes["service.instance.id"], resource.attributes["resource.opentelemetry.io/service.instance.id"]) where resource.attributes["service.instance.id"] == nil and resource.attributes["resource.opentelemetry.io/service.instance.id"] != nil
+                - set(resource.attributes["service.instance.id"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["k8s.pod.name"], resource.attributes["k8s.container.name"]], "/")) where resource.attributes["service.instance.id"] == nil and resource.attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["service.version"], resource.attributes["resource.opentelemetry.io/service.version"]) where resource.attributes["service.version"] == nil and resource.attributes["resource.opentelemetry.io/service.version"] != nil
+                - set(resource.attributes["service.version"], resource.attributes["app.kubernetes.io/version"]) where resource.attributes["service.version"] == nil and resource.attributes["app.kubernetes.io/version"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.namespace")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.name")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.instance.id")
+                - delete_key(resource.attributes, "resource.opentelemetry.io/service.version")
+                - delete_key(resource.attributes, "app.kubernetes.io/instance")
+                - delete_key(resource.attributes, "app.kubernetes.io/name")
+                - delete_key(resource.attributes, "app.kubernetes.io/version")
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
@@ -1528,6 +1658,33 @@ processors:
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
+                - delete_key(resource.attributes, "aws.log.source")
+        metric_statements: []
+        trace_statements: []
+    transform/logs_routing:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["k8s.cluster.name"], resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["aws.log.source"] != nil
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["k8s.cluster.name"], "default"], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["k8s.cluster.name"] != nil
+                - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["k8s.namespace.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
+        metric_statements: []
+        trace_statements: []
+    transform/otlp_log_source:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
         trace_statements: []
     transform/set_cluster_name:
@@ -2641,6 +2798,9 @@ service:
                 - otlphttp/logs
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
+                - transform/logs_routing
+                - groupbyattrs/logs
                 - attributestocontext/opentelemetry
                 - transform/logs_cleanup
                 - batch/opentelemetry_logs
@@ -2649,7 +2809,8 @@ service:
         logs/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_log_source
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328
@@ -2870,12 +3031,12 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_processes
                 - telegraf_netstat
-                - telegraf_procstat/1917393364
-                - telegraf_cpu
                 - telegraf_swap
+                - telegraf_cpu
+                - telegraf_mem
+                - telegraf_procstat/1917393364
                 - telegraf_disk
         metrics/host_insights:
             exporters:
@@ -2890,8 +3051,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -2907,6 +3068,7 @@ service:
                 - otlphttp/metrics
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry
@@ -2929,6 +3091,7 @@ service:
                 - otlphttp/traces
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry

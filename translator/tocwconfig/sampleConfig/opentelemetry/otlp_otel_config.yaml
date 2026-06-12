@@ -171,6 +171,10 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 15s
+    groupbyattrs/logs:
+        keys:
+            - aws.log.group.name
+            - aws.log.stream.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -452,8 +456,35 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/identity:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
@@ -461,6 +492,33 @@ processors:
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
+                - delete_key(resource.attributes, "aws.log.source")
+        metric_statements: []
+        trace_statements: []
+    transform/logs_routing:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
+                - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.id"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
+        metric_statements: []
+        trace_statements: []
+    transform/otlp_log_source:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
         trace_statements: []
 receivers:
@@ -500,6 +558,9 @@ service:
                 - otlphttp/logs
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
+                - transform/logs_routing
+                - groupbyattrs/logs
                 - attributestocontext/opentelemetry
                 - transform/logs_cleanup
                 - batch/opentelemetry_logs
@@ -508,7 +569,8 @@ service:
         logs/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_log_source
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318
@@ -517,6 +579,7 @@ service:
                 - otlphttp/metrics
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry
@@ -532,6 +595,7 @@ service:
                 - otlphttp/traces
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry

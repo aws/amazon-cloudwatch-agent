@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -27,6 +28,18 @@ var transformEfaConfig string
 
 //go:embed transform_dbi_fix_start_time.yaml
 var transformDbiFixStartTimeConfig string
+
+//go:embed transform_identity_host.yaml
+var transformIdentityHostConfig string
+
+//go:embed transform_identity_k8s.yaml
+var transformIdentityK8sConfig string
+
+//go:embed transform_logs_routing_host.yaml
+var transformLogsRoutingHostConfig string
+
+//go:embed transform_logs_routing_k8s.yaml
+var transformLogsRoutingK8sConfig string
 
 type Option func(*translator)
 
@@ -44,11 +57,19 @@ func WithMetricStatements(statements []string) Option {
 	}
 }
 
+// WithErrorMode sets the error mode for dynamic statements. Defaults to "propagate".
+func WithErrorMode(mode string) Option {
+	return func(t *translator) {
+		t.errorMode = mode
+	}
+}
+
 type translator struct {
 	name             string
 	factory          processor.Factory
 	logStatements    []string
 	metricStatements []string
+	errorMode        string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -70,8 +91,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	// Dynamic statements (generic path for both metrics and logs)
 	if len(t.logStatements) > 0 || len(t.metricStatements) > 0 {
+		errorMode := t.errorMode
+		if errorMode == "" {
+			errorMode = "propagate"
+		}
 		cfgMap := map[string]interface{}{
-			"error_mode": "propagate",
+			"error_mode": errorMode,
 		}
 		if len(t.metricStatements) > 0 {
 			cfgMap["metric_statements"] = []interface{}{buildStatements(t.metricStatements)}
@@ -97,6 +122,18 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	if t.name == common.DbiTransformFixStartTime {
 		return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeConfig)
+	}
+	if t.name == common.Identity {
+		if context.CurrentContext().KubernetesMode() != "" {
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityK8sConfig)
+		}
+		return common.GetYamlFileToYamlConfig(cfg, transformIdentityHostConfig)
+	}
+	if t.name == common.LogsRouting {
+		if context.CurrentContext().KubernetesMode() != "" {
+			return common.GetYamlFileToYamlConfig(cfg, transformLogsRoutingK8sConfig)
+		}
+		return common.GetYamlFileToYamlConfig(cfg, transformLogsRoutingHostConfig)
 	}
 
 	return cfg, nil

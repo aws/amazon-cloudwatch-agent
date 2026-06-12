@@ -150,6 +150,12 @@ const (
 	DbiConnectorTopsql       = "dbi_topsql"
 )
 
+// OpenTelemetry pipeline processor names
+const (
+	Identity    = "identity"
+	LogsRouting = "logs_routing"
+)
+
 var (
 	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)

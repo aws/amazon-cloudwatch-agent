@@ -1,0 +1,18 @@
+error_mode: ignore
+log_statements:
+  - error_mode: ignore
+    context: resource
+    statements:
+      # Log group: /aws/cwagent/{source} or /aws/cwagent/default
+      - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
+      - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+      # Log stream: host.id/service.namespace/service.name (first match wins)
+      - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+      # host.id + service.name
+      - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+      # host.id only
+      - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.id"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil
+      # host.name fallback (on-prem)
+      - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
+      # fallback
+      - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil

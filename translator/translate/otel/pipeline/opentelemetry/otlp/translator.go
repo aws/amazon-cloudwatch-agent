@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
@@ -52,9 +53,19 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if t.signal == pipeline.SignalLogs {
+		processors.Set(transformprocessor.NewTranslatorWithName("otlp_log_source",
+			transformprocessor.WithErrorMode("ignore"),
+			transformprocessor.WithLogStatements([]string{
+				`set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil`,
+			}),
+		))
+	}
+
 	return &common.ComponentTranslators{
 		Receivers:  receivers,
-		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Processors: processors,
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
