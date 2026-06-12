@@ -941,6 +941,8 @@ processors:
                 - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.id"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil
                 - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
                 - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
@@ -1489,13 +1491,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_mem
-                - telegraf_netstat
-                - telegraf_disk
-                - telegraf_processes
-                - telegraf_cpu
-                - telegraf_procstat/1917393364
                 - telegraf_swap
+                - telegraf_processes
+                - telegraf_procstat/1917393364
+                - telegraf_mem
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_netstat
         metrics/host_insights:
             exporters:
                 - forward/opentelemetry
@@ -1509,8 +1511,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1519,8 +1521,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
