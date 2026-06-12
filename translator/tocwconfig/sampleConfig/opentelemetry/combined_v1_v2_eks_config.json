@@ -1,0 +1,159 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "logfile": "/tmp/fake/log/hotdog.log",
+    "debug": true,
+    "region": "us-west-2"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "resources": ["*"],
+        "measurement": ["cpu_usage_idle", "cpu_usage_nice"],
+        "totalcpu": true,
+        "metrics_collection_interval": 60
+      },
+      "mem": {
+        "measurement": ["mem_used", "mem_cached", "mem_total"]
+      },
+      "disk": {
+        "resources": ["/"],
+        "measurement": ["free", "total", "used"],
+        "metrics_collection_interval": 60
+      },
+      "diskio": {
+        "resources": ["*"],
+        "measurement": ["reads", "writes", "read_time", "write_time"]
+      },
+      "net": {
+        "resources": ["eth0"],
+        "measurement": ["bytes_sent", "bytes_recv"]
+      },
+      "netstat": {
+        "measurement": ["tcp_established", "tcp_syn_sent"]
+      },
+      "swap": {
+        "measurement": ["swap_used", "swap_free"]
+      },
+      "processes": {
+        "measurement": ["running", "sleeping", "dead"]
+      },
+      "statsd": {
+        "service_address": ":8125",
+        "metrics_collection_interval": 10,
+        "metrics_aggregation_interval": 60
+      },
+      "collectd": {
+        "service_address": "udp://127.0.0.1:25826",
+        "name_prefix": "collectd_",
+        "collectd_auth_file": "/etc/collectd/auth_file",
+        "collectd_security_level": "encrypt",
+        "collectd_typesdb": ["/usr/share/collectd/types.db"],
+        "metrics_aggregation_interval": 60
+      },
+      "procstat": [
+        {
+          "pid_file": "/var/run/example1.pid",
+          "measurement": ["cpu_usage", "memory_rss"]
+        }
+      ]
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [["InstanceId", "InstanceType"], []],
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "metrics_role_arn_value_test"
+    },
+    "endpoint_override": "https://monitoring-fips.us-west-2.amazonaws.com"
+  },
+  "logs": {
+    "metrics_collected": {
+      "emf": {
+        "service_address": "udp://127.0.0.1:25888"
+      }
+    },
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log",
+            "log_stream_name": "amazon-cloudwatch-agent.log",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/test.log",
+            "log_group_name": "test.log",
+            "log_stream_name": "test.log",
+            "timezone": "UTC",
+            "auto_removal": true
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME",
+    "force_flush_interval": 60,
+    "credentials": {
+      "role_arn": "log_role_arn_value_test"
+    },
+    "endpoint_override": "https://logs-fips.us-west-2.amazonaws.com"
+  },
+  "traces": {
+    "traces_collected": {
+      "xray": {
+        "bind_address": "0.0.0.0:2000",
+        "tcp_proxy": {
+          "bind_address": "0.0.0.0:1234"
+        }
+      },
+      "otlp": {
+        "grpc_endpoint": "0.0.0.0:4317",
+        "http_endpoint": "0.0.0.0:4318"
+      }
+    },
+    "concurrency": 1,
+    "buffer_size_mb": 3,
+    "insecure": true,
+    "credentials": {
+      "role_arn": "trace_role_arn_value_test"
+    },
+    "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com"
+  },
+  "opentelemetry": {
+    "collect": {
+      "host_insights": {
+        "metrics_collection_interval": 60
+      },
+      "container_insights": {
+        "cluster_name": "TestCluster",
+        "collection_interval": 30
+      },
+      "database_insights": {
+        "postgresql": [
+          {
+            "endpoint": "localhost:5432",
+            "instance_name": "my-postgres",
+            "username": "cw_monitor",
+            "password_file": "sampleConfig/opentelemetry/testdata/.pgpass",
+            "logs": {
+              "file_path": "/var/lib/pgsql/data/log/postgresql-*.log"
+            }
+          }
+        ]
+      },
+      "prometheus": {
+        "config_path": "./sampleConfig/opentelemetry/prometheus_otel_scrape_config.yaml",
+        "cluster_name": "TestCluster"
+      },
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4327",
+        "http_endpoint": "127.0.0.1:4328"
+      }
+    }
+  }
+}

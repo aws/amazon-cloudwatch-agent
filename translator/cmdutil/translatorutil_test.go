@@ -341,3 +341,7 @@ func TestOpenTelemetryPrometheusSchemaValidation(t *testing.T) {
 func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
 }
+
+func TestCombinedV1V2SchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validCombinedV1V2Config.json", true, map[string]int{})
+}

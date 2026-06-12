@@ -1,0 +1,3332 @@
+connectors:
+    count/dbi_dbload:
+        datapoints:
+            metric.datapoint.count:
+                description: The number of data points observed.
+        logs:
+            postgresql.active_sessions.by_app:
+                attributes:
+                    - key: db.system.name
+                    - key: postgresql.application_name
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by application
+            postgresql.active_sessions.by_db:
+                attributes:
+                    - key: db.system.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by database
+            postgresql.active_sessions.by_host:
+                attributes:
+                    - key: db.system.name
+                    - key: network.peer.address
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by host
+            postgresql.active_sessions.by_sql:
+                attributes:
+                    - key: db.system.name
+                    - key: postgresql.query_id
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by query
+            postgresql.active_sessions.by_sql_wait:
+                attributes:
+                    - key: db.system.name
+                    - key: postgresql.query_id
+                    - key: postgresql.wait_event_type
+                    - key: postgresql.wait_event
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by query and wait
+            postgresql.active_sessions.by_user:
+                attributes:
+                    - key: db.system.name
+                    - key: user.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by user
+            postgresql.active_sessions.by_wait:
+                attributes:
+                    - key: db.system.name
+                    - key: postgresql.wait_event_type
+                    - key: postgresql.wait_event
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Active sessions by wait event
+            postgresql.active_sessions.count:
+                attributes:
+                    - key: db.system.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["postgresql.state"] == "active"
+                description: Total active sessions
+        metrics:
+            metric.count:
+                description: The number of metrics observed.
+        spanevents:
+            trace.span.event.count:
+                description: The number of span events observed.
+        spans:
+            trace.span.count:
+                description: The number of spans observed.
+    forward/opentelemetry: {}
+    signaltometrics/dbi_topsql:
+        logs:
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+                - key: postgresql.rolname
+                  optional: false
+              conditions:
+                - attributes["postgresql.calls"] != nil
+              description: SQL execution count
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.calls
+              sum:
+                value: Int(attributes["postgresql.calls"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+                - key: postgresql.rolname
+                  optional: false
+              conditions:
+                - attributes["postgresql.total_exec_time"] != nil
+              description: Total execution time in ms
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.total_exec_time
+              sum:
+                value: Double(attributes["postgresql.total_exec_time"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+                - key: postgresql.rolname
+                  optional: false
+              conditions:
+                - attributes["postgresql.total_plan_time"] != nil
+              description: Total plan time in ms
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.total_plan_time
+              sum:
+                value: Double(attributes["postgresql.total_plan_time"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+                - key: postgresql.rolname
+                  optional: false
+              conditions:
+                - attributes["postgresql.rows"] != nil
+              description: Rows affected
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.rows
+              sum:
+                value: Int(attributes["postgresql.rows"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["postgresql.shared_blks_hit"] != nil
+              description: Shared blocks hit
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.shared_blks_hit
+              sum:
+                value: Int(attributes["postgresql.shared_blks_hit"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["postgresql.shared_blks_read"] != nil
+              description: Shared blocks read
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.shared_blks_read
+              sum:
+                value: Int(attributes["postgresql.shared_blks_read"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["postgresql.local_blks_hit"] != nil
+              description: Local blocks hit
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.local_blks_hit
+              sum:
+                value: Int(attributes["postgresql.local_blks_hit"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: postgresql.queryid
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["postgresql.local_blks_read"] != nil
+              description: Local blocks read
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: postgresql.local_blks_read
+              sum:
+                value: Int(attributes["postgresql.local_blks_read"])
+              unit: ""
+exporters:
+    awscloudwatch:
+        backoff_retry_base: 200ms
+        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
+        force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
+        max_datums_per_call: 1000
+        max_retry_count: 5
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+        role_arn: metrics_role_arn_value_test
+        rollup_dimensions:
+            - - InstanceId
+              - InstanceType
+            - []
+    awscloudwatchlogs/emf_logs:
+        certificate_file_path: ""
+        emf_only: true
+        endpoint: https://logs-fips.us-west-2.amazonaws.com
+        external_id: ""
+        imds_retries: 1
+        local_mode: false
+        log_group_name: emf/logs/default
+        log_retention: 0
+        log_stream_name: LOG_STREAM_NAME
+        max_retries: 2
+        middleware: agenthealth/logs
+        no_verify_ssl: false
+        num_workers: 8
+        profile: ""
+        proxy_address: ""
+        raw_log: true
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        role_arn: log_role_arn_value_test
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 1
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+    awsxray:
+        certificate_file_path: ""
+        endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+        external_id: ""
+        imds_retries: 1
+        index_all_attributes: false
+        local_mode: false
+        max_retries: 2
+        middleware: agenthealth/traces
+        no_verify_ssl: true
+        num_workers: 1
+        profile: ""
+        proxy_address: ""
+        region: us-west-2
+        request_timeout_seconds: 30
+        resource_arn: ""
+        role_arn: trace_role_arn_value_test
+        telemetry:
+            enabled: true
+            include_metadata: true
+    otlphttp/cw_k8s_ci_v0_cwotel:
+        auth:
+            authenticator: sigv4auth/cw_k8s_ci_v0_cwotel
+        compression: gzip
+        encoding: proto
+        endpoint: https://monitoring.us-west-2.amazonaws.com:443
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/cw_k8s_ci_v0_metrics_dest:
+        auth:
+            authenticator: sigv4auth/cw_k8s_ci_v0_metrics_dest
+        compression: gzip
+        encoding: proto
+        endpoint: https://monitoring.us-west-2.amazonaws.com:443
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/logs:
+        auth:
+            authenticator: agenthealth/logs
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/metrics:
+        auth:
+            authenticator: agenthealth/otlphttp_metrics
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: https://monitoring.us-west-2.amazonaws.com/v1/metrics
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/traces:
+        auth:
+            authenticator: agenthealth/traces
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: https://xray.us-west-2.amazonaws.com/v1/traces
+        write_buffer_size: 524288
+extensions:
+    agenthealth/logs:
+        additional_auth: headers_setter/logs
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
+    agenthealth/otlphttp_metrics:
+        additional_auth: sigv4auth/monitoring
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
+    agenthealth/statuscode:
+        is_status_code_enabled: true
+        is_usage_data_enabled: true
+        stats:
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
+    agenthealth/traces:
+        additional_auth: sigv4auth/xray
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
+    awscloudwatchlogsprovisioner:
+        additional_auth: sigv4auth/logs
+        imds_retries: 1
+        logs_provision_failure_backoff: 30s
+        max_retries: 2
+        num_workers: 8
+        region: us-west-2
+        request_timeout_seconds: 10
+    entitystore:
+        kubernetes_mode: EKS
+        mode: ec2
+        region: us-west-2
+    headers_setter/logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              from_context: aws.log.group.name
+              key: x-aws-log-group
+            - action: upsert
+              from_context: aws.log.stream.name
+              key: x-aws-log-stream
+    nodemetadatacache/cw_k8s_ci_v0:
+        namespace: amazon-cloudwatch
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
+    sigv4auth/cw_k8s_ci_v0_cwotel:
+        assume_role: {}
+        imds_retries: 0
+        max_retries: 2
+        num_workers: 8
+        region: us-west-2
+        request_timeout_seconds: 30
+        service: monitoring
+    sigv4auth/cw_k8s_ci_v0_metrics_dest:
+        assume_role: {}
+        imds_retries: 0
+        max_retries: 2
+        num_workers: 8
+        region: us-west-2
+        request_timeout_seconds: 30
+        service: monitoring
+    sigv4auth/logs:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: us-west-2
+        request_timeout_seconds: 30
+        service: logs
+    sigv4auth/monitoring:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: us-west-2
+        request_timeout_seconds: 30
+        service: monitoring
+    sigv4auth/xray:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: us-west-2
+        request_timeout_seconds: 30
+        service: xray
+processors:
+    attributestocontext:
+        actions:
+            - from_resource_attribute: aws.log.group.name
+              key: aws.log.group.name
+            - from_resource_attribute: aws.log.stream.name
+              key: aws.log.stream.name
+    awsattributelimit/cw_k8s_ci_v0:
+        max_total_attributes: 150
+        unconditional_removal_keys:
+            - k8s.node.label.topology.kubernetes.io/region
+            - k8s.node.label.topology.kubernetes.io/zone
+            - k8s.node.label.topology.ebs.csi.aws.com/zone
+            - k8s.node.label.node.kubernetes.io/instance-type
+            - k8s.node.label.kubernetes.io/hostname
+            - k8s.node.label.helm.sh/chart
+            - k8s.node.label.release
+            - k8s.node.label.eks.amazonaws.com/nodegroup-image
+            - k8s.node.label.k8s.io/cloud-provider-aws
+            - k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateId
+            - k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateVersion
+            - k8s.pod.label.pod-template-hash
+            - k8s.pod.label.controller-revision-hash
+        unconditional_removal_prefixes:
+            - k8s.node.label.feature.node.kubernetes.io/
+            - k8s.node.label.beta.kubernetes.io/
+            - k8s.node.label.failure-domain.beta.kubernetes.io/
+            - k8s.node.label.alpha.eksctl.io/
+    awsdevicepodcorrelation/cw_k8s_ci_v0:
+        device_types:
+            - device_id_attribute: neuroncore
+              device_id_source: ""
+              name: neuron-by-core
+              resource_names:
+                - aws.amazon.com/neuroncore
+            - device_id_attribute: neurondevice
+              device_id_source: ""
+              name: neuron-by-device
+              resource_names:
+                - aws.amazon.com/neurondevice
+                - aws.amazon.com/neuron
+            - device_id_attribute: aws.efa.device
+              device_id_source: ""
+              name: efa
+              resource_names:
+                - vpc.amazonaws.com/efa
+        kubelet_socket_path: /var/lib/kubelet/pod-resources/kubelet.sock
+    awsentity/resource:
+        entity_type: Resource
+        kubernetes_mode: EKS
+        platform: ec2
+        scrape_datapoint_attribute: true
+    awsentity/service/telegraf:
+        entity_type: Service
+        kubernetes_mode: EKS
+        platform: ec2
+        scrape_datapoint_attribute: true
+    awsneuron/cw_k8s_ci_v0: {}
+    batch/cw_k8s_ci_v0_cwotel:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 500
+        send_batch_size: 500
+        timeout: 10s
+    batch/cw_k8s_ci_v0_metrics_dest:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 500
+        send_batch_size: 500
+        timeout: 10s
+    batch/emf_logs:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    batch/logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 1m0s
+    batch/opentelemetry:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    batch/xray:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    cumulativetodelta/hostDeltaMetrics:
+        exclude:
+            match_type: strict
+            metrics:
+                - iops_in_progress
+                - diskio_iops_in_progress
+                - diskio_ebs_volume_queue_length
+        include:
+            match_type: ""
+        initial_value: 2
+        max_staleness: 0s
+    ec2tagger:
+        ec2_instance_tag_keys:
+            - AutoScalingGroupName
+        ec2_metadata_tags:
+            - InstanceType
+            - ImageId
+            - InstanceId
+        imds_retries: 1
+        middleware: agenthealth/statuscode
+        refresh_tags_interval: 0s
+        refresh_volumes_interval: 0s
+    filter/cw_k8s_ci_v0_apiserver_build_info:
+        error_mode: ignore
+        logs: {}
+        metrics:
+            metric:
+                - name == "kubernetes_build_info"
+        spans: {}
+        traces: {}
+    filter/cw_k8s_ci_v0_cadvisor_empty:
+        error_mode: ignore
+        logs: {}
+        metrics:
+            datapoint:
+                - attributes["container"] == "" and attributes["pod"] == ""
+                - attributes["container"] == "" and attributes["pod"] == nil
+                - attributes["container"] == nil and attributes["pod"] == ""
+                - attributes["container"] == nil and attributes["pod"] == nil
+        spans: {}
+        traces: {}
+    filter/cw_k8s_ci_v0_cadvisor_pod:
+        error_mode: ignore
+        logs: {}
+        metrics:
+            datapoint:
+                - attributes["container"] == "POD"
+        spans: {}
+        traces: {}
+    filter/cw_k8s_ci_v0_neuron:
+        error_mode: ignore
+        logs: {}
+        metrics:
+            metric:
+                - IsMatch(name, "^(neuron|execution_|hardware_ecc_)") != true
+        spans: {}
+        traces: {}
+    filter/cw_k8s_ci_v0_scrape_metadata:
+        error_mode: ignore
+        logs: {}
+        metrics:
+            metric:
+                - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added)$")
+        spans: {}
+        traces: {}
+    filter/dbi_exclude_monitor_0:
+        error_mode: propagate
+        logs:
+            log_record:
+                - attributes["user.name"] == "cw_monitor" or attributes["postgresql.rolname"] == "cw_monitor"
+        metrics: {}
+        spans: {}
+        traces: {}
+    groupbyattrs/cw_k8s_ci_v0_cadvisor:
+        keys:
+            - container
+            - pod
+            - namespace
+    groupbyattrs/cw_k8s_ci_v0_dcgm:
+        keys:
+            - pod
+            - namespace
+            - container
+    groupbyattrs/cw_k8s_ci_v0_ksm:
+        keys:
+            - pod
+            - namespace
+            - uid
+            - node
+            - container
+            - owner_name
+            - owner_kind
+            - deployment
+            - daemonset
+            - statefulset
+            - replicaset
+            - job_name
+            - cronjob
+    groupbyattrs/cw_k8s_ci_v0_neuron:
+        keys:
+            - k8s.pod.name
+            - k8s.namespace.name
+            - k8s.container.name
+    k8sattributes/cw_k8s_ci_v0_node:
+        auth_type: serviceAccount
+        context: ""
+        exclude:
+            pods:
+                - name: jaeger-agent
+                - name: jaeger-collector
+        extract:
+            labels:
+                - from: node
+                  key: ""
+                  key_regex: (.*)
+                  tag_name: k8s.node.label.$$$1
+            metadata:
+                - k8s.node.name
+            otel_annotations: false
+        filter:
+            namespace: ""
+            node: ""
+            node_from_env_var: ""
+        kube_config_path: ""
+        passthrough: false
+        pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.node.name
+        wait_for_metadata: false
+        wait_for_metadata_timeout: 10s
+    k8sattributes/cw_k8s_ci_v0_pod:
+        auth_type: serviceAccount
+        context: ""
+        exclude:
+            pods:
+                - name: jaeger-agent
+                - name: jaeger-collector
+        extract:
+            labels:
+                - from: pod
+                  key: ""
+                  key_regex: (.*)
+                  tag_name: k8s.pod.label.$$$1
+            metadata:
+                - k8s.pod.uid
+                - k8s.node.name
+                - k8s.deployment.name
+                - k8s.statefulset.name
+                - k8s.daemonset.name
+                - k8s.replicaset.name
+                - k8s.job.name
+                - k8s.cronjob.name
+            otel_annotations: false
+        filter:
+            namespace: ""
+            node: ""
+            node_from_env_var: ""
+        kube_config_path: ""
+        passthrough: false
+        pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.name
+                - from: resource_attribute
+                  name: k8s.namespace.name
+        wait_for_metadata: false
+        wait_for_metadata_timeout: 10s
+    metricstarttime/cw_k8s_ci_v0:
+        gc_interval: 10m0s
+        strategy: true_reset_point
+    nodemetadataenricher/cw_k8s_ci_v0: {}
+    resourcedetection:
+        aks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        azure:
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            tags: []
+        consul:
+            address: ""
+            datacenter: ""
+            namespace: ""
+            resource_attributes:
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            token_file: ""
+        detectors:
+            - eks
+            - env
+            - ec2
+        docker:
+            resource_attributes:
+                host.name:
+                    enabled: true
+                os.type:
+                    enabled: true
+        ec2:
+            fail_on_missing_metadata: false
+            max_attempts: 3
+            max_backoff: 20s
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+            tags:
+                - ^kubernetes.io/cluster/.*$
+                - ^aws:autoscaling:groupName
+        ecs:
+            resource_attributes:
+                aws.ecs.cluster.arn:
+                    enabled: true
+                aws.ecs.launchtype:
+                    enabled: true
+                aws.ecs.task.arn:
+                    enabled: true
+                aws.ecs.task.family:
+                    enabled: true
+                aws.ecs.task.id:
+                    enabled: true
+                aws.ecs.task.revision:
+                    enabled: true
+                aws.log.group.arns:
+                    enabled: true
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.arns:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+        eks:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: false
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        elasticbeanstalk:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                deployment.environment:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.version:
+                    enabled: true
+        gcp:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.id:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+                gcp.cloud_run.job.execution:
+                    enabled: true
+                gcp.cloud_run.job.task_index:
+                    enabled: true
+                gcp.gce.instance.hostname:
+                    enabled: false
+                gcp.gce.instance.name:
+                    enabled: false
+                gcp.gce.instance_group_manager.name:
+                    enabled: true
+                gcp.gce.instance_group_manager.region:
+                    enabled: true
+                gcp.gce.instance_group_manager.zone:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        heroku:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                heroku.app.id:
+                    enabled: true
+                heroku.dyno.id:
+                    enabled: true
+                heroku.release.commit:
+                    enabled: true
+                heroku.release.creation_timestamp:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.name:
+                    enabled: true
+                service.version:
+                    enabled: true
+        idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
+        kubeadm:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            resource_attributes:
+                k8s.cluster.name:
+                    enabled: true
+                k8s.cluster.uid:
+                    enabled: true
+        lambda:
+            resource_attributes:
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.max_memory:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+        max_idle_conns: 100
+        middleware: agenthealth/statuscode
+        openshift:
+            address: ""
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+            tls: {}
+            token: ""
+        override: true
+        system:
+            resource_attributes:
+                host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.ip:
+                    enabled: false
+                host.mac:
+                    enabled: false
+                host.name:
+                    enabled: true
+                os.description:
+                    enabled: false
+                os.type:
+                    enabled: true
+                os.version:
+                    enabled: false
+        timeout: 2s
+    resourcedetection/cw_k8s_ci_v0:
+        aks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        azure:
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            tags: []
+        consul:
+            address: ""
+            datacenter: ""
+            namespace: ""
+            resource_attributes:
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            token_file: ""
+        detectors:
+            - eks
+            - ec2
+        docker:
+            resource_attributes:
+                host.name:
+                    enabled: true
+                os.type:
+                    enabled: true
+        ec2:
+            fail_on_missing_metadata: false
+            max_attempts: 3
+            max_backoff: 20s
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: false
+                host.image.id:
+                    enabled: false
+                host.name:
+                    enabled: false
+                host.type:
+                    enabled: false
+            tags: []
+        ecs:
+            resource_attributes:
+                aws.ecs.cluster.arn:
+                    enabled: true
+                aws.ecs.launchtype:
+                    enabled: true
+                aws.ecs.task.arn:
+                    enabled: true
+                aws.ecs.task.family:
+                    enabled: true
+                aws.ecs.task.id:
+                    enabled: true
+                aws.ecs.task.revision:
+                    enabled: true
+                aws.log.group.arns:
+                    enabled: true
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.arns:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+        eks:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: false
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        elasticbeanstalk:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                deployment.environment:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.version:
+                    enabled: true
+        gcp:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.id:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+                gcp.cloud_run.job.execution:
+                    enabled: true
+                gcp.cloud_run.job.task_index:
+                    enabled: true
+                gcp.gce.instance.hostname:
+                    enabled: false
+                gcp.gce.instance.name:
+                    enabled: false
+                gcp.gce.instance_group_manager.name:
+                    enabled: true
+                gcp.gce.instance_group_manager.region:
+                    enabled: true
+                gcp.gce.instance_group_manager.zone:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        heroku:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                heroku.app.id:
+                    enabled: true
+                heroku.dyno.id:
+                    enabled: true
+                heroku.release.commit:
+                    enabled: true
+                heroku.release.creation_timestamp:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.name:
+                    enabled: true
+                service.version:
+                    enabled: true
+        idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
+        kubeadm:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            resource_attributes:
+                k8s.cluster.name:
+                    enabled: true
+                k8s.cluster.uid:
+                    enabled: true
+        lambda:
+            resource_attributes:
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.max_memory:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+        max_idle_conns: 100
+        openshift:
+            address: ""
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+            tls: {}
+            token: ""
+        override: true
+        system:
+            resource_attributes:
+                host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.ip:
+                    enabled: false
+                host.mac:
+                    enabled: false
+                host.name:
+                    enabled: true
+                os.description:
+                    enabled: false
+                os.type:
+                    enabled: true
+                os.version:
+                    enabled: false
+        timeout: 5s
+    transform/cw_k8s_ci_v0_apiserver_cleanup_version:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - delete_key(attributes, "k8s.apiserver.version") where attributes["k8s.apiserver.version"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_apiserver_extract_version:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.apiserver.version"], attributes["git_version"]) where attributes["git_version"] != nil and attributes["git_version"] != ""
+        trace_statements: []
+    transform/cw_k8s_ci_v0_cadvisor_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil and attributes["container"] != ""
+                - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
+                - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(attributes["container"], resource.attributes["container"]) where resource.attributes["container"] != nil
+                - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
+                - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_clear_schema_url:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(resource.schema_url, "")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_dcgm_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
+                - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
+                - set(attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
+                - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
+                - set(attributes["container"], resource.attributes["container"]) where resource.attributes["container"] != nil
+                - delete_key(attributes, "Hostname") where attributes["Hostname"] != nil
+                - delete_key(attributes, "pci_bus_id") where attributes["pci_bus_id"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_ebs_csi_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["instance_id"], attributes["instance_id"]) where attributes["instance_id"] != nil
+                - set(resource.attributes["volume_id"], attributes["volume_id"]) where attributes["volume_id"] != nil
+                - delete_key(attributes, "instance_id") where attributes["instance_id"] != nil
+                - delete_key(attributes, "volume_id") where attributes["volume_id"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_efa_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.pod.name"], attributes["k8s.pod.name"]) where attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["k8s.namespace.name"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["k8s.container.name"], attributes["k8s.container.name"]) where attributes["k8s.container.name"] != nil
+                - delete_key(attributes, "k8s.pod.name") where attributes["k8s.pod.name"] != nil
+                - delete_key(attributes, "k8s.namespace.name") where attributes["k8s.namespace.name"] != nil
+                - delete_key(attributes, "k8s.container.name") where attributes["k8s.container.name"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_ksm_clean_resource:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - delete_key(attributes, "k8s.pod.name")
+                - delete_key(attributes, "k8s.pod.uid")
+                - delete_key(attributes, "k8s.namespace.name")
+                - delete_key(attributes, "k8s.node.name")
+                - delete_key(attributes, "k8s.container.name")
+                - delete_key(attributes, "k8s.deployment.name")
+                - delete_key(attributes, "k8s.replicaset.name")
+                - delete_key(attributes, "k8s.workload.name")
+                - delete_key(attributes, "k8s.workload.type")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_ksm_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
+                - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
+                - set(attributes["k8s.node.name"], attributes["node"]) where attributes["node"] != nil
+                - set(attributes["k8s.pod.uid"], attributes["uid"]) where attributes["uid"] != nil
+                - set(attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil
+                - set(attributes["k8s.workload.name"], attributes["owner_name"]) where attributes["owner_name"] != nil
+                - set(attributes["k8s.workload.type"], attributes["owner_kind"]) where attributes["owner_kind"] != nil
+                - set(attributes["k8s.deployment.name"], attributes["deployment"]) where attributes["deployment"] != nil
+                - set(attributes["k8s.daemonset.name"], attributes["daemonset"]) where attributes["daemonset"] != nil
+                - set(attributes["k8s.statefulset.name"], attributes["statefulset"]) where attributes["statefulset"] != nil
+                - set(attributes["k8s.job.name"], attributes["job_name"]) where attributes["job_name"] != nil
+                - set(attributes["k8s.cronjob.name"], attributes["cronjob"]) where attributes["cronjob"] != nil
+                - set(attributes["k8s.replicaset.name"], attributes["replicaset"]) where attributes["replicaset"] != nil
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
+                - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
+                - set(attributes["node"], resource.attributes["node"]) where resource.attributes["node"] != nil
+                - set(attributes["uid"], resource.attributes["uid"]) where resource.attributes["uid"] != nil
+                - set(attributes["container"], resource.attributes["container"]) where resource.attributes["container"] != nil
+                - set(attributes["deployment"], resource.attributes["deployment"]) where resource.attributes["deployment"] != nil
+                - set(attributes["daemonset"], resource.attributes["daemonset"]) where resource.attributes["daemonset"] != nil
+                - set(attributes["statefulset"], resource.attributes["statefulset"]) where resource.attributes["statefulset"] != nil
+                - set(attributes["replicaset"], resource.attributes["replicaset"]) where resource.attributes["replicaset"] != nil
+                - set(attributes["job_name"], resource.attributes["job_name"]) where resource.attributes["job_name"] != nil
+                - set(attributes["cronjob"], resource.attributes["cronjob"]) where resource.attributes["cronjob"] != nil
+                - set(attributes["owner_name"], resource.attributes["owner_name"]) where resource.attributes["owner_name"] != nil
+                - set(attributes["owner_kind"], resource.attributes["owner_kind"]) where resource.attributes["owner_kind"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_lis_csi_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["instance_id"], attributes["instance_id"]) where attributes["instance_id"] != nil
+                - set(resource.attributes["volume_id"], attributes["volume_id"]) where attributes["volume_id"] != nil
+                - delete_key(attributes, "instance_id") where attributes["instance_id"] != nil
+                - delete_key(attributes, "volume_id") where attributes["volume_id"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_neuron_hw_attrs:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(attributes["aws.neuron.device"], attributes["neurondevice"]) where attributes["neurondevice"] != nil
+                - set(attributes["aws.neuron.core"], attributes["neuroncore"]) where attributes["neuroncore"] != nil
+                - delete_key(attributes, "neuroncore") where attributes["neuroncore"] != nil
+                - delete_key(attributes, "neurondevice") where attributes["neurondevice"] != nil
+                - delete_key(attributes, "instance_type") where attributes["instance_type"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_neuron_promote:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.pod.name"], attributes["k8s.pod.name"]) where attributes["k8s.pod.name"] != nil
+                - set(resource.attributes["k8s.namespace.name"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["k8s.container.name"], attributes["k8s.container.name"]) where attributes["k8s.container.name"] != nil
+                - set(resource.attributes["aws.neuron.runtime.tag"], attributes["runtime_tag"]) where attributes["runtime_tag"] != nil
+                - delete_key(attributes, "k8s.pod.name") where attributes["k8s.pod.name"] != nil
+                - delete_key(attributes, "k8s.namespace.name") where attributes["k8s.namespace.name"] != nil
+                - delete_key(attributes, "k8s.container.name") where attributes["k8s.container.name"] != nil
+                - delete_key(attributes, "runtime_tag") where attributes["runtime_tag"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_promote_component:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.component.name"], attributes["component"])
+        trace_statements: []
+    transform/cw_k8s_ci_v0_promote_node_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.node.name"], attributes["node_name"]) where attributes["node_name"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_cloud_resource_id:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ""
+              statements:
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:eks:", resource.attributes["cloud.region"], ":", resource.attributes["cloud.account.id"], ":cluster/", resource.attributes["k8s.cluster.name"]], "")) where resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_cluster_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_component:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(attributes["component"], "apiserver")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_node_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(attributes["node_name"], "${env:K8S_NODE_NAME}")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_apiserver:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.version, resource.attributes["k8s.apiserver.version"]) where resource.attributes["k8s.apiserver.version"] != nil
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "apiserver")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_cadvisor:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.name, "github.com/google/cadvisor")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "cadvisor")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_dcgm:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.name, "github.com/NVIDIA/dcgm-exporter")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "dcgm")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_ebs_csi:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "ebs-csi")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_efa:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "efa")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_kube_state_metrics:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.name, "github.com/kubernetes/kube-state-metrics")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "kube-state-metrics")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_kubeletstats:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "kubeletstats")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_lis_csi:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "lis-csi")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_neuron_monitor:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.name, "awsneuron")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "neuron-monitor")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_scope_node_exporter:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ""
+              statements:
+                - set(scope.name, "github.com/prometheus/node_exporter")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "node-exporter")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_unit:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: metric
+              error_mode: ""
+              statements:
+                - set(unit, "s") where IsMatch(name, ".*_seconds(_total)?$")
+                - set(unit, "ms") where IsMatch(name, ".*_milliseconds(_total)?$")
+                - set(unit, "us") where IsMatch(name, ".*_microseconds(_total)?$")
+                - set(unit, "ns") where IsMatch(name, ".*_nanoseconds(_total)?$")
+                - set(unit, "By") where IsMatch(name, ".*_bytes(_total)?$")
+                - set(unit, "KBy") where IsMatch(name, ".*_kilobytes(_total)?$")
+                - set(unit, "MBy") where IsMatch(name, ".*_megabytes(_total)?$")
+                - set(unit, "GBy") where IsMatch(name, ".*_gigabytes(_total)?$")
+                - set(unit, "KiBy") where IsMatch(name, ".*_kibibytes(_total)?$")
+                - set(unit, "MiBy") where IsMatch(name, ".*_mebibytes(_total)?$")
+                - set(unit, "GiBy") where IsMatch(name, ".*_gibibytes(_total)?$")
+                - set(unit, "Cel") where IsMatch(name, ".*_celsius$")
+                - set(unit, "Hz") where IsMatch(name, ".*_hertz$")
+                - set(unit, "1") where IsMatch(name, ".*_ratio$")
+                - set(unit, "%") where IsMatch(name, ".*_percent$")
+                - set(unit, "V") where IsMatch(name, ".*_volts$")
+                - set(unit, "W") where IsMatch(name, ".*_watts$")
+                - set(unit, "J") where IsMatch(name, ".*_joules$")
+                - set(unit, "A") where IsMatch(name, ".*_amperes$")
+                - set(unit, "m") where IsMatch(name, ".*_meters(_total)?$")
+                - set(unit, "1") where unit == "" and IsMatch(name, ".*_total$")
+        trace_statements: []
+    transform/cw_k8s_ci_v0_set_workload:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ""
+              statements:
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.job.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.cronjob.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.cronjob.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.cronjob.name"] != nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+        trace_statements: []
+    transform/dbi_fix_start_time:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ignore
+              statements:
+                - set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0
+                - replace_match(datapoint.attributes["postgresql.wait_event_type"], "", "CPU")
+                - replace_match(datapoint.attributes["postgresql.wait_event"], "", "CPU")
+                - replace_match(datapoint.attributes["postgresql.application_name"], "", "unknown")
+                - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
+                - replace_match(datapoint.attributes["postgresql.query_id"], "", "unknown")
+                - replace_match(datapoint.attributes["user.name"], "", "unknown")
+        trace_statements: []
+    transform/dbi_logs_raw-events_0:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
+        metric_statements: []
+        trace_statements: []
+    transform/dbi_logs_server-logs_0:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
+        metric_statements: []
+        trace_statements: []
+    transform/dbi_resource_0:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["db.system.name"], "postgresql")
+                - set(resource.attributes["db.instance.name"], "my-postgres")
+        metric_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["db.system.name"], "postgresql")
+                - set(resource.attributes["db.instance.name"], "my-postgres")
+        trace_statements: []
+    transform/logs_cleanup:
+        error_mode: propagate
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - delete_key(resource.attributes, "aws.log.group.name")
+                - delete_key(resource.attributes, "aws.log.stream.name")
+        metric_statements: []
+        trace_statements: []
+    transform/set_cluster_name:
+        error_mode: propagate
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        trace_statements: []
+receivers:
+    awsefareceiver/cw_k8s_ci_v0:
+        collection_interval: 30s
+        host_path: ""
+        initial_delay: 1s
+        metrics:
+            efa_impaired_remote_conn_events:
+                enabled: true
+            efa_rdma_read_bytes:
+                enabled: true
+            efa_rdma_read_resp_bytes:
+                enabled: true
+            efa_rdma_read_wr_err:
+                enabled: true
+            efa_rdma_read_wrs:
+                enabled: true
+            efa_rdma_write_bytes:
+                enabled: true
+            efa_rdma_write_recv_bytes:
+                enabled: true
+            efa_rdma_write_wr_err:
+                enabled: true
+            efa_rdma_write_wrs:
+                enabled: true
+            efa_recv_bytes:
+                enabled: true
+            efa_recv_wrs:
+                enabled: true
+            efa_retrans_bytes:
+                enabled: true
+            efa_retrans_pkts:
+                enabled: true
+            efa_retrans_timeout_events:
+                enabled: true
+            efa_rx_bytes:
+                enabled: true
+            efa_rx_dropped:
+                enabled: true
+            efa_rx_pkts:
+                enabled: true
+            efa_send_bytes:
+                enabled: true
+            efa_send_wrs:
+                enabled: true
+            efa_tx_bytes:
+                enabled: true
+            efa_tx_pkts:
+                enabled: true
+            efa_unresponsive_remote_events:
+                enabled: true
+        timeout: 0s
+    awsxray:
+        endpoint: 0.0.0.0:2000
+        proxy_server:
+            aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
+            certificate_file_path: ""
+            endpoint: 0.0.0.0:1234
+            imds_retries: 1
+            local_mode: false
+            profile: ""
+            proxy_address: ""
+            region: us-west-2
+            role_arn: trace_role_arn_value_test
+            service_name: xray
+            tls:
+                insecure: true
+        transport: udp
+    filelog/postgresql_0:
+        encoding: utf-8
+        exclude_older_than: 0s
+        fingerprint_size: 1000
+        force_flush_period: 500ms
+        id: file_input
+        include:
+            - /var/lib/pgsql/data/log/postgresql-*.log
+        include_file_name: true
+        initial_buffer_size: 16384
+        max_concurrent_files: 1024
+        max_log_size: 1048576
+        operators: []
+        poll_interval: 200ms
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        start_at: end
+        type: file_input
+    hostmetrics:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            process:
+                include:
+                    match_type: regexp
+                    names:
+                        - postgres.*
+                metrics:
+                    process.cpu.utilization:
+                        enabled: true
+                    process.memory.utilization:
+                        enabled: true
+                mute_process_all_errors: true
+            processes: null
+        timeout: 0s
+    kubeletstats/cw_k8s_ci_v0:
+        auth_type: serviceAccount
+        collection_interval: 30s
+        context: ""
+        endpoint: https://${env:HOST_IP}:10250
+        initial_delay: 1s
+        insecure_skip_verify: true
+        kube_config_path: ""
+        metric_groups:
+            - pod
+            - container
+            - node
+        metrics:
+            container.cpu.time:
+                enabled: true
+            container.cpu.usage:
+                enabled: true
+            container.cpu.utilization:
+                enabled: true
+            container.filesystem.available:
+                enabled: true
+            container.filesystem.capacity:
+                enabled: true
+            container.filesystem.usage:
+                enabled: true
+            container.memory.available:
+                enabled: true
+            container.memory.major_page_faults:
+                enabled: true
+            container.memory.page_faults:
+                enabled: true
+            container.memory.rss:
+                enabled: true
+            container.memory.usage:
+                enabled: true
+            container.memory.working_set:
+                enabled: true
+            container.uptime:
+                enabled: true
+            k8s.container.cpu.node.utilization:
+                enabled: false
+            k8s.container.cpu_limit_utilization:
+                enabled: true
+            k8s.container.cpu_request_utilization:
+                enabled: true
+            k8s.container.memory.node.utilization:
+                enabled: false
+            k8s.container.memory_limit_utilization:
+                enabled: true
+            k8s.container.memory_request_utilization:
+                enabled: true
+            k8s.node.cpu.time:
+                enabled: true
+            k8s.node.cpu.usage:
+                enabled: true
+            k8s.node.cpu.utilization:
+                enabled: true
+            k8s.node.filesystem.available:
+                enabled: true
+            k8s.node.filesystem.capacity:
+                enabled: true
+            k8s.node.filesystem.usage:
+                enabled: true
+            k8s.node.memory.available:
+                enabled: true
+            k8s.node.memory.major_page_faults:
+                enabled: true
+            k8s.node.memory.page_faults:
+                enabled: true
+            k8s.node.memory.rss:
+                enabled: true
+            k8s.node.memory.usage:
+                enabled: true
+            k8s.node.memory.working_set:
+                enabled: true
+            k8s.node.network.errors:
+                enabled: true
+            k8s.node.network.io:
+                enabled: true
+            k8s.node.uptime:
+                enabled: true
+            k8s.pod.cpu.node.utilization:
+                enabled: false
+            k8s.pod.cpu.time:
+                enabled: true
+            k8s.pod.cpu.usage:
+                enabled: true
+            k8s.pod.cpu.utilization:
+                enabled: true
+            k8s.pod.cpu_limit_utilization:
+                enabled: true
+            k8s.pod.cpu_request_utilization:
+                enabled: true
+            k8s.pod.filesystem.available:
+                enabled: true
+            k8s.pod.filesystem.capacity:
+                enabled: true
+            k8s.pod.filesystem.usage:
+                enabled: true
+            k8s.pod.memory.available:
+                enabled: true
+            k8s.pod.memory.major_page_faults:
+                enabled: true
+            k8s.pod.memory.node.utilization:
+                enabled: false
+            k8s.pod.memory.page_faults:
+                enabled: true
+            k8s.pod.memory.rss:
+                enabled: true
+            k8s.pod.memory.usage:
+                enabled: true
+            k8s.pod.memory.working_set:
+                enabled: true
+            k8s.pod.memory_limit_utilization:
+                enabled: true
+            k8s.pod.memory_request_utilization:
+                enabled: true
+            k8s.pod.network.errors:
+                enabled: true
+            k8s.pod.network.io:
+                enabled: true
+            k8s.pod.uptime:
+                enabled: true
+            k8s.volume.available:
+                enabled: true
+            k8s.volume.capacity:
+                enabled: true
+            k8s.volume.inodes:
+                enabled: true
+            k8s.volume.inodes.free:
+                enabled: true
+            k8s.volume.inodes.used:
+                enabled: true
+        node: ""
+        resource_attributes:
+            aws.volume.id:
+                enabled: true
+            container.id:
+                enabled: true
+            fs.type:
+                enabled: true
+            gce.pd.name:
+                enabled: true
+            glusterfs.endpoints.name:
+                enabled: true
+            glusterfs.path:
+                enabled: true
+            k8s.container.name:
+                enabled: true
+            k8s.namespace.name:
+                enabled: true
+            k8s.node.name:
+                enabled: true
+            k8s.persistentvolumeclaim.name:
+                enabled: true
+            k8s.pod.name:
+                enabled: true
+            k8s.pod.uid:
+                enabled: true
+            k8s.volume.name:
+                enabled: true
+            k8s.volume.type:
+                enabled: true
+            partition:
+                enabled: true
+        timeout: 0s
+    otlp/grpc_0_0_0_0_4317:
+        protocols:
+            grpc:
+                endpoint: 0.0.0.0:4317
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
+                read_buffer_size: 524288
+                transport: tcp
+    otlp/grpc_127_0_0_1_4327:
+        protocols:
+            grpc:
+                endpoint: 127.0.0.1:4327
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
+                read_buffer_size: 524288
+                transport: tcp
+    otlp/http_0_0_0_0_4318:
+        protocols:
+            http:
+                cors: {}
+                endpoint: 0.0.0.0:4318
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+    otlp/http_127_0_0_1_4328:
+        protocols:
+            http:
+                cors: {}
+                endpoint: 127.0.0.1:4328
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+    postgresql/events_0:
+        collection_interval: 10s
+        endpoint: localhost:5432
+        events:
+            db.server.query_sample:
+                enabled: true
+            db.server.top_query:
+                enabled: true
+        initial_delay: 1s
+        metrics:
+            postgresql.backends:
+                enabled: true
+            postgresql.bgwriter.buffers.allocated:
+                enabled: true
+            postgresql.bgwriter.buffers.writes:
+                enabled: true
+            postgresql.bgwriter.checkpoint.count:
+                enabled: true
+            postgresql.bgwriter.duration:
+                enabled: true
+            postgresql.bgwriter.maxwritten:
+                enabled: true
+            postgresql.blks_hit:
+                enabled: false
+            postgresql.blks_read:
+                enabled: false
+            postgresql.blocks_read:
+                enabled: true
+            postgresql.commits:
+                enabled: true
+            postgresql.connection.max:
+                enabled: true
+            postgresql.database.count:
+                enabled: true
+            postgresql.database.locks:
+                enabled: false
+            postgresql.db_size:
+                enabled: true
+            postgresql.deadlocks:
+                enabled: false
+            postgresql.function.calls:
+                enabled: false
+            postgresql.index.scans:
+                enabled: true
+            postgresql.index.size:
+                enabled: true
+            postgresql.operations:
+                enabled: true
+            postgresql.replication.data_delay:
+                enabled: true
+            postgresql.rollbacks:
+                enabled: true
+            postgresql.rows:
+                enabled: true
+            postgresql.sequential_scans:
+                enabled: false
+            postgresql.sessions:
+                enabled: false
+            postgresql.table.count:
+                enabled: true
+            postgresql.table.size:
+                enabled: true
+            postgresql.table.vacuum.count:
+                enabled: true
+            postgresql.temp.io:
+                enabled: false
+            postgresql.temp_files:
+                enabled: false
+            postgresql.tup_deleted:
+                enabled: false
+            postgresql.tup_fetched:
+                enabled: false
+            postgresql.tup_inserted:
+                enabled: false
+            postgresql.tup_returned:
+                enabled: false
+            postgresql.tup_updated:
+                enabled: false
+            postgresql.wal.age:
+                enabled: true
+            postgresql.wal.delay:
+                enabled: false
+            postgresql.wal.lag:
+                enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.pgpass
+        query_sample_collection:
+            collection_interval: 1m0s
+            enabled: true
+            max_rows_per_query: 500
+        resource_attributes:
+            postgresql.database.name:
+                enabled: true
+            postgresql.index.name:
+                enabled: true
+            postgresql.schema.name:
+                enabled: true
+            postgresql.table.name:
+                enabled: true
+            service.instance.id:
+                enabled: true
+        timeout: 0s
+        tls:
+            insecure: true
+            insecure_skip_verify: true
+        top_query_collection:
+            collection_interval: 1m0s
+            max_explain_each_interval: 0
+            max_rows_per_query: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_n_query: 200
+        transport: tcp
+        username: cw_monitor
+    postgresql/metrics_0:
+        collection_interval: 10s
+        endpoint: localhost:5432
+        events:
+            db.server.query_sample:
+                enabled: true
+            db.server.top_query:
+                enabled: true
+        initial_delay: 1s
+        metrics:
+            postgresql.backends:
+                enabled: true
+            postgresql.bgwriter.buffers.allocated:
+                enabled: true
+            postgresql.bgwriter.buffers.writes:
+                enabled: true
+            postgresql.bgwriter.checkpoint.count:
+                enabled: true
+            postgresql.bgwriter.duration:
+                enabled: true
+            postgresql.bgwriter.maxwritten:
+                enabled: true
+            postgresql.blks_hit:
+                enabled: false
+            postgresql.blks_read:
+                enabled: false
+            postgresql.blocks_read:
+                enabled: true
+            postgresql.commits:
+                enabled: true
+            postgresql.connection.max:
+                enabled: true
+            postgresql.database.count:
+                enabled: true
+            postgresql.database.locks:
+                enabled: false
+            postgresql.db_size:
+                enabled: true
+            postgresql.deadlocks:
+                enabled: false
+            postgresql.function.calls:
+                enabled: false
+            postgresql.index.scans:
+                enabled: true
+            postgresql.index.size:
+                enabled: true
+            postgresql.operations:
+                enabled: true
+            postgresql.replication.data_delay:
+                enabled: true
+            postgresql.rollbacks:
+                enabled: true
+            postgresql.rows:
+                enabled: true
+            postgresql.sequential_scans:
+                enabled: false
+            postgresql.sessions:
+                enabled: false
+            postgresql.table.count:
+                enabled: true
+            postgresql.table.size:
+                enabled: true
+            postgresql.table.vacuum.count:
+                enabled: true
+            postgresql.temp.io:
+                enabled: false
+            postgresql.temp_files:
+                enabled: false
+            postgresql.tup_deleted:
+                enabled: false
+            postgresql.tup_fetched:
+                enabled: false
+            postgresql.tup_inserted:
+                enabled: false
+            postgresql.tup_returned:
+                enabled: false
+            postgresql.tup_updated:
+                enabled: false
+            postgresql.wal.age:
+                enabled: true
+            postgresql.wal.delay:
+                enabled: false
+            postgresql.wal.lag:
+                enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.pgpass
+        query_sample_collection:
+            collection_interval: 1s
+            enabled: true
+            max_rows_per_query: 500
+        resource_attributes:
+            postgresql.database.name:
+                enabled: true
+            postgresql.index.name:
+                enabled: true
+            postgresql.schema.name:
+                enabled: true
+            postgresql.table.name:
+                enabled: true
+            service.instance.id:
+                enabled: true
+        timeout: 0s
+        tls:
+            insecure: true
+            insecure_skip_verify: true
+        top_query_collection:
+            collection_interval: 1m0s
+            max_explain_each_interval: 0
+            max_rows_per_query: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_n_query: 200
+        transport: tcp
+        username: cw_monitor
+    prometheus:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 30s
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: test_app
+                  metrics_path: /metrics
+                  scheme: http
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  static_configs:
+                    - targets:
+                        - localhost:9090
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_apiserver:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - authorization:
+                    credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                    type: Bearer
+                  enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: kubernetes-apiserver
+                  kubernetes_sd_configs:
+                    - enable_http2: true
+                      follow_redirects: true
+                      kubeconfig_file: ""
+                      namespaces:
+                        names:
+                            - default
+                        own_namespace: false
+                      role: endpoints
+                  metrics_path: /metrics
+                  relabel_configs:
+                    - action: keep
+                      regex: kubernetes
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_service_name
+                    - action: keep
+                      regex: https
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_endpoint_port_name
+                    - action: replace
+                      replacement: /metrics
+                      separator: ;
+                      target_label: __metrics_path__
+                  scheme: https
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  tls_config:
+                    ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                    insecure_skip_verify: false
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_cadvisor:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - authorization:
+                    credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+                    type: Bearer
+                  enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: cadvisor
+                  metrics_path: /metrics/cadvisor
+                  scheme: https
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  static_configs:
+                    - targets:
+                        - ${env:HOST_IP}:10250
+                  tls_config:
+                    insecure_skip_verify: true
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_dcgm:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: dcgm-exporter
+                  metrics_path: /metrics
+                  scheme: https
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  static_configs:
+                    - targets:
+                        - dcgm-exporter-service:9400
+                  tls_config:
+                    ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+                    insecure_skip_verify: false
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_ebs_csi_node:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: ebs-csi-node
+                  kubernetes_sd_configs:
+                    - enable_http2: true
+                      follow_redirects: true
+                      kubeconfig_file: ""
+                      namespaces:
+                        names:
+                            - kube-system
+                        own_namespace: false
+                      role: pod
+                  metrics_path: /metrics
+                  relabel_configs:
+                    - action: keep
+                      regex: ebs-csi-node
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_label_app
+                    - action: keep
+                      regex: ${env:K8S_NODE_NAME}
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_node_name
+                    - action: keep
+                      regex: metrics
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_container_port_name
+                  scheme: http
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_kube_state_metrics:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: kube-state-metrics
+                  metrics_path: /metrics
+                  scheme: https
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  static_configs:
+                    - targets:
+                        - kube-state-metrics.amazon-cloudwatch.svc:8443
+                  tls_config:
+                    ca_file: /etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt
+                    insecure_skip_verify: false
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_lis_csi_node:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: lis-csi-node
+                  kubernetes_sd_configs:
+                    - enable_http2: true
+                      follow_redirects: true
+                      kubeconfig_file: ""
+                      namespaces:
+                        names:
+                            - kube-system
+                        own_namespace: false
+                      role: pod
+                  metrics_path: /metrics
+                  relabel_configs:
+                    - action: keep
+                      regex: ec2-instance-store-plugin
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_label_app
+                    - action: keep
+                      regex: ${env:K8S_NODE_NAME}
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_node_name
+                    - action: keep
+                      regex: metrics
+                      replacement: $1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_container_port_name
+                  scheme: http
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_neuron:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: neuron-monitor
+                  metrics_path: /metrics
+                  scheme: https
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  static_configs:
+                    - targets:
+                        - neuron-monitor-service:8000
+                  tls_config:
+                    ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+                    insecure_skip_verify: false
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    prometheus/cw_k8s_ci_v0_node_exporter:
+        config:
+            global:
+                evaluation_interval: 1m
+                scrape_interval: 1m
+                scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                scrape_timeout: 10s
+            runtime:
+                gogc: 75
+            scrape_configs:
+                - enable_compression: true
+                  enable_http2: true
+                  follow_redirects: true
+                  honor_timestamps: true
+                  job_name: node-exporter
+                  metrics_path: /metrics
+                  scheme: https
+                  scrape_interval: 30s
+                  scrape_protocols:
+                    - OpenMetricsText1.0.0
+                    - OpenMetricsText0.0.1
+                    - PrometheusText1.0.0
+                    - PrometheusText0.0.4
+                  scrape_timeout: 10s
+                  static_configs:
+                    - targets:
+                        - node-exporter-service:9487
+                  tls_config:
+                    ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+                    insecure_skip_verify: false
+                  track_timestamps_staleness: false
+        report_extra_scrape_metrics: false
+        start_time_metric_regex: ""
+        trim_metric_suffixes: false
+        use_start_time_metric: false
+    telegraf_cpu:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_disk:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_diskio:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_mem:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_net:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_netstat:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_processes:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_procstat/1917393364:
+        alias_name: /var/run/example1.pid
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_socket_listener:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_statsd:
+        collection_interval: 10s
+        initial_delay: 1s
+        timeout: 0s
+    telegraf_swap:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
+    udplog/emf_logs:
+        encoding: utf-8
+        id: udp_input
+        listen_address: 127.0.0.1:25888
+        multiline:
+            line_end_pattern: .^
+            line_start_pattern: ""
+            omit_pattern: false
+        operators: []
+        retry_on_failure:
+            enabled: false
+            initial_interval: 0s
+            max_elapsed_time: 0s
+            max_interval: 0s
+        type: udp_input
+service:
+    extensions:
+        - agenthealth/metrics
+        - agenthealth/statuscode
+        - agenthealth/logs
+        - agenthealth/traces
+        - sigv4auth/monitoring
+        - agenthealth/otlphttp_metrics
+        - sigv4auth/logs
+        - awscloudwatchlogsprovisioner
+        - headers_setter/logs
+        - sigv4auth/xray
+        - sigv4auth/cw_k8s_ci_v0_metrics_dest
+        - sigv4auth/cw_k8s_ci_v0_cwotel
+        - nodemetadatacache/cw_k8s_ci_v0
+        - entitystore
+        - server
+    pipelines:
+        logs/dbi_postgresql_0:
+            exporters:
+                - count/dbi_dbload
+                - signaltometrics/dbi_topsql
+            processors:
+                - filter/dbi_exclude_monitor_0
+            receivers:
+                - postgresql/metrics_0
+        logs/dbi_postgresql_rawevents_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - filter/dbi_exclude_monitor_0
+                - resourcedetection
+                - transform/dbi_resource_0
+                - transform/dbi_logs_raw-events_0
+            receivers:
+                - postgresql/events_0
+        logs/dbi_postgresql_serverlogs_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - resourcedetection
+                - transform/dbi_resource_0
+                - transform/dbi_logs_server-logs_0
+            receivers:
+                - filelog/postgresql_0
+        logs/emf_logs:
+            exporters:
+                - awscloudwatchlogs/emf_logs
+            processors:
+                - batch/emf_logs
+            receivers:
+                - udplog/emf_logs
+        logs/opentelemetry:
+            exporters:
+                - otlphttp/logs
+            processors:
+                - resourcedetection
+                - attributestocontext
+                - transform/logs_cleanup
+                - batch/logs
+            receivers:
+                - forward/opentelemetry
+        logs/otlp:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - otlp/grpc_127_0_0_1_4327
+                - otlp/http_127_0_0_1_4328
+        metrics/cw_k8s_ci_v0_apiserver:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_cwotel
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_apiserver_extract_version
+                - filter/cw_k8s_ci_v0_apiserver_build_info
+                - transform/cw_k8s_ci_v0_set_scope_apiserver
+                - transform/cw_k8s_ci_v0_apiserver_cleanup_version
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - transform/cw_k8s_ci_v0_set_component
+                - transform/cw_k8s_ci_v0_promote_component
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_cwotel
+            receivers:
+                - prometheus/cw_k8s_ci_v0_apiserver
+        metrics/cw_k8s_ci_v0_cadvisor:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - filter/cw_k8s_ci_v0_cadvisor_empty
+                - filter/cw_k8s_ci_v0_cadvisor_pod
+                - groupbyattrs/cw_k8s_ci_v0_cadvisor
+                - transform/cw_k8s_ci_v0_cadvisor_promote
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - transform/cw_k8s_ci_v0_set_scope_cadvisor
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - prometheus/cw_k8s_ci_v0_cadvisor
+        metrics/cw_k8s_ci_v0_dcgm:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - groupbyattrs/cw_k8s_ci_v0_dcgm
+                - transform/cw_k8s_ci_v0_dcgm_promote
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - k8sattributes/cw_k8s_ci_v0_node
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_scope_dcgm
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - prometheus/cw_k8s_ci_v0_dcgm
+        metrics/cw_k8s_ci_v0_ebs_csi_node:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - transform/cw_k8s_ci_v0_ebs_csi_promote
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_set_scope_ebs_csi
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - prometheus/cw_k8s_ci_v0_ebs_csi_node
+        metrics/cw_k8s_ci_v0_efa:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_scope_efa
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - awsdevicepodcorrelation/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_efa_promote
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - k8sattributes/cw_k8s_ci_v0_node
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - awsefareceiver/cw_k8s_ci_v0
+        metrics/cw_k8s_ci_v0_kube_state_metrics:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_cwotel
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_scope_kube_state_metrics
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - transform/cw_k8s_ci_v0_ksm_clean_resource
+                - groupbyattrs/cw_k8s_ci_v0_ksm
+                - transform/cw_k8s_ci_v0_ksm_promote
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_set_workload
+                - resourcedetection/cw_k8s_ci_v0
+                - nodemetadataenricher/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_cwotel
+            receivers:
+                - prometheus/cw_k8s_ci_v0_kube_state_metrics
+        metrics/cw_k8s_ci_v0_kubeletstats:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_scope_kubeletstats
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - kubeletstats/cw_k8s_ci_v0
+        metrics/cw_k8s_ci_v0_lis_csi_node:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - transform/cw_k8s_ci_v0_lis_csi_promote
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_set_scope_lis_csi
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - prometheus/cw_k8s_ci_v0_lis_csi_node
+        metrics/cw_k8s_ci_v0_neuron:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - filter/cw_k8s_ci_v0_neuron
+                - awsneuron/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_unit
+                - awsdevicepodcorrelation/cw_k8s_ci_v0
+                - groupbyattrs/cw_k8s_ci_v0_neuron
+                - transform/cw_k8s_ci_v0_neuron_promote
+                - transform/cw_k8s_ci_v0_neuron_hw_attrs
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_set_scope_neuron_monitor
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - prometheus/cw_k8s_ci_v0_neuron
+        metrics/cw_k8s_ci_v0_node_exporter:
+            exporters:
+                - otlphttp/cw_k8s_ci_v0_metrics_dest
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - transform/cw_k8s_ci_v0_set_node_name
+                - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_set_scope_node_exporter
+                - transform/cw_k8s_ci_v0_clear_schema_url
+                - transform/cw_k8s_ci_v0_set_workload
+                - awsattributelimit/cw_k8s_ci_v0
+                - batch/cw_k8s_ci_v0_metrics_dest
+            receivers:
+                - prometheus/cw_k8s_ci_v0_node_exporter
+        metrics/dbi_postgresql_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/dbi_resource_0
+                - transform/dbi_fix_start_time
+            receivers:
+                - postgresql/metrics_0
+                - count/dbi_dbload
+                - signaltometrics/dbi_topsql
+        metrics/host:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+                - awsentity/resource
+            receivers:
+                - telegraf_processes
+                - telegraf_procstat/1917393364
+                - telegraf_disk
+                - telegraf_swap
+                - telegraf_cpu
+                - telegraf_mem
+                - telegraf_netstat
+        metrics/host_insights:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - hostmetrics
+        metrics/hostCustomMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - ec2tagger
+                - awsentity/service/telegraf
+            receivers:
+                - telegraf_socket_listener
+                - telegraf_statsd
+        metrics/hostDeltaMetrics:
+            exporters:
+                - awscloudwatch
+            processors:
+                - cumulativetodelta/hostDeltaMetrics
+                - ec2tagger
+                - awsentity/resource
+            receivers:
+                - telegraf_net
+                - telegraf_diskio
+        metrics/opentelemetry:
+            exporters:
+                - otlphttp/metrics
+            processors:
+                - resourcedetection
+                - batch/opentelemetry
+            receivers:
+                - forward/opentelemetry
+        metrics/otel_prometheus:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/set_cluster_name
+            receivers:
+                - prometheus
+        metrics/otlp:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - otlp/grpc_127_0_0_1_4327
+                - otlp/http_127_0_0_1_4328
+        traces/opentelemetry:
+            exporters:
+                - otlphttp/traces
+            processors:
+                - resourcedetection
+                - batch/opentelemetry
+            receivers:
+                - forward/opentelemetry
+        traces/otlp:
+            exporters:
+                - forward/opentelemetry
+            processors: []
+            receivers:
+                - otlp/grpc_127_0_0_1_4327
+                - otlp/http_127_0_0_1_4328
+        traces/xray:
+            exporters:
+                - awsxray
+            processors:
+                - batch/xray
+            receivers:
+                - awsxray
+                - otlp/grpc_0_0_0_0_4317
+                - otlp/http_0_0_0_0_4318
+    telemetry:
+        logs:
+            encoding: console
+            level: debug
+            output_paths:
+                - /tmp/fake/log/hotdog.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
