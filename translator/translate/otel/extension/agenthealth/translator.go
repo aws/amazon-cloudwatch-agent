@@ -41,11 +41,13 @@ var (
 type Name string
 
 var (
-	MetricsName     = Name(pipeline.SignalMetrics.String())
-	OtelMetricsName = Name("otlphttp_metrics")
-	LogsName        = Name(pipeline.SignalLogs.String())
-	TracesName      = Name(pipeline.SignalTraces.String())
-	StatusCodeName  = Name("statuscode")
+	MetricsName      = Name(pipeline.SignalMetrics.String())
+	OtelMetricsName  = Name("opentelemetry_metrics")
+	LogsName         = Name(pipeline.SignalLogs.String())
+	OtelLogsName     = Name("opentelemetry_logs")
+	TracesName       = Name(pipeline.SignalTraces.String())
+	OtelTracesName   = Name("opentelemetry_traces")
+	StatusCodeName   = Name("statuscode")
 )
 
 type Option func(*translator)

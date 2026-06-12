@@ -66,10 +66,10 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	// Agent health
-	agentHealthExt := agenthealth.NewTranslator(agenthealth.LogsName, []string{"*"}, agenthealth.WithAdditionalAuth(headersExt.ID()))
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelLogsName, []string{"*"}, agenthealth.WithAdditionalAuth(headersExt.ID()))
 
 	// Processors
-	attrCtx := attributestocontext.NewTranslator([]attributestocontextprocessor.ActionKeyValue{
+	attrCtx := attributestocontext.NewTranslatorWithName(common.OpenTelemetryKey, []attributestocontextprocessor.ActionKeyValue{
 		{Key: "aws.log.group.name", FromResourceAttribute: "aws.log.group.name"},
 		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
 	})
@@ -80,14 +80,14 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		}),
 	)
 	batch := batchprocessor.NewTranslator(
-		common.WithName("logs"),
+		common.WithName("opentelemetry_logs"),
 		batchprocessor.WithTimeout(1*time.Minute),
 		batchprocessor.WithMetadataKeys([]string{"aws.log.group.name", "aws.log.stream.name"}),
 	)
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), attrCtx, logsCleanup, batch),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), attrCtx, logsCleanup, batch),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, provisionerExt, headersExt, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),

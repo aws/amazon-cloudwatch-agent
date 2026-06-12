@@ -3,7 +3,7 @@ connectors:
 exporters:
     otlphttp/metrics:
         auth:
-            authenticator: agenthealth/otlphttp_metrics
+            authenticator: agenthealth/opentelemetry_metrics
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -29,7 +29,7 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
-    agenthealth/otlphttp_metrics:
+    agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
         stats:
@@ -52,7 +52,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
-    resourcedetection:
+    resourcedetection/opentelemetry:
         aks:
             resource_attributes:
                 cloud.platform:
@@ -334,7 +334,7 @@ processors:
                     enabled: false
         timeout: 2s
 receivers:
-    hostmetrics:
+    hostmetrics/opentelemetry:
         collection_interval: 10s
         initial_delay: 1s
         scrapers:
@@ -372,19 +372,19 @@ receivers:
 service:
     extensions:
         - sigv4auth/monitoring
-        - agenthealth/otlphttp_metrics
+        - agenthealth/opentelemetry_metrics
     pipelines:
         metrics/host_insights:
             exporters:
                 - forward/opentelemetry
             processors: []
             receivers:
-                - hostmetrics
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
             processors:
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry

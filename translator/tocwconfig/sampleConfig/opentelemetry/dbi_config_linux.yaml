@@ -228,7 +228,7 @@ connectors:
 exporters:
     otlphttp/logs:
         auth:
-            authenticator: agenthealth/logs
+            authenticator: agenthealth/opentelemetry_logs
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -255,7 +255,7 @@ exporters:
         write_buffer_size: 524288
     otlphttp/metrics:
         auth:
-            authenticator: agenthealth/otlphttp_metrics
+            authenticator: agenthealth/opentelemetry_metrics
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -281,7 +281,7 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
-    agenthealth/logs:
+    agenthealth/opentelemetry_logs:
         additional_auth: headers_setter/logs
         is_usage_data_enabled: true
         stats:
@@ -290,7 +290,7 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    agenthealth/otlphttp_metrics:
+    agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
         stats:
@@ -333,13 +333,18 @@ extensions:
         request_timeout_seconds: 30
         service: monitoring
 processors:
-    attributestocontext:
+    attributestocontext/opentelemetry:
         actions:
             - from_resource_attribute: aws.log.group.name
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
-    batch/logs:
+    batch/opentelemetry:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
             - aws.log.group.name
@@ -347,11 +352,6 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    batch/opentelemetry:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 200ms
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
         logs:
@@ -360,7 +360,7 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
-    resourcedetection:
+    resourcedetection/opentelemetry:
         aks:
             resource_attributes:
                 cloud.platform:
@@ -728,7 +728,7 @@ receivers:
             max_interval: 30s
         start_at: end
         type: file_input
-    hostmetrics:
+    hostmetrics/opentelemetry:
         collection_interval: 30s
         initial_delay: 1s
         scrapers:
@@ -1003,11 +1003,11 @@ receivers:
 service:
     extensions:
         - sigv4auth/monitoring
-        - agenthealth/otlphttp_metrics
+        - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
         - headers_setter/logs
-        - agenthealth/logs
+        - agenthealth/opentelemetry_logs
     pipelines:
         logs/dbi_postgresql_0:
             exporters:
@@ -1022,7 +1022,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - filter/dbi_exclude_monitor_0
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
             receivers:
@@ -1031,7 +1031,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
             receivers:
@@ -1040,10 +1040,10 @@ service:
             exporters:
                 - otlphttp/logs
             processors:
-                - resourcedetection
-                - attributestocontext
+                - resourcedetection/opentelemetry
+                - attributestocontext/opentelemetry
                 - transform/logs_cleanup
-                - batch/logs
+                - batch/opentelemetry_logs
             receivers:
                 - forward/opentelemetry
         metrics/dbi_postgresql_0:
@@ -1061,12 +1061,12 @@ service:
                 - forward/opentelemetry
             processors: []
             receivers:
-                - hostmetrics
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
             processors:
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry

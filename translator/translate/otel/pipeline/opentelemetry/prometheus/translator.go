@@ -77,7 +77,7 @@ type prometheusReceiverTranslator struct{}
 var _ common.ComponentTranslator = (*prometheusReceiverTranslator)(nil)
 
 func (t *prometheusReceiverTranslator) ID() component.ID {
-	return component.NewIDWithName(prometheusreceiver.NewFactory().Type(), "")
+	return component.NewIDWithName(prometheusreceiver.NewFactory().Type(), "opentelemetry")
 }
 
 func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.Config, error) {

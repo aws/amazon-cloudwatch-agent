@@ -49,6 +49,13 @@ func WithSignal(signal pipeline.Signal) Option {
 	})
 }
 
+// WithName sets the component name suffix.
+func WithName(name string) Option {
+	return optionFunc(func(t *translator) {
+		t.name = name
+	})
+}
+
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.ComponentTranslator {

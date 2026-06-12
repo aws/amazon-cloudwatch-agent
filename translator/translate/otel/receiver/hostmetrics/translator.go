@@ -41,6 +41,7 @@ func (c *Config) Validate() error {
 }
 
 type translator struct {
+	name           string
 	factory        receiver.Factory
 	processScraper map[string]any
 }
@@ -49,6 +50,10 @@ type Option func(*translator)
 
 func WithProcessScraper(scraperConfig map[string]any) Option {
 	return func(t *translator) { t.processScraper = scraperConfig }
+}
+
+func WithName(name string) Option {
+	return func(t *translator) { t.name = name }
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -62,7 +67,7 @@ func NewTranslator(opts ...Option) common.ComponentTranslator {
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), "")
+	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {

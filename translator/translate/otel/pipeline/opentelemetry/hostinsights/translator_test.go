@@ -93,13 +93,13 @@ func TestHostInsightsTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 0, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
-				assert.Equal(t, "hostmetrics", got.Receivers.Keys()[0].String())
+				assert.Equal(t, "hostmetrics/opentelemetry", got.Receivers.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 
 				if tc.expectProcess {
 					// Verify process scraper is configured for DBI
-					rcvTranslator, ok := got.Receivers.Get(component.NewIDWithName(component.MustNewType("hostmetrics"), ""))
+					rcvTranslator, ok := got.Receivers.Get(component.NewIDWithName(component.MustNewType("hostmetrics"), "opentelemetry"))
 					require.True(t, ok)
 					rcvCfg, err := rcvTranslator.Translate(conf)
 					require.NoError(t, err)

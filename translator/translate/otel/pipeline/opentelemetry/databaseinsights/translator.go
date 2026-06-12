@@ -103,7 +103,7 @@ func (t *dbiTranslator) translateRawEvents() (*common.ComponentTranslators, erro
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("events", postgresql.WithQuerySampleInterval(60*time.Second))),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter(), resourcedetection.NewTranslator(), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_"+idx, transformprocessor.WithLogStatements(t.logStatements("raw-events")))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_"+idx, transformprocessor.WithLogStatements(t.logStatements("raw-events")))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),
@@ -116,7 +116,7 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](filelog.NewTranslator(filelog.WithNamePrefix("postgresql"), filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath))),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_server-logs_"+idx, transformprocessor.WithLogStatements(t.logStatements("server-logs")))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_server-logs_"+idx, transformprocessor.WithLogStatements(t.logStatements("server-logs")))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),

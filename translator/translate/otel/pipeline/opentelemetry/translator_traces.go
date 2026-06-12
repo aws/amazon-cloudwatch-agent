@@ -46,13 +46,13 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 	}
 	tracesEndpoint := common.ServiceEndpoint("xray", region, "/v1/traces")
 	sigv4Ext := sigv4auth.NewTranslatorWithService("xray")
-	agentHealthExt := agenthealth.NewTranslator(agenthealth.TracesName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelTracesName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),

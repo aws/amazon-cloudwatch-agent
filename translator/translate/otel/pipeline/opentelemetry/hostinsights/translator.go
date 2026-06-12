@@ -35,6 +35,7 @@ func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	}
 
 	var opts []hostmetrics.Option
+	opts = append(opts, hostmetrics.WithName(common.OpenTelemetryKey))
 	if conf.IsSet(common.DatabaseInsightsConfigKey) {
 		opts = append(opts, hostmetrics.WithProcessScraper(map[string]any{
 			"include": map[string]any{

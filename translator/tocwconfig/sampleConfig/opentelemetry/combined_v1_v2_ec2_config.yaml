@@ -302,7 +302,7 @@ exporters:
             include_metadata: true
     otlphttp/logs:
         auth:
-            authenticator: agenthealth/logs
+            authenticator: agenthealth/opentelemetry_logs
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -329,7 +329,7 @@ exporters:
         write_buffer_size: 524288
     otlphttp/metrics:
         auth:
-            authenticator: agenthealth/otlphttp_metrics
+            authenticator: agenthealth/opentelemetry_metrics
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -356,7 +356,7 @@ exporters:
         write_buffer_size: 524288
     otlphttp/traces:
         auth:
-            authenticator: agenthealth/traces
+            authenticator: agenthealth/opentelemetry_traces
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
@@ -383,11 +383,10 @@ exporters:
         write_buffer_size: 524288
 extensions:
     agenthealth/logs:
-        additional_auth: headers_setter/logs
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutLogEvents
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -399,8 +398,26 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    agenthealth/otlphttp_metrics:
+    agenthealth/opentelemetry_logs:
+        additional_auth: headers_setter/logs
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/opentelemetry_traces:
+        additional_auth: sigv4auth/xray
         is_usage_data_enabled: true
         stats:
             operations:
@@ -416,11 +433,10 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     agenthealth/traces:
-        additional_auth: sigv4auth/xray
         is_usage_data_enabled: true
         stats:
             operations:
-                - '*'
+                - PutTraceSegments
             usage_flags:
                 mode: EC2
                 region_type: ACJ
@@ -469,7 +485,7 @@ extensions:
         request_timeout_seconds: 30
         service: xray
 processors:
-    attributestocontext:
+    attributestocontext/opentelemetry:
         actions:
             - from_resource_attribute: aws.log.group.name
               key: aws.log.group.name
@@ -488,7 +504,12 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    batch/logs:
+    batch/opentelemetry:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 200ms
+    batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
             - aws.log.group.name
@@ -496,11 +517,6 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    batch/opentelemetry:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 200ms
     batch/xray:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -521,9 +537,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -536,7 +552,7 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
-    resourcedetection:
+    resourcedetection/opentelemetry:
         aks:
             resource_attributes:
                 cloud.platform:
@@ -920,7 +936,7 @@ receivers:
             max_interval: 30s
         start_at: end
         type: file_input
-    hostmetrics:
+    hostmetrics/opentelemetry:
         collection_interval: 1m0s
         initial_delay: 1s
         scrapers:
@@ -1232,7 +1248,7 @@ receivers:
             top_n_query: 200
         transport: tcp
         username: cw_monitor
-    prometheus:
+    prometheus/opentelemetry:
         config:
             global:
                 evaluation_interval: 1m
@@ -1334,11 +1350,13 @@ service:
         - agenthealth/logs
         - agenthealth/traces
         - sigv4auth/monitoring
-        - agenthealth/otlphttp_metrics
+        - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
         - headers_setter/logs
+        - agenthealth/opentelemetry_logs
         - sigv4auth/xray
+        - agenthealth/opentelemetry_traces
         - entitystore
     pipelines:
         logs/dbi_postgresql_0:
@@ -1354,7 +1372,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - filter/dbi_exclude_monitor_0
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
             receivers:
@@ -1363,7 +1381,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
             receivers:
@@ -1379,10 +1397,10 @@ service:
             exporters:
                 - otlphttp/logs
             processors:
-                - resourcedetection
-                - attributestocontext
+                - resourcedetection/opentelemetry
+                - attributestocontext/opentelemetry
                 - transform/logs_cleanup
-                - batch/logs
+                - batch/opentelemetry_logs
             receivers:
                 - forward/opentelemetry
         logs/otlp:
@@ -1409,19 +1427,19 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_procstat/1917393364
-                - telegraf_netstat
                 - telegraf_swap
-                - telegraf_processes
-                - telegraf_disk
                 - telegraf_cpu
+                - telegraf_processes
+                - telegraf_netstat
                 - telegraf_mem
+                - telegraf_disk
+                - telegraf_procstat/1917393364
         metrics/host_insights:
             exporters:
                 - forward/opentelemetry
             processors: []
             receivers:
-                - hostmetrics
+                - hostmetrics/opentelemetry
         metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch
@@ -1429,8 +1447,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1439,13 +1457,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
             processors:
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry
@@ -1454,7 +1472,7 @@ service:
                 - forward/opentelemetry
             processors: []
             receivers:
-                - prometheus
+                - prometheus/opentelemetry
         metrics/otlp:
             exporters:
                 - forward/opentelemetry
@@ -1466,7 +1484,7 @@ service:
             exporters:
                 - otlphttp/traces
             processors:
-                - resourcedetection
+                - resourcedetection/opentelemetry
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry

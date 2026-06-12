@@ -96,7 +96,7 @@ func TestPrometheusTranslator(t *testing.T) {
 				assert.Equal(t, 1, got.Receivers.Len())
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
-				assert.Equal(t, "prometheus", got.Receivers.Keys()[0].String())
+				assert.Equal(t, "prometheus/opentelemetry", got.Receivers.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Exporters.Keys()[0].String())
 			}
 		})
