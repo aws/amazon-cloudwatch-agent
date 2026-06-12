@@ -179,9 +179,9 @@ processors:
         timeout: 10s
     batch/opentelemetry:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 200ms
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 15s
     filter/cw_k8s_ci_v0_apiserver_build_info:
         error_mode: ignore
         logs: {}

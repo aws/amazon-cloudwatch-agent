@@ -49,9 +49,9 @@ extensions:
 processors:
     batch/opentelemetry:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 200ms
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 15s
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
