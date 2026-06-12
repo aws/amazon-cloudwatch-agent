@@ -104,30 +104,6 @@ processors:
     - context: datapoint
       statements:
       - set(resource.attributes["k8s.component.name"], attributes["component"])
-  resourcedetection/cw_k8s_ci_v0:
-    detectors:
-    - eks
-    - ec2
-    ec2:
-      resource_attributes:
-        cloud.account.id:
-          enabled: true
-        cloud.availability_zone:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        host.id:
-          enabled: false
-        host.image.id:
-          enabled: false
-        host.name:
-          enabled: false
-        host.type:
-          enabled: false
   transform/cw_k8s_ci_v0_clear_schema_url:
     error_mode: ignore
     metric_statements:
@@ -161,24 +137,7 @@ processors:
     - k8s.node.label.beta.kubernetes.io/
     - k8s.node.label.failure-domain.beta.kubernetes.io/
     - k8s.node.label.alpha.eksctl.io/
-  batch/cw_k8s_ci_v0_cwotel:
-    send_batch_max_size: 500
-    send_batch_size: 500
-    timeout: 10s
-exporters:
-  otlphttp/cw_k8s_ci_v0_cwotel:
-    auth:
-      authenticator: sigv4auth/cw_k8s_ci_v0_cwotel
-    endpoint: https://monitoring.{{.Region}}.amazonaws.com:443
-    tls:
-      insecure: false
-extensions:
-  sigv4auth/cw_k8s_ci_v0_cwotel:
-    region: {{.Region}}
-    service: monitoring
 service:
-  extensions:
-  - sigv4auth/cw_k8s_ci_v0_cwotel
   pipelines:
     metrics/cw_k8s_ci_v0_apiserver:
       receivers:
@@ -194,10 +153,10 @@ service:
       - transform/cw_k8s_ci_v0_set_cluster_name
       - transform/cw_k8s_ci_v0_set_component
       - transform/cw_k8s_ci_v0_promote_component
-      - resourcedetection/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_clear_schema_url
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
       - awsattributelimit/cw_k8s_ci_v0
-      - batch/cw_k8s_ci_v0_cwotel
       exporters:
-      - otlphttp/cw_k8s_ci_v0_cwotel
+      - forward/opentelemetry
+connectors:
+  forward/opentelemetry: {}

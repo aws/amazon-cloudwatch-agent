@@ -137,30 +137,6 @@ processors:
     - sources:
       - from: resource_attribute
         name: k8s.node.name
-  resourcedetection/cw_k8s_ci_v0:
-    detectors:
-    - eks
-    - ec2
-    ec2:
-      resource_attributes:
-        cloud.account.id:
-          enabled: true
-        cloud.availability_zone:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        host.id:
-          enabled: true
-        host.image.id:
-          enabled: true
-        host.name:
-          enabled: true
-        host.type:
-          enabled: true
   transform/cw_k8s_ci_v0_clear_schema_url:
     error_mode: ignore
     metric_statements:
@@ -211,24 +187,7 @@ processors:
     - k8s.node.label.beta.kubernetes.io/
     - k8s.node.label.failure-domain.beta.kubernetes.io/
     - k8s.node.label.alpha.eksctl.io/
-  batch/cw_k8s_ci_v0_metrics_dest:
-    send_batch_max_size: 500
-    send_batch_size: 500
-    timeout: 10s
-exporters:
-  otlphttp/cw_k8s_ci_v0_metrics_dest:
-    auth:
-      authenticator: sigv4auth/cw_k8s_ci_v0_metrics_dest
-    endpoint: https://monitoring.{{.Region}}.amazonaws.com:443
-    tls:
-      insecure: false
-extensions:
-  sigv4auth/cw_k8s_ci_v0_metrics_dest:
-    region: {{.Region}}
-    service: monitoring
 service:
-  extensions:
-  - sigv4auth/cw_k8s_ci_v0_metrics_dest
   pipelines:
     metrics/cw_k8s_ci_v0_efa:
       receivers:
@@ -244,11 +203,11 @@ service:
       - transform/cw_k8s_ci_v0_promote_node_name
       - k8sattributes/cw_k8s_ci_v0_pod
       - k8sattributes/cw_k8s_ci_v0_node
-      - resourcedetection/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_clear_schema_url
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
       - transform/cw_k8s_ci_v0_set_workload
       - awsattributelimit/cw_k8s_ci_v0
-      - batch/cw_k8s_ci_v0_metrics_dest
       exporters:
-      - otlphttp/cw_k8s_ci_v0_metrics_dest
+      - forward/opentelemetry
+connectors:
+  forward/opentelemetry: {}
