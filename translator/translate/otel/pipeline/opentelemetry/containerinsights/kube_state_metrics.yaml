@@ -139,6 +139,8 @@ processors:
       - k8s.job.name
       - k8s.cronjob.name
     passthrough: false
+    exclude:
+      pods: []
     pod_association:
     - sources:
       - from: resource_attribute
@@ -155,6 +157,8 @@ processors:
       metadata:
       - k8s.node.name
     passthrough: false
+    exclude:
+      pods: []
     pod_association:
     - sources:
       - from: resource_attribute

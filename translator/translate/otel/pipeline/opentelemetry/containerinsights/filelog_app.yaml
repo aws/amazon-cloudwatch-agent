@@ -78,6 +78,8 @@ processors:
     filter:
       node_from_env_var: K8S_NODE_NAME
     passthrough: false
+    exclude:
+      pods: []
     pod_association:
     - sources:
       - from: resource_attribute
@@ -101,6 +103,8 @@ processors:
     filter:
       node_from_env_var: K8S_NODE_NAME
     passthrough: false
+    exclude:
+      pods: []
     pod_association:
     - sources:
       - from: resource_attribute
