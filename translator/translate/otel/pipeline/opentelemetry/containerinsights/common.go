@@ -5,6 +5,7 @@ package containerinsights
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
@@ -117,11 +118,18 @@ func createComponentConfig(id component.ID, cfgMap map[string]interface{}) (comp
 	return cfg, nil
 }
 
+// clusterNameRegex restricts cluster_name to safe characters, preventing
+// OTTL injection and template metacharacter issues in YAML templates.
+var clusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+
 func getClusterName(conf *confmap.Conf) (string, error) {
 	key := common.ConfigKey(ciConfigKey, "cluster_name")
 	name, ok := common.GetString(conf, key)
 	if !ok || name == "" {
 		return "", fmt.Errorf("cluster_name is required for container_insights")
+	}
+	if !clusterNameRegex.MatchString(name) {
+		return "", fmt.Errorf("cluster_name contains invalid characters: %q (must match %s)", name, clusterNameRegex.String())
 	}
 	return name, nil
 }
