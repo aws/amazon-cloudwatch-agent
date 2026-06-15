@@ -171,10 +171,6 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 15s
-    groupbyattrs/logs:
-        keys:
-            - aws.log.group.name
-            - aws.log.stream.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -562,7 +558,6 @@ service:
                 - resourcedetection/opentelemetry
                 - transform/identity
                 - transform/logs_routing
-                - groupbyattrs/logs
                 - attributestocontext/opentelemetry
                 - transform/logs_cleanup
                 - batch/opentelemetry_logs

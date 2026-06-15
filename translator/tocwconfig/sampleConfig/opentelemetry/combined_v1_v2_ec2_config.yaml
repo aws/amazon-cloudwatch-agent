@@ -552,10 +552,6 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
-    groupbyattrs/logs:
-        keys:
-            - aws.log.group.name
-            - aws.log.stream.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -1460,7 +1456,6 @@ service:
                 - resourcedetection/opentelemetry
                 - transform/identity
                 - transform/logs_routing
-                - groupbyattrs/logs
                 - attributestocontext/opentelemetry
                 - transform/logs_cleanup
                 - batch/opentelemetry_logs
