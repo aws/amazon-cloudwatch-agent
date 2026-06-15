@@ -1,11 +1,14 @@
 receivers:
   prometheus/cw_k8s_ci_v0_node_exporter:
     config:
+      global:
+        scrape_interval: {{.CollectionInterval}}
+        scrape_timeout: {{.ScrapeTimeout}}
       scrape_configs:
       - job_name: node-exporter
         scheme: https
         scrape_interval: {{.CollectionInterval}}
-        scrape_timeout: 10s
+        scrape_timeout: {{.ScrapeTimeout}}
         static_configs:
         - targets:
           - node-exporter-service:9487
@@ -72,12 +75,16 @@ processors:
     - context: datapoint
       statements:
       - set(resource.attributes["k8s.node.name"], attributes["node_name"]) where attributes["node_name"] != nil
+  resourcedetection/cw_k8s_ci_v0:
+    detectors: [eks, env, ec2]
+    override: false
+    timeout: 2s
   transform/cw_k8s_ci_v0_set_cloud_resource_id:
     error_mode: ignore
     metric_statements:
     - context: resource
       statements:
-      - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:eks:", resource.attributes["cloud.region"], ":", resource.attributes["cloud.account.id"], ":cluster/", resource.attributes["k8s.cluster.name"]], "")) where resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil
+      - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil
   k8sattributes/cw_k8s_ci_v0_node:
     auth_type: serviceAccount
     extract:
@@ -162,6 +169,7 @@ service:
       - transform/cw_k8s_ci_v0_set_cluster_name
       - transform/cw_k8s_ci_v0_set_node_name
       - transform/cw_k8s_ci_v0_promote_node_name
+      - resourcedetection/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
       - k8sattributes/cw_k8s_ci_v0_node
       - transform/cw_k8s_ci_v0_set_scope_node_exporter

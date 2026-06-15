@@ -7,7 +7,9 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"os"
 	"text/template"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -18,6 +20,17 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 )
+
+// envOrPlaceholder returns the env var value if set and non-empty, otherwise
+// returns ${VAR} as a placeholder for the expandconverter to resolve at
+// collector startup. Treats empty string same as unset since K8S downward API
+// vars (K8S_NODE_NAME, HOST_IP) are always non-empty when present.
+func envOrPlaceholder(name string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return "${" + name + "}"
+}
 
 //go:embed kubeletstats.yaml
 var kubeletstatsYAML string
@@ -123,16 +136,23 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		return nil, err
 	}
 
+	collectionInterval := getCollectionInterval(conf)
+	scrapeTimeout := 10 * time.Second
+	if collectionInterval < scrapeTimeout {
+		scrapeTimeout = collectionInterval
+	}
+
 	data := templateData{
 		ClusterName:        clusterName,
 		Region:             agent.Global_Config.Region,
-		CollectionInterval: getCollectionInterval(conf).String(),
-		NodeName:           "${env:K8S_NODE_NAME}",
-		HostIP:             "${env:HOST_IP}",
+		CollectionInterval: collectionInterval.String(),
+		ScrapeTimeout:      scrapeTimeout.String(),
+		NodeName:           envOrPlaceholder("K8S_NODE_NAME"),
+		HostIP:             envOrPlaceholder("HOST_IP"),
 		AppLogGroup:        fmt.Sprintf("/aws/otel/containerinsights/%s/application", clusterName),
-		AppLogStream:       "${env:K8S_NODE_NAME}-application",
+		AppLogStream:       envOrPlaceholder("K8S_NODE_NAME") + "-application",
 		NodeLogGroup:       fmt.Sprintf("/aws/otel/containerinsights/%s/host", clusterName),
-		NodeLogStream:      "${env:K8S_NODE_NAME}-host",
+		NodeLogStream:      envOrPlaceholder("K8S_NODE_NAME") + "-host",
 	}
 
 	// Execute template
@@ -146,8 +166,11 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	}
 
 	// Parse YAML
+	// Escape $N patterns so the expandconverter doesn't misinterpret regex
+	// backreferences (e.g., k8sattributes tag_name: $$$1) as env var refs.
+	escaped := escapeDollarDigit(buf.String())
 	var parsed map[string]interface{}
-	if err := yaml.Unmarshal(buf.Bytes(), &parsed); err != nil {
+	if err := yaml.Unmarshal([]byte(escaped), &parsed); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML for %s: %w", t.name, err)
 	}
 

@@ -8,30 +8,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awscloudwatchlogsprovisionerextension"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyattrsprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/metricstarttimeprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
-	"go.opentelemetry.io/collector/processor/batchprocessor"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/nodemetadatacache"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsneuron"
-	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -47,6 +26,7 @@ type templateData struct {
 	ClusterName        string
 	Region             string
 	CollectionInterval string
+	ScrapeTimeout      string
 	NodeName           string
 	HostIP             string
 	AppLogGroup        string
@@ -55,38 +35,40 @@ type templateData struct {
 	NodeLogStream      string
 }
 
-// factoryEntry holds a component factory for creating default configs.
-type factoryEntry struct {
-	createDefaultConfig func() component.Config
+// rawMapConfig wraps a raw config map and passes it through serialization unchanged.
+// This avoids the struct round-trip that causes:
+// - Bug 1: expandconverter misinterpreting $1 injected by struct defaults
+// - Bug 2: zero-value ErrorMode in transform processor ContextStatements
+// - Bug 3: broken operator.Config marshaling for filelog receiver
+type rawMapConfig struct {
+	data map[string]interface{}
 }
 
-// factoryRegistry maps component type names to their factories.
-var factoryRegistry = map[string]factoryEntry{
-	// Receivers
-	"kubeletstats":   {createDefaultConfig: kubeletstatsreceiver.NewFactory().CreateDefaultConfig},
-	"prometheus":     {createDefaultConfig: prometheusreceiver.NewFactory().CreateDefaultConfig},
-	"filelog":        {createDefaultConfig: filelogreceiver.NewFactory().CreateDefaultConfig},
-	"awsefareceiver": {createDefaultConfig: awsefareceiver.NewFactory().CreateDefaultConfig},
-	// Processors
-	"transform":               {createDefaultConfig: transformprocessor.NewFactory().CreateDefaultConfig},
-	"filter":                  {createDefaultConfig: filterprocessor.NewFactory().CreateDefaultConfig},
-	"batch":                   {createDefaultConfig: batchprocessor.NewFactory().CreateDefaultConfig},
-	"k8sattributes":           {createDefaultConfig: k8sattributesprocessor.NewFactory().CreateDefaultConfig},
-	"resourcedetection":       {createDefaultConfig: resourcedetectionprocessor.NewFactory().CreateDefaultConfig},
-	"groupbyattrs":            {createDefaultConfig: groupbyattrsprocessor.NewFactory().CreateDefaultConfig},
-	"metricstarttime":         {createDefaultConfig: metricstarttimeprocessor.NewFactory().CreateDefaultConfig},
-	"awsattributelimit":       {createDefaultConfig: awsattributelimitprocessor.NewFactory().CreateDefaultConfig},
-	"awsdevicepodcorrelation": {createDefaultConfig: awsdevicepodcorrelationprocessor.NewFactory().CreateDefaultConfig},
-	"awsneuron":               {createDefaultConfig: awsneuron.NewFactory().CreateDefaultConfig},
-	"nodemetadataenricher":    {createDefaultConfig: nodemetadataenricher.NewFactory().CreateDefaultConfig},
-	"attributestocontext":     {createDefaultConfig: attributestocontextprocessor.NewFactory().CreateDefaultConfig},
-	// Exporters
-	"otlphttp": {createDefaultConfig: otlphttpexporter.NewFactory().CreateDefaultConfig},
-	// Extensions
-	"sigv4auth":                    {createDefaultConfig: sigv4authextension.NewFactory().CreateDefaultConfig},
-	"awscloudwatchlogsprovisioner": {createDefaultConfig: awscloudwatchlogsprovisionerextension.NewFactory().CreateDefaultConfig},
-	"nodemetadatacache":            {createDefaultConfig: nodemetadatacache.NewFactory().CreateDefaultConfig},
-	"headers_setter":               {createDefaultConfig: headerssetterextension.NewFactory().CreateDefaultConfig},
+var _ component.Config = (*rawMapConfig)(nil)
+var _ confmap.Marshaler = rawMapConfig{}
+
+func (r rawMapConfig) Validate() error { return nil } // validation deferred to component factory at runtime
+
+// Marshal implements confmap.Marshaler so that the internal mapstructure encoder
+// returns the raw map directly instead of reflecting over struct fields.
+// Uses value receiver because the encoder dereferences pointers before checking
+// for the Marshaler interface.
+func (r rawMapConfig) Marshal(conf *confmap.Conf) error {
+	return conf.Merge(confmap.NewFromStringMap(r.data))
+}
+
+// escapeDollarDigit escapes bare $ followed by a digit so the expandconverter
+// does not interpret regex backreferences (e.g., k8sattributes $1) as env vars.
+func escapeDollarDigit(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] == '$' && i+1 < len(s) && s[i+1] >= '0' && s[i+1] <= '9' {
+			out = append(out, '$', '$')
+		} else {
+			out = append(out, s[i])
+		}
+	}
+	return string(out)
 }
 
 // yamlComponentTranslator wraps a pre-built component config.
@@ -100,22 +82,6 @@ var _ common.ComponentTranslator = (*yamlComponentTranslator)(nil)
 func (t *yamlComponentTranslator) ID() component.ID { return t.id }
 func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return t.cfg, nil
-}
-
-// createComponentConfig looks up the factory for the component type, creates a default config,
-// and unmarshals the YAML section into it.
-func createComponentConfig(id component.ID, cfgMap map[string]interface{}) (component.Config, error) {
-	entry, ok := factoryRegistry[id.Type().String()]
-	if !ok {
-		return nil, fmt.Errorf("unknown component type: %s", id.Type())
-	}
-	cfg := entry.createDefaultConfig()
-	if len(cfgMap) > 0 {
-		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal config for %s: %w", id, err)
-		}
-	}
-	return cfg, nil
 }
 
 // clusterNameRegex restricts cluster_name to safe characters, preventing
@@ -252,11 +218,7 @@ func buildComponentTranslators(parsed map[string]interface{}, section string, or
 			return common.NewTranslatorMap[component.Config, component.ID](), err
 		}
 
-		cfg, err := createComponentConfig(id, cfgMap)
-		if err != nil {
-			return common.NewTranslatorMap[component.Config, component.ID](), err
-		}
-
+		cfg := &rawMapConfig{data: cfgMap}
 		translators = append(translators, &yamlComponentTranslator{id: id, cfg: cfg})
 	}
 
