@@ -981,6 +981,13 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    resourcedetection/cw_k8s_ci_v0:
+        detectors:
+            - eks
+            - env
+            - ec2
+        override: false
+        timeout: 2s
     transform/cw_k8s_ci_v0_apiserver_cleanup_version:
         error_mode: ignore
         metric_statements:
@@ -1143,7 +1150,7 @@ processors:
         metric_statements:
             - context: resource
               statements:
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:eks:", resource.attributes["cloud.region"], ":", resource.attributes["cloud.account.id"], ":cluster/", resource.attributes["k8s.cluster.name"]], "")) where resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil
+                - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil
     transform/cw_k8s_ci_v0_set_cluster_name:
         error_mode: ignore
         metric_statements:
@@ -2105,6 +2112,7 @@ service:
                 - transform/cw_k8s_ci_v0_set_component
                 - transform/cw_k8s_ci_v0_promote_component
                 - transform/cw_k8s_ci_v0_clear_schema_url
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - awsattributelimit/cw_k8s_ci_v0
             receivers:
@@ -2123,6 +2131,7 @@ service:
                 - transform/cw_k8s_ci_v0_cadvisor_promote
                 - transform/cw_k8s_ci_v0_set_node_name
                 - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - k8sattributes/cw_k8s_ci_v0_node
                 - k8sattributes/cw_k8s_ci_v0_pod
@@ -2148,6 +2157,7 @@ service:
                 - k8sattributes/cw_k8s_ci_v0_node
                 - transform/cw_k8s_ci_v0_set_scope_dcgm
                 - transform/cw_k8s_ci_v0_clear_schema_url
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - transform/cw_k8s_ci_v0_set_workload
                 - awsattributelimit/cw_k8s_ci_v0
@@ -2164,6 +2174,7 @@ service:
                 - transform/cw_k8s_ci_v0_ebs_csi_promote
                 - transform/cw_k8s_ci_v0_set_node_name
                 - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - k8sattributes/cw_k8s_ci_v0_node
                 - transform/cw_k8s_ci_v0_set_scope_ebs_csi
@@ -2187,6 +2198,7 @@ service:
                 - k8sattributes/cw_k8s_ci_v0_pod
                 - k8sattributes/cw_k8s_ci_v0_node
                 - transform/cw_k8s_ci_v0_clear_schema_url
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - transform/cw_k8s_ci_v0_set_workload
                 - awsattributelimit/cw_k8s_ci_v0
@@ -2209,6 +2221,7 @@ service:
                 - transform/cw_k8s_ci_v0_set_workload
                 - nodemetadataenricher/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_clear_schema_url
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - awsattributelimit/cw_k8s_ci_v0
             receivers:
@@ -2220,6 +2233,7 @@ service:
                 - metricstarttime/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_scope_kubeletstats
                 - transform/cw_k8s_ci_v0_set_cluster_name
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - k8sattributes/cw_k8s_ci_v0_pod
                 - k8sattributes/cw_k8s_ci_v0_node
@@ -2239,6 +2253,7 @@ service:
                 - transform/cw_k8s_ci_v0_lis_csi_promote
                 - transform/cw_k8s_ci_v0_set_node_name
                 - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - k8sattributes/cw_k8s_ci_v0_node
                 - transform/cw_k8s_ci_v0_set_scope_lis_csi
@@ -2264,6 +2279,7 @@ service:
                 - k8sattributes/cw_k8s_ci_v0_pod
                 - transform/cw_k8s_ci_v0_set_node_name
                 - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - k8sattributes/cw_k8s_ci_v0_node
                 - transform/cw_k8s_ci_v0_set_scope_neuron_monitor
@@ -2282,6 +2298,7 @@ service:
                 - transform/cw_k8s_ci_v0_set_cluster_name
                 - transform/cw_k8s_ci_v0_set_node_name
                 - transform/cw_k8s_ci_v0_promote_node_name
+                - resourcedetection/cw_k8s_ci_v0
                 - transform/cw_k8s_ci_v0_set_cloud_resource_id
                 - k8sattributes/cw_k8s_ci_v0_node
                 - transform/cw_k8s_ci_v0_set_scope_node_exporter
