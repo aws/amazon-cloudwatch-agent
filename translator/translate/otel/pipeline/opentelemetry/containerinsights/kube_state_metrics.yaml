@@ -1,11 +1,14 @@
 receivers:
   prometheus/cw_k8s_ci_v0_kube_state_metrics:
     config:
+      global:
+        scrape_interval: {{.CollectionInterval}}
+        scrape_timeout: {{.ScrapeTimeout}}
       scrape_configs:
       - job_name: kube-state-metrics
         scheme: https
         scrape_interval: {{.CollectionInterval}}
-        scrape_timeout: 10s
+        scrape_timeout: {{.ScrapeTimeout}}
         static_configs:
         - targets:
           - kube-state-metrics.amazon-cloudwatch.svc:8443

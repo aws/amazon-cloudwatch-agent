@@ -523,22 +523,18 @@ processors:
     awsdevicepodcorrelation/cw_k8s_ci_v0:
         device_types:
             - device_id_attribute: neuroncore
-              device_id_source: ""
               name: neuron-by-core
               resource_names:
                 - aws.amazon.com/neuroncore
             - device_id_attribute: neurondevice
-              device_id_source: ""
               name: neuron-by-device
               resource_names:
                 - aws.amazon.com/neurondevice
                 - aws.amazon.com/neuron
             - device_id_attribute: aws.efa.device
-              device_id_source: ""
               name: efa
               resource_names:
                 - vpc.amazonaws.com/efa
-        kubelet_socket_path: /var/lib/kubelet/pod-resources/kubelet.sock
     awsentity/resource:
         entity_type: Resource
         kubernetes_mode: EKS
@@ -549,7 +545,7 @@ processors:
         kubernetes_mode: EKS
         platform: ec2
         scrape_datapoint_attribute: true
-    awsneuron/cw_k8s_ci_v0: {}
+    awsneuron/cw_k8s_ci_v0: null
     batch/emf_logs:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 0
@@ -597,47 +593,32 @@ processors:
         refresh_volumes_interval: 0s
     filter/cw_k8s_ci_v0_apiserver_build_info:
         error_mode: ignore
-        logs: {}
         metrics:
             metric:
                 - name == "kubernetes_build_info"
-        spans: {}
-        traces: {}
     filter/cw_k8s_ci_v0_cadvisor_empty:
         error_mode: ignore
-        logs: {}
         metrics:
             datapoint:
                 - attributes["container"] == "" and attributes["pod"] == ""
                 - attributes["container"] == "" and attributes["pod"] == nil
                 - attributes["container"] == nil and attributes["pod"] == ""
                 - attributes["container"] == nil and attributes["pod"] == nil
-        spans: {}
-        traces: {}
     filter/cw_k8s_ci_v0_cadvisor_pod:
         error_mode: ignore
-        logs: {}
         metrics:
             datapoint:
                 - attributes["container"] == "POD"
-        spans: {}
-        traces: {}
     filter/cw_k8s_ci_v0_neuron:
         error_mode: ignore
-        logs: {}
         metrics:
             metric:
                 - IsMatch(name, "^(neuron|execution_|hardware_ecc_)") != true
-        spans: {}
-        traces: {}
     filter/cw_k8s_ci_v0_scrape_metadata:
         error_mode: ignore
-        logs: {}
         metrics:
             metric:
                 - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added)$")
-        spans: {}
-        traces: {}
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
         logs:
@@ -678,41 +659,29 @@ processors:
             - k8s.container.name
     k8sattributes/cw_k8s_ci_v0_node:
         auth_type: serviceAccount
-        context: ""
         exclude:
-            pods: []
+            pods: null
         extract:
             labels:
                 - from: node
-                  key: ""
                   key_regex: (.*)
-                  tag_name: k8s.node.label.$$$1
+                  tag_name: k8s.node.label.$$$$1
             metadata:
                 - k8s.node.name
-            otel_annotations: false
-        filter:
-            namespace: ""
-            node: ""
-            node_from_env_var: ""
-        kube_config_path: ""
         passthrough: false
         pod_association:
             - sources:
                 - from: resource_attribute
                   name: k8s.node.name
-        wait_for_metadata: false
-        wait_for_metadata_timeout: 10s
     k8sattributes/cw_k8s_ci_v0_pod:
         auth_type: serviceAccount
-        context: ""
         exclude:
-            pods: []
+            pods: null
         extract:
             labels:
                 - from: pod
-                  key: ""
                   key_regex: (.*)
-                  tag_name: k8s.pod.label.$$$1
+                  tag_name: k8s.pod.label.$$$$1
             metadata:
                 - k8s.pod.uid
                 - k8s.node.name
@@ -722,12 +691,6 @@ processors:
                 - k8s.replicaset.name
                 - k8s.job.name
                 - k8s.cronjob.name
-            otel_annotations: false
-        filter:
-            namespace: ""
-            node: ""
-            node_from_env_var: ""
-        kube_config_path: ""
         passthrough: false
         pod_association:
             - sources:
@@ -735,12 +698,8 @@ processors:
                   name: k8s.pod.name
                 - from: resource_attribute
                   name: k8s.namespace.name
-        wait_for_metadata: false
-        wait_for_metadata_timeout: 10s
-    metricstarttime/cw_k8s_ci_v0:
-        gc_interval: 10m0s
-        strategy: true_reset_point
-    nodemetadataenricher/cw_k8s_ci_v0: {}
+    metricstarttime/cw_k8s_ci_v0: null
+    nodemetadataenricher/cw_k8s_ci_v0: null
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -1024,92 +983,63 @@ processors:
         timeout: 2s
     transform/cw_k8s_ci_v0_apiserver_cleanup_version:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - delete_key(attributes, "k8s.apiserver.version") where attributes["k8s.apiserver.version"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_apiserver_extract_version:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.apiserver.version"], attributes["git_version"]) where attributes["git_version"] != nil and attributes["git_version"] != ""
-        trace_statements: []
     transform/cw_k8s_ci_v0_cadvisor_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - set(attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil and attributes["container"] != ""
                 - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
                 - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(attributes["container"], resource.attributes["container"]) where resource.attributes["container"] != nil
                 - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
                 - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_clear_schema_url:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - set(resource.schema_url, "")
-        trace_statements: []
     transform/cw_k8s_ci_v0_dcgm_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
                 - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
                 - set(attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
                 - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
                 - set(attributes["container"], resource.attributes["container"]) where resource.attributes["container"] != nil
                 - delete_key(attributes, "Hostname") where attributes["Hostname"] != nil
                 - delete_key(attributes, "pci_bus_id") where attributes["pci_bus_id"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_ebs_csi_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["instance_id"], attributes["instance_id"]) where attributes["instance_id"] != nil
                 - set(resource.attributes["volume_id"], attributes["volume_id"]) where attributes["volume_id"] != nil
                 - delete_key(attributes, "instance_id") where attributes["instance_id"] != nil
                 - delete_key(attributes, "volume_id") where attributes["volume_id"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_efa_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.pod.name"], attributes["k8s.pod.name"]) where attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["k8s.namespace.name"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
@@ -1117,14 +1047,10 @@ processors:
                 - delete_key(attributes, "k8s.pod.name") where attributes["k8s.pod.name"] != nil
                 - delete_key(attributes, "k8s.namespace.name") where attributes["k8s.namespace.name"] != nil
                 - delete_key(attributes, "k8s.container.name") where attributes["k8s.container.name"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_ksm_clean_resource:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - delete_key(attributes, "k8s.pod.name")
                 - delete_key(attributes, "k8s.pod.uid")
@@ -1135,14 +1061,10 @@ processors:
                 - delete_key(attributes, "k8s.replicaset.name")
                 - delete_key(attributes, "k8s.workload.name")
                 - delete_key(attributes, "k8s.workload.type")
-        trace_statements: []
     transform/cw_k8s_ci_v0_ksm_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
                 - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
@@ -1158,7 +1080,6 @@ processors:
                 - set(attributes["k8s.cronjob.name"], attributes["cronjob"]) where attributes["cronjob"] != nil
                 - set(attributes["k8s.replicaset.name"], attributes["replicaset"]) where attributes["replicaset"] != nil
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
                 - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
@@ -1173,41 +1094,29 @@ processors:
                 - set(attributes["cronjob"], resource.attributes["cronjob"]) where resource.attributes["cronjob"] != nil
                 - set(attributes["owner_name"], resource.attributes["owner_name"]) where resource.attributes["owner_name"] != nil
                 - set(attributes["owner_kind"], resource.attributes["owner_kind"]) where resource.attributes["owner_kind"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_lis_csi_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["instance_id"], attributes["instance_id"]) where attributes["instance_id"] != nil
                 - set(resource.attributes["volume_id"], attributes["volume_id"]) where attributes["volume_id"] != nil
                 - delete_key(attributes, "instance_id") where attributes["instance_id"] != nil
                 - delete_key(attributes, "volume_id") where attributes["volume_id"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_neuron_hw_attrs:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(attributes["aws.neuron.device"], attributes["neurondevice"]) where attributes["neurondevice"] != nil
                 - set(attributes["aws.neuron.core"], attributes["neuroncore"]) where attributes["neuroncore"] != nil
                 - delete_key(attributes, "neuroncore") where attributes["neuroncore"] != nil
                 - delete_key(attributes, "neurondevice") where attributes["neurondevice"] != nil
                 - delete_key(attributes, "instance_type") where attributes["instance_type"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_neuron_promote:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.pod.name"], attributes["k8s.pod.name"]) where attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["k8s.namespace.name"], attributes["k8s.namespace.name"]) where attributes["k8s.namespace.name"] != nil
@@ -1217,210 +1126,142 @@ processors:
                 - delete_key(attributes, "k8s.namespace.name") where attributes["k8s.namespace.name"] != nil
                 - delete_key(attributes, "k8s.container.name") where attributes["k8s.container.name"] != nil
                 - delete_key(attributes, "runtime_tag") where attributes["runtime_tag"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_promote_component:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.component.name"], attributes["component"])
-        trace_statements: []
     transform/cw_k8s_ci_v0_promote_node_name:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.node.name"], attributes["node_name"]) where attributes["node_name"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_cloud_resource_id:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: resource
-              error_mode: ""
               statements:
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:eks:", resource.attributes["cloud.region"], ":", resource.attributes["cloud.account.id"], ":cluster/", resource.attributes["k8s.cluster.name"]], "")) where resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_cluster_name:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_component:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(attributes["component"], "apiserver")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_node_name:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
-                - set(attributes["node_name"], "${env:K8S_NODE_NAME}")
-        trace_statements: []
+                - set(attributes["node_name"], "${K8S_NODE_NAME}")
     transform/cw_k8s_ci_v0_set_scope_apiserver:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.version, resource.attributes["k8s.apiserver.version"]) where resource.attributes["k8s.apiserver.version"] != nil
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "apiserver")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_cadvisor:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.name, "github.com/google/cadvisor")
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "cadvisor")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_dcgm:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.name, "github.com/NVIDIA/dcgm-exporter")
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "dcgm")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_ebs_csi:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "ebs-csi")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_efa:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "efa")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_kube_state_metrics:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.name, "github.com/kubernetes/kube-state-metrics")
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "kube-state-metrics")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_kubeletstats:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "kubeletstats")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_lis_csi:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "lis-csi")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_neuron_monitor:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.name, "awsneuron")
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "neuron-monitor")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_scope_node_exporter:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: scope
-              error_mode: ""
               statements:
                 - set(scope.name, "github.com/prometheus/node_exporter")
                 - set(scope.schema_url, "")
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "node-exporter")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_unit:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: metric
-              error_mode: ""
               statements:
                 - set(unit, "s") where IsMatch(name, ".*_seconds(_total)?$")
                 - set(unit, "ms") where IsMatch(name, ".*_milliseconds(_total)?$")
@@ -1443,14 +1284,10 @@ processors:
                 - set(unit, "A") where IsMatch(name, ".*_amperes$")
                 - set(unit, "m") where IsMatch(name, ".*_meters(_total)?$")
                 - set(unit, "1") where unit == "" and IsMatch(name, ".*_total$")
-        trace_statements: []
     transform/cw_k8s_ci_v0_set_workload:
         error_mode: ignore
-        flatten_data: false
-        log_statements: []
         metric_statements:
             - context: datapoint
-              error_mode: ""
               statements:
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.deployment.name"] != nil
@@ -1464,7 +1301,6 @@ processors:
                 - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.cronjob.name"] != nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.replicaset.name"] != nil
-        trace_statements: []
     transform/dbi_fix_start_time:
         error_mode: ignore
         flatten_data: false
@@ -1543,54 +1379,6 @@ processors:
 receivers:
     awsefareceiver/cw_k8s_ci_v0:
         collection_interval: 30s
-        host_path: ""
-        initial_delay: 1s
-        metrics:
-            efa_impaired_remote_conn_events:
-                enabled: true
-            efa_rdma_read_bytes:
-                enabled: true
-            efa_rdma_read_resp_bytes:
-                enabled: true
-            efa_rdma_read_wr_err:
-                enabled: true
-            efa_rdma_read_wrs:
-                enabled: true
-            efa_rdma_write_bytes:
-                enabled: true
-            efa_rdma_write_recv_bytes:
-                enabled: true
-            efa_rdma_write_wr_err:
-                enabled: true
-            efa_rdma_write_wrs:
-                enabled: true
-            efa_recv_bytes:
-                enabled: true
-            efa_recv_wrs:
-                enabled: true
-            efa_retrans_bytes:
-                enabled: true
-            efa_retrans_pkts:
-                enabled: true
-            efa_retrans_timeout_events:
-                enabled: true
-            efa_rx_bytes:
-                enabled: true
-            efa_rx_dropped:
-                enabled: true
-            efa_rx_pkts:
-                enabled: true
-            efa_send_bytes:
-                enabled: true
-            efa_send_wrs:
-                enabled: true
-            efa_tx_bytes:
-                enabled: true
-            efa_tx_pkts:
-                enabled: true
-            efa_unresponsive_remote_events:
-                enabled: true
-        timeout: 0s
     awsxray:
         endpoint: 0.0.0.0:2000
         proxy_server:
@@ -1677,169 +1465,41 @@ receivers:
     kubeletstats/cw_k8s_ci_v0:
         auth_type: serviceAccount
         collection_interval: 30s
-        context: ""
-        endpoint: https://${env:HOST_IP}:10250
-        initial_delay: 1s
+        endpoint: https://${HOST_IP}:10250
         insecure_skip_verify: true
-        kube_config_path: ""
         metric_groups:
             - pod
             - container
             - node
         metrics:
-            container.cpu.time:
-                enabled: true
             container.cpu.usage:
-                enabled: true
-            container.cpu.utilization:
-                enabled: true
-            container.filesystem.available:
-                enabled: true
-            container.filesystem.capacity:
-                enabled: true
-            container.filesystem.usage:
-                enabled: true
-            container.memory.available:
-                enabled: true
-            container.memory.major_page_faults:
-                enabled: true
-            container.memory.page_faults:
-                enabled: true
-            container.memory.rss:
-                enabled: true
-            container.memory.usage:
-                enabled: true
-            container.memory.working_set:
                 enabled: true
             container.uptime:
                 enabled: true
-            k8s.container.cpu.node.utilization:
-                enabled: false
             k8s.container.cpu_limit_utilization:
                 enabled: true
             k8s.container.cpu_request_utilization:
                 enabled: true
-            k8s.container.memory.node.utilization:
-                enabled: false
             k8s.container.memory_limit_utilization:
                 enabled: true
             k8s.container.memory_request_utilization:
                 enabled: true
-            k8s.node.cpu.time:
-                enabled: true
             k8s.node.cpu.usage:
-                enabled: true
-            k8s.node.cpu.utilization:
-                enabled: true
-            k8s.node.filesystem.available:
-                enabled: true
-            k8s.node.filesystem.capacity:
-                enabled: true
-            k8s.node.filesystem.usage:
-                enabled: true
-            k8s.node.memory.available:
-                enabled: true
-            k8s.node.memory.major_page_faults:
-                enabled: true
-            k8s.node.memory.page_faults:
-                enabled: true
-            k8s.node.memory.rss:
-                enabled: true
-            k8s.node.memory.usage:
-                enabled: true
-            k8s.node.memory.working_set:
-                enabled: true
-            k8s.node.network.errors:
-                enabled: true
-            k8s.node.network.io:
                 enabled: true
             k8s.node.uptime:
                 enabled: true
-            k8s.pod.cpu.node.utilization:
-                enabled: false
-            k8s.pod.cpu.time:
-                enabled: true
             k8s.pod.cpu.usage:
-                enabled: true
-            k8s.pod.cpu.utilization:
                 enabled: true
             k8s.pod.cpu_limit_utilization:
                 enabled: true
             k8s.pod.cpu_request_utilization:
                 enabled: true
-            k8s.pod.filesystem.available:
-                enabled: true
-            k8s.pod.filesystem.capacity:
-                enabled: true
-            k8s.pod.filesystem.usage:
-                enabled: true
-            k8s.pod.memory.available:
-                enabled: true
-            k8s.pod.memory.major_page_faults:
-                enabled: true
-            k8s.pod.memory.node.utilization:
-                enabled: false
-            k8s.pod.memory.page_faults:
-                enabled: true
-            k8s.pod.memory.rss:
-                enabled: true
-            k8s.pod.memory.usage:
-                enabled: true
-            k8s.pod.memory.working_set:
-                enabled: true
             k8s.pod.memory_limit_utilization:
                 enabled: true
             k8s.pod.memory_request_utilization:
                 enabled: true
-            k8s.pod.network.errors:
-                enabled: true
-            k8s.pod.network.io:
-                enabled: true
             k8s.pod.uptime:
                 enabled: true
-            k8s.volume.available:
-                enabled: true
-            k8s.volume.capacity:
-                enabled: true
-            k8s.volume.inodes:
-                enabled: true
-            k8s.volume.inodes.free:
-                enabled: true
-            k8s.volume.inodes.used:
-                enabled: true
-        node: ""
-        resource_attributes:
-            aws.volume.id:
-                enabled: true
-            container.id:
-                enabled: true
-            fs.type:
-                enabled: true
-            gce.pd.name:
-                enabled: true
-            glusterfs.endpoints.name:
-                enabled: true
-            glusterfs.path:
-                enabled: true
-            k8s.container.name:
-                enabled: true
-            k8s.namespace.name:
-                enabled: true
-            k8s.node.name:
-                enabled: true
-            k8s.persistentvolumeclaim.name:
-                enabled: true
-            k8s.pod.name:
-                enabled: true
-            k8s.pod.uid:
-                enabled: true
-            k8s.volume.name:
-                enabled: true
-            k8s.volume.type:
-                enabled: true
-            partition:
-                enabled: true
-        timeout: 0s
     otlp/grpc_0_0_0_0_4317:
         protocols:
             grpc:
@@ -2109,387 +1769,164 @@ receivers:
     prometheus/cw_k8s_ci_v0_apiserver:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - authorization:
-                    credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-                    type: Bearer
-                  enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
+                - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
                   job_name: kubernetes-apiserver
                   kubernetes_sd_configs:
-                    - enable_http2: true
-                      follow_redirects: true
-                      kubeconfig_file: ""
-                      namespaces:
+                    - namespaces:
                         names:
                             - default
-                        own_namespace: false
                       role: endpoints
-                  metrics_path: /metrics
                   relabel_configs:
                     - action: keep
                       regex: kubernetes
-                      replacement: $1
-                      separator: ;
                       source_labels:
                         - __meta_kubernetes_service_name
                     - action: keep
                       regex: https
-                      replacement: $1
-                      separator: ;
                       source_labels:
                         - __meta_kubernetes_endpoint_port_name
-                    - action: replace
-                      replacement: /metrics
-                      separator: ;
+                    - replacement: /metrics
                       target_label: __metrics_path__
                   scheme: https
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
                   tls_config:
                     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
                     insecure_skip_verify: false
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_cadvisor:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - authorization:
-                    credentials_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-                    type: Bearer
-                  enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
+                - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
                   job_name: cadvisor
                   metrics_path: /metrics/cadvisor
                   scheme: https
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
                   static_configs:
                     - targets:
-                        - ${env:HOST_IP}:10250
+                        - ${HOST_IP}:10250
                   tls_config:
                     insecure_skip_verify: true
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_dcgm:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: dcgm-exporter
-                  metrics_path: /metrics
+                - job_name: dcgm-exporter
                   scheme: https
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
                   static_configs:
                     - targets:
                         - dcgm-exporter-service:9400
                   tls_config:
                     ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
-                    insecure_skip_verify: false
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_ebs_csi_node:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: ebs-csi-node
+                - job_name: ebs-csi-node
                   kubernetes_sd_configs:
-                    - enable_http2: true
-                      follow_redirects: true
-                      kubeconfig_file: ""
-                      namespaces:
+                    - namespaces:
                         names:
                             - kube-system
-                        own_namespace: false
                       role: pod
-                  metrics_path: /metrics
                   relabel_configs:
                     - action: keep
                       regex: ebs-csi-node
-                      replacement: $1
-                      separator: ;
                       source_labels:
                         - __meta_kubernetes_pod_label_app
                     - action: keep
-                      regex: ${env:K8S_NODE_NAME}
-                      replacement: $1
-                      separator: ;
+                      regex: ${K8S_NODE_NAME}
                       source_labels:
                         - __meta_kubernetes_pod_node_name
                     - action: keep
                       regex: metrics
-                      replacement: $1
-                      separator: ;
                       source_labels:
                         - __meta_kubernetes_pod_container_port_name
-                  scheme: http
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_kube_state_metrics:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: kube-state-metrics
-                  metrics_path: /metrics
+                - job_name: kube-state-metrics
                   scheme: https
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
                   static_configs:
                     - targets:
                         - kube-state-metrics.amazon-cloudwatch.svc:8443
                   tls_config:
                     ca_file: /etc/amazon-cloudwatch-observability-agent-cert/tls-ca.crt
-                    insecure_skip_verify: false
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_lis_csi_node:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: lis-csi-node
+                - job_name: lis-csi-node
                   kubernetes_sd_configs:
-                    - enable_http2: true
-                      follow_redirects: true
-                      kubeconfig_file: ""
-                      namespaces:
+                    - namespaces:
                         names:
                             - kube-system
-                        own_namespace: false
                       role: pod
-                  metrics_path: /metrics
                   relabel_configs:
                     - action: keep
                       regex: ec2-instance-store-plugin
-                      replacement: $1
-                      separator: ;
                       source_labels:
                         - __meta_kubernetes_pod_label_app
                     - action: keep
-                      regex: ${env:K8S_NODE_NAME}
-                      replacement: $1
-                      separator: ;
+                      regex: ${K8S_NODE_NAME}
                       source_labels:
                         - __meta_kubernetes_pod_node_name
                     - action: keep
                       regex: metrics
-                      replacement: $1
-                      separator: ;
                       source_labels:
                         - __meta_kubernetes_pod_container_port_name
-                  scheme: http
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_neuron:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: neuron-monitor
-                  metrics_path: /metrics
+                - job_name: neuron-monitor
                   scheme: https
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
                   static_configs:
                     - targets:
                         - neuron-monitor-service:8000
                   tls_config:
                     ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
-                    insecure_skip_verify: false
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/cw_k8s_ci_v0_node_exporter:
         config:
             global:
-                evaluation_interval: 1m
-                scrape_interval: 1m
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
+                scrape_interval: 30s
                 scrape_timeout: 10s
-            runtime:
-                gogc: 75
             scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: node-exporter
-                  metrics_path: /metrics
+                - job_name: node-exporter
                   scheme: https
                   scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
                   scrape_timeout: 10s
                   static_configs:
                     - targets:
                         - node-exporter-service:9487
                   tls_config:
                     ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
-                    insecure_skip_verify: false
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
     prometheus/opentelemetry:
         config:
             global:
@@ -2870,13 +2307,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_cpu
+                - telegraf_disk
                 - telegraf_mem
                 - telegraf_processes
-                - telegraf_netstat
                 - telegraf_procstat/1917393364
-                - telegraf_cpu
                 - telegraf_swap
-                - telegraf_disk
+                - telegraf_netstat
         metrics/host_insights:
             exporters:
                 - forward/opentelemetry

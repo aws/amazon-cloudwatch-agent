@@ -1,6 +1,9 @@
 receivers:
   prometheus/cw_k8s_ci_v0_apiserver:
     config:
+      global:
+        scrape_interval: {{.CollectionInterval}}
+        scrape_timeout: {{.ScrapeTimeout}}
       scrape_configs:
       - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         job_name: kubernetes-apiserver
@@ -22,7 +25,7 @@ receivers:
           target_label: __metrics_path__
         scheme: https
         scrape_interval: {{.CollectionInterval}}
-        scrape_timeout: 10s
+        scrape_timeout: {{.ScrapeTimeout}}
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           insecure_skip_verify: false

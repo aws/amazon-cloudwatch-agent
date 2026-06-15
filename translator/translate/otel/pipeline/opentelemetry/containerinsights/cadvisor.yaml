@@ -1,13 +1,16 @@
 receivers:
   prometheus/cw_k8s_ci_v0_cadvisor:
     config:
+      global:
+        scrape_interval: {{.CollectionInterval}}
+        scrape_timeout: {{.ScrapeTimeout}}
       scrape_configs:
       - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         job_name: cadvisor
         metrics_path: /metrics/cadvisor
         scheme: https
         scrape_interval: {{.CollectionInterval}}
-        scrape_timeout: 10s
+        scrape_timeout: {{.ScrapeTimeout}}
         static_configs:
         - targets:
           - {{.HostIP}}:10250
