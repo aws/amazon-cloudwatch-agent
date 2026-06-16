@@ -41,3 +41,18 @@ func TestTranslateUnsupported(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported count connector config")
 }
+
+func TestTranslatorID_MySQL(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbloadMysql)
+	assert.Equal(t, "count/dbi_dbload_mysql", tr.ID().String())
+}
+
+func TestTranslateDbloadMysql(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbloadMysql)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	countCfg := cfg.(*countconnector.Config)
+	assert.Len(t, countCfg.Logs, 7)
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_wait")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.count")
+}

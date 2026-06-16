@@ -89,6 +89,21 @@ func TestDbiFixStartTimeTranslate(t *testing.T) {
 	assert.Equal(t, `replace_match(datapoint.attributes["user.name"], "", "unknown")`, actualCfg.MetricStatements[0].Statements[6])
 }
 
+func TestDbiFixStartTimeMysqlTranslate(t *testing.T) {
+	transl := NewTranslatorWithName(common.DbiTransformFixStartTimeMysql)
+	assert.Equal(t, "transform/dbi_fix_start_time_mysql", transl.ID().String())
+
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+	require.Len(t, actualCfg.MetricStatements, 1)
+	assert.Equal(t, "datapoint", string(actualCfg.MetricStatements[0].Context))
+	require.Len(t, actualCfg.MetricStatements[0].Statements, 5)
+	assert.Equal(t, "set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0", actualCfg.MetricStatements[0].Statements[0])
+	assert.Equal(t, `replace_match(datapoint.attributes["mysql.wait_type"], "", "CPU")`, actualCfg.MetricStatements[0].Statements[1])
+	assert.Equal(t, `replace_match(datapoint.attributes["user.name"], "", "unknown")`, actualCfg.MetricStatements[0].Statements[4])
+}
+
 func TestDbiResourceTranslate(t *testing.T) {
 	stmts := []string{
 		`set(resource.attributes["db.system.name"], "postgresql")`,

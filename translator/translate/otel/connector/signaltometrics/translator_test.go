@@ -41,3 +41,18 @@ func TestTranslateUnsupported(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported signaltometrics connector config")
 }
+
+func TestTranslatorID_MySQL(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsqlMysql)
+	assert.Equal(t, "signaltometrics/dbi_topsql_mysql", tr.ID().String())
+}
+
+func TestTranslateTopsqlMysql(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsqlMysql)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	stmCfg := cfg.(*signaltometricsconfig.Config)
+	assert.Len(t, stmCfg.Logs, 2)
+	assert.Equal(t, "mysql.count_star", stmCfg.Logs[0].Name)
+	assert.Equal(t, "mysql.sum_timer_wait", stmCfg.Logs[1].Name)
+}

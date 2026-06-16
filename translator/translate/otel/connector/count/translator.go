@@ -18,6 +18,9 @@ import (
 //go:embed dbi_dbload.yaml
 var dbiDbloadConfig string
 
+//go:embed dbi_dbload_mysql.yaml
+var dbiDbloadMysqlConfig string
+
 type translator struct {
 	name    string
 	factory connector.Factory
@@ -40,8 +43,11 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*countconnector.Config)
 
-	if t.name == common.DbiConnectorDbload {
+	switch t.name {
+	case common.DbiConnectorDbload:
 		return common.GetYamlFileToYamlConfig(cfg, dbiDbloadConfig)
+	case common.DbiConnectorDbloadMysql:
+		return common.GetYamlFileToYamlConfig(cfg, dbiDbloadMysqlConfig)
 	}
 
 	return nil, fmt.Errorf("unsupported count connector config: %s", t.name)

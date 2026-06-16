@@ -1,0 +1,27 @@
+logs:
+  - name: mysql.count_star
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "SQL execution count"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+      - key: user.name
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.count_star"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.count_star"])'
+  - name: mysql.sum_timer_wait
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total execution time in picoseconds"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+      - key: user.name
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"] != nil
+    sum:
+      value: 'Double(attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"])'

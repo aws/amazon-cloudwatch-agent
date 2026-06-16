@@ -19,6 +19,9 @@ import (
 //go:embed dbi_topsql.yaml
 var dbiTopsqlConfig string
 
+//go:embed dbi_topsql_mysql.yaml
+var dbiTopsqlMysqlConfig string
+
 type translator struct {
 	name    string
 	factory connector.Factory
@@ -41,8 +44,11 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*signaltometricsconfig.Config)
 
-	if t.name == common.DbiConnectorTopsql {
+	switch t.name {
+	case common.DbiConnectorTopsql:
 		return common.GetYamlFileToYamlConfig(cfg, dbiTopsqlConfig)
+	case common.DbiConnectorTopsqlMysql:
+		return common.GetYamlFileToYamlConfig(cfg, dbiTopsqlMysqlConfig)
 	}
 
 	return nil, fmt.Errorf("unsupported signaltometrics connector config: %s", t.name)

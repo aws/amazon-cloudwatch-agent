@@ -29,6 +29,9 @@ var transformEfaConfig string
 //go:embed transform_dbi_fix_start_time.yaml
 var transformDbiFixStartTimeConfig string
 
+//go:embed transform_dbi_fix_start_time_mysql.yaml
+var transformDbiFixStartTimeMysqlConfig string
+
 //go:embed transform_identity_host.yaml
 var transformIdentityHostConfig string
 
@@ -134,8 +137,11 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
 		return common.GetYamlFileToYamlConfig(cfg, transformEfaConfig)
 	}
-	if t.name == common.DbiTransformFixStartTime {
+	switch t.name {
+	case common.DbiTransformFixStartTime:
 		return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeConfig)
+	case common.DbiTransformFixStartTimeMysql:
+		return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeMysqlConfig)
 	}
 	if t.name == common.Identity {
 		if context.CurrentContext().KubernetesMode() != "" {
