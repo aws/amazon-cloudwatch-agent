@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package hostinsights
+package hostmetrics
 
 import (
 	"go.opentelemetry.io/collector/component"
@@ -13,25 +13,25 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 )
 
-const pipelineNameHostInsights = "host_insights"
+const pipelineNameHostMetrics = "host_metrics"
 
-var hostInsightsKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey)
+var hostMetricsKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostMetricsKey)
 
-type hostInsightsTranslator struct{}
+type hostMetricsTranslator struct{}
 
-var _ common.PipelineTranslator = (*hostInsightsTranslator)(nil)
+var _ common.PipelineTranslator = (*hostMetricsTranslator)(nil)
 
 func NewTranslator() common.PipelineTranslator {
-	return &hostInsightsTranslator{}
+	return &hostMetricsTranslator{}
 }
 
-func (t *hostInsightsTranslator) ID() pipeline.ID {
-	return pipeline.NewIDWithName(pipeline.SignalMetrics, pipelineNameHostInsights)
+func (t *hostMetricsTranslator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, pipelineNameHostMetrics)
 }
 
-func (t *hostInsightsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || (!conf.IsSet(hostInsightsKey) && !conf.IsSet(common.DatabaseInsightsConfigKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: hostInsightsKey + " or " + common.DatabaseInsightsConfigKey}
+func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	if conf == nil || (!conf.IsSet(hostMetricsKey) && !conf.IsSet(common.DatabaseInsightsConfigKey)) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: hostMetricsKey + " or " + common.DatabaseInsightsConfigKey}
 	}
 
 	var opts []hostmetrics.Option

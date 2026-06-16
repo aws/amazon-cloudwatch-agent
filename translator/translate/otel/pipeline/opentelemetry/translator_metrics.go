@@ -37,7 +37,7 @@ func (t *baseMetricsTranslator) ID() pipeline.ID {
 
 // Translate creates the shared metrics export pipeline. It activates when any
 // collect sub-section is present; it receives data via the forward connector
-// from feature pipelines (host_insights, otlp, span_metrics).
+// from feature pipelines (host_metrics, otlp, span_metrics).
 func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	if conf == nil || !conf.IsSet(otelCollectKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: otelCollectKey}

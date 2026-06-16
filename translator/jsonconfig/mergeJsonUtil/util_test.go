@@ -350,7 +350,7 @@ func TestSectionMergeRule_Merge(t *testing.T) {
 	source2 := map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
-				"host_insights": map[string]interface{}{},
+				"host_metrics": map[string]interface{}{},
 			},
 		},
 	}
@@ -359,6 +359,6 @@ func TestSectionMergeRule_Merge(t *testing.T) {
 
 	otel := source2["opentelemetry"].(map[string]interface{})
 	collect := otel["collect"].(map[string]interface{})
-	assert.Contains(t, collect, "host_insights")
+	assert.Contains(t, collect, "host_metrics")
 	assert.Contains(t, collect, "database_insights")
 }

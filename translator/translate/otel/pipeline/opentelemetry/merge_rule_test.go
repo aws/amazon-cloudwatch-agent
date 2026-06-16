@@ -20,7 +20,7 @@ func TestMergeRule(t *testing.T) {
 	source := map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
-				"host_insights": map[string]interface{}{},
+				"host_metrics": map[string]interface{}{},
 			},
 		},
 	}
@@ -30,5 +30,5 @@ func TestMergeRule(t *testing.T) {
 	assert.Contains(t, result, "opentelemetry")
 	otel := result["opentelemetry"].(map[string]interface{})
 	assert.Contains(t, otel, "collect")
-	assert.Contains(t, otel["collect"].(map[string]interface{}), "host_insights")
+	assert.Contains(t, otel["collect"].(map[string]interface{}), "host_metrics")
 }

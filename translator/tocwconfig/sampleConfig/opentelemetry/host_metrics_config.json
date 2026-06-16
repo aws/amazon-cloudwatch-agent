@@ -4,7 +4,7 @@
   },
   "opentelemetry": {
     "collect": {
-      "host_insights": {
+      "host_metrics": {
         "metrics_collection_interval": 10
       }
     }

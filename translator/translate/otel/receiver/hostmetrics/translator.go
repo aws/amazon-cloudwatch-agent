@@ -94,7 +94,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	intervalKeyChain := []string{
-		common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostInsightsKey, common.MetricsCollectionIntervalKey),
+		common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostMetricsKey, common.MetricsCollectionIntervalKey),
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
 	return &Config{

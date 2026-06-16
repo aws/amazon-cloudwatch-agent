@@ -1834,7 +1834,7 @@
               },
               "additionalProperties": false
             },
-            "host_insights": {
+            "host_metrics": {
               "type": "object",
               "properties": {
                 "metrics_collection_interval": {
