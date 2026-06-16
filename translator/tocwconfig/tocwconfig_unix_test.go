@@ -183,3 +183,11 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	})
 	assert.Empty(t, cmp.Diff(expected, actual, opt))
 }
+
+func TestDBIMySQLConfigLinux(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	require.NoError(t, os.Chmod("sampleConfig/opentelemetry/testdata/.mysql_credentials", 0600))
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "opentelemetry/dbi_mysql_config_linux", "linux", expectedEnvVars, "")
+}
