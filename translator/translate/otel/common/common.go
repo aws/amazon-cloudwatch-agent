@@ -140,14 +140,20 @@ const (
 const (
 	DatabaseInsightsKey = "database_insights"
 	PostgreSQLKey       = "postgresql"
+	MySQLKey            = "mysql"
 
-	// DBI component names
+	// DBI component names — PostgreSQL
 	DbiTransformFixStartTime = "dbi_fix_start_time"
 	DbiTransformResource     = "dbi_resource"
 	DbiTransformLogs         = "dbi_logs"
 	DbiFilterExcludeMonitor  = "dbi_exclude_monitor"
 	DbiConnectorDbload       = "dbi_dbload"
 	DbiConnectorTopsql       = "dbi_topsql"
+
+	// DBI component names — MySQL
+	DbiTransformFixStartTimeMysql = "dbi_fix_start_time_mysql"
+	DbiConnectorDbloadMysql       = "dbi_dbload_mysql"
+	DbiConnectorTopsqlMysql       = "dbi_topsql_mysql"
 )
 
 // OpenTelemetry pipeline processor names
