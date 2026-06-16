@@ -379,6 +379,13 @@ func TestPrometheusOtelPipelineConfig(t *testing.T) {
 	checkTranslation(t, "opentelemetry/prometheus_otel_pipeline_config", "linux", nil, "")
 }
 
+func TestPrometheusOtelPipelineEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	checkTranslation(t, "opentelemetry/prometheus_otel_pipeline_eks_config", "linux", nil, "")
+}
+
 func TestOtlpMetricsConfigKubernetes(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -418,6 +425,13 @@ func TestOtlpOtelConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	checkTranslation(t, "opentelemetry/otlp_otel_config", "linux", nil, "")
+}
+
+func TestOtlpOtelEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	checkTranslation(t, "opentelemetry/otlp_otel_eks_config", "linux", nil, "")
 }
 
 func TestProcstatMemorySwapConfig(t *testing.T) {

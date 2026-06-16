@@ -11,6 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
 
 func TestPrometheusTranslator(t *testing.T) {
@@ -220,4 +223,31 @@ func TestPrometheusReceiverTranslatorPlainFormat(t *testing.T) {
 	cfg, err := receiver.Translate(conf)
 	require.NoError(t, err)
 	assert.NotNil(t, cfg)
+}
+
+func TestPrometheusTranslatorK8sMode(t *testing.T) {
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	defer context.CurrentContext().SetKubernetesMode("")
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"config_path":  createTempPromConfig(t),
+					"cluster_name": "test-cluster",
+				},
+			},
+		},
+	})
+
+	tt := NewTranslator()
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	assert.Equal(t, 2, got.Processors.Len()) // scope + set_cluster_name
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.Contains(t, keys, "transform/prometheus_scope")
+	assert.Contains(t, keys, "transform/set_cluster_name")
 }

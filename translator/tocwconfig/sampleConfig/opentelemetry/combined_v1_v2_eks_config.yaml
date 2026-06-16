@@ -584,9 +584,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -698,6 +698,64 @@ processors:
                   name: k8s.pod.name
                 - from: resource_attribute
                   name: k8s.namespace.name
+    k8sattributes/opentelemetry:
+        auth_type: serviceAccount
+        context: ""
+        exclude:
+            pods: []
+        extract:
+            annotations:
+                - from: pod
+                  key: resource.opentelemetry.io/service.name
+                  key_regex: ""
+                  tag_name: resource.opentelemetry.io/service.name
+                - from: pod
+                  key: resource.opentelemetry.io/service.namespace
+                  key_regex: ""
+                  tag_name: resource.opentelemetry.io/service.namespace
+                - from: pod
+                  key: resource.opentelemetry.io/service.instance.id
+                  key_regex: ""
+                  tag_name: resource.opentelemetry.io/service.instance.id
+                - from: pod
+                  key: resource.opentelemetry.io/service.version
+                  key_regex: ""
+                  tag_name: resource.opentelemetry.io/service.version
+            labels:
+                - from: pod
+                  key: app.kubernetes.io/instance
+                  key_regex: ""
+                  tag_name: app.kubernetes.io/instance
+                - from: pod
+                  key: app.kubernetes.io/name
+                  key_regex: ""
+                  tag_name: app.kubernetes.io/name
+                - from: pod
+                  key: app.kubernetes.io/version
+                  key_regex: ""
+                  tag_name: app.kubernetes.io/version
+            metadata:
+                - k8s.namespace.name
+                - k8s.deployment.name
+                - k8s.replicaset.name
+                - k8s.statefulset.name
+                - k8s.daemonset.name
+                - k8s.job.name
+                - k8s.cronjob.name
+                - k8s.node.name
+                - k8s.pod.name
+                - k8s.pod.uid
+                - k8s.pod.start_time
+                - k8s.container.name
+            otel_annotations: false
+        filter:
+            namespace: ""
+            node: ""
+            node_from_env_var: K8S_NODE_NAME
+        kube_config_path: ""
+        passthrough: false
+        wait_for_metadata: false
+        wait_for_metadata_timeout: 10s
     metricstarttime/cw_k8s_ci_v0: null
     nodemetadataenricher/cw_k8s_ci_v0: null
     resourcedetection/cw_k8s_ci_v0:
@@ -2324,6 +2382,7 @@ service:
                 - otlphttp/logs
             processors:
                 - resourcedetection/opentelemetry
+                - k8sattributes/opentelemetry
                 - transform/identity
                 - transform/logs_routing
                 - attributestocontext/opentelemetry
@@ -2568,13 +2627,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_swap
-                - telegraf_cpu
                 - telegraf_procstat/1917393364
-                - telegraf_disk
+                - telegraf_cpu
+                - telegraf_swap
                 - telegraf_mem
-                - telegraf_processes
                 - telegraf_netstat
+                - telegraf_processes
+                - telegraf_disk
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -2589,8 +2648,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -2606,6 +2665,7 @@ service:
                 - otlphttp/metrics
             processors:
                 - resourcedetection/opentelemetry
+                - k8sattributes/opentelemetry
                 - transform/identity
                 - batch/opentelemetry
             receivers:
@@ -2631,6 +2691,7 @@ service:
                 - otlphttp/traces
             processors:
                 - resourcedetection/opentelemetry
+                - k8sattributes/opentelemetry
                 - transform/identity
                 - batch/opentelemetry
             receivers:
