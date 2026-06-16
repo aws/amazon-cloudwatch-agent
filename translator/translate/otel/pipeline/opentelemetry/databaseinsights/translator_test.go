@@ -103,3 +103,93 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
 }
+
+func TestDbiMysqlTranslatorID(t *testing.T) {
+	tests := []struct {
+		pipelineType dbiPipelineType
+		index        int
+		want         string
+	}{
+		{dbiMetrics, 0, "metrics/dbi_mysql_0"},
+		{dbiMetrics, 1, "metrics/dbi_mysql_1"},
+		{dbiLogToMetrics, 0, "logs/dbi_mysql_0"},
+		{dbiRawEvents, 0, "logs/dbi_mysql_rawevents_0"},
+		{dbiServerLogs, 0, "logs/dbi_mysql_serverlogs_0"},
+		{dbiServerLogs, 2, "logs/dbi_mysql_serverlogs_2"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.want, func(t *testing.T) {
+			tr := &dbiMysqlTranslator{pipelineType: tc.pipelineType, instanceIndex: tc.index}
+			assert.Equal(t, tc.want, tr.ID().String())
+		})
+	}
+}
+
+func TestDbiMysqlTranslate(t *testing.T) {
+	cfg := dbiInstanceConfig{
+		endpoint:     "localhost:3306",
+		username:     "cw_monitor",
+		passfile:     "/etc/.mysql_credentials",
+		instanceName: "my-db",
+		logFilePath:  "/var/log/mysql/mysql.log",
+		isLocalhost:  true,
+	}
+
+	tests := []struct {
+		name       string
+		pipeline   dbiPipelineType
+		expectedID string
+		nRecv      int
+		nProc      int
+		nExp       int
+		nConn      int
+	}{
+		{"metrics", dbiMetrics, "metrics/dbi_mysql_0", 3, 3, 1, 3},
+		{"log_to_metrics", dbiLogToMetrics, "logs/dbi_mysql_0", 1, 1, 2, 2},
+		{"raw_events", dbiRawEvents, "logs/dbi_mysql_rawevents_0", 1, 5, 1, 1},
+		{"server_logs", dbiServerLogs, "logs/dbi_mysql_serverlogs_0", 1, 4, 1, 1},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &dbiMysqlTranslator{pipelineType: tc.pipeline, instanceIndex: 0, cfg: cfg}
+			assert.Equal(t, tc.expectedID, tr.ID().String())
+
+			result, err := tr.Translate(nil)
+			require.NoError(t, err)
+			assert.Equal(t, tc.nRecv, result.Receivers.Len())
+			assert.Equal(t, tc.nProc, result.Processors.Len())
+			assert.Equal(t, tc.nExp, result.Exporters.Len())
+			assert.Equal(t, tc.nConn, result.Connectors.Len())
+		})
+	}
+}
+
+func TestDbiMysqlTranslateMetrics_ComponentIDs(t *testing.T) {
+	tr := &dbiMysqlTranslator{
+		pipelineType:  dbiMetrics,
+		instanceIndex: 0,
+		cfg:           dbiInstanceConfig{instanceName: "mydb"},
+	}
+	result, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	var receivers, processors, exporters, connectors []string
+	result.Receivers.Range(func(c common.Translator[component.Config, component.ID]) {
+		receivers = append(receivers, c.ID().String())
+	})
+	result.Processors.Range(func(c common.Translator[component.Config, component.ID]) {
+		processors = append(processors, c.ID().String())
+	})
+	result.Exporters.Range(func(c common.Translator[component.Config, component.ID]) {
+		exporters = append(exporters, c.ID().String())
+	})
+	result.Connectors.Range(func(c common.Translator[component.Config, component.ID]) {
+		connectors = append(connectors, c.ID().String())
+	})
+
+	assert.ElementsMatch(t, []string{"mysql/metrics_0", "count/dbi_dbload_mysql", "signaltometrics/dbi_topsql_mysql"}, receivers)
+	assert.Equal(t, []string{"transform/dbi_scope_mysql_0", "transform/dbi_resource_mysql_0", "transform/dbi_fix_start_time_mysql"}, processors)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_mysql", "signaltometrics/dbi_topsql_mysql"}, connectors)
+}

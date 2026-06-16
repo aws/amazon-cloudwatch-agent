@@ -19,6 +19,10 @@ import (
 // characters, preventing injection of OTTL syntax or string escape sequences.
 var ottlSafeRegex = regexp.MustCompile(`^[a-zA-Z0-9._@/:\-]+$`)
 
+var (
+	dbiMysqlKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.DatabaseInsightsKey, common.MySQLKey)
+)
+
 type dbiInstanceConfig struct {
 	endpoint     string
 	username     string
@@ -35,8 +39,8 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 		return translators
 	}
 
-	instances := parseDbiPostgresqlInstances(conf)
-	for i, cfg := range instances {
+	pgInstances := parseDbiPostgresqlInstances(conf)
+	for i, cfg := range pgInstances {
 		translators.Set(&dbiTranslator{pipelineType: dbiMetrics, instanceIndex: i, cfg: cfg})
 		translators.Set(&dbiTranslator{pipelineType: dbiLogToMetrics, instanceIndex: i, cfg: cfg})
 		translators.Set(&dbiTranslator{pipelineType: dbiRawEvents, instanceIndex: i, cfg: cfg})
@@ -44,6 +48,17 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 			translators.Set(&dbiTranslator{pipelineType: dbiServerLogs, instanceIndex: i, cfg: cfg})
 		}
 	}
+
+	mysqlInstances := parseDbiMysqlInstances(conf)
+	for i, cfg := range mysqlInstances {
+		translators.Set(&dbiMysqlTranslator{pipelineType: dbiMetrics, instanceIndex: i, cfg: cfg})
+		translators.Set(&dbiMysqlTranslator{pipelineType: dbiLogToMetrics, instanceIndex: i, cfg: cfg})
+		translators.Set(&dbiMysqlTranslator{pipelineType: dbiRawEvents, instanceIndex: i, cfg: cfg})
+		if cfg.logFilePath != "" {
+			translators.Set(&dbiMysqlTranslator{pipelineType: dbiServerLogs, instanceIndex: i, cfg: cfg})
+		}
+	}
+
 	return translators
 }
 
@@ -89,8 +104,43 @@ func validateOttlSafe(field, value string) error {
 	return nil
 }
 
+type mysqlRawInstance struct {
+	Endpoint     string `mapstructure:"endpoint"`
+	Username     string `mapstructure:"username"`
+	PasswordFile string `mapstructure:"password_file"`
+	InstanceName string `mapstructure:"instance_name"`
+	TLS          struct {
+		CAFile string `mapstructure:"ca_file"`
+	} `mapstructure:"tls"`
+	Logs struct {
+		FilePath string `mapstructure:"file_path"`
+	} `mapstructure:"logs"`
+}
+
+func parseDbiMysqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
+	arr, _ := conf.Get(dbiMysqlKey).([]any)
+	var raw []mysqlRawInstance
+	if err := mapstructure.Decode(arr, &raw); err != nil {
+		return nil
+	}
+	instances := make([]dbiInstanceConfig, 0, len(raw))
+	for _, r := range raw {
+		instances = append(instances, dbiInstanceConfig{
+			endpoint:     r.Endpoint,
+			username:     r.Username,
+			passfile:     r.PasswordFile,
+			caFile:       r.TLS.CAFile,
+			instanceName: r.InstanceName,
+			logFilePath:  r.Logs.FilePath,
+			isLocalhost:  isLocalhostEndpoint(r.Endpoint),
+		})
+	}
+	return instances
+}
+
 func isLocalhostEndpoint(endpoint string) bool {
 	return strings.HasPrefix(endpoint, "localhost") ||
 		strings.HasPrefix(endpoint, "127.0.0.1") ||
+		strings.HasPrefix(endpoint, "[::1]") ||
 		strings.HasPrefix(endpoint, "::1")
 }

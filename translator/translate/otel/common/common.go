@@ -165,6 +165,7 @@ const (
 var (
 	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+	DatabaseInsightsMysqlKey    = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, MySQLKey)
 )
 
 const (
