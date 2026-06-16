@@ -80,9 +80,14 @@ func TestOtlpPipelineTranslator(t *testing.T) {
 			got, err := translator.Translate(conf)
 			require.NoError(t, err)
 			assert.Equal(t, 2, got.Receivers.Len())  // grpc + http
-			assert.Equal(t, 0, got.Processors.Len()) // no processors
 			assert.Equal(t, 1, got.Exporters.Len())  // forward connector
 			assert.Equal(t, 1, got.Connectors.Len()) // forward connector
+			if signal == pipeline.SignalLogs {
+				assert.Equal(t, 1, got.Processors.Len()) // otlp_log_source
+				assert.Equal(t, "transform/otlp_log_source", got.Processors.Keys()[0].String())
+			} else {
+				assert.Equal(t, 0, got.Processors.Len())
+			}
 		})
 	}
 }

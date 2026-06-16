@@ -537,9 +537,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -887,8 +887,35 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         trace_statements: []
+    transform/identity:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
@@ -896,6 +923,35 @@ processors:
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
+                - delete_key(resource.attributes, "aws.log.source")
+        metric_statements: []
+        trace_statements: []
+    transform/logs_routing:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
+                - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.id"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
+        metric_statements: []
+        trace_statements: []
+    transform/otlp_log_source:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: propagate
+              statements:
+                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
         trace_statements: []
 receivers:
@@ -1398,6 +1454,8 @@ service:
                 - otlphttp/logs
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
+                - transform/logs_routing
                 - attributestocontext/opentelemetry
                 - transform/logs_cleanup
                 - batch/opentelemetry_logs
@@ -1406,7 +1464,8 @@ service:
         logs/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_log_source
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328
@@ -1427,13 +1486,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_procstat/1917393364
-                - telegraf_netstat
                 - telegraf_processes
                 - telegraf_cpu
                 - telegraf_swap
+                - telegraf_procstat/1917393364
                 - telegraf_mem
                 - telegraf_disk
+                - telegraf_netstat
         metrics/host_insights:
             exporters:
                 - forward/opentelemetry
@@ -1447,8 +1506,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1464,6 +1523,7 @@ service:
                 - otlphttp/metrics
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry
@@ -1485,6 +1545,7 @@ service:
                 - otlphttp/traces
             processors:
                 - resourcedetection/opentelemetry
+                - transform/identity
                 - batch/opentelemetry
             receivers:
                 - forward/opentelemetry

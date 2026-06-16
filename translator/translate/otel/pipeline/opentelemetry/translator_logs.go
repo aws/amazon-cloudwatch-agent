@@ -73,9 +73,11 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
 	})
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
+		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithLogStatements([]string{
 			`delete_key(resource.attributes, "aws.log.group.name")`,
 			`delete_key(resource.attributes, "aws.log.stream.name")`,
+			`delete_key(resource.attributes, "aws.log.source")`,
 		}),
 	)
 	batch := batchprocessor.NewTranslator(
@@ -86,9 +88,12 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		batchprocessor.WithMetadataKeys([]string{"aws.log.group.name", "aws.log.stream.name"}),
 	)
 
+	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)
+	logsRouting := transformprocessor.NewTranslatorWithName(common.LogsRouting)
+
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), attrCtx, logsCleanup, batch),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.Identity), logsRouting, attrCtx, logsCleanup, batch),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, provisionerExt, headersExt, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
