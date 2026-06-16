@@ -40,11 +40,11 @@ func TestTranslate(t *testing.T) {
 			},
 			expectedInterval: 30 * time.Second,
 		},
-		"HostInsightsLevelInterval": {
+		"HostMetricsLevelInterval": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
-						"host_insights": map[string]interface{}{
+						"host_metrics": map[string]interface{}{
 							"metrics_collection_interval": 10,
 						},
 					},
@@ -52,14 +52,14 @@ func TestTranslate(t *testing.T) {
 			},
 			expectedInterval: 10 * time.Second,
 		},
-		"HostInsightsWinsOverAgent": {
+		"HostMetricsWinsOverAgent": {
 			input: map[string]interface{}{
 				"agent": map[string]interface{}{
 					"metrics_collection_interval": 30,
 				},
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
-						"host_insights": map[string]interface{}{
+						"host_metrics": map[string]interface{}{
 							"metrics_collection_interval": 10,
 						},
 					},

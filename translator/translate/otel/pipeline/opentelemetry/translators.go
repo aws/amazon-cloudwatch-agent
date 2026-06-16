@@ -10,7 +10,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	ci "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/containerinsights"
 	dbi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/databaseinsights"
-	hi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/hostinsights"
+	hi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/hostmetrics"
 	otelotlp "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/otlp"
 	prom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/prometheus"
 )

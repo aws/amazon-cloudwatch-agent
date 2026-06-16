@@ -1104,7 +1104,7 @@ service:
                 - postgresql/metrics_0
                 - count/dbi_dbload
                 - signaltometrics/dbi_topsql
-        metrics/host_insights:
+        metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
             processors: []

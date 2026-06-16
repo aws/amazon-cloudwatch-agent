@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-package hostinsights
+package hostmetrics
 
 import (
 	"testing"
@@ -17,10 +17,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 )
 
-func TestHostInsightsTranslator(t *testing.T) {
+func TestHostMetricsTranslator(t *testing.T) {
 	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
 	tt := NewTranslator()
-	assert.EqualValues(t, "metrics/host_insights", tt.ID().String())
+	assert.EqualValues(t, "metrics/host_metrics", tt.ID().String())
 
 	testCases := map[string]struct {
 		input         map[string]interface{}
@@ -29,17 +29,17 @@ func TestHostInsightsTranslator(t *testing.T) {
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: hostInsightsKey + " or " + common.DatabaseInsightsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: hostMetricsKey + " or " + common.DatabaseInsightsConfigKey},
 		},
-		"WithoutHostInsightsKey": {
+		"WithoutHostMetricsKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: hostInsightsKey + " or " + common.DatabaseInsightsConfigKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: hostMetricsKey + " or " + common.DatabaseInsightsConfigKey},
 		},
-		"WithHostInsightsKey": {
+		"WithHostMetricsKey": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
-						"host_insights": map[string]interface{}{},
+						"host_metrics": map[string]interface{}{},
 					},
 				},
 			},
@@ -62,7 +62,7 @@ func TestHostInsightsTranslator(t *testing.T) {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
-						"host_insights": map[string]interface{}{},
+						"host_metrics": map[string]interface{}{},
 						"database_insights": map[string]interface{}{
 							"postgresql": []interface{}{
 								map[string]interface{}{"endpoint": "localhost:5432", "username": "cwagent"},

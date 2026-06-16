@@ -332,10 +332,10 @@ func TestOtlpMetricsConfig(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
 }
 
-func TestHostInsightsConfig(t *testing.T) {
+func TestHostMetricsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	checkTranslation(t, "opentelemetry/host_insights_config", "linux", nil, "")
+	checkTranslation(t, "opentelemetry/host_metrics_config", "linux", nil, "")
 }
 
 func TestContainerInsightsConfig(t *testing.T) {

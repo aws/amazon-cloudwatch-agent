@@ -401,7 +401,7 @@ service:
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
     pipelines:
-        metrics/host_insights:
+        metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
             processors: []

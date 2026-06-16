@@ -2487,7 +2487,7 @@ service:
                 - telegraf_mem
                 - telegraf_cpu
                 - telegraf_disk
-        metrics/host_insights:
+        metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
             processors: []
