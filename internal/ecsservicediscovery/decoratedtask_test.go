@@ -453,9 +453,10 @@ func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode *s
 	target, ok := targets["10.4.0.205:32774/metrics"]
 	assert.True(t, ok, "Missing target: 10.4.0.205:32774/metrics")
 
-	assert.Equal(t, 10, len(target.Labels))
+	assert.Equal(t, 11, len(target.Labels))
 	assert.Equal(t, "/metrics", target.Labels["EC2_PROMETHEUS_METRICS_PATH"])
 	assert.Equal(t, "9406", target.Labels["EC2_PROMETHEUS_EXPORTER_PORT"])
+	assert.Equal(t, "i-02aa8e82e91b2c30e", target.Labels["EC2InstanceId"])
 	assert.Equal(t, "t3.medium", target.Labels["InstanceType"])
 	assert.Equal(t, "subnet-0d0b0212d14b70250", target.Labels["SubnetId"])
 	assert.Equal(t, "5", target.Labels["TaskRevision"])
@@ -467,9 +468,10 @@ func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode *s
 
 	target, ok = targets["10.4.0.205:9494/metrics"]
 	assert.True(t, ok, "Missing target: 10.4.0.205:9494/metrics")
-	assert.Equal(t, 10, len(target.Labels))
+	assert.Equal(t, 11, len(target.Labels))
 	assert.Equal(t, "9404", target.Labels["EC2_PROMETHEUS_EXPORTER_PORT"])
 	assert.Equal(t, "bugbash-tomcat-ec2-bridge-mapped-port", target.Labels["EC2_PROMETHEUS_JOB_NAME"])
+	assert.Equal(t, "i-02aa8e82e91b2c30e", target.Labels["EC2InstanceId"])
 	assert.Equal(t, "t3.medium", target.Labels["InstanceType"])
 	assert.Equal(t, "subnet-0d0b0212d14b70250", target.Labels["SubnetId"])
 	assert.Equal(t, "5", target.Labels["TaskRevision"])
@@ -526,9 +528,10 @@ func testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networ
 	target, ok := targets["10.4.0.205:9494/metrics"]
 	log.Print(target)
 	assert.True(t, ok, "Missing target: 10.4.0.205:9494/metrics")
-	assert.Equal(t, 10, len(target.Labels))
+	assert.Equal(t, 11, len(target.Labels))
 	assert.Equal(t, "9404", target.Labels["EC2_PROMETHEUS_EXPORTER_PORT"])
 	assert.Equal(t, "bugbash-tomcat-ec2-bridge-mapped-port", target.Labels["EC2_PROMETHEUS_JOB_NAME"])
+	assert.Equal(t, "i-02aa8e82e91b2c30e", target.Labels["EC2InstanceId"])
 	assert.Equal(t, "t3.medium", target.Labels["InstanceType"])
 	assert.Equal(t, "subnet-0d0b0212d14b70250", target.Labels["SubnetId"])
 	assert.Equal(t, "5", target.Labels["TaskRevision"])
