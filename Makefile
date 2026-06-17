@@ -253,7 +253,10 @@ clean::
 	rm -rf release/ build/
 	rm -f CWAGENT_VERSION
 
-package-prepare-rpm: amazon-cloudwatch-agent-linux
+copy-tools:
+	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
+
+package-prepare-rpm: amazon-cloudwatch-agent-linux copy-tools
 	# amd64 rpm
 	mkdir -p $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg
 	cp $(BUILD_SPACE)/bin/linux_amd64/* $(BUILD_SPACE)/private/linux/amd64/rpm/amazon-cloudwatch-agent-pre-pkg/
@@ -281,9 +284,8 @@ package-prepare-rpm: amazon-cloudwatch-agent-linux
 	cp $(BASE_SPACE)/packaging/linux/amazon-cloudwatch-agent.spec $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/linux/arm64/rpm/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
-	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
-package-prepare-deb: amazon-cloudwatch-agent-linux
+package-prepare-deb: amazon-cloudwatch-agent-linux copy-tools
 	# amd64 deb
 	mkdir -p $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg
 	cp $(BUILD_SPACE)/bin/linux_amd64/* $(BUILD_SPACE)/private/linux/amd64/deb/amazon-cloudwatch-agent-pre-pkg/
@@ -310,10 +312,9 @@ package-prepare-deb: amazon-cloudwatch-agent-linux
 	cp $(BASE_SPACE)/translator/config/schema.json $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/amazon-cloudwatch-agent-schema.json
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/linux/arm64/deb/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
 
-	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 	cp -rf $(BASE_SPACE)/packaging $(BUILD_SPACE)/
 
-package-prepare-win-zip: amazon-cloudwatch-agent-windows
+package-prepare-win-zip: amazon-cloudwatch-agent-windows copy-tools
 	# amd64 win
 	mkdir -p $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg
 	cp $(BUILD_SPACE)/bin/windows_amd64/* $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/
@@ -326,9 +327,8 @@ package-prepare-win-zip: amazon-cloudwatch-agent-windows
 	cp ${BASE_SPACE}/packaging/windows/install.ps1 $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/
 	cp ${BASE_SPACE}/packaging/windows/uninstall.ps1 $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/windows/amd64/zip/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
-	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
-package-prepare-darwin-tar: amazon-cloudwatch-agent-darwin
+package-prepare-darwin-tar: amazon-cloudwatch-agent-darwin copy-tools
 	# amd64 darwin
 	mkdir -p $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg
 	cp $(BUILD_SPACE)/bin/darwin_amd64/* $(BUILD_SPACE)/private/darwin/amd64/tar/amazon-cloudwatch-agent-pre-pkg/
@@ -352,8 +352,6 @@ package-prepare-darwin-tar: amazon-cloudwatch-agent-darwin
 	cp $(BASE_SPACE)/packaging/darwin/amazon-cloudwatch-agent-ctl $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/darwin/com.amazon.cloudwatch.agent.plist $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/
 	cp $(BASE_SPACE)/packaging/opentelemetry-jmx-metrics.jar $(BUILD_SPACE)/private/darwin/arm64/tar/amazon-cloudwatch-agent-pre-pkg/opentelemetry-jmx-metrics.jar
-
-	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
 .PHONY: package-rpm
 package-rpm: package-prepare-rpm
