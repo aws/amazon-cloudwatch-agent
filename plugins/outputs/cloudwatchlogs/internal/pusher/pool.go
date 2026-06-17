@@ -6,7 +6,6 @@ package pusher
 import (
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 type WorkerPool interface {
@@ -112,14 +111,4 @@ func (s *senderPool) Send(batch *logEventBatch) {
 func (s *senderPool) Stop() {
 	// workerpool is stopped by the plugin
 	s.sender.Stop()
-}
-
-// SetRetryDuration sets the retry duration on the wrapped Sender.
-func (s *senderPool) SetRetryDuration(duration time.Duration) {
-	s.sender.SetRetryDuration(duration)
-}
-
-// RetryDuration returns the retry duration of the wrapped Sender.
-func (s *senderPool) RetryDuration() time.Duration {
-	return s.sender.RetryDuration()
 }
