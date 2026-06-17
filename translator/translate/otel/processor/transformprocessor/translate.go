@@ -64,11 +64,19 @@ func WithErrorMode(mode string) Option {
 	}
 }
 
+// WithScopeStatements sets OTTL statements to execute in the "scope" context for all signal types.
+func WithScopeStatements(statements []string) Option {
+	return func(t *translator) {
+		t.scopeStatements = statements
+	}
+}
+
 type translator struct {
 	name             string
 	factory          processor.Factory
 	logStatements    []string
 	metricStatements []string
+	scopeStatements  []string
 	errorMode        string
 }
 
@@ -90,7 +98,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 
 	// Dynamic statements (generic path for both metrics and logs)
-	if len(t.logStatements) > 0 || len(t.metricStatements) > 0 {
+	if len(t.logStatements) > 0 || len(t.metricStatements) > 0 || len(t.scopeStatements) > 0 {
 		errorMode := t.errorMode
 		if errorMode == "" {
 			errorMode = "propagate"
@@ -103,6 +111,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		}
 		if len(t.logStatements) > 0 {
 			cfgMap["log_statements"] = []interface{}{buildStatements(t.logStatements, errorMode)}
+		}
+		if len(t.scopeStatements) > 0 {
+			scopeBlock := buildScopeStatements(t.scopeStatements)
+			cfgMap["metric_statements"] = appendStatements(cfgMap["metric_statements"], scopeBlock)
+			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], scopeBlock)
+			cfgMap["trace_statements"] = []interface{}{scopeBlock}
 		}
 		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("failed to configure transform processor: %w", err)
@@ -149,4 +163,23 @@ func buildStatements(statements []string, errorMode string) map[string]interface
 		"error_mode": errorMode,
 		"statements": stmts,
 	}
+}
+
+func buildScopeStatements(statements []string) map[string]interface{} {
+	stmts := make([]interface{}, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	return map[string]interface{}{
+		"context":    "scope",
+		"error_mode": "ignore",
+		"statements": stmts,
+	}
+}
+
+func appendStatements(existing interface{}, block map[string]interface{}) []interface{} {
+	if existing == nil {
+		return []interface{}{block}
+	}
+	return append(existing.([]interface{}), block)
 }

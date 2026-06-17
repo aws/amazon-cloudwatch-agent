@@ -54,10 +54,10 @@ func TestDbiTranslate(t *testing.T) {
 		nExp       int
 		nConn      int
 	}{
-		{"metrics", dbiMetrics, "metrics/dbi_postgresql_0", 3, 2, 1, 3},
+		{"metrics", dbiMetrics, "metrics/dbi_postgresql_0", 3, 3, 1, 3},
 		{"log_to_metrics", dbiLogToMetrics, "logs/dbi_postgresql_0", 1, 1, 2, 2},
-		{"raw_events", dbiRawEvents, "logs/dbi_postgresql_rawevents_0", 1, 4, 1, 1},
-		{"server_logs", dbiServerLogs, "logs/dbi_postgresql_serverlogs_0", 1, 3, 1, 1},
+		{"raw_events", dbiRawEvents, "logs/dbi_postgresql_rawevents_0", 1, 5, 1, 1},
+		{"server_logs", dbiServerLogs, "logs/dbi_postgresql_serverlogs_0", 1, 4, 1, 1},
 	}
 
 	for _, tc := range tests {
@@ -99,7 +99,7 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	})
 
 	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, receivers)
-	assert.Equal(t, []string{"transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
+	assert.Equal(t, []string{"transform/dbi_scope_0", "transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
 }

@@ -887,6 +887,48 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         trace_statements: []
+    transform/dbi_scope_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -954,6 +996,48 @@ processors:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
         trace_statements: []
+    transform/otlp_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-otlp")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-otlp")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-otlp")
+    transform/prometheus_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-prometheus")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-prometheus")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-prometheus")
 receivers:
     awsxray:
         endpoint: 0.0.0.0:2000
@@ -1428,6 +1512,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - filter/dbi_exclude_monitor_0
+                - transform/dbi_scope_0
                 - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
@@ -1437,6 +1522,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
+                - transform/dbi_scope_0
                 - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
@@ -1465,6 +1551,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
+                - transform/otlp_scope
                 - transform/otlp_log_source
             receivers:
                 - otlp/grpc_127_0_0_1_4327
@@ -1473,6 +1560,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
+                - transform/dbi_scope_0
                 - transform/dbi_resource_0
                 - transform/dbi_fix_start_time
             receivers:
@@ -1486,17 +1574,18 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_processes
-                - telegraf_cpu
-                - telegraf_swap
                 - telegraf_procstat/1917393364
                 - telegraf_mem
-                - telegraf_disk
                 - telegraf_netstat
+                - telegraf_cpu
+                - telegraf_disk
+                - telegraf_swap
+                - telegraf_processes
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/host_metrics_scope
             receivers:
                 - hostmetrics/opentelemetry
         metrics/hostCustomMetrics:
@@ -1506,8 +1595,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1516,8 +1605,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
@@ -1530,13 +1619,15 @@ service:
         metrics/otel_prometheus:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/prometheus_scope
             receivers:
                 - prometheus/opentelemetry
         metrics/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_scope
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328
@@ -1552,7 +1643,8 @@ service:
         traces/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_scope
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328
