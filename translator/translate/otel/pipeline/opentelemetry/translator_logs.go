@@ -73,7 +73,6 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
 	})
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
-		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithLogStatements([]string{
 			`delete_key(resource.attributes, "aws.log.group.name")`,
 			`delete_key(resource.attributes, "aws.log.stream.name")`,

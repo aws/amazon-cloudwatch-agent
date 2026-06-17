@@ -1489,7 +1489,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
     transform/logs_cleanup:
-        error_mode: ignore
+        error_mode: propagate
         flatten_data: false
         log_statements:
             - context: resource
@@ -1517,7 +1517,7 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/otlp_log_source:
-        error_mode: ignore
+        error_mode: propagate
         flatten_data: false
         log_statements:
             - context: resource

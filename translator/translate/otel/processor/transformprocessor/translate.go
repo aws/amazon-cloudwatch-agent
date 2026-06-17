@@ -99,10 +99,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 			"error_mode": errorMode,
 		}
 		if len(t.metricStatements) > 0 {
-			cfgMap["metric_statements"] = []interface{}{buildStatements(t.metricStatements)}
+			cfgMap["metric_statements"] = []interface{}{buildStatements(t.metricStatements, errorMode)}
 		}
 		if len(t.logStatements) > 0 {
-			cfgMap["log_statements"] = []interface{}{buildStatements(t.logStatements)}
+			cfgMap["log_statements"] = []interface{}{buildStatements(t.logStatements, errorMode)}
 		}
 		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("failed to configure transform processor: %w", err)
@@ -139,14 +139,14 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return cfg, nil
 }
 
-func buildStatements(statements []string) map[string]interface{} {
+func buildStatements(statements []string, errorMode string) map[string]interface{} {
 	stmts := make([]interface{}, len(statements))
 	for i, s := range statements {
 		stmts[i] = s
 	}
 	return map[string]interface{}{
 		"context":    "resource",
-		"error_mode": "propagate",
+		"error_mode": errorMode,
 		"statements": stmts,
 	}
 }

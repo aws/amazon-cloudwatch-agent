@@ -56,7 +56,6 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	if t.signal == pipeline.SignalLogs {
 		processors.Set(transformprocessor.NewTranslatorWithName("otlp_log_source",
-			transformprocessor.WithErrorMode("ignore"),
 			transformprocessor.WithLogStatements([]string{
 				`set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil`,
 			}),
