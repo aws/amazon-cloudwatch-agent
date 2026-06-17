@@ -27,7 +27,7 @@ jobs:
       build: ${{ steps.filter.outputs.build }}
       lint: ${{ steps.filter.outputs.lint }}
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4.3.1
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
         id: filter
         with:
@@ -47,14 +47,14 @@ jobs:
     steps:
       - name: Set up Go 1.x
         if: needs.changes.outputs.lint == 'true'
-        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v4.3.0
         with:
           go-version: ~1.25.8
           cache: false
 
       - name: Check out code
         if: needs.changes.outputs.lint == 'true'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4.3.1
         with:
           fetch-depth: 0
 
@@ -104,14 +104,14 @@ jobs:
     steps:
       - name: Set up Go 1.x
         if: needs.changes.outputs.build == 'true'
-        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v4.3.0
         with:
           go-version: ~1.25.8
           cache: false
 
       - name: Check out code
         if: needs.changes.outputs.build == 'true'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4.3.1
 
       - name: Free up disk space
         if: needs.changes.outputs.build == 'true' && matrix.family == 'linux'
@@ -151,14 +151,14 @@ jobs:
     steps:
       - name: Set up Go 1.x
         if: needs.changes.outputs.build == 'true'
-        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v4.3.0
         with:
           go-version: ~1.25.8
           cache: false
 
       - name: Check out code
         if: needs.changes.outputs.build == 'true'
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4.3.1
 
       - name: Test data race
         if: needs.changes.outputs.build == 'true'

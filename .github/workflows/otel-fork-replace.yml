@@ -29,9 +29,9 @@ jobs:
             echo "sha=${{ inputs.CommitSha }}" >> $GITHUB_OUTPUT
           fi
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v4.3.1
       - name: Set up Go 1.x
-        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v4.3.0
         with:
           go-version: ~1.25.8
           cache: false
