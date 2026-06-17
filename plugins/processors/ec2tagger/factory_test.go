@@ -17,6 +17,7 @@ import (
 )
 
 func TestCreateDefaultConfig(t *testing.T) {
+	t.Parallel()
 	factory := NewFactory()
 	require.NotNil(t, factory)
 
@@ -26,6 +27,7 @@ func TestCreateDefaultConfig(t *testing.T) {
 }
 
 func TestCreateProcessor(t *testing.T) {
+	t.Parallel()
 	factory := NewFactory()
 	require.NotNil(t, factory)
 

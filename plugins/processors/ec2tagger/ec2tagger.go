@@ -57,6 +57,9 @@ type Tagger struct {
 	ec2API             ec2iface.EC2API
 	volumeSerialCache  volume.Cache
 
+	backoffSleepArray      []time.Duration
+	defaultRefreshInterval time.Duration
+
 	Configurer   *awsmiddleware.Configurer
 	sync.RWMutex //to protect ec2TagCache
 }
@@ -66,10 +69,12 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 	_, cancel := context.WithCancel(context.Background())
 	mdCredentialConfig := &configaws.CredentialConfig{}
 	p := &Tagger{
-		Config:           config,
-		logger:           logger,
-		cancelFunc:       cancel,
-		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
+		Config:                 config,
+		logger:                 logger,
+		cancelFunc:             cancel,
+		metadataProvider:       ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), config.IMDSRetries),
+		backoffSleepArray:      BackoffSleepArray,
+		defaultRefreshInterval: defaultRefreshInterval,
 		ec2Provider: func(ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
 			return ec2.New(
 				ec2CredentialConfig.Credentials(),
@@ -396,7 +401,7 @@ func (t *Tagger) refreshLoopToUpdateTags() {
 		needRefresh = len(t.EC2InstanceTagKeys) != 1 || t.EC2InstanceTagKeys[0] != "*"
 
 		stopAfterFirstSuccess = true
-		refreshInterval = defaultRefreshInterval
+		refreshInterval = t.getDefaultRefreshInterval()
 	} else if refreshInterval.Seconds() > 0 {
 		//customer wants to update the tags with the given refresh interval
 		needRefresh = true
@@ -421,7 +426,7 @@ func (t *Tagger) refreshLoopToUpdateVolumes() {
 		needRefresh = len(t.EBSDeviceKeys) != 1 || t.EBSDeviceKeys[0] != "*"
 
 		stopAfterFirstSuccess = true
-		refreshInterval = defaultRefreshInterval
+		refreshInterval = t.getDefaultRefreshInterval()
 	} else if refreshInterval.Seconds() > 0 {
 		//customer wants to update the volumes with the given refresh interval
 		needRefresh = true
@@ -508,11 +513,12 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 
 	retry := 0
 	for {
+		backoffSleeps := t.getBackoffSleepArray()
 		var waitDuration time.Duration
-		if retry < len(BackoffSleepArray) {
-			waitDuration = BackoffSleepArray[retry]
+		if retry < len(backoffSleeps) {
+			waitDuration = backoffSleeps[retry]
 		} else {
-			waitDuration = BackoffSleepArray[len(BackoffSleepArray)-1]
+			waitDuration = backoffSleeps[len(backoffSleeps)-1]
 		}
 
 		wait := time.NewTimer(waitDuration)
@@ -552,6 +558,14 @@ func (t *Tagger) initialRetrievalOfTagsAndVolumes() {
 		retry++
 	}
 
+}
+
+func (t *Tagger) getBackoffSleepArray() []time.Duration {
+	return t.backoffSleepArray
+}
+
+func (t *Tagger) getDefaultRefreshInterval() time.Duration {
+	return t.defaultRefreshInterval
 }
 
 func sleepUntilHostJitter(max time.Duration) {

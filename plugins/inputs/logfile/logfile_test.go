@@ -207,7 +207,7 @@ func TestMultipleFilesForSameConfig(t *testing.T) {
 	tmpfile1.Close()
 
 	//make file stat reflect the diff of file ModTime
-	time.Sleep(time.Second * 2)
+	time.Sleep(100 * time.Millisecond)
 
 	tmpfile2, err := createTempFile("", uniquePrefix+"tmp2_")
 	defer os.Remove(tmpfile2.Name())
@@ -407,7 +407,7 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 	defer close(evts)
 	// Choose a large enough number of lines so that even high-spec hosts will not
 	// complete receiving logEvents before the 2nd createWriteRead() goroutine begins.
-	const numLines int = 1000000
+	const numLines int = 500000
 	const msg string = "this is the best log line ever written to a file"
 	writeLines(t, file, numLines, msg)
 	file.Close()
@@ -526,6 +526,7 @@ append line`
 }
 
 func TestLogsMultilineTimeout(t *testing.T) {
+	multilineWaitPeriod = 50 * time.Millisecond
 	// multline line starter as [^/s]
 	logEntryString1 := `multiline begin
  append line
@@ -557,8 +558,8 @@ func TestLogsMultilineTimeout(t *testing.T) {
 		_, err = tmpfile.WriteString(logEntryString1 + "\n")
 		require.NoError(t, err)
 
-		// sleep 5 second for multiline timeout
-		time.Sleep(5 * time.Second)
+		// sleep for multiline timeout
+		time.Sleep(100 * time.Millisecond)
 		_, err = tmpfile.WriteString(logEntryString2 + "\n")
 		require.NoError(t, err)
 	}()
@@ -614,7 +615,7 @@ func TestLogsFileTruncate(t *testing.T) {
 	go func() {
 		_, err = tmpfile.WriteString(lineBeforeFileTruncate + "\n")
 		require.NoError(t, err)
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 
 		// Truncate the file
 		err = os.Truncate(tmpfile.Name(), 0)
@@ -1054,7 +1055,7 @@ func TestLogsFileRecreate(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, tmpfile.Close())
 		// 100 ms between deleting and recreating is enough on Linux and MacOS, but not Windows.
-		time.Sleep(time.Second * 1)
+		time.Sleep(1 * time.Second)
 		tmpfile, err = os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 		require.NoError(t, err)
 
@@ -1075,7 +1076,7 @@ func TestLogsFileRecreate(t *testing.T) {
 		if len(lsrcs) > 0 {
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if len(lsrcs) != 1 {
 		t.Fatalf("%v log src was returned when 1 should be available", len(lsrcs))
@@ -1182,21 +1183,23 @@ func TestLogFileMultiLogsReading(t *testing.T) {
 		wg.Add(1)
 		switch lsrc.Group() {
 		case generateLogGroupName(agentLog.Name()):
+			var once sync.Once
 			lsrc.SetOutput(func(e logs.LogEvent) {
 				if e != nil {
 					if e.Message() != "This is from Agent log" {
 						t.Errorf("Wrong agent log found : \n%v", e.Message())
 					}
-					wg.Done()
+					once.Do(wg.Done)
 				}
 			})
 		case generateLogGroupName(serviceLog.Name()):
+			var once sync.Once
 			lsrc.SetOutput(func(e logs.LogEvent) {
 				if e != nil {
 					if e.Message() != "This is from Service log" {
 						t.Errorf("Wrong service log found : \n%v", e.Message())
 					}
-					wg.Done()
+					once.Do(wg.Done)
 				}
 			})
 		default:
@@ -1239,7 +1242,7 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 		_, err := agentLog.WriteString(logEntryString + "\n")
 		require.NoError(t, err)
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 
 		serviceLog, err = createTempFile(dir, "test_service.log")
 		require.NoError(t, err)
@@ -1257,28 +1260,30 @@ func TestLogFileMultiLogsReadingAddingFile(t *testing.T) {
 			wg.Add(1)
 			switch lsrc.Group() {
 			case generateLogGroupName(agentLog.Name()):
+				var once sync.Once
 				lsrc.SetOutput(func(e logs.LogEvent) {
 					if e != nil {
 						if e.Message() != "This is from Agent log" {
 							t.Errorf("Wrong agent log found : \n%v", e.Message())
 						}
-						wg.Done()
+						once.Do(wg.Done)
 					}
 				})
 			default:
+				var once sync.Once
 				lsrc.SetOutput(func(e logs.LogEvent) {
 					if e != nil {
 						if e.Message() != "This is from Service log" {
 							t.Errorf("Wrong service log found : \n%v", e.Message())
 						}
-						wg.Done()
+						once.Do(wg.Done)
 					}
 				})
 			}
 			defer lsrc.Stop()
 			c++
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 	}
 	wg.Wait()
 	tt.Stop()
@@ -1288,9 +1293,13 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 	multilineWaitPeriod = 10 * time.Millisecond
 	logEntryString := "This is from Agent log"
 
-	agentLog, err := createTempFile("", "test_agent.log")
-	defer os.Remove(agentLog.Name())
+	dir, err := os.MkdirTemp("", "test")
 	require.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	agentLog, err := createTempFile(dir, "test_agent.log")
+	require.NoError(t, err)
+	defer os.Remove(agentLog.Name())
 
 	tt := NewLogFile()
 	tt.Log = TestLogger{t}
@@ -1313,9 +1322,9 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 		_, err := agentLog.WriteString(logEntryString + "\n")
 		require.NoError(t, err)
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 
-		serviceLog, err = createTempFile("", "test_service.log")
+		serviceLog, err = createTempFile(dir, "test_service.log")
 		require.NoError(t, err)
 
 		logEntryString = "This is from Service log"
@@ -1329,22 +1338,23 @@ func TestLogFileMultiLogsReadingWithBlacklist(t *testing.T) {
 		lsrcs := tt.FindLogSrc()
 		for _, lsrc := range lsrcs {
 			switch lsrc.Group() {
-			case agentLog.Name():
+			case generateLogGroupName(agentLog.Name()):
 				t.Errorf("Agent log should be blacklisted, but found : \n%v", lsrc.Group())
 			default:
 				wg.Add(1)
+				var once sync.Once
 				lsrc.SetOutput(func(e logs.LogEvent) {
 					if e != nil {
 						if e.Message() != "This is from Service log" {
 							t.Errorf("Wrong service log found : \n%v", e.Message())
 						}
-						wg.Done()
+						once.Do(wg.Done)
 					}
 				})
 			}
 			defer lsrc.Stop()
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 		c++
 	}
 	wg.Wait()

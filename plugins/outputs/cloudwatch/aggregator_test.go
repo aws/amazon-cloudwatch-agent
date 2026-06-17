@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
@@ -164,8 +165,9 @@ func TestDurationAggregator_aggregating(t *testing.T) {
 		durationAgg.addMetric(m)
 	}
 
-	//give some time to aggregation to do the work
-	time.Sleep(time.Second + 3*aggregationInterval)
+	require.Eventually(t, func() bool {
+		return len(durationAgg.metricChan) == 4
+	}, time.Second+3*aggregationInterval, 50*time.Millisecond)
 	close(shutdownChan)
 	wg.Wait()
 	assert.Empty(t, durationAgg.aggregationChan)

@@ -128,14 +128,21 @@ func (cw *CertWatcher) Start(ctx context.Context) error {
 		}
 	}
 
-	go cw.Watch()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cw.Watch()
+	}()
 
 	cw.logger.Debug("Successfully started certificate watcher")
 
 	// Block until the context is done.
 	<-ctx.Done()
 
-	return cw.watcher.Close()
+	err := cw.watcher.Close()
+	wg.Wait()
+	return err
 }
 
 // Watch reads events from the watcher's channel and reacts to changes.

@@ -10,10 +10,12 @@ import (
 
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
 
 func TestAddPodServiceEnvironmentMapping(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name              string
 		want              *ttlcache.Cache[string, ServiceEnvironment]
@@ -85,6 +87,7 @@ func TestAddPodServiceEnvironmentMapping(t *testing.T) {
 }
 
 func TestAddPodServiceEnvironmentMapping_TtlRefresh(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewDevelopment()
 	ei := newEKSInfo(logger)
 
@@ -93,19 +96,16 @@ func TestAddPodServiceEnvironmentMapping_TtlRefresh(t *testing.T) {
 	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
 	expiration := ei.podToServiceEnvMap.Get("test-pod").ExpiresAt()
 
-	//sleep for 1 second to simulate ttl refresh
-	time.Sleep(1 * time.Second)
-
-	// simulate adding the same pod to service environment mapping
-	ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-environment", "Instrumentation")
-	newExpiration := ei.podToServiceEnvMap.Get("test-pod").ExpiresAt()
-
-	// assert that the expiration time is updated
-	assert.True(t, newExpiration.After(expiration))
+	// poll until enough time has passed for TTL refresh to produce a later expiration
+	require.Eventually(t, func() bool {
+		ei.AddPodServiceEnvironmentMapping("test-pod", "test-service", "test-environment", "Instrumentation")
+		return ei.podToServiceEnvMap.Get("test-pod").ExpiresAt().After(expiration)
+	}, 1*time.Second, 50*time.Millisecond)
 	assert.Equal(t, 1, ei.podToServiceEnvMap.Len())
 }
 
 func TestAddPodServiceEnvironmentMapping_MaxCapacity(t *testing.T) {
+	t.Parallel()
 	logger := zap.NewNop()
 	ei := newEKSInfo(logger)
 
@@ -124,6 +124,7 @@ func TestAddPodServiceEnvironmentMapping_MaxCapacity(t *testing.T) {
 }
 
 func TestGetPodServiceEnvironmentMapping(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		want   *ttlcache.Cache[string, ServiceEnvironment]
@@ -161,6 +162,7 @@ func TestGetPodServiceEnvironmentMapping(t *testing.T) {
 }
 
 func TestTTLServicePodEnvironmentMapping(t *testing.T) {
+	t.Parallel()
 	logger, _ := zap.NewDevelopment()
 	ei := newEKSInfo(logger)
 
@@ -178,11 +180,10 @@ func TestTTLServicePodEnvironmentMapping(t *testing.T) {
 	go ei.podToServiceEnvMap.Start()
 	defer ei.podToServiceEnvMap.Stop()
 
-	//sleep for 1 second to simulate ttl refresh
-	time.Sleep(1 * time.Second)
-
-	//stops the ttl cache.
-	assert.Equal(t, 0, ei.podToServiceEnvMap.Len())
+	//sleep for ttl to expire and cache to evict
+	require.Eventually(t, func() bool {
+		return ei.podToServiceEnvMap.Len() == 0
+	}, 1*time.Second, 50*time.Millisecond)
 }
 
 func setupTTLCacheForTesting(podToServiceMap map[string]ServiceEnvironment, ttlDuration time.Duration) *ttlcache.Cache[string, ServiceEnvironment] {

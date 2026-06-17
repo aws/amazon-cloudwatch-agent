@@ -12,6 +12,7 @@ import (
 )
 
 func TestUnmarshalDefaultConfig(t *testing.T) {
+	t.Parallel()
 	factory := NewFactory()
 	cfg := factory.CreateDefaultConfig()
 	assert.NoError(t, confmap.New().Unmarshal(cfg))
@@ -19,6 +20,7 @@ func TestUnmarshalDefaultConfig(t *testing.T) {
 }
 
 func TestValidateConfig(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		cfg  component.Config
@@ -44,6 +46,7 @@ func TestValidateConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			assert.NoError(t, confmap.New().Unmarshal(tt.cfg))
 			err := tt.cfg.(*Config).Validate()
 			assert.Nil(t, err, "Empty or invalid dimension tags should be silently ignored")

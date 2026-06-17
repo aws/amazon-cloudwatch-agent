@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSharedCredentialsProviderExpiryWindowIsExpired(t *testing.T) {
@@ -33,13 +34,17 @@ func TestSharedCredentialsProviderExpiryWindowIsExpired(t *testing.T) {
 	bytes_rotate, _ := os.ReadFile("./testdata/credential_rotate")
 	os.WriteFile(tmpFile.Name(), bytes_rotate, 0644)
 
-	time.Sleep(2 * time.Second)
+	require.Eventually(t, func() bool {
+		return p.IsExpired()
+	}, 2*time.Second, 50*time.Millisecond)
 
 	assert.True(t, p.IsExpired(), "Expect creds to be expired.")
 	creds, _ = p.Get()
 	assert.Equal(t, "o1rLDaaaccc", creds.SecretAccessKey)
 	assert.False(t, p.IsExpired(), "Expect creds not to be expired.")
 
-	time.Sleep(1 * time.Second)
+	require.Eventually(t, func() bool {
+		return p.IsExpired()
+	}, 2*time.Second, 50*time.Millisecond)
 	assert.True(t, p.IsExpired(), "Expect creds to be expired.")
 }
