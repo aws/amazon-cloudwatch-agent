@@ -254,6 +254,7 @@ clean::
 	rm -f CWAGENT_VERSION
 
 copy-tools:
+	mkdir -p $(BUILD_SPACE)
 	cp -rf $(BASE_SPACE)/Tools $(BUILD_SPACE)/
 
 package-prepare-rpm: amazon-cloudwatch-agent-linux copy-tools
