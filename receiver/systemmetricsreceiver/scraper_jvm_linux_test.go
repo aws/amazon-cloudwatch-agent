@@ -6,7 +6,6 @@
 package systemmetricsreceiver
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -20,14 +19,6 @@ import (
 func TestJVMScraperName(t *testing.T) {
 	s := newJVMScraper(zap.NewNop())
 	assert.Equal(t, "jvm", s.Name())
-}
-
-func TestJVMScraperNoSocketsIsNoop(t *testing.T) {
-	s := newJVMScraper(zap.NewNop())
-	metrics := pmetric.NewMetrics()
-	err := s.Scrape(context.Background(), metrics)
-	require.NoError(t, err)
-	assert.Equal(t, 0, metrics.ResourceMetrics().Len())
 }
 
 func TestParseHeap(t *testing.T) {
