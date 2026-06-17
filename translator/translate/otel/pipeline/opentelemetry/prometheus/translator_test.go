@@ -118,8 +118,9 @@ func TestPrometheusTranslatorClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got.Processors.Len())
-	assert.Equal(t, "transform/set_cluster_name", got.Processors.Keys()[0].String())
+	assert.Equal(t, 2, got.Processors.Len())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
+	assert.Equal(t, "transform/set_cluster_name", got.Processors.Keys()[1].String())
 }
 
 func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
@@ -136,7 +137,8 @@ func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 0, got.Processors.Len())
+	assert.Equal(t, 1, got.Processors.Len())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
 }
 
 func TestPrometheusReceiverTranslator(t *testing.T) {

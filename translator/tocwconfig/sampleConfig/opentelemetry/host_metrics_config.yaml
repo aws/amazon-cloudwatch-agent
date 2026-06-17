@@ -333,6 +333,27 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -404,7 +425,8 @@ service:
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/host_metrics_scope
             receivers:
                 - hostmetrics/opentelemetry
         metrics/opentelemetry:

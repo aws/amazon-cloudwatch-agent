@@ -51,6 +51,13 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	receiver := &prometheusReceiverTranslator{}
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	processors.Set(transformprocessor.NewTranslatorWithName("prometheus_scope",
+		transformprocessor.WithErrorMode("ignore"),
+		transformprocessor.WithScopeStatements([]string{
+			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
+			`set(attributes["cloudwatch.solution"], "otel-prometheus")`,
+		}),
+	))
 	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {
 		if !clusterNameRegex.MatchString(clusterName) {
 			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)

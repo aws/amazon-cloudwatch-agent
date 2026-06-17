@@ -519,6 +519,27 @@ processors:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
         trace_statements: []
+    transform/otlp_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-otlp")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-otlp")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
     otlp/grpc_127_0_0_1_4317:
         protocols:
@@ -567,6 +588,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
+                - transform/otlp_scope
                 - transform/otlp_log_source
             receivers:
                 - otlp/grpc_127_0_0_1_4317
@@ -583,7 +605,8 @@ service:
         metrics/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_scope
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318
@@ -599,7 +622,8 @@ service:
         traces/otlp:
             exporters:
                 - forward/opentelemetry
-            processors: []
+            processors:
+                - transform/otlp_scope
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318

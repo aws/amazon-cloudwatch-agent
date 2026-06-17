@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/hostmetrics"
 )
 
@@ -57,8 +58,14 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator(opts...)),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator(opts...)),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](transformprocessor.NewTranslatorWithName("host_metrics_scope",
+			transformprocessor.WithErrorMode("ignore"),
+			transformprocessor.WithScopeStatements([]string{
+				`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
+				`set(attributes["cloudwatch.solution"], "otel-host-metrics")`,
+			}),
+		)),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
