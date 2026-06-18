@@ -316,3 +316,32 @@ func TestGenerateMergedJsonConfigMap_EnvVarJSONWithYAML(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 }
+
+func TestOpenTelemetryHostMetricsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryHostMetrics.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["additional_property_not_allowed"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryCollect.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryDatabaseInsightsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryDatabaseInsights.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryDatabaseInsights.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryPrometheusSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryPrometheus.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryPrometheus.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
+}
+
+func TestCombinedV1V2SchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validCombinedV1V2Config.json", true, map[string]int{})
+}

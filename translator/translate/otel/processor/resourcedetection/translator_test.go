@@ -144,3 +144,27 @@ func TestTranslate(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslate_OpenTelemetryKey_NoMiddleware(t *testing.T) {
+	tt := NewTranslator(WithName("opentelemetry"))
+	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = ""
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	gotCfg := got.(*resourcedetectionprocessor.Config)
+	assert.Nil(t, gotCfg.MiddlewareID)
+}
+
+func TestTranslate_NonOpenTelemetryKey_HasMiddleware(t *testing.T) {
+	tt := NewTranslator(WithSignal(pipeline.SignalTraces))
+	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = ""
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	gotCfg := got.(*resourcedetectionprocessor.Config)
+	assert.NotNil(t, gotCfg.MiddlewareID)
+}

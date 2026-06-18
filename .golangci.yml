@@ -39,6 +39,10 @@ linters:
         path: 'translator/translate/util/*'
         text: 'var-naming: avoid meaningless package names'
       - linters:
+        - revive
+        path: 'translator/translate/otel/common/*'
+        text: 'var-naming: avoid meaningless package names'
+      - linters:
         - staticcheck
         text: 'ST1005: error strings should not be capitalized'
 issues:

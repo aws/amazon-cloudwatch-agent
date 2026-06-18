@@ -29,6 +29,10 @@ const (
 	MetricsCollectedKey                            = "metrics_collected"
 	LogsCollectedKey                               = "logs_collected"
 	TracesCollectedKey                             = "traces_collected"
+	OpenTelemetryKey                               = "opentelemetry"
+	CollectKey                                     = "collect"
+	HostMetricsKey                                 = "host_metrics"
+	OtelContainerInsightsKey                       = "container_insights"
 	MetricsDestinationsKey                         = "metrics_destinations"
 	ECSKey                                         = "ecs"
 	KubernetesKey                                  = "kubernetes"
@@ -132,6 +136,31 @@ const (
 	AppSignalsRules                  = "rules"
 )
 
+// DBI (Database Insights) constants
+const (
+	DatabaseInsightsKey = "database_insights"
+	PostgreSQLKey       = "postgresql"
+
+	// DBI component names
+	DbiTransformFixStartTime = "dbi_fix_start_time"
+	DbiTransformResource     = "dbi_resource"
+	DbiTransformLogs         = "dbi_logs"
+	DbiFilterExcludeMonitor  = "dbi_exclude_monitor"
+	DbiConnectorDbload       = "dbi_dbload"
+	DbiConnectorTopsql       = "dbi_topsql"
+)
+
+// OpenTelemetry pipeline processor names
+const (
+	Identity    = "identity"
+	LogsRouting = "logs_routing"
+)
+
+var (
+	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
+	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+)
+
 const (
 	DiskIOPrefix = "diskio_"
 )
@@ -158,6 +187,7 @@ var (
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
 	OTLPLogsKey                     = ConfigKey(LogsKey, MetricsCollectedKey, OtlpKey)
 	OTLPMetricsKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, OtlpKey)
+	OtelCollectLogsConfigKey        = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 )
 
 type TranslatorID interface {

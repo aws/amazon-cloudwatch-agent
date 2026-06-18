@@ -179,3 +179,21 @@ func mergeObjects(result, source map[string]interface{}) interface{} {
 	}
 	return []interface{}{result, source}
 }
+
+type SectionMergeRule struct {
+	SectionKey string
+	Path       string
+	MergeMap   map[string]mergeJsonRule.MergeRule
+}
+
+func NewSectionMergeRule(sectionKey, parentPath string) *SectionMergeRule {
+	return &SectionMergeRule{
+		SectionKey: sectionKey,
+		Path:       fmt.Sprintf("%s%s/", parentPath, sectionKey),
+		MergeMap:   make(map[string]mergeJsonRule.MergeRule),
+	}
+}
+
+func (m SectionMergeRule) Merge(source, result map[string]interface{}) {
+	MergeMap(source, result, m.SectionKey, m.MergeMap, m.Path)
+}

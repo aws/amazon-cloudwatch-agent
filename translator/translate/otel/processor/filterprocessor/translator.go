@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -29,7 +30,8 @@ var containerInsightsConfig string
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	factory processor.Factory
+	factory            processor.Factory
+	logRecordCondition string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -46,7 +48,12 @@ func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	return t
 }
 
-var _ common.ComponentTranslator = (*translator)(nil)
+// NewTranslatorWithLogCondition creates a filter translator that drops logs matching the given OTTL condition.
+func NewTranslatorWithLogCondition(name string, condition string) common.ComponentTranslator {
+	t := &translator{factory: filterprocessor.NewFactory(), logRecordCondition: condition}
+	t.SetName(name)
+	return t
+}
 
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
@@ -55,6 +62,20 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	// DBI: filter log records by OTTL condition
+	if strings.HasPrefix(t.Name(), common.DbiFilterExcludeMonitor) {
+		cfg := &filterprocessor.Config{}
+		if err := confmap.NewFromStringMap(map[string]interface{}{
+			"error_mode": "propagate",
+			"logs": map[string]interface{}{
+				"log_record": []interface{}{t.logRecordCondition},
+			},
+		}).Unmarshal(cfg); err != nil {
+			return nil, err
+		}
+		return cfg, nil
+	}
+
 	// also checking for container insights pipeline to add default filtering for prometheus metadata
 	if conf == nil || (t.Name() != common.PipelineNameContainerInsights && t.Name() != common.PipelineNameKueue && t.Name() != common.PipelineNameContainerInsightsJmx && !conf.IsSet(common.JmxConfigKey)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
