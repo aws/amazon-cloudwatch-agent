@@ -57,7 +57,7 @@ func TestBaseMetricsTranslator(t *testing.T) {
 				assert.Equal(t, 3, got.Processors.Len())
 				assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[0].String())
 				assert.Equal(t, "transform/identity", got.Processors.Keys()[1].String())
-				assert.Equal(t, "batch/opentelemetry", got.Processors.Keys()[2].String())
+				assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[2].String())
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 2, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())

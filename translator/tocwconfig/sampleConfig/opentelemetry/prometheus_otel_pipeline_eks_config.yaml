@@ -52,7 +52,7 @@ extensions:
         request_timeout_seconds: 30
         service: monitoring
 processors:
-    batch/opentelemetry:
+    batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
@@ -592,7 +592,7 @@ service:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
                 - transform/identity
-                - batch/opentelemetry
+                - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
         metrics/otel_prometheus:

@@ -58,7 +58,7 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
-	processors.Set(batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey), batchprocessor.WithSendBatchSize(common.MaxSpansPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxSpansPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
+	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_traces"), batchprocessor.WithSendBatchSize(common.MaxSpansPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxSpansPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),

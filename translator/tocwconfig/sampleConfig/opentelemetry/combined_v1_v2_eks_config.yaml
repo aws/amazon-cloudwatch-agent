@@ -551,7 +551,12 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    batch/opentelemetry:
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 15s
+    batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 10000
         send_batch_size: 10000
@@ -2667,7 +2672,7 @@ service:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
                 - transform/identity
-                - batch/opentelemetry
+                - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
         metrics/otel_prometheus:
@@ -2693,7 +2698,7 @@ service:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
                 - transform/identity
-                - batch/opentelemetry
+                - batch/opentelemetry_traces
             receivers:
                 - forward/opentelemetry
         traces/otlp:

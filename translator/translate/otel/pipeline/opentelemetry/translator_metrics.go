@@ -60,7 +60,7 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
-	processors.Set(batchprocessor.NewTranslator(common.WithName(common.OpenTelemetryKey), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
+	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
