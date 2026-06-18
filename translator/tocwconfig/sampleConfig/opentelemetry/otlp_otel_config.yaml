@@ -162,12 +162,12 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 15s
+        timeout: 30s
     batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 10000
         send_batch_size: 10000
-        timeout: 15s
+        timeout: 30s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -175,7 +175,7 @@ processors:
             - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
-        timeout: 15s
+        timeout: 30s
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:

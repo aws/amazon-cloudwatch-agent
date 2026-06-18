@@ -101,7 +101,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	}
 
 	// Deployment metrics pipelines
-	if mode == "" || mode == "cluster" {
+	if mode == "cluster" {
 		translators.Set(newYAMLPipeline("apiserver", pipeline.SignalMetrics, apiserverYAML))
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
 	}

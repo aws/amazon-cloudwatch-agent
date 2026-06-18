@@ -51,7 +51,7 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 15s
+        timeout: 30s
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
