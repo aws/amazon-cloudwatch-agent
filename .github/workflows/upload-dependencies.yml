@@ -52,8 +52,20 @@ jobs:
           S3_BUCKET: ${{ inputs.s3_integration_bucket }}
           GITHUB_SHA_INPUT: ${{ inputs.github_sha }}
         run: |
+          set -euo pipefail
           go mod tidy
           go mod vendor
+
+          # Guard against shipping an inconsistent vendor tree. The CN-region
+          # integration tests consume this tarball with GOFLAGS=-mod=vendor (they
+          # cannot reach proxy.golang.org), so a vendor/ that is out of sync with
+          # go.mod fails every CN job with "go: inconsistent vendoring". Resolve
+          # every package in vendor mode here and fail fast instead of after a full
+          # fleet of CN jobs has been provisioned. 'go list' surfaces the exact
+          # "inconsistent vendoring" error without running any test (TestMain).
+          echo "Verifying vendor tree is consistent with go.mod (vendor mode)..."
+          GOFLAGS=-mod=vendor go list ./... >/dev/null
+
           mkdir test-repo
           tar -czf ./test-repo/amazon-cloudwatch-agent-test.tar.gz --exclude='test-repo' .
           aws s3 cp ./test-repo/amazon-cloudwatch-agent-test.tar.gz "s3://${S3_BUCKET}/integration-test/cloudwatch-agent-test-repo/${GITHUB_SHA_INPUT}.tar.gz" --quiet
