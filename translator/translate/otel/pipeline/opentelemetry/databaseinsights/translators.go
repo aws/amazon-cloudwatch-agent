@@ -4,6 +4,8 @@
 package databaseinsights
 
 import (
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -12,6 +14,10 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
+
+// ottlSafeRegex restricts values interpolated into OTTL statements to safe
+// characters, preventing injection of OTTL syntax or string escape sequences.
+var ottlSafeRegex = regexp.MustCompile(`^[a-zA-Z0-9._@/:\-]+$`)
 
 type dbiInstanceConfig struct {
 	endpoint     string
@@ -71,6 +77,16 @@ func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 		})
 	}
 	return instances
+}
+
+func validateOttlSafe(field, value string) error {
+	if value == "" {
+		return nil
+	}
+	if !ottlSafeRegex.MatchString(value) {
+		return fmt.Errorf("database_insights %s contains invalid characters: %q (must match %s)", field, value, ottlSafeRegex.String())
+	}
+	return nil
 }
 
 func isLocalhostEndpoint(endpoint string) bool {

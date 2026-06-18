@@ -56,6 +56,12 @@ func (t *dbiTranslator) ID() pipeline.ID {
 }
 
 func (t *dbiTranslator) Translate(_ *confmap.Conf) (*common.ComponentTranslators, error) {
+	if err := validateOttlSafe("username", t.cfg.username); err != nil {
+		return nil, err
+	}
+	if err := validateOttlSafe("instance_name", t.cfg.instanceName); err != nil {
+		return nil, err
+	}
 	switch t.pipelineType {
 	case dbiMetrics:
 		return t.translateMetrics()
