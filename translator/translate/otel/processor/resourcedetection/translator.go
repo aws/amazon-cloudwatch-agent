@@ -72,7 +72,9 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-	cfg.MiddlewareID = &agenthealth.StatusCodeID
+	if t.name != common.OpenTelemetryKey {
+		cfg.MiddlewareID = &agenthealth.StatusCodeID
+	}
 	mode := context.CurrentContext().KubernetesMode()
 	if mode == "" {
 		mode = context.CurrentContext().Mode()
