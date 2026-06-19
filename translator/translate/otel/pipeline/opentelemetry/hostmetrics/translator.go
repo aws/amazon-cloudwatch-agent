@@ -41,7 +41,7 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		opts = append(opts, hostmetrics.WithProcessScraper(map[string]any{
 			"include": map[string]any{
 				"match_type": "regexp",
-				"names":      []string{"postgres.*"},
+				"names":      []string{"post(gres|master).*"},
 			},
 			"mute_process_all_errors": true,
 			"metrics": map[string]any{

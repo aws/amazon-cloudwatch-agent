@@ -852,7 +852,7 @@ receivers:
                 include:
                     match_type: regexp
                     names:
-                        - postgres.*
+                        - post(gres|master).*
                 metrics:
                     process.cpu.utilization:
                         enabled: true

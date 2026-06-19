@@ -109,7 +109,7 @@ func TestHostMetricsTranslator(t *testing.T) {
 					assert.True(t, exists, "expected process scraper")
 					include := processCfg["include"].(map[string]any)
 					assert.Equal(t, "regexp", include["match_type"])
-					assert.Equal(t, []string{"postgres.*"}, include["names"])
+					assert.Equal(t, []string{"post(gres|master).*"}, include["names"])
 				}
 			}
 		})
