@@ -347,7 +347,8 @@ jobs:
 
   StartLocalStackITAR:
     name: 'StartLocalStackITAR'
-    needs: [OutputEnvVariables]
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix != '[]' }}
     uses: ./.github/workflows/start-localstack.yml
     secrets:
       AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
@@ -366,7 +367,8 @@ jobs:
 
   StartLocalStackCN:
     name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables, UploadDependenciesCN ]
+    needs: [ OutputEnvVariables, UploadDependenciesCN, GenerateTestMatrix ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix != '[]' }}
     uses: ./.github/workflows/start-localstack.yml
     secrets:
       AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
@@ -385,7 +387,8 @@ jobs:
 
   UploadDependenciesCN:
     name: 'UploadDependenciesCN'
-    needs: [ OutputEnvVariables ]
+    needs: [ OutputEnvVariables, GenerateTestMatrix ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix != '[]' }}
     uses: ./.github/workflows/upload-dependencies.yml
     secrets: inherit
     permissions:
