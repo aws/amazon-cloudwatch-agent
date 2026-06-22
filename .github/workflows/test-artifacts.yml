@@ -67,7 +67,7 @@ on:
         required: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.build_id }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ inputs.build_id }}
   cancel-in-progress: true
 
 jobs:
