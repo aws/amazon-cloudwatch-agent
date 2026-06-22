@@ -33,6 +33,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/journald"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
@@ -49,6 +50,16 @@ func RegisterPipeline(translators ...pipelinetranslator.Translator) {
 
 // Translate converts a JSON config into an OTEL config.
 func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	return translateInternal(jsonConfig, os, true)
+}
+
+// TranslateWithoutValidation is like Translate but skips config validation.
+// Use in tests where filesystem-dependent validation (e.g. token files) would fail.
+func TranslateWithoutValidation(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	return translateInternal(jsonConfig, os, false)
+}
+
+func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelcol.Config, error) {
 	m, ok := jsonConfig.(map[string]interface{})
 	if !ok {
 		return nil, errors.New("invalid json config")
@@ -82,6 +93,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Set(systemmetrics.NewTranslator())
+	translators.Merge(opentelemetry.NewTranslators(conf))
 	translators.Merge(journald.NewTranslators(conf))
 	translators.Merge(registry)
 	pipelines, err := pipelinetranslator.NewTranslator(translators).Translate(conf)
@@ -92,8 +104,9 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			return nil, err
 		}
 	}
-	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms
-	if !ecsutil.GetECSUtilSingleton().IsECS() {
+	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms.
+	// Only add entitystore when pipelines that use the awsentity processor are present.
+	if !ecsutil.GetECSUtilSingleton().IsECS() && (conf.IsSet(common.MetricsKey) || conf.IsSet(common.LogsKey) || conf.IsSet(common.TracesKey)) {
 		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
 	}
 	if context.CurrentContext().KubernetesMode() != "" {
@@ -119,8 +132,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
 	}
-	if err = xconfmap.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid otel config: %w", err)
+	if validate {
+		if err = xconfmap.Validate(cfg); err != nil {
+			return nil, fmt.Errorf("invalid otel config: %w", err)
+		}
 	}
 	return cfg, nil
 }

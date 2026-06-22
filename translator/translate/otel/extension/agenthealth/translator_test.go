@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
@@ -210,4 +211,18 @@ func TestTranslate(t *testing.T) {
 			assert.Equal(t, testCase.want, got)
 		})
 	}
+}
+
+func TestTranslateWithAdditionalAuth(t *testing.T) {
+	context.CurrentContext().SetMode(config.ModeEC2)
+	translateagent.Global_Config.RegionType = config.RegionTypeNotFound
+	authID := component.MustNewIDWithName("sigv4auth", "monitoring")
+	tt := NewTranslator(MetricsName, []string{"*"}, WithAdditionalAuth(authID)).(*translator)
+	tt.isUsageDataEnabled = true
+	conf := confmap.NewFromStringMap(map[string]any{"agent": map[string]any{}})
+	got, err := tt.Translate(conf)
+	assert.NoError(t, err)
+	cfg := got.(*agenthealth.Config)
+	assert.NotNil(t, cfg.AdditionalAuth)
+	assert.Equal(t, authID, *cfg.AdditionalAuth)
 }
