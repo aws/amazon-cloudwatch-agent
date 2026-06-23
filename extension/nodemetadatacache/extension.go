@@ -83,6 +83,26 @@ func (c *NodeMetadataCache) Get(nodeName string) *NodeMetadata {
 	return entry
 }
 
+// Len returns the number of node entries currently in the cache. Used for
+// diagnostics (e.g. distinguishing an empty cache from a key mismatch).
+func (c *NodeMetadataCache) Len() int {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return len(c.cache)
+}
+
+// Keys returns a snapshot of the node names currently in the cache. Used for
+// diagnostics so an enrichment miss can be compared against what was published.
+func (c *NodeMetadataCache) Keys() []string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	keys := make([]string, 0, len(c.cache))
+	for k := range c.cache {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // Start creates a K8s clientset and starts a Lease informer scoped to the
 // configured namespace. Informer event handlers populate the cache.
 func (c *NodeMetadataCache) Start(_ context.Context, _ component.Host) error {

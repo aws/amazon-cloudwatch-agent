@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/nodemetadatacache"
 )
@@ -121,6 +123,44 @@ func TestPassThroughWithCacheMiss(t *testing.T) {
 	assert.False(t, ok, "host.image.id should NOT be set on cache miss")
 	_, ok = attrs.Get(attrAvailabilityZone)
 	assert.False(t, ok, "cloud.availability_zone should NOT be set on cache miss")
+}
+
+// TestCacheMissLogsDiagnostic verifies that an enrichment miss for a resource
+// that DOES carry k8s.node.name (the KSM node-bucket failure mode) emits the
+// rate-limited diagnostic warning with the looked-up name and the cache keys,
+// so a CI run can distinguish a node-name mismatch from a coverage gap.
+func TestCacheMissLogsDiagnostic(t *testing.T) {
+	setupCacheWithTestData(t, map[string]*nodemetadatacache.NodeMetadata{
+		"ip-10-0-1-42.us-west-2.compute.internal": freshMetadata(),
+	})
+
+	core, logs := observer.New(zapcore.WarnLevel)
+	p := &nodeMetadataEnricherProcessor{
+		logger:        zap.New(core),
+		lastMissLogAt: make(map[string]time.Time),
+	}
+	if c := nodemetadatacache.GetNodeMetadataCache(); c != nil {
+		p.cache.Store(c)
+	}
+
+	// Resource carries a node name that is NOT a cache key (e.g. KSM "node"
+	// label value differing from the Lease key K8S_NODE_NAME).
+	input := createTestMetrics("ip-10-0-1-42", nil)
+
+	_, err := p.processMetrics(context.Background(), input)
+	require.NoError(t, err)
+
+	entries := logs.FilterMessageSnippet("node metadata cache miss").All()
+	require.Len(t, entries, 1, "expected exactly one cache-miss warning")
+	fields := entries[0].ContextMap()
+	assert.Equal(t, "ip-10-0-1-42", fields["k8s.node.name"], "miss log should name the looked-up node")
+	assert.EqualValues(t, 1, fields["cacheSize"], "miss log should report cache size")
+
+	// Second miss for the same node within the interval is rate-limited.
+	_, err = p.processMetrics(context.Background(), createTestMetrics("ip-10-0-1-42", nil))
+	require.NoError(t, err)
+	assert.Len(t, logs.FilterMessageSnippet("node metadata cache miss").All(), 1,
+		"repeat miss for same node should be rate-limited")
 }
 
 func TestPassThroughWithoutNodeName(t *testing.T) {

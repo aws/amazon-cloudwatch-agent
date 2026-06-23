@@ -295,3 +295,19 @@ func TestSkipsLeaseWithMissingLeaseDuration(t *testing.T) {
 
 	assert.Nil(t, c.Get("node-1"), "Get should return nil when Lease has no leaseDurationSeconds")
 }
+
+func TestLenAndKeys(t *testing.T) {
+	c := NewForTest(zap.NewNop())
+	assert.Equal(t, 0, c.Len(), "fresh cache should be empty")
+	assert.Empty(t, c.Keys(), "fresh cache should have no keys")
+
+	md := &NodeMetadata{Expiry: time.Now().Add(time.Hour)}
+	c.SetForTest("ip-10-0-1-42.us-west-2.compute.internal", md)
+	c.SetForTest("ip-10-0-2-99.us-west-2.compute.internal", md)
+
+	assert.Equal(t, 2, c.Len(), "cache should report two entries")
+	assert.ElementsMatch(t,
+		[]string{"ip-10-0-1-42.us-west-2.compute.internal", "ip-10-0-2-99.us-west-2.compute.internal"},
+		c.Keys(),
+		"Keys should return the cached node names for diagnostics")
+}
