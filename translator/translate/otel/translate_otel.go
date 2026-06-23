@@ -20,9 +20,11 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/oidctoken"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
@@ -111,6 +113,11 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 	}
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
+	}
+
+	// Azure VM has no AWS credentials, so it needs oidctoken for egress auth.
+	if context.CurrentContext().Mode() == config.ModeAzureVM {
+		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
 	}
 
 	cfg := &otelcol.Config{

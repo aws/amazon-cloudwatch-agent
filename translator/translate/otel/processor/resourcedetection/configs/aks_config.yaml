@@ -1,0 +1,3 @@
+detectors: [env, aks, azure]
+override: true
+timeout: 2s

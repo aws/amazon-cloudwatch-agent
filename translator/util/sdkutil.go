@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/azuredetector"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -29,6 +30,10 @@ var DetectCredentialsPath = detectCredentialsPath
 var DefaultEC2Region = defaultEC2Region
 var DefaultECSRegion = defaultECSRegion
 var IsEKS = isEKS
+
+// IsAKS/IsAzureVM are overridable detection hooks; tests override these vars.
+var IsAKS = isAKS
+var IsAzureVM = isAzureVM
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -57,6 +62,20 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeEC2
 	}
 
+	// Azure is checked only after all AWS signals, so it can't override them.
+	// AKS nodes are Azure VMs; RUN_IN_AKS is checked before the IMDS probe since
+	// an AKS pod may not reach IMDS from its container.
+	if IsAKS() {
+		fmt.Println("I! Detected from ENV instance is Azure (AKS)")
+		return config.ModeAzureVM
+	}
+
+	// Last resort: IMDS probe (~2s worst-case one-time cost on a black-holed host).
+	if IsAzureVM() {
+		fmt.Println("I! Detected the instance is Azure VM")
+		return config.ModeAzureVM
+	}
+
 	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
 }
@@ -64,12 +83,18 @@ func DetectAgentMode(configuredMode string) string {
 func DetectKubernetesMode(configuredMode string) string {
 	isEKS := IsEKS()
 
-	if isEKS.Err != nil {
-		return "" // not kubernetes
+	// EKS wins over AKS when confirmed.
+	if isEKS.Err == nil && isEKS.Value {
+		return config.ModeEKS
 	}
 
-	if isEKS.Value {
-		return config.ModeEKS
+	// AKS is an explicit env signal, so it applies even if the EKS probe errored.
+	if IsAKS() {
+		return config.ModeAKS
+	}
+
+	if isEKS.Err != nil {
+		return "" // not kubernetes
 	}
 
 	if configuredMode == config.ModeEC2 {
@@ -120,6 +145,16 @@ func defaultECSRegion() string {
 
 func isEKS() eksdetector.IsEKSCache {
 	return eksdetector.IsEKS()
+}
+
+// isAKS dispatches to azuredetector.IsAKS dynamically (symmetric with isAzureVM).
+func isAKS() bool {
+	return azuredetector.IsAKS()
+}
+
+// isAzureVM reports Azure VM detection; an unreachable IMDS reads as not-Azure.
+func isAzureVM() bool {
+	return azuredetector.IsAzureVM().Value
 }
 
 func detectRegion(mode string, credsConfig map[string]string) (region string, regionType string) {

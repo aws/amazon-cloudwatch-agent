@@ -125,6 +125,7 @@ func TestComponents(t *testing.T) {
 		"health_check",
 		"k8smetadata",
 		"nodemetadatacache",
+		"oidctoken",
 		"pprof",
 		"server",
 		"sigv4auth",
