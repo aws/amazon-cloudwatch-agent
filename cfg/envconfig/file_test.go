@@ -15,37 +15,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestReadEnvConfigFile(t *testing.T) {
+func TestReadFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	content := `{"KEY1": "val1", "KEY2": "val2"}`
 	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
 
-	result, err := ReadEnvConfigFile(path)
+	result, err := ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"KEY1": "val1", "KEY2": "val2"}, result)
 }
 
-func TestReadEnvConfigFile_EmptyPath(t *testing.T) {
-	result, err := ReadEnvConfigFile("")
+func TestReadFile_EmptyPath(t *testing.T) {
+	result, err := ReadFile("")
 	assert.NoError(t, err)
 	assert.Nil(t, result)
 }
 
-func TestReadEnvConfigFile_MissingFile(t *testing.T) {
-	_, err := ReadEnvConfigFile(filepath.Join(t.TempDir(), "nonexistent.json"))
+func TestReadFile_MissingFile(t *testing.T) {
+	_, err := ReadFile(filepath.Join(t.TempDir(), "nonexistent.json"))
 	assert.True(t, errors.Is(err, fs.ErrNotExist))
 }
 
-func TestReadEnvConfigFile_Corrupt(t *testing.T) {
+func TestReadFile_Corrupt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	require.NoError(t, os.WriteFile(path, []byte("not valid json"), 0600))
 
-	result, err := ReadEnvConfigFile(path)
+	result, err := ReadFile(path)
 	require.NoError(t, err)
 	assert.Empty(t, result)
 }
 
-func TestLoadEnvConfigFile(t *testing.T) {
+func TestLoadFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	content := `{"MY_TEST_VAR": "hello", "MY_OTHER_VAR": "world"}`
 	require.NoError(t, os.WriteFile(path, []byte(content), 0600))
@@ -53,74 +53,61 @@ func TestLoadEnvConfigFile(t *testing.T) {
 	t.Setenv("MY_TEST_VAR", "")
 	t.Setenv("MY_OTHER_VAR", "")
 
-	require.NoError(t, LoadEnvConfigFile(path))
+	require.NoError(t, LoadFile(path))
 
 	assert.Equal(t, "hello", os.Getenv("MY_TEST_VAR"))
 	assert.Equal(t, "world", os.Getenv("MY_OTHER_VAR"))
 }
 
-func TestLoadEnvConfigFile_MissingFile(t *testing.T) {
-	err := LoadEnvConfigFile(filepath.Join(t.TempDir(), "nonexistent.json"))
+func TestLoadFile_MissingFile(t *testing.T) {
+	err := LoadFile(filepath.Join(t.TempDir(), "nonexistent.json"))
 	assert.True(t, errors.Is(err, fs.ErrNotExist))
 }
 
-func TestLoadEnvConfigFile_EmptyPath(t *testing.T) {
-	assert.NoError(t, LoadEnvConfigFile(""))
+func TestLoadFile_EmptyPath(t *testing.T) {
+	assert.NoError(t, LoadFile(""))
 }
 
-func TestMergeEnvConfigFile(t *testing.T) {
+func TestMergeFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	existing := map[string]string{"KEEP_ME": "original", "OVERWRITE_ME": "old"}
 	data, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data, 0600))
 
-	require.NoError(t, MergeEnvConfigFile(path, map[string]string{
+	require.NoError(t, MergeFile(path, map[string]string{
 		"OVERWRITE_ME": "new",
 		"NEW_KEY":      "added",
 	}))
 
-	result, err := ReadEnvConfigFile(path)
+	result, err := ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, "original", result["KEEP_ME"])
 	assert.Equal(t, "new", result["OVERWRITE_ME"])
 	assert.Equal(t, "added", result["NEW_KEY"])
 }
 
-func TestMergeEnvConfigFile_CreatesIfMissing(t *testing.T) {
+func TestMergeFile_CreatesIfMissing(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 
-	require.NoError(t, MergeEnvConfigFile(path, map[string]string{"KEY": "value"}))
+	require.NoError(t, MergeFile(path, map[string]string{"KEY": "value"}))
 
-	result, err := ReadEnvConfigFile(path)
+	result, err := ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"KEY": "value"}, result)
 }
 
-func TestMergeEnvConfigFile_CorruptExistingFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "env-config.json")
-	require.NoError(t, os.WriteFile(path, []byte("not valid json"), 0600))
-
-	// A corrupt file is treated as empty and recreated rather than failing,
-	// so corrupt state never blocks writing the managed values.
-	require.NoError(t, MergeEnvConfigFile(path, map[string]string{"KEY": "value"}))
-
-	result, err := ReadEnvConfigFile(path)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"KEY": "value"}, result)
-}
-
-func TestReplaceEnvConfigFile(t *testing.T) {
+func TestReplaceFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	existing := map[string]string{"STALE_KEY": "old", "KEEP_ME": "retained"}
 	data, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data, 0600))
 
-	err = ReplaceEnvConfigFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"})
+	err = ReplaceFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"})
 	require.NoError(t, err)
 
-	result, err := ReadEnvConfigFile(path)
+	result, err := ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, "retained", result["KEEP_ME"])
 	assert.Equal(t, "new", result["NEW_KEY"])
@@ -128,22 +115,24 @@ func TestReplaceEnvConfigFile(t *testing.T) {
 	assert.False(t, hasStale)
 }
 
-func TestReplaceEnvConfigFile_RecreatesCorruptFile(t *testing.T) {
+func TestReplaceFile_RecreatesCorruptFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	require.NoError(t, os.WriteFile(path, []byte("{ broken json"), 0600))
 
-	// Corrupt existing content is discarded; managed values are still written.
-	require.NoError(t, ReplaceEnvConfigFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"}))
+	require.NoError(t, ReplaceFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"}))
 
-	result, err := ReadEnvConfigFile(path)
+	result, err := ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{"NEW_KEY": "new"}, result)
 }
 
-func TestReplaceEnvConfigFile_IOErrorDoesNotClobber(t *testing.T) {
-	// A path that exists but cannot be read as a regular file (it's a directory)
-	// surfaces the error instead of silently overwriting.
+func TestReplaceFile_IOErrorDoesNotClobber(t *testing.T) {
+	// A directory can't be read as a file, producing a non-ErrNotExist error.
 	dir := t.TempDir()
-	err := ReplaceEnvConfigFile(dir, map[string]string{"KEY": "value"}, nil)
+	err := ReplaceFile(dir, map[string]string{"KEY": "value"}, nil)
 	assert.Error(t, err)
+}
+
+func TestReplaceFile_EmptyPath(t *testing.T) {
+	assert.NoError(t, ReplaceFile("", map[string]string{"KEY": "value"}, nil))
 }

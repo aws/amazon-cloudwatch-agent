@@ -45,7 +45,7 @@ func TranslateJSONMapToEnvConfigFile(jsonConfigValue map[string]any, envConfigPa
 	if envConfigPath == "" {
 		return
 	}
-	if err := envconfig.ReplaceEnvConfigFile(envConfigPath, toenvconfig.ToEnvConfig(jsonConfigValue), toenvconfig.ManagedKeys); err != nil {
+	if err := envconfig.ReplaceFile(envConfigPath, toenvconfig.ToEnvConfig(jsonConfigValue), toenvconfig.ManagedKeys); err != nil {
 		log.Panicf("E! Failed to write env config. Reason: %s", err.Error())
 	}
 }

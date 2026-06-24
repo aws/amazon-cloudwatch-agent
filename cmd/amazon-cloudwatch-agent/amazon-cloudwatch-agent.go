@@ -158,7 +158,7 @@ func reloadLoop(
 					select {
 					case <-ticker.C:
 						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
-							if err := envconfig.LoadEnvConfigFile(envConfigPath); err != nil {
+							if err := envconfig.LoadFile(envConfigPath); err != nil {
 								log.Printf("E! Unable to load env variables: %v\n", err)
 							}
 							// Sets the log level based on environment variable
@@ -217,7 +217,7 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = envconfig.LoadEnvConfigFile(envConfigPath)
+	err = envconfig.LoadFile(envConfigPath)
 	if err != nil && !*fSchemaTest {
 		log.Printf("W! Failed to load environment variables due to %s\n", err.Error())
 	}
@@ -583,7 +583,7 @@ func main() {
 		if *fEnvConfig != "" {
 			parts := strings.SplitN(*fSetEnv, "=", 2)
 			if len(parts) == 2 {
-				if err := envconfig.MergeEnvConfigFile(*fEnvConfig, map[string]string{parts[0]: parts[1]}); err != nil {
+				if err := envconfig.MergeFile(*fEnvConfig, map[string]string{parts[0]: parts[1]}); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}

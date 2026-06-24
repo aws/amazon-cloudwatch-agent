@@ -11,9 +11,9 @@ import (
 	"os"
 )
 
-// ReadEnvConfigFile parses the env-config.json at the given path and returns the
+// ReadFile parses the env-config.json at the given path and returns the
 // key-value pairs. Unparseable contents are treated as empty.
-func ReadEnvConfigFile(path string) (map[string]string, error) {
+func ReadFile(path string) (map[string]string, error) {
 	if path == "" {
 		return nil, nil
 	}
@@ -28,10 +28,10 @@ func ReadEnvConfigFile(path string) (map[string]string, error) {
 	return envVars, nil
 }
 
-// LoadEnvConfigFile loads environment variables from the given env-config.json into
+// LoadFile loads environment variables from the given env-config.json into
 // the process environment, logging each variable set and any that fail to set.
-func LoadEnvConfigFile(path string) error {
-	envVars, err := ReadEnvConfigFile(path)
+func LoadFile(path string) error {
+	envVars, err := ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -45,21 +45,21 @@ func LoadEnvConfigFile(path string) error {
 	return nil
 }
 
-// MergeEnvConfigFile adds the given values to the env-config.json at path,
+// MergeFile adds the given values to the env-config.json at path,
 // overwriting keys with the same name. All other existing keys, including managed
 // keys, are retained.
-func MergeEnvConfigFile(path string, values map[string]string) error {
-	return ReplaceEnvConfigFile(path, values, nil)
+func MergeFile(path string, values map[string]string) error {
+	return ReplaceFile(path, values, nil)
 }
 
-// ReplaceEnvConfigFile merges the given values into the env-config.json at path,
+// ReplaceFile merges the given values into the env-config.json at path,
 // first removing keysToRemove so stale values don't persist. Read errors other
 // than a missing file leave the file untouched.
-func ReplaceEnvConfigFile(path string, values map[string]string, keysToRemove []string) error {
+func ReplaceFile(path string, values map[string]string, keysToRemove []string) error {
 	if path == "" {
 		return nil
 	}
-	merged, err := ReadEnvConfigFile(path)
+	merged, err := ReadFile(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
