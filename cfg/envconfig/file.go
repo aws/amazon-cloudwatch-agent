@@ -6,13 +6,14 @@ package envconfig
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
 )
 
 // ReadFile parses the env-config.json at the given path and returns the
-// key-value pairs. Unparseable contents are treated as empty.
+// key-value pairs. Returns an error if the file is missing or cannot be parsed.
 func ReadFile(path string) (map[string]string, error) {
 	if path == "" {
 		return nil, nil
@@ -23,7 +24,7 @@ func ReadFile(path string) (map[string]string, error) {
 	}
 	envVars := map[string]string{}
 	if err = json.Unmarshal(data, &envVars); err != nil {
-		return map[string]string{}, nil
+		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}
 	return envVars, nil
 }
@@ -36,7 +37,7 @@ func LoadFile(path string) error {
 		return err
 	}
 	for k, v := range envVars {
-		if err := os.Setenv(k, v); err != nil {
+		if err = os.Setenv(k, v); err != nil {
 			log.Printf("W! Failed to set environment variable %s: %v", k, err)
 			continue
 		}
@@ -45,17 +46,10 @@ func LoadFile(path string) error {
 	return nil
 }
 
-// MergeFile adds the given values to the env-config.json at path,
-// overwriting keys with the same name. All other existing keys, including managed
-// keys, are retained.
-func MergeFile(path string, values map[string]string) error {
-	return ReplaceFile(path, values, nil)
-}
-
-// ReplaceFile merges the given values into the env-config.json at path,
-// first removing keysToRemove so stale values don't persist. Read errors other
-// than a missing file leave the file untouched.
-func ReplaceFile(path string, values map[string]string, keysToRemove []string) error {
+// MergeFile merges values into the env-config.json at path. Existing keys are
+// retained unless listed in keysToRemove. A missing file is treated as empty.
+// Other read errors leave the file untouched.
+func MergeFile(path string, values map[string]string, keysToRemove ...string) error {
 	if path == "" {
 		return nil
 	}

@@ -42,10 +42,7 @@ var ErrOnlyYAML = errors.New("only YAML files detected")
 // TranslateJSONMapToEnvConfigFile populates env-config.json based on the input json config.
 // Keys managed by translation are always overwritten; other keys are retained.
 func TranslateJSONMapToEnvConfigFile(jsonConfigValue map[string]any, envConfigPath string) {
-	if envConfigPath == "" {
-		return
-	}
-	if err := envconfig.ReplaceFile(envConfigPath, toenvconfig.ToEnvConfig(jsonConfigValue), toenvconfig.ManagedKeys); err != nil {
+	if err := envconfig.MergeFile(envConfigPath, toenvconfig.ToEnvConfig(jsonConfigValue), toenvconfig.ManagedKeys...); err != nil {
 		log.Panicf("E! Failed to write env config. Reason: %s", err.Error())
 	}
 }

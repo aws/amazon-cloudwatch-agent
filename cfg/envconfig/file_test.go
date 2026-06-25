@@ -36,13 +36,12 @@ func TestReadFile_MissingFile(t *testing.T) {
 	assert.True(t, errors.Is(err, fs.ErrNotExist))
 }
 
-func TestReadFile_Corrupt(t *testing.T) {
+func TestReadFile_CorruptReturnsError(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	require.NoError(t, os.WriteFile(path, []byte("not valid json"), 0600))
 
-	result, err := ReadFile(path)
-	require.NoError(t, err)
-	assert.Empty(t, result)
+	_, err := ReadFile(path)
+	assert.Error(t, err)
 }
 
 func TestLoadFile(t *testing.T) {
@@ -97,14 +96,14 @@ func TestMergeFile_CreatesIfMissing(t *testing.T) {
 	assert.Equal(t, map[string]string{"KEY": "value"}, result)
 }
 
-func TestReplaceFile(t *testing.T) {
+func TestMergeFile_RemovesStaleKeys(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	existing := map[string]string{"STALE_KEY": "old", "KEEP_ME": "retained"}
 	data, err := json.MarshalIndent(existing, "", "\t")
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data, 0600))
 
-	err = ReplaceFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"})
+	err = MergeFile(path, map[string]string{"NEW_KEY": "new"}, "STALE_KEY")
 	require.NoError(t, err)
 
 	result, err := ReadFile(path)
@@ -115,24 +114,26 @@ func TestReplaceFile(t *testing.T) {
 	assert.False(t, hasStale)
 }
 
-func TestReplaceFile_RecreatesCorruptFile(t *testing.T) {
+func TestMergeFile_CorruptReturnsError(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env-config.json")
 	require.NoError(t, os.WriteFile(path, []byte("{ broken json"), 0600))
 
-	require.NoError(t, ReplaceFile(path, map[string]string{"NEW_KEY": "new"}, []string{"STALE_KEY"}))
+	err := MergeFile(path, map[string]string{"NEW_KEY": "new"}, "STALE_KEY")
+	assert.Error(t, err)
 
-	result, err := ReadFile(path)
-	require.NoError(t, err)
-	assert.Equal(t, map[string]string{"NEW_KEY": "new"}, result)
+	// File is left as-is so the original content is recoverable.
+	content, readErr := os.ReadFile(path)
+	require.NoError(t, readErr)
+	assert.Equal(t, "{ broken json", string(content))
 }
 
-func TestReplaceFile_IOErrorDoesNotClobber(t *testing.T) {
+func TestMergeFile_IOErrorReturnsError(t *testing.T) {
 	// A directory can't be read as a file, producing a non-ErrNotExist error.
 	dir := t.TempDir()
-	err := ReplaceFile(dir, map[string]string{"KEY": "value"}, nil)
+	err := MergeFile(dir, map[string]string{"KEY": "value"})
 	assert.Error(t, err)
 }
 
-func TestReplaceFile_EmptyPath(t *testing.T) {
-	assert.NoError(t, ReplaceFile("", map[string]string{"KEY": "value"}, nil))
+func TestMergeFile_EmptyPath(t *testing.T) {
+	assert.NoError(t, MergeFile("", map[string]string{"KEY": "value"}))
 }
