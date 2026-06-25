@@ -221,7 +221,7 @@ func TestSyslogSchema_MissingListenAddress(t *testing.T) {
 			}
 		}
 	}`)
-	assert.False(t, result.Valid(), "missing listen_address should fail")
+	assert.True(t, result.Valid(), "missing listen_address should be valid (defaults to tcp://127.0.0.1:5514)")
 }
 
 func TestSyslogSchema_MissingLogGroupName(t *testing.T) {
