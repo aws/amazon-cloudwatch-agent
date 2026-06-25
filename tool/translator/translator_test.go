@@ -43,7 +43,7 @@ func TestTranslate_OnlyYAML(t *testing.T) {
 	assert.NoFileExists(t, yamlPath)
 }
 
-func TestTranslate_RetainsCustomKeysAndClearsStaleManagedKeys(t *testing.T) {
+func TestTranslate_RetainsCustomKeysAndClearsStaleTranslatorManagedKeys(t *testing.T) {
 	orig := translatorutil.DetectRegion
 	translatorutil.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-east-1", "mock"

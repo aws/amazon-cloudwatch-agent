@@ -18,8 +18,8 @@ const (
 	usageDataKey      = "usage_data"
 )
 
-// ManagedKeys is the set of env-config.json keys that ToEnvConfig may produce.
-var ManagedKeys = []string{
+// TranslatorManagedKeys is the set of env-config.json keys that ToEnvConfig may produce.
+var TranslatorManagedKeys = []string{
 	envconfig.AWS_CA_BUNDLE,
 	envconfig.AWS_SDK_LOG_LEVEL,
 	envconfig.AWS_USE_DUALSTACK_ENDPOINT,

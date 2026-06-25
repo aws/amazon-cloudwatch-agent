@@ -313,7 +313,7 @@ func TestToEnvConfig_TypeAssertions(t *testing.T) {
 	}
 }
 
-func TestManagedKeys_CoversAllToEnvConfigKeys(t *testing.T) {
+func TestTranslatorManagedKeys_CoversAllToEnvConfigKeys(t *testing.T) {
 	// Set up context to trigger proxy/SSL keys
 	context.CurrentContext().SetProxy(map[string]string{
 		"http_proxy":  "http://proxy",
@@ -342,6 +342,6 @@ func TestManagedKeys_CoversAllToEnvConfigKeys(t *testing.T) {
 	}
 
 	result := ToEnvConfig(input)
-	assert.ElementsMatch(t, ManagedKeys, slices.Collect(maps.Keys(result)),
-		"ManagedKeys must exactly match the keys ToEnvConfig can produce")
+	assert.ElementsMatch(t, TranslatorManagedKeys, slices.Collect(maps.Keys(result)),
+		"TranslatorManagedKeys must exactly match the keys ToEnvConfig can produce")
 }

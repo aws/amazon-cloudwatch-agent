@@ -103,7 +103,7 @@ func TestTranslateJSONMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T)
 	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
 }
 
-func TestTranslateJSONMapToEnvConfigFile_ClearsStaleManagedKeys(t *testing.T) {
+func TestTranslateJSONMapToEnvConfigFile_ClearsStaleTranslatorManagedKeys(t *testing.T) {
 	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 
 	// Simulate a previous translation that set CWAGENT_USER_AGENT

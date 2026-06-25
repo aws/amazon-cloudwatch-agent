@@ -12,6 +12,8 @@ import (
 	"os"
 )
 
+const logValueTruncateLen = 5
+
 // ReadFile parses the env-config.json at the given path and returns the
 // key-value pairs. Returns an error if the file is missing or cannot be parsed.
 func ReadFile(path string) (map[string]string, error) {
@@ -41,7 +43,7 @@ func LoadFile(path string) error {
 			log.Printf("W! Failed to set environment variable %s: %v", k, err)
 			continue
 		}
-		log.Printf("I! %s is set to %q", k, v)
+		log.Printf("I! %s is set to %s", k, truncate(v))
 	}
 	return nil
 }
@@ -70,5 +72,16 @@ func MergeFile(path string, values map[string]string, keysToRemove ...string) er
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644) //nolint:gosec // G306: 0644 is intentional for env-config.json
+	//nolint:gosec // G306: 0644 is intentional for env-config.json
+	if err = os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("writing %s: %w", path, err)
+	}
+	return nil
+}
+
+func truncate(s string) string {
+	if len(s) <= logValueTruncateLen {
+		return fmt.Sprintf("%q", s)
+	}
+	return fmt.Sprintf("%q...", s[:logValueTruncateLen])
 }
