@@ -18,7 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
@@ -82,8 +82,14 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	// Detect agent mode and region
 	mode = util.DetectAgentMode(mode)
 	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
-	if region == "" && downloadLocation != locationDefault {
-		if mode == config.ModeEC2 {
+
+	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
+	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
+		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
+	}
+
+	if region == "" && locationArray[0] != locationDefault {
+		if mode == translatorconfig.ModeEC2 {
 			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
 		}
 		return fmt.Errorf("please make sure the credentials and region set correctly on your hosts")
@@ -94,17 +100,24 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 		return fmt.Errorf("failed to clean up output directory: %v", err)
 	}
 
-	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
-	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
-		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
-	}
-
 	var config, outputFilePath string
 	switch locationArray[0] {
 	case locationDefault:
-		outputFilePath = locationDefault
-		if multiConfig != "remove" {
-			config, err = defaultJSONConfig(mode)
+		if len(locationArray) == 2 {
+			name := locationArray[1]
+			cfg, ok := translatorconfig.DefaultJSONConfigFor(name)
+			if !ok {
+				return fmt.Errorf("unknown default config %q", name)
+			}
+			outputFilePath = locationDefault + "_" + name
+			if multiConfig != "remove" {
+				config = cfg
+			}
+		} else {
+			outputFilePath = locationDefault
+			if multiConfig != "remove" {
+				config, err = defaultJSONConfig(mode)
+			}
 		}
 	case locationSSM:
 		outputFilePath = locationSSM + "_" + EscapeFilePath(locationArray[1])
@@ -141,7 +154,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 }
 
 func defaultJSONConfig(mode string) (string, error) {
-	return config.DefaultJsonConfig(config.ToValidOs(""), mode), nil
+	return translatorconfig.DefaultJsonConfig(translatorconfig.ToValidOs(""), mode), nil
 }
 
 func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[string]string) (string, error) {

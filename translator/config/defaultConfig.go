@@ -3,6 +3,21 @@
 
 package config
 
+import _ "embed"
+
+//go:embed defaults/otel.json
+var defaultOtelConfig string
+
+var defaultConfigs = map[string]string{
+	"otel": defaultOtelConfig,
+}
+
+// DefaultJSONConfigFor returns the named default config if it exists.
+func DefaultJSONConfigFor(name string) (string, bool) {
+	cfg, ok := defaultConfigs[name]
+	return cfg, ok
+}
+
 var defaultLinuxOnPremConfig = `
 {
 	"agent": {

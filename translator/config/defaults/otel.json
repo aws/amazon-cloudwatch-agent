@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "credentials": {
+      "role_arn": "${CWAGENT_ROLE_ARN}"
+    }
+  },
+  "opentelemetry": {
+    "collect": {
+      "otlp": {}
+    }
+  }
+}

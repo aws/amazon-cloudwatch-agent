@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
@@ -428,6 +429,16 @@ func TestOpenTelemetryPrometheusSchemaValidation(t *testing.T) {
 
 func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
+}
+
+func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+	jsonMap, err := util.GetJsonMapFromJsonBytes([]byte(cfg))
+	require.NoError(t, err)
+	result, err := RunSchemaValidation(jsonMap)
+	require.NoError(t, err)
+	assert.True(t, result.Valid(), "default otel config must pass schema validation: %v", result.Errors())
 }
 
 func TestCombinedV1V2SchemaValidation(t *testing.T) {

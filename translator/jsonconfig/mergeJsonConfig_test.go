@@ -99,3 +99,28 @@ func shouldFail(t *testing.T, testData TestData) {
 	}
 	log.Printf("Test %v %v finished", testData.testId, testData.testName)
 }
+
+func TestMergeJsonConfigMaps_UseDefaultConfigOtel(t *testing.T) {
+	t.Setenv("USE_DEFAULT_CONFIG", "otel")
+	resultMap, err := MergeJsonConfigMaps(nil, nil, "default")
+	assert.NoError(t, err)
+	assert.NotNil(t, resultMap)
+	assert.Contains(t, resultMap, "opentelemetry")
+	assert.Contains(t, resultMap, "agent")
+}
+
+func TestMergeJsonConfigMaps_UseDefaultConfigTrue(t *testing.T) {
+	t.Setenv("USE_DEFAULT_CONFIG", "True")
+	// On non-ECS host, USE_DEFAULT_CONFIG=True falls through to default behavior
+	resultMap, err := MergeJsonConfigMaps(nil, nil, "default")
+	assert.NoError(t, err)
+	assert.Nil(t, resultMap)
+}
+
+func TestMergeJsonConfigMaps_UseDefaultConfigUnknown(t *testing.T) {
+	t.Setenv("USE_DEFAULT_CONFIG", "unknown")
+	resultMap, err := MergeJsonConfigMaps(nil, nil, "default")
+	assert.NoError(t, err)
+	// Unknown value falls through to default behavior
+	assert.Nil(t, resultMap)
+}
