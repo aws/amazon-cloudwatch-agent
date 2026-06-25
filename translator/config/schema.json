@@ -1251,6 +1251,22 @@
                   "minLength": 1,
                   "maxLength": 255
                 },
+                "protocol": {
+                  "type": "string",
+                  "description": "Syslog message format",
+                  "enum": ["rfc5424", "rfc3164"]
+                },
+                "tls": {
+                  "type": "object",
+                  "properties": {
+                    "cert_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                    "key_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                    "ca_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                    "client_ca_file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+                    "min_version": { "type": "string", "enum": ["1.0", "1.1", "1.2", "1.3"] }
+                  },
+                  "additionalProperties": false
+                },
                 "log_group_name": {
                   "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
                 },
@@ -1269,7 +1285,7 @@
                   "items": { "$ref": "#/definitions/logsDefinition/definitions/syslogRoutingRuleDefinition" }
                 }
               },
-              "required": ["listen_address", "log_group_name"],
+              "required": ["log_group_name"],
               "additionalProperties": false
             },
             {
@@ -1329,7 +1345,6 @@
               "additionalProperties": false
             }
           },
-          "required": ["listen_address"],
           "additionalProperties": false
         },
         "syslogRoutingRuleDefinition": {

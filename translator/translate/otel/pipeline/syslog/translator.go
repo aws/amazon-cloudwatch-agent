@@ -142,7 +142,11 @@ func NewTranslators(conf *confmap.Conf) (common.PipelineTranslatorMap, error) {
 		return translators, err
 	}
 	for i, section := range sections {
-		translators.Merge(buildSectionPipelines(section, i, conf))
+		pipelines, err := buildSectionPipelines(section, i, conf)
+		if err != nil {
+			return translators, err
+		}
+		translators.Merge(pipelines)
 	}
 	return translators, nil
 }
@@ -185,13 +189,13 @@ func validateUniqueListeners(sections []map[string]any) error {
 }
 
 // buildSectionPipelines creates all pipelines for a single syslog section.
-func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap.Conf) common.PipelineTranslatorMap {
+func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap.Conf) (common.PipelineTranslatorMap, error) {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	prefix := fmt.Sprintf("syslog_%d", sectionIdx)
 
 	listeners := normalizeListeners(syslogConf)
 	if len(listeners) == 0 {
-		return translators
+		return translators, nil
 	}
 
 	defaultLogGroupName, _ := syslogConf["log_group_name"].(string)
@@ -205,10 +209,14 @@ func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap
 	var receiverTranslators []common.ComponentTranslator
 	for _, listener := range listeners {
 		listenAddress, _ := listener["listen_address"].(string)
-		receiverName := deriveReceiverName(listenAddress)
-		protocol, _ := listener["protocol"].(string)
 		tlsConfig := toTLSConfig(listener)
-		receiverTranslators = append(receiverTranslators, syslogreceiver.NewTranslator(receiverName, listenAddress, protocol, tlsConfig))
+		resolvedAddress, err := resolveListenAddress(listenAddress, tlsConfig)
+		if err != nil {
+			return translators, err
+		}
+		receiverName := deriveReceiverName(resolvedAddress)
+		protocol, _ := listener["protocol"].(string)
+		receiverTranslators = append(receiverTranslators, syslogreceiver.NewTranslator(receiverName, resolvedAddress, protocol, tlsConfig))
 	}
 
 	// Parse routing rules
@@ -249,7 +257,7 @@ func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap
 			exporter:   newCWLExporterTranslator(prefix+"_default", defaultLogGroupName, defaultLogStreamName, defaultRetention),
 			extensions: extensions,
 		})
-		return translators
+		return translators, nil
 	}
 
 	// Build routing table entries
@@ -333,7 +341,7 @@ func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap
 		extensions:          extensions,
 	})
 
-	return translators
+	return translators, nil
 }
 
 func newExtensionTranslators() []common.ComponentTranslator {
@@ -345,6 +353,7 @@ func newExtensionTranslators() []common.ComponentTranslator {
 
 // normalizeListeners converts the config into a slice of listener maps.
 // Supports both "listeners" array and "listen_address" shorthand.
+// If neither is provided, a default listener is created.
 func normalizeListeners(syslogConf map[string]any) []map[string]any {
 	if rawListeners, ok := syslogConf["listeners"].([]any); ok {
 		var listeners []map[string]any
@@ -356,17 +365,25 @@ func normalizeListeners(syslogConf map[string]any) []map[string]any {
 		return listeners
 	}
 	// Shorthand: single listener from top-level fields
-	if addr, ok := syslogConf["listen_address"].(string); ok && addr != "" {
-		listener := map[string]any{"listen_address": addr}
-		if p, ok := syslogConf["protocol"].(string); ok {
-			listener["protocol"] = p
+	addr, _ := syslogConf["listen_address"].(string)
+	listener := map[string]any{}
+	if addr != "" {
+		listener["listen_address"] = addr
+	} else {
+		// No listen_address specified — construct default based on TLS presence
+		if _, hasTLS := syslogConf["tls"]; hasTLS {
+			listener["listen_address"] = "tcp://"
+		} else {
+			listener["listen_address"] = "tcp://"
 		}
-		if t, ok := syslogConf["tls"]; ok {
-			listener["tls"] = t
-		}
-		return []map[string]any{listener}
 	}
-	return nil
+	if p, ok := syslogConf["protocol"].(string); ok {
+		listener["protocol"] = p
+	}
+	if t, ok := syslogConf["tls"]; ok {
+		listener["tls"] = t
+	}
+	return []map[string]any{listener}
 }
 
 // buildOTTLCondition converts a match map to an OTTL condition string.
@@ -407,6 +424,71 @@ func buildAttributeCondition(attr, value string) string {
 // isGlobPattern detects if a string contains glob characters.
 func isGlobPattern(s string) bool {
 	return strings.ContainsAny(s, "*?[")
+}
+
+// resolveListenAddress applies default host, port, and protocol based on the
+// listener configuration:
+//   - If no host is specified, default to 127.0.0.1 (localhost)
+//   - If no port is specified: use 6514 if TLS is configured, 1514 for UDP, 5514 for TCP
+//   - If TLS is configured and protocol is UDP, return an error
+func resolveListenAddress(listenAddress string, tlsConfig map[string]any) (string, error) {
+	parts := strings.SplitN(listenAddress, "://", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid listen address %q, expected protocol://host:port", listenAddress)
+	}
+	protocol := strings.ToLower(parts[0])
+	if protocol != "tcp" && protocol != "udp" {
+		return "", fmt.Errorf("unsupported protocol %q, expected tcp or udp", protocol)
+	}
+	hostPort := parts[1]
+
+	// TLS + UDP is invalid
+	if len(tlsConfig) > 0 && protocol == "udp" {
+		return "", fmt.Errorf("TLS configuration is not supported with UDP listeners: %q", listenAddress)
+	}
+
+	host, port := splitHostPort(hostPort)
+
+	// Default host to localhost
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	// Default port based on TLS and protocol
+	if port == "" {
+		if len(tlsConfig) > 0 {
+			port = "6514"
+		} else if protocol == "udp" {
+			port = "1514"
+		} else {
+			port = "5514"
+		}
+	}
+
+	return fmt.Sprintf("%s://%s:%s", protocol, host, port), nil
+}
+
+// splitHostPort splits a host:port string. Handles IPv6 [host]:port notation.
+func splitHostPort(hostPort string) (string, string) {
+	if hostPort == "" {
+		return "", ""
+	}
+	// Handle IPv6 bracket notation [::1]:port
+	if strings.HasPrefix(hostPort, "[") {
+		if i := strings.LastIndex(hostPort, "]:"); i != -1 {
+			return hostPort[1:i], hostPort[i+2:]
+		}
+		// Brackets but no port
+		return strings.Trim(hostPort, "[]"), ""
+	}
+	// Multiple colons without brackets = IPv6 address without port
+	if strings.Count(hostPort, ":") > 1 {
+		return hostPort, ""
+	}
+	if i := strings.LastIndex(hostPort, ":"); i != -1 {
+		return hostPort[:i], hostPort[i+1:]
+	}
+	return hostPort, ""
 }
 
 func deriveReceiverName(listenAddress string) string {

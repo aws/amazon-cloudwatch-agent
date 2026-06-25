@@ -641,3 +641,219 @@ func TestHeadersSetterTranslator_ZeroRetention(t *testing.T) {
 	assert.Equal(t, "x-aws-log-stream", h1["key"])
 	assert.Equal(t, "stream", h1["value"])
 }
+
+func TestSplitHostPort(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantHost string
+		wantPort string
+	}{
+		{"empty", "", "", ""},
+		{"host and port", "0.0.0.0:514", "0.0.0.0", "514"},
+		{"port only", ":6514", "", "6514"},
+		{"host only", "myhost", "myhost", ""},
+		{"localhost and port", "127.0.0.1:5514", "127.0.0.1", "5514"},
+		{"ipv6 with port", "[::1]:514", "::1", "514"},
+		{"ipv6 without port", "[::1]", "::1", ""},
+		{"ipv6 no brackets", "::1", "::1", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			host, port := splitHostPort(tt.input)
+			assert.Equal(t, tt.wantHost, host)
+			assert.Equal(t, tt.wantPort, port)
+		})
+	}
+}
+
+func TestResolveListenAddress(t *testing.T) {
+	tests := []struct {
+		name      string
+		address   string
+		tlsConfig map[string]any
+		want      string
+		wantErr   string
+	}{
+		{
+			name:    "fully specified tcp",
+			address: "tcp://0.0.0.0:514",
+			want:    "tcp://0.0.0.0:514",
+		},
+		{
+			name:    "fully specified udp",
+			address: "udp://192.168.1.1:1514",
+			want:    "udp://192.168.1.1:1514",
+		},
+		{
+			name:    "no host defaults to localhost - tcp",
+			address: "tcp://:6514",
+			want:    "tcp://127.0.0.1:6514",
+		},
+		{
+			name:    "no host defaults to localhost - udp",
+			address: "udp://:1514",
+			want:    "udp://127.0.0.1:1514",
+		},
+		{
+			name:    "no port defaults to 5514 for tcp",
+			address: "tcp://myhost",
+			want:    "tcp://myhost:5514",
+		},
+		{
+			name:    "no port defaults to 1514 for udp",
+			address: "udp://myhost",
+			want:    "udp://myhost:1514",
+		},
+		{
+			name:    "no host or port - tcp",
+			address: "tcp://",
+			want:    "tcp://127.0.0.1:5514",
+		},
+		{
+			name:    "no host or port - udp",
+			address: "udp://",
+			want:    "udp://127.0.0.1:1514",
+		},
+		{
+			name:      "tls configured - no port defaults to 6514",
+			address:   "tcp://0.0.0.0",
+			tlsConfig: map[string]any{"cert_file": "/cert.pem", "key_file": "/key.pem"},
+			want:      "tcp://0.0.0.0:6514",
+		},
+		{
+			name:      "tls configured - no host or port",
+			address:   "tcp://",
+			tlsConfig: map[string]any{"cert_file": "/cert.pem", "key_file": "/key.pem"},
+			want:      "tcp://127.0.0.1:6514",
+		},
+		{
+			name:      "tls configured - explicit port preserved",
+			address:   "tcp://0.0.0.0:9999",
+			tlsConfig: map[string]any{"cert_file": "/cert.pem"},
+			want:      "tcp://0.0.0.0:9999",
+		},
+		{
+			name:      "tls with udp - error",
+			address:   "udp://0.0.0.0:514",
+			tlsConfig: map[string]any{"cert_file": "/cert.pem"},
+			wantErr:   "TLS configuration is not supported with UDP",
+		},
+		{
+			name:    "invalid - no protocol separator",
+			address: "badaddress",
+			wantErr: "invalid listen address",
+		},
+		{
+			name:    "invalid - unsupported protocol",
+			address: "http://localhost:8080",
+			wantErr: "unsupported protocol",
+		},
+		{
+			name:    "ipv6 with brackets and port",
+			address: "tcp://[::1]:514",
+			want:    "tcp://::1:514",
+		},
+		{
+			name:    "ipv6 with brackets no port",
+			address: "tcp://[::1]",
+			want:    "tcp://::1:5514",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveListenAddress(tt.address, tt.tlsConfig)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestNewTranslatorsNoListenAddress(t *testing.T) {
+	// When no listen_address is specified, should default to tcp://127.0.0.1:5514
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{"logs_collected": map[string]any{
+			"syslog": map[string]any{
+				"log_group_name": "/syslog/default",
+			},
+		}},
+	})
+	translators, err := NewTranslators(conf)
+	require.NoError(t, err)
+	assert.Greater(t, translators.Len(), 0)
+}
+
+func TestNewTranslatorsNoListenAddressWithTLS(t *testing.T) {
+	// When TLS is specified but no listen_address, should default to tcp://127.0.0.1:6514
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{"logs_collected": map[string]any{
+			"syslog": map[string]any{
+				"log_group_name": "/syslog/secure",
+				"tls": map[string]any{
+					"cert_file": "/etc/tls/cert.pem",
+					"key_file":  "/etc/tls/key.pem",
+				},
+			},
+		}},
+	})
+	translators, err := NewTranslators(conf)
+	require.NoError(t, err)
+	assert.Greater(t, translators.Len(), 0)
+}
+
+func TestNewTranslatorsTLSWithUDPFails(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{"logs_collected": map[string]any{
+			"syslog": map[string]any{
+				"listen_address": "udp://0.0.0.0:514",
+				"log_group_name": "/syslog/default",
+				"tls": map[string]any{
+					"cert_file": "/etc/tls/cert.pem",
+					"key_file":  "/etc/tls/key.pem",
+				},
+			},
+		}},
+	})
+	_, err := NewTranslators(conf)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TLS configuration is not supported with UDP")
+}
+
+func TestNewTranslatorsPortOnlyAddress(t *testing.T) {
+	// tcp://:6514 should resolve to tcp://127.0.0.1:6514
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{"logs_collected": map[string]any{
+			"syslog": map[string]any{
+				"listen_address": "tcp://:6514",
+				"log_group_name": "/syslog/default",
+			},
+		}},
+	})
+	translators, err := NewTranslators(conf)
+	require.NoError(t, err)
+	assert.Greater(t, translators.Len(), 0)
+}
+
+func TestNewTranslatorsListenerWithoutAddress(t *testing.T) {
+	// A listener in the array form without listen_address should get defaults
+	conf := confmap.NewFromStringMap(map[string]any{
+		"logs": map[string]any{"logs_collected": map[string]any{
+			"syslog": map[string]any{
+				"listeners": []any{
+					map[string]any{
+						"listen_address": "tcp://",
+					},
+				},
+				"log_group_name": "/syslog/default",
+			},
+		}},
+	})
+	translators, err := NewTranslators(conf)
+	require.NoError(t, err)
+	assert.Greater(t, translators.Len(), 0)
+}
