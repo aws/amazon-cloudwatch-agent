@@ -51,7 +51,7 @@ func (d *postgresqlDetector) Detect(ctx context.Context, process detector.Proces
 		return nil, err
 	}
 
-	if len(args) > 0 && strings.Contains(args[0], ":") {
+	if len(args) > 0 && strings.HasPrefix(strings.TrimSpace(args[0]), exeName+":") {
 		return nil, detector.ErrIncompatibleDetector
 	}
 
@@ -62,10 +62,8 @@ func (d *postgresqlDetector) Detect(ctx context.Context, process detector.Proces
 		Categories: []detector.Category{detector.CategoryPostgreSQL},
 	}
 
-	port, err := d.portExtractor.Extract(ctx, process)
-	if err != nil {
-		return nil, err
-	}
+	port, _ := d.portExtractor.Extract(ctx, process)
+
 	md.Status = detector.StatusReady
 	md.TelemetryPort = port
 
