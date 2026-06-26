@@ -4,6 +4,7 @@
 name: Build And Upload Packages
 env:
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
+  CWA_GITHUB_TEST_REPO_BRANCH: "subset-test/mac-monterey-statsd-20260625-2004"
 
 on:
   workflow_dispatch:
@@ -75,6 +76,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{env.CWA_GITHUB_TEST_REPO_NAME}}
+          ref: ${{env.CWA_GITHUB_TEST_REPO_BRANCH}}
           path: test
 
       - name: Set up Go 1.x
