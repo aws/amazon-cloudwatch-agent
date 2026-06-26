@@ -1902,6 +1902,10 @@
                 "http_endpoint": {
                   "description": "OTLP HTTP receiver endpoint",
                   "type": "string"
+                },
+                "derive_metrics_from_traces": {
+                  "description": "Derive request rate, error, and duration metrics from traces.",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false

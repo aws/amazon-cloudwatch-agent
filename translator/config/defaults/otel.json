@@ -6,7 +6,9 @@
   },
   "opentelemetry": {
     "collect": {
-      "otlp": {}
+      "otlp": {
+        "derive_metrics_from_traces": true
+      }
     }
   }
 }
