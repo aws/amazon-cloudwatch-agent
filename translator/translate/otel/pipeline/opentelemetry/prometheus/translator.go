@@ -54,8 +54,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	processors.Set(transformprocessor.NewTranslatorWithName("prometheus_scope",
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements([]string{
-			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
-			`set(attributes["cloudwatch.solution"], "otel-prometheus")`,
+			`set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`,
+			`set(scope.attributes["cloudwatch.solution"], "otel-prometheus")`,
 		}),
 	))
 	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {

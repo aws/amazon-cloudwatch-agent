@@ -158,6 +158,14 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
+    batch/opentelemetry_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 30s
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
@@ -165,14 +173,6 @@ processors:
         timeout: 30s
     batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 10000
-        send_batch_size: 10000
-        timeout: 30s
-    batch/opentelemetry_logs:
-        metadata_cardinality_limit: 1000
-        metadata_keys:
-            - aws.log.group.name
-            - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
@@ -530,20 +530,20 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
     otlp/grpc_127_0_0_1_4317:
         protocols:

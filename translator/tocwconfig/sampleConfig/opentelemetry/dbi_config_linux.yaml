@@ -339,11 +339,6 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
-    batch/opentelemetry_metrics:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 1000
-        send_batch_size: 1000
-        timeout: 30s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -351,6 +346,11 @@ processors:
             - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
+        timeout: 30s
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
         timeout: 30s
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
@@ -701,20 +701,20 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
@@ -722,20 +722,20 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
     transform/identity:
         error_mode: ignore
         flatten_data: false

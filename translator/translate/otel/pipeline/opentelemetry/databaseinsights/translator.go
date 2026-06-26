@@ -154,8 +154,8 @@ func (t *dbiTranslator) scopeTransform() common.ComponentTranslator {
 	return transformprocessor.NewTranslatorWithName("dbi_scope_"+idx,
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements([]string{
-			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
-			`set(attributes["cloudwatch.solution"], "otel-database-insights")`,
+			`set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`,
+			`set(scope.attributes["cloudwatch.solution"], "otel-database-insights")`,
 		}),
 	)
 }

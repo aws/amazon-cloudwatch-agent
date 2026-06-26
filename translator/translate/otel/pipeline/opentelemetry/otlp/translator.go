@@ -57,8 +57,8 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	processors.Set(transformprocessor.NewTranslatorWithName("otlp_scope",
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements([]string{
-			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
-			`set(attributes["cloudwatch.solution"], "otel-otlp")`,
+			`set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`,
+			`set(scope.attributes["cloudwatch.solution"], "otel-otlp")`,
 		}),
 	))
 	if t.signal == pipeline.SignalLogs {
