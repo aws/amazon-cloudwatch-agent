@@ -26,27 +26,26 @@ func TestCache(t *testing.T) {
 	testErr := errors.New("test")
 	p := &mockProvider{
 		serialMap: map[string]string{
-			"/dev/xvdf": "foo",
-			"xvdc":      "bar",
-			"xvdc1":     "baz",
+			"xvdf":    "foo",
+			"nvme1n1": "foo",
+			"xvdc":    "bar",
+			"xvdc1":   "baz",
 		},
 		err: testErr,
 	}
 	c := NewCache(nil).(*cache)
-	c.fetchBlockName = func(s string) string {
-		return ""
-	}
 	assert.ErrorIs(t, c.Refresh(), errNoProviders)
 	c.provider = p
 	assert.ErrorIs(t, c.Refresh(), testErr)
 	p.err = nil
 	assert.NoError(t, c.Refresh())
 	assert.Equal(t, "foo", c.Serial("xvdf"))
+	assert.Equal(t, "foo", c.Serial("nvme1n1"))
 	assert.Equal(t, "bar", c.Serial("xvdc"))
 	assert.Equal(t, "baz", c.Serial("xvdc1"))
 	assert.Equal(t, "bar", c.Serial("xvdc2"))
 	assert.Equal(t, "", c.Serial("xvde"))
 	got := c.Devices()
 	sort.Strings(got)
-	assert.Equal(t, []string{"xvdc", "xvdc1", "xvdf"}, got)
+	assert.Equal(t, []string{"nvme1n1", "xvdc", "xvdc1", "xvdf"}, got)
 }
