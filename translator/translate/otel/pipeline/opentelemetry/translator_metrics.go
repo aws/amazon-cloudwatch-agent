@@ -24,7 +24,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
 
-var otelCollectKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey)
+var otelMetricsKeys = []string{
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostMetricsKey),
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey),
+	common.DatabaseInsightsConfigKey,
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey),
+}
 
 type baseMetricsTranslator struct{}
 
@@ -38,12 +44,9 @@ func (t *baseMetricsTranslator) ID() pipeline.ID {
 	return pipeline.NewIDWithName(pipeline.SignalMetrics, common.OpenTelemetryKey)
 }
 
-// Translate creates the shared metrics export pipeline. It activates when any
-// collect sub-section is present; it receives data via the forward connector
-// from feature pipelines (host_metrics, otlp, span_metrics).
 func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(otelCollectKey) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: otelCollectKey}
+	if err := common.ValidateAnySet(conf, t.ID(), otelMetricsKeys); err != nil {
+		return nil, err
 	}
 
 	region := agent.Global_Config.Region

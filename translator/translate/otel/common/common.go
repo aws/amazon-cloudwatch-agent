@@ -136,6 +136,8 @@ const (
 	AppSignalsRules                  = "rules"
 )
 
+const WindowsEventsKey = "windows_events"
+
 // DBI (Database Insights) constants
 const (
 	DatabaseInsightsKey = "database_insights"
@@ -161,6 +163,7 @@ var (
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
 	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
+	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
 )
 
 const (
@@ -524,6 +527,14 @@ func IsAnySet(conf *confmap.Conf, keys []string) bool {
 		}
 	}
 	return false
+}
+
+// ValidateAnySet returns a MissingKeyError if none of the keys are set in the config.
+func ValidateAnySet(conf *confmap.Conf, id ID, keys []string) error {
+	if conf != nil && IsAnySet(conf, keys) {
+		return nil
+	}
+	return &MissingKeyError{ID: id, JsonKey: strings.Join(keys, " or ")}
 }
 
 func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {

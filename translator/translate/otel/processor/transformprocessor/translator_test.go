@@ -5,14 +5,17 @@ package transformprocessor
 
 import (
 	_ "embed"
+	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -199,4 +202,42 @@ func TestScopeStatementsAllSignals(t *testing.T) {
 	assert.Equal(t, "scope", string(actualCfg.LogStatements[0].Context))
 	require.Len(t, actualCfg.TraceStatements, 1)
 	assert.Equal(t, "scope", string(actualCfg.TraceStatements[0].Context))
+}
+
+func TestLogsRoutingWindowsSync(t *testing.T) {
+	type routingConfig struct {
+		LogStatements []struct {
+			Statements []string `yaml:"statements"`
+		} `yaml:"log_statements"`
+	}
+
+	baseBytes, err := os.ReadFile("transform_logs_routing_host.yaml")
+	require.NoError(t, err)
+	winBytes, err := os.ReadFile("transform_logs_routing_host_windows.yaml")
+	require.NoError(t, err)
+
+	var base, win routingConfig
+	require.NoError(t, yaml.Unmarshal(baseBytes, &base))
+	require.NoError(t, yaml.Unmarshal(winBytes, &win))
+
+	require.Len(t, base.LogStatements, 1)
+	require.Len(t, win.LogStatements, 1)
+
+	baseStmts := base.LogStatements[0].Statements
+	winStmts := win.LogStatements[0].Statements
+
+	// Partition Windows statements into channel-routing and shared
+	var channelStmts, sharedStmts []string
+	for _, stmt := range winStmts {
+		if strings.Contains(stmt, "aws.log.channel") {
+			channelStmts = append(channelStmts, stmt)
+		} else {
+			sharedStmts = append(sharedStmts, stmt)
+		}
+	}
+
+	assert.Equal(t, 2, len(channelStmts),
+		"Windows routing YAML must have exactly 2 channel-routing statements")
+	assert.Equal(t, baseStmts, sharedStmts,
+		"Windows routing YAML shared statements must match base")
 }

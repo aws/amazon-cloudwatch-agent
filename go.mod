@@ -203,6 +203,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.124.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0

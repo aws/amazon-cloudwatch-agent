@@ -202,6 +202,23 @@ func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_azurevm.yaml")
 }
 
+func TestDefaultOtelConfigTranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.RegionType = config.RegionTypeCredsMap
+
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.yaml")
+}
+
 func TestAzureVMHostMetricsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeAzureVM)
