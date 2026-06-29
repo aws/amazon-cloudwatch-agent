@@ -1427,7 +1427,10 @@
         "role_arn": {
           "description": "The target IAM role with which agent can access aws resources",
           "type": "string",
-          "minLength": 1,
+          "anyOf": [
+            { "minLength": 20 },
+            { "pattern": "^\\$\\{.+\\}$" }
+          ],
           "maxLength": 2048
         }
       },

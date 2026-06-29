@@ -84,7 +84,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	region, _ := util.DetectRegion(mode, cc.CredentialsMap())
 
 	locationArray := strings.SplitN(downloadLocation, locationSeparator, 2)
-	if locationArray == nil || len(locationArray) < 2 && downloadLocation != locationDefault {
+	if len(locationArray) < 2 && downloadLocation != locationDefault {
 		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
 	}
 
