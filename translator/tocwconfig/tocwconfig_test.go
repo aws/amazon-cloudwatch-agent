@@ -427,6 +427,23 @@ func TestOtlpOtelConfig(t *testing.T) {
 	checkTranslation(t, "opentelemetry/otlp_otel_config", "linux", nil, "")
 }
 
+func TestDefaultOtelConfigTranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.RegionType = config.RegionTypeCredsMap
+
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.yaml")
+}
+
 func TestOtlpOtelEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
