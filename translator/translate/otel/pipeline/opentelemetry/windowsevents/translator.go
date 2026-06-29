@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/filestorage"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/windowseventlog"
@@ -110,7 +111,7 @@ func (t *windowsEventsPipelineTranslator) Translate(_ *confmap.Conf) (*common.Co
 		Receivers:  receivers,
 		Processors: processors,
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
-		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](filestorage.NewTranslator(common.WindowsEventsKey)),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
 }

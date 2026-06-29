@@ -79,6 +79,7 @@ func TestPipelineTranslator_Translate_NoFilter(t *testing.T) {
 	assert.Equal(t, 1, result.Receivers.Len())
 	assert.Equal(t, 1, result.Processors.Len())
 	assert.Equal(t, 1, result.Exporters.Len())
+	assert.Equal(t, 1, result.Extensions.Len())
 	assert.Equal(t, 1, result.Connectors.Len())
 }
 
@@ -94,6 +95,7 @@ func TestPipelineTranslator_Translate_WithFilter(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
+	assert.Equal(t, 1, result.Extensions.Len())
 	assert.Equal(t, 2, result.Processors.Len())
 }
 

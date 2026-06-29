@@ -26,3 +26,9 @@ func TestCompleteConfigWindows(t *testing.T) {
 	// so this is separate
 	checkTranslation(t, "complete_windows_config", "windows", expectedEnvVars, "")
 }
+
+func TestWindowsEventsOtelConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/windows_events_config", "windows", nil, "")
+}

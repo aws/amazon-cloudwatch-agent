@@ -69,7 +69,7 @@ func TestTranslatorWithConfig(t *testing.T) {
 			assert.Equal(t, tc.want.InputConfig.Priority, gotCfg.InputConfig.Priority)
 			assert.Equal(t, tc.want.InputConfig.Matches, gotCfg.InputConfig.Matches)
 			assert.NotNil(t, gotCfg.StorageID)
-			assert.Equal(t, filestorage.StorageComponentID(), *gotCfg.StorageID)
+			assert.Equal(t, filestorage.ComponentID("journald"), *gotCfg.StorageID)
 		})
 	}
 }

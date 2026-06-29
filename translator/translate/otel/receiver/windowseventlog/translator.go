@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/filestorage"
 )
 
 type translator struct {
@@ -42,6 +43,8 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.InputConfig.Channel = t.channel
 	cfg.InputConfig.Raw = t.raw
 	cfg.InputConfig.StartAt = "end"
+	storageID := filestorage.ComponentID(common.WindowsEventsKey)
+	cfg.StorageID = &storageID
 	if len(t.resource) > 0 {
 		cfg.InputConfig.Resource = make(map[string]helper.ExprStringConfig, len(t.resource))
 		for k, v := range t.resource {
