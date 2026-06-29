@@ -68,7 +68,8 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		}
 
 		resource := map[string]string{
-			"aws.log.source": common.WindowsEventsKey,
+			"aws.log.source":  common.WindowsEventsKey,
+			"aws.log.channel": channel,
 		}
 		if logGroup, ok := m[logGroupNameKey].(string); ok && logGroup != "" {
 			resource["aws.log.group.name"] = logGroup

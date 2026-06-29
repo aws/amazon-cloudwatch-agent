@@ -86,6 +86,7 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 			`delete_key(resource.attributes, "aws.log.group.name")`,
 			`delete_key(resource.attributes, "aws.log.stream.name")`,
 			`delete_key(resource.attributes, "aws.log.source")`,
+			`delete_key(resource.attributes, "aws.log.channel")`,
 		}),
 	)
 	batch := batchprocessor.NewTranslator(

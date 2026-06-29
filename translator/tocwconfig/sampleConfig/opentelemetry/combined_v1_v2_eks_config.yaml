@@ -1502,6 +1502,7 @@ processors:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
                 - delete_key(resource.attributes, "aws.log.source")
+                - delete_key(resource.attributes, "aws.log.channel")
         metric_statements: []
         trace_statements: []
     transform/logs_routing:
