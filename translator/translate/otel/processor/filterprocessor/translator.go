@@ -7,7 +7,6 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -62,8 +61,7 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	// DBI: filter log records by OTTL condition
-	if strings.HasPrefix(t.Name(), common.DbiFilterExcludeMonitor) {
+	if t.logRecordCondition != "" {
 		cfg := &filterprocessor.Config{}
 		if err := confmap.NewFromStringMap(map[string]interface{}{
 			"error_mode": "propagate",

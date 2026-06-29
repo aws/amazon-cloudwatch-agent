@@ -4,6 +4,7 @@
 package opentelemetry
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,16 +25,26 @@ func TestBaseMetricsTranslator(t *testing.T) {
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
 		},
 		"WithoutCollectKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
 		},
-		"WithCollectKey": {
+		"WithCollectKeyButNoMetricsSource": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{},
+				},
+			},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
+		},
+		"WithOtlpKey": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
 				},
 			},
 		},
@@ -75,7 +86,9 @@ func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
 	tt := NewBaseMetricsTranslator()
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
-			"collect": map[string]interface{}{},
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{},
+			},
 		},
 	})
 	got, err := tt.Translate(conf)

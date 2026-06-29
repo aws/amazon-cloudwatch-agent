@@ -39,10 +39,17 @@ func (t *baseLogsTranslator) ID() pipeline.ID {
 	return pipeline.NewIDWithName(pipeline.SignalLogs, common.OpenTelemetryKey)
 }
 
+// otelLogsKeys are the config keys that activate the base opentelemetry logs pipeline.
+var otelLogsKeys = []string{
+	common.OtelCollectLogsConfigKey,
+	common.DatabaseInsightsConfigKey,
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+	common.WindowsEventsConfigKey,
+}
+
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	otlpKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)
-	if conf == nil || (!conf.IsSet(common.OtelCollectLogsConfigKey) && !conf.IsSet(common.DatabaseInsightsConfigKey) && !conf.IsSet(otlpKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + otlpKey}
+	if err := common.ValidateAnySet(conf, t.ID(), otelLogsKeys); err != nil {
+		return nil, err
 	}
 
 	region := agent.Global_Config.Region
