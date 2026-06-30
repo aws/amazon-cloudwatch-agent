@@ -64,7 +64,7 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 	exporters := common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID())))
 	connectors := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
 
-	if spanmetrics.IsEnabled(conf) {
+	if common.GetOrDefaultBool(conf, common.OtelSpanMetricsEnabledKey, false) {
 		sm := spanmetrics.NewTranslator(common.OpenTelemetryKey)
 		exporters.Set(sm)
 		connectors.Set(sm)

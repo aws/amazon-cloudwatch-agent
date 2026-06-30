@@ -66,7 +66,7 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	receivers := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
 	connectors := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
 
-	if spanmetrics.IsEnabled(conf) {
+	if common.GetOrDefaultBool(conf, common.OtelSpanMetricsEnabledKey, false) {
 		sm := spanmetrics.NewTranslator(common.OpenTelemetryKey)
 		receivers.Set(sm)
 		connectors.Set(sm)
