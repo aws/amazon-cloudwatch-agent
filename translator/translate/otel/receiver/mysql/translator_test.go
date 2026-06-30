@@ -25,7 +25,6 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 		WithEndpoint("localhost:3306"),
 		WithUsername("cw_monitor"),
 		WithPassfile("/etc/.mysql_credentials"),
-		WithIsLocalhost(true),
 		WithIndex(0),
 	)
 	cfg, err := tr.Translate(nil)
@@ -51,33 +50,9 @@ func TestTranslator_Translate_CustomInterval(t *testing.T) {
 		WithEndpoint("localhost:3306"),
 		WithUsername("cw_monitor"),
 		WithPassfile("/etc/.mysql_credentials"),
-		WithIsLocalhost(true),
 		WithTopQueryInterval(30*time.Second),
 	)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	assert.Equal(t, 30*time.Second, cfg.(*mysqlreceiver.Config).TopQueryCollection.CollectionInterval)
-}
-
-func TestTranslator_Translate_Remote(t *testing.T) {
-	tr := NewTranslator(
-		WithName("events"),
-		WithEndpoint("db.example.com:3306"),
-		WithUsername("cw_monitor"),
-		WithPassfile("/etc/.mysql_credentials"),
-		WithCAFile("/etc/ssl/ca.pem"),
-		WithIsLocalhost(false),
-		WithIndex(0),
-	)
-	cfg, err := tr.Translate(nil)
-	require.NoError(t, err)
-	mysqlCfg := cfg.(*mysqlreceiver.Config)
-
-	assert.Equal(t, "db.example.com:3306", mysqlCfg.Endpoint)
-	assert.False(t, mysqlCfg.TLS.Insecure)
-	assert.Equal(t, "/etc/ssl/ca.pem", string(mysqlCfg.TLS.CAFile))
-	assert.Equal(t, 60*time.Second, mysqlCfg.TopQueryCollection.CollectionInterval)
-	assert.Equal(t, uint64(500), mysqlCfg.QuerySampleCollection.MaxRowsPerQuery)
-	assert.True(t, mysqlCfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled)
-	assert.True(t, mysqlCfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled)
 }

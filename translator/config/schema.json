@@ -1840,13 +1840,6 @@
                       "instance_name": { "type": "string" },
                       "username": { "type": "string" },
                       "password_file": { "type": "string" },
-                      "tls": {
-                        "type": "object",
-                        "properties": {
-                          "ca_file": { "type": "string" }
-                        },
-                        "additionalProperties": false
-                      },
                       "logs": {
                         "type": "object",
                         "properties": {

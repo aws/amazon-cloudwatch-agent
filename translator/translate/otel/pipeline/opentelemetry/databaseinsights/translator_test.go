@@ -16,20 +16,25 @@ import (
 func TestDbiTranslatorID(t *testing.T) {
 	tests := []struct {
 		name         string
+		engine       string
 		pipelineType dbiPipelineType
 		index        int
 		want         string
 	}{
-		{"Metrics_0", dbiMetrics, 0, "metrics/dbi_postgresql_0"},
-		{"Metrics_1", dbiMetrics, 1, "metrics/dbi_postgresql_1"},
-		{"LogToMetrics_0", dbiLogToMetrics, 0, "logs/dbi_postgresql_0"},
-		{"RawEvents_0", dbiRawEvents, 0, "logs/dbi_postgresql_rawevents_0"},
-		{"ServerLogs_0", dbiServerLogs, 0, "logs/dbi_postgresql_serverlogs_0"},
-		{"ServerLogs_2", dbiServerLogs, 2, "logs/dbi_postgresql_serverlogs_2"},
+		{"PG_Metrics_0", common.PostgreSQLKey, dbiMetrics, 0, "metrics/dbi_postgresql_0"},
+		{"PG_Metrics_1", common.PostgreSQLKey, dbiMetrics, 1, "metrics/dbi_postgresql_1"},
+		{"PG_LogToMetrics_0", common.PostgreSQLKey, dbiLogToMetrics, 0, "logs/dbi_postgresql_0"},
+		{"PG_RawEvents_0", common.PostgreSQLKey, dbiRawEvents, 0, "logs/dbi_postgresql_rawevents_0"},
+		{"PG_ServerLogs_0", common.PostgreSQLKey, dbiServerLogs, 0, "logs/dbi_postgresql_serverlogs_0"},
+		{"Mysql_Metrics_0", common.MySQLKey, dbiMetrics, 0, "metrics/dbi_mysql_0"},
+		{"Mysql_Metrics_1", common.MySQLKey, dbiMetrics, 1, "metrics/dbi_mysql_1"},
+		{"Mysql_LogToMetrics_0", common.MySQLKey, dbiLogToMetrics, 0, "logs/dbi_mysql_0"},
+		{"Mysql_RawEvents_0", common.MySQLKey, dbiRawEvents, 0, "logs/dbi_mysql_rawevents_0"},
+		{"Mysql_ServerLogs_0", common.MySQLKey, dbiServerLogs, 0, "logs/dbi_mysql_serverlogs_0"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := &dbiTranslator{pipelineType: tc.pipelineType, instanceIndex: tc.index}
+			tr := &dbiTranslator{pipelineType: tc.pipelineType, instanceIndex: tc.index, cfg: dbiInstanceConfig{engine: tc.engine}}
 			assert.Equal(t, tc.want, tr.ID().String())
 		})
 	}
@@ -37,6 +42,7 @@ func TestDbiTranslatorID(t *testing.T) {
 
 func TestDbiTranslate(t *testing.T) {
 	cfg := dbiInstanceConfig{
+		engine:       common.PostgreSQLKey,
 		endpoint:     "localhost:5432",
 		username:     "cw_monitor",
 		passfile:     "/etc/.pgpass",
@@ -79,7 +85,7 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	tr := &dbiTranslator{
 		pipelineType:  dbiMetrics,
 		instanceIndex: 0,
-		cfg:           dbiInstanceConfig{instanceName: "mydb"},
+		cfg:           dbiInstanceConfig{engine: common.PostgreSQLKey, instanceName: "mydb"},
 	}
 	result, err := tr.Translate(nil)
 	require.NoError(t, err)
@@ -98,35 +104,15 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 		connectors = append(connectors, c.ID().String())
 	})
 
-	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, receivers)
-	assert.Equal(t, []string{"transform/dbi_scope_0", "transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
+	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "count/dbi_dbload_postgresql", "signaltometrics/dbi_topsql_postgresql"}, receivers)
+	assert.Equal(t, []string{"transform/dbi_scope_postgresql_0", "transform/dbi_resource_postgresql_0", "transform/dbi_fix_start_time_postgresql"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
-	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
-}
-
-func TestDbiMysqlTranslatorID(t *testing.T) {
-	tests := []struct {
-		pipelineType dbiPipelineType
-		index        int
-		want         string
-	}{
-		{dbiMetrics, 0, "metrics/dbi_mysql_0"},
-		{dbiMetrics, 1, "metrics/dbi_mysql_1"},
-		{dbiLogToMetrics, 0, "logs/dbi_mysql_0"},
-		{dbiRawEvents, 0, "logs/dbi_mysql_rawevents_0"},
-		{dbiServerLogs, 0, "logs/dbi_mysql_serverlogs_0"},
-		{dbiServerLogs, 2, "logs/dbi_mysql_serverlogs_2"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.want, func(t *testing.T) {
-			tr := &dbiMysqlTranslator{pipelineType: tc.pipelineType, instanceIndex: tc.index}
-			assert.Equal(t, tc.want, tr.ID().String())
-		})
-	}
+	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_postgresql", "signaltometrics/dbi_topsql_postgresql"}, connectors)
 }
 
 func TestDbiMysqlTranslate(t *testing.T) {
 	cfg := dbiInstanceConfig{
+		engine:       common.MySQLKey,
 		endpoint:     "localhost:3306",
 		username:     "cw_monitor",
 		passfile:     "/etc/.mysql_credentials",
@@ -152,7 +138,7 @@ func TestDbiMysqlTranslate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := &dbiMysqlTranslator{pipelineType: tc.pipeline, instanceIndex: 0, cfg: cfg}
+			tr := &dbiTranslator{pipelineType: tc.pipeline, instanceIndex: 0, cfg: cfg}
 			assert.Equal(t, tc.expectedID, tr.ID().String())
 
 			result, err := tr.Translate(nil)
@@ -166,10 +152,10 @@ func TestDbiMysqlTranslate(t *testing.T) {
 }
 
 func TestDbiMysqlTranslateMetrics_ComponentIDs(t *testing.T) {
-	tr := &dbiMysqlTranslator{
+	tr := &dbiTranslator{
 		pipelineType:  dbiMetrics,
 		instanceIndex: 0,
-		cfg:           dbiInstanceConfig{instanceName: "mydb"},
+		cfg:           dbiInstanceConfig{engine: common.MySQLKey, instanceName: "mydb"},
 	}
 	result, err := tr.Translate(nil)
 	require.NoError(t, err)

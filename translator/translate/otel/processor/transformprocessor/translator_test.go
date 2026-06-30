@@ -76,8 +76,8 @@ func TestJmxTranslate(t *testing.T) {
 }
 
 func TestDbiFixStartTimeTranslate(t *testing.T) {
-	transl := NewTranslatorWithName(common.DbiTransformFixStartTime)
-	assert.Equal(t, "transform/dbi_fix_start_time", transl.ID().String())
+	transl := NewTranslatorWithName(common.DbiTransformFixStartTime+"_"+common.PostgreSQLKey, WithDbiFixStartTime(common.PostgreSQLKey))
+	assert.Equal(t, "transform/dbi_fix_start_time_postgresql", transl.ID().String())
 
 	cfg, err := transl.Translate(nil)
 	require.NoError(t, err)
@@ -90,7 +90,7 @@ func TestDbiFixStartTimeTranslate(t *testing.T) {
 }
 
 func TestDbiFixStartTimeMysqlTranslate(t *testing.T) {
-	transl := NewTranslatorWithName(common.DbiTransformFixStartTimeMysql)
+	transl := NewTranslatorWithName(common.DbiTransformFixStartTime+"_"+common.MySQLKey, WithDbiFixStartTime(common.MySQLKey))
 	assert.Equal(t, "transform/dbi_fix_start_time_mysql", transl.ID().String())
 
 	cfg, err := transl.Translate(nil)

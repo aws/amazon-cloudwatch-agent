@@ -25,8 +25,6 @@ type translator struct {
 	endpoint         string
 	username         string
 	passfile         string
-	caFile           string
-	isLocalhost      bool
 	index            int
 	topQueryInterval time.Duration
 }
@@ -35,8 +33,6 @@ func WithName(name string) Option   { return func(t *translator) { t.name = name
 func WithEndpoint(ep string) Option { return func(t *translator) { t.endpoint = ep } }
 func WithUsername(u string) Option  { return func(t *translator) { t.username = u } }
 func WithPassfile(p string) Option  { return func(t *translator) { t.passfile = p } }
-func WithCAFile(ca string) Option   { return func(t *translator) { t.caFile = ca } }
-func WithIsLocalhost(b bool) Option { return func(t *translator) { t.isLocalhost = b } }
 func WithIndex(i int) Option        { return func(t *translator) { t.index = i } }
 func WithTopQueryInterval(d time.Duration) Option {
 	return func(t *translator) { t.topQueryInterval = d }
@@ -66,16 +62,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.Passfile = t.passfile
 	cfg.Transport = confignet.TransportTypeTCP
 
-	if t.isLocalhost {
-		cfg.TLS = configtls.ClientConfig{
-			Insecure: true,
-		}
-	} else {
-		cfg.TLS = configtls.ClientConfig{
-			Config: configtls.Config{
-				CAFile: t.caFile,
-			},
-		}
+	// DBI only supports local MySQL instances, so the connection does not use
+	// TLS. Remote (TLS) connections are intentionally not supported.
+	cfg.TLS = configtls.ClientConfig{
+		Insecure: true,
 	}
 
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true

@@ -20,6 +20,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/filelog"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/mysql"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/postgresql"
 )
 
@@ -32,6 +33,10 @@ const (
 	dbiServerLogs
 )
 
+// dbiTranslator generates DBI pipelines for a single database instance. The
+// engine (carried on cfg) selects engine-specific receivers, connector configs,
+// resource attributes, and log group paths. Component IDs are index-based so
+// PostgreSQL and MySQL instances share one consistent naming scheme.
 type dbiTranslator struct {
 	pipelineType  dbiPipelineType
 	instanceIndex int
@@ -44,13 +49,13 @@ func (t *dbiTranslator) ID() pipeline.ID {
 	idx := strconv.Itoa(t.instanceIndex)
 	switch t.pipelineType {
 	case dbiMetrics:
-		return pipeline.NewIDWithName(pipeline.SignalMetrics, "dbi_postgresql_"+idx)
+		return pipeline.NewIDWithName(pipeline.SignalMetrics, "dbi_"+t.cfg.engine+"_"+idx)
 	case dbiLogToMetrics:
-		return pipeline.NewIDWithName(pipeline.SignalLogs, "dbi_postgresql_"+idx)
+		return pipeline.NewIDWithName(pipeline.SignalLogs, "dbi_"+t.cfg.engine+"_"+idx)
 	case dbiRawEvents:
-		return pipeline.NewIDWithName(pipeline.SignalLogs, "dbi_postgresql_rawevents_"+idx)
+		return pipeline.NewIDWithName(pipeline.SignalLogs, "dbi_"+t.cfg.engine+"_rawevents_"+idx)
 	case dbiServerLogs:
-		return pipeline.NewIDWithName(pipeline.SignalLogs, "dbi_postgresql_serverlogs_"+idx)
+		return pipeline.NewIDWithName(pipeline.SignalLogs, "dbi_"+t.cfg.engine+"_serverlogs_"+idx)
 	}
 	return pipeline.NewID(pipeline.SignalMetrics)
 }
@@ -78,12 +83,12 @@ func (t *dbiTranslator) Translate(_ *confmap.Conf) (*common.ComponentTranslators
 func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error) {
 	idx := strconv.Itoa(t.instanceIndex)
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
-	countConn := count.NewTranslator(common.DbiConnectorDbload)
-	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql)
+	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine, t.cfg.engine)
+	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine, t.cfg.engine)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics"), countConn, s2mConn),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.scopeTransform(), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformFixStartTime)),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.receiver("metrics"), countConn, s2mConn),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](t.scopeTransform(), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+t.cfg.engine+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformFixStartTime+"_"+t.cfg.engine, transformprocessor.WithDbiFixStartTime(t.cfg.engine))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd, countConn, s2mConn),
@@ -91,11 +96,11 @@ func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error)
 }
 
 func (t *dbiTranslator) translateLogToMetrics() (*common.ComponentTranslators, error) {
-	countConn := count.NewTranslator(common.DbiConnectorDbload)
-	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql)
+	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine, t.cfg.engine)
+	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine, t.cfg.engine)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics")),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.receiver("metrics")),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter()),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](countConn, s2mConn),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
@@ -108,8 +113,8 @@ func (t *dbiTranslator) translateRawEvents() (*common.ComponentTranslators, erro
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("events", postgresql.WithQuerySampleInterval(60*time.Second))),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter(), t.scopeTransform(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_"+idx, transformprocessor.WithLogStatements(t.logStatements("raw-events")))),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.receiver("events")),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter(), t.scopeTransform(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+t.cfg.engine+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_"+t.cfg.engine+"_raw-events_"+idx, transformprocessor.WithLogStatements(t.logStatements("raw-events")))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),
@@ -121,15 +126,27 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](filelog.NewTranslator(filelog.WithNamePrefix("postgresql"), filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath))),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.scopeTransform(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_server-logs_"+idx, transformprocessor.WithLogStatements(t.logStatements("server-logs")))),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](filelog.NewTranslator(filelog.WithNamePrefix(t.cfg.engine), filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](t.scopeTransform(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+t.cfg.engine+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_"+t.cfg.engine+"_server-logs_"+idx, transformprocessor.WithLogStatements(t.logStatements("server-logs")))),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),
 	}, nil
 }
 
-func (t *dbiTranslator) pgReceiver(name string, extraOpts ...postgresql.Option) common.ComponentTranslator {
+// receiver builds the engine-specific receiver translator. name is "metrics" or
+// "events"; for PostgreSQL events we override the query sample interval.
+func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
+	if t.cfg.engine == common.MySQLKey {
+		return mysql.NewTranslator(
+			mysql.WithName(name),
+			mysql.WithIndex(t.instanceIndex),
+			mysql.WithEndpoint(t.cfg.endpoint),
+			mysql.WithUsername(t.cfg.username),
+			mysql.WithPassfile(t.cfg.passfile),
+		)
+	}
+
 	opts := []postgresql.Option{
 		postgresql.WithName(name),
 		postgresql.WithIndex(t.instanceIndex),
@@ -139,19 +156,24 @@ func (t *dbiTranslator) pgReceiver(name string, extraOpts ...postgresql.Option) 
 		postgresql.WithCAFile(t.cfg.caFile),
 		postgresql.WithIsLocalhost(t.cfg.isLocalhost),
 	}
-	opts = append(opts, extraOpts...)
+	if name == "events" {
+		opts = append(opts, postgresql.WithQuerySampleInterval(60*time.Second))
+	}
 	return postgresql.NewTranslator(opts...)
 }
 
 func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
-	condition := fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
-	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+idx, condition)
+	condition := fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
+	if t.cfg.engine == common.PostgreSQLKey {
+		condition = fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
+	}
+	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+t.cfg.engine+"_"+idx, condition)
 }
 
 func (t *dbiTranslator) scopeTransform() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
-	return transformprocessor.NewTranslatorWithName("dbi_scope_"+idx,
+	return transformprocessor.NewTranslatorWithName("dbi_scope_"+t.cfg.engine+"_"+idx,
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements([]string{
 			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
@@ -162,14 +184,14 @@ func (t *dbiTranslator) scopeTransform() common.ComponentTranslator {
 
 func (t *dbiTranslator) resourceStatements() []string {
 	return []string{
-		`set(resource.attributes["db.system.name"], "postgresql")`,
+		fmt.Sprintf(`set(resource.attributes["db.system.name"], "%s")`, t.cfg.engine),
 		fmt.Sprintf(`set(resource.attributes["db.instance.name"], "%s")`, t.cfg.instanceName),
 	}
 }
 
 func (t *dbiTranslator) logStatements(destination string) []string {
 	return []string{
-		fmt.Sprintf(`set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/%s")`, destination),
+		fmt.Sprintf(`set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/%s/%s")`, t.cfg.engine, destination),
 		fmt.Sprintf(`set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "%s"], "/"))`, t.cfg.instanceName),
 	}
 }

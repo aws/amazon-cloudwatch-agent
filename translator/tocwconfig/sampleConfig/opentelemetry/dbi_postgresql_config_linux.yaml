@@ -1,5 +1,5 @@
 connectors:
-    count/dbi_dbload:
+    count/dbi_dbload_postgresql:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -79,7 +79,7 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql:
+    signaltometrics/dbi_topsql_postgresql:
         logs:
             - attributes:
                 - key: db.system.name
@@ -339,11 +339,6 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
-    batch/opentelemetry_metrics:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 1000
-        send_batch_size: 1000
-        timeout: 15s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -352,7 +347,12 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 15s
-    filter/dbi_exclude_monitor_0:
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 15s
+    filter/dbi_exclude_monitor_postgresql_0:
         error_mode: propagate
         logs:
             log_record:
@@ -640,7 +640,7 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
-    transform/dbi_fix_start_time:
+    transform/dbi_fix_start_time_postgresql:
         error_mode: ignore
         flatten_data: false
         log_statements: []
@@ -656,7 +656,7 @@ processors:
                 - replace_match(datapoint.attributes["postgresql.query_id"], "", "unknown")
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
         trace_statements: []
-    transform/dbi_logs_raw-events_0:
+    transform/dbi_logs_postgresql_raw-events_0:
         error_mode: propagate
         flatten_data: false
         log_statements:
@@ -667,7 +667,7 @@ processors:
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
         trace_statements: []
-    transform/dbi_logs_server-logs_0:
+    transform/dbi_logs_postgresql_server-logs_0:
         error_mode: propagate
         flatten_data: false
         log_statements:
@@ -678,7 +678,7 @@ processors:
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
         trace_statements: []
-    transform/dbi_resource_0:
+    transform/dbi_resource_postgresql_0:
         error_mode: propagate
         flatten_data: false
         log_statements:
@@ -694,7 +694,7 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "pentest-postgres")
         trace_statements: []
-    transform/dbi_scope_0:
+    transform/dbi_scope_postgresql_0:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -1098,31 +1098,31 @@ service:
     pipelines:
         logs/dbi_postgresql_0:
             exporters:
-                - count/dbi_dbload
-                - signaltometrics/dbi_topsql
+                - count/dbi_dbload_postgresql
+                - signaltometrics/dbi_topsql_postgresql
             processors:
-                - filter/dbi_exclude_monitor_0
+                - filter/dbi_exclude_monitor_postgresql_0
             receivers:
                 - postgresql/metrics_0
         logs/dbi_postgresql_rawevents_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - filter/dbi_exclude_monitor_0
-                - transform/dbi_scope_0
+                - filter/dbi_exclude_monitor_postgresql_0
+                - transform/dbi_scope_postgresql_0
                 - resourcedetection/opentelemetry
-                - transform/dbi_resource_0
-                - transform/dbi_logs_raw-events_0
+                - transform/dbi_resource_postgresql_0
+                - transform/dbi_logs_postgresql_raw-events_0
             receivers:
                 - postgresql/events_0
         logs/dbi_postgresql_serverlogs_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope_postgresql_0
                 - resourcedetection/opentelemetry
-                - transform/dbi_resource_0
-                - transform/dbi_logs_server-logs_0
+                - transform/dbi_resource_postgresql_0
+                - transform/dbi_logs_postgresql_server-logs_0
             receivers:
                 - filelog/postgresql_0
         logs/opentelemetry:
@@ -1141,13 +1141,13 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
-                - transform/dbi_resource_0
-                - transform/dbi_fix_start_time
+                - transform/dbi_scope_postgresql_0
+                - transform/dbi_resource_postgresql_0
+                - transform/dbi_fix_start_time_postgresql
             receivers:
                 - postgresql/metrics_0
-                - count/dbi_dbload
-                - signaltometrics/dbi_topsql
+                - count/dbi_dbload_postgresql
+                - signaltometrics/dbi_topsql_postgresql
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry

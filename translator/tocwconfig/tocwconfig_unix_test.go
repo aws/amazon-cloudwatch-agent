@@ -104,7 +104,7 @@ func TestDBIConfigLinux(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	require.NoError(t, os.Chmod("sampleConfig/opentelemetry/testdata/.pgpass", 0600))
 	expectedEnvVars := map[string]string{}
-	checkTranslation(t, "opentelemetry/dbi_config_linux", "linux", expectedEnvVars, "")
+	checkTranslation(t, "opentelemetry/dbi_postgresql_config_linux", "linux", expectedEnvVars, "")
 }
 
 func TestJournaldLogsUnits(t *testing.T) {
