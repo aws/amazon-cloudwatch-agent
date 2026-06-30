@@ -1902,6 +1902,10 @@
                 "http_endpoint": {
                   "description": "OTLP HTTP receiver endpoint",
                   "type": "string"
+                },
+                "span_metrics_enabled": {
+                  "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false
