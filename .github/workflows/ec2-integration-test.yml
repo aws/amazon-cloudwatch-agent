@@ -123,9 +123,9 @@ jobs:
             -var="test_name=${{ matrix.arrays.os }}" \
             -var="is_onprem=${{ inputs.is_onprem_test }}" \
             -var="user=${{ matrix.arrays.username }}"; then
-            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+            echo "::notice::[DBI-DEBUG] apply succeeded - KEEPING INSTANCE (destroy disabled for debugging)"
           else
-            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
+            echo "::error::[DBI-DEBUG] apply FAILED - KEEPING INSTANCE for SSM debugging" && exit 1
           fi
       
       - name: "[WIP] ✅ Passed"
@@ -141,20 +141,5 @@ jobs:
       - name: Fail if not WIP
         if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
-      
-      #This is here just in case workflow cancel
-      - name: Terraform destroy
-        if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
-        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
-        with:
-          max_attempts: 2
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            else
-              cd ${{inputs.test_dir}}
-            fi
 
-            terraform destroy -lock-timeout=5m -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+      # [DBI-DEBUG] Backup "Terraform destroy" step removed so instances persist for SSM debugging.
