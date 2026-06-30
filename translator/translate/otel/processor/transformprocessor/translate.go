@@ -35,9 +35,6 @@ var transformIdentityHostConfig string
 //go:embed transform_identity_k8s.yaml
 var transformIdentityK8sConfig string
 
-//go:embed transform_logs_routing_host.yaml
-var transformLogsRoutingHostConfig string
-
 //go:embed transform_logs_routing_k8s.yaml
 var transformLogsRoutingK8sConfig string
 

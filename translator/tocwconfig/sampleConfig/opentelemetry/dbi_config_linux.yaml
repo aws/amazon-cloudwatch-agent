@@ -339,6 +339,11 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 30s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -346,11 +351,6 @@ processors:
             - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
-        timeout: 30s
-    batch/opentelemetry_metrics:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 1000
-        send_batch_size: 1000
         timeout: 30s
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
@@ -773,7 +773,6 @@ processors:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
                 - delete_key(resource.attributes, "aws.log.source")
-                - delete_key(resource.attributes, "aws.log.channel")
         metric_statements: []
         trace_statements: []
     transform/logs_routing:
@@ -785,8 +784,6 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
                 - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["aws.log.channel"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["aws.log.channel"] != nil
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["aws.log.channel"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["aws.log.channel"] != nil
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"

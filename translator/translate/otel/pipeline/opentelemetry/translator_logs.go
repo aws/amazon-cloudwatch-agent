@@ -82,12 +82,7 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
 	})
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
-		transformprocessor.WithLogStatements([]string{
-			`delete_key(resource.attributes, "aws.log.group.name")`,
-			`delete_key(resource.attributes, "aws.log.stream.name")`,
-			`delete_key(resource.attributes, "aws.log.source")`,
-			`delete_key(resource.attributes, "aws.log.channel")`,
-		}),
+		transformprocessor.WithLogStatements(logsCleanupStatements),
 	)
 	batch := batchprocessor.NewTranslator(
 		common.WithName("opentelemetry_logs"),
