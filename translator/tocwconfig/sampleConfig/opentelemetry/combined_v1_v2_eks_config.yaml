@@ -587,9 +587,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -1287,39 +1287,39 @@ processors:
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
         trace_statements: []
     transform/dbi_logs_raw-events_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_logs_server-logs_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         metric_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
@@ -1478,11 +1478,11 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
@@ -1506,11 +1506,11 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/otlp_log_source:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
@@ -1548,12 +1548,12 @@ processors:
                 - set(scope.attributes["cloudwatch.solution"], "otel-prometheus")
         trace_statements: []
     transform/set_cluster_name:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements: []
         metric_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
         trace_statements: []
@@ -2418,13 +2418,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_swap
                 - telegraf_mem
-                - telegraf_cpu
                 - telegraf_processes
+                - telegraf_netstat
                 - telegraf_disk
                 - telegraf_procstat/1917393364
-                - telegraf_swap
-                - telegraf_netstat
+                - telegraf_cpu
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -2449,8 +2449,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
