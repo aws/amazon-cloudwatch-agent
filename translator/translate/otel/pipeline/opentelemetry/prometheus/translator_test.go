@@ -121,9 +121,10 @@ func TestPrometheusTranslatorClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 2, got.Processors.Len())
-	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
-	assert.Equal(t, "transform/set_cluster_name", got.Processors.Keys()[1].String())
+	assert.Equal(t, 3, got.Processors.Len())
+	assert.Equal(t, "metric_start_time/otel_prometheus", got.Processors.Keys()[0].String())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[1].String())
+	assert.Equal(t, "transform/set_cluster_name", got.Processors.Keys()[2].String())
 }
 
 func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
@@ -140,8 +141,9 @@ func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got.Processors.Len())
-	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
+	assert.Equal(t, 2, got.Processors.Len())
+	assert.Equal(t, "metric_start_time/otel_prometheus", got.Processors.Keys()[0].String())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[1].String())
 }
 
 func TestPrometheusReceiverTranslator(t *testing.T) {
@@ -243,11 +245,12 @@ func TestPrometheusTranslatorK8sMode(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 2, got.Processors.Len()) // scope + set_cluster_name
+	assert.Equal(t, 3, got.Processors.Len()) // metricstarttime + scope + set_cluster_name
 	keys := make([]string, 0, got.Processors.Len())
 	for _, k := range got.Processors.Keys() {
 		keys = append(keys, k.String())
 	}
+	assert.Contains(t, keys, "metric_start_time/otel_prometheus")
 	assert.Contains(t, keys, "transform/prometheus_scope")
 	assert.Contains(t, keys, "transform/set_cluster_name")
 }

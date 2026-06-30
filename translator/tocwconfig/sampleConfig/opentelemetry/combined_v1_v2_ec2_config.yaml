@@ -1318,6 +1318,10 @@ processors:
               statements:
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "otel-otlp")
+    metric_start_time/otel_prometheus:
+        gc_interval: 10m0s
+        start_time_metric_regex: ""
+        strategy: true_reset_point
     transform/prometheus_scope:
         error_mode: ignore
         flatten_data: false
@@ -2028,6 +2032,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
+                - metric_start_time/otel_prometheus
                 - transform/prometheus_scope
             receivers:
                 - prometheus/opentelemetry

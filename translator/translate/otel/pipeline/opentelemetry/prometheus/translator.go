@@ -17,6 +17,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/metricstarttime"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
 
@@ -51,6 +52,9 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	receiver := &prometheusReceiverTranslator{}
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	// CloudWatch's OTLP ingestion requires a start time for sums and histograms,
+	// so restore it via the metricstarttime processor before exporting.
+	processors.Set(metricstarttime.NewTranslatorWithName(pipelineName))
 	processors.Set(transformprocessor.NewTranslatorWithName("prometheus_scope",
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements([]string{

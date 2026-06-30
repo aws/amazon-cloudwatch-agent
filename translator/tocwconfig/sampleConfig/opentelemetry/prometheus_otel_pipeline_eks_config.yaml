@@ -770,6 +770,10 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+    metric_start_time/otel_prometheus:
+        gc_interval: 10m0s
+        start_time_metric_regex: ""
+        strategy: true_reset_point
     transform/prometheus_scope:
         error_mode: ignore
         flatten_data: false
@@ -866,6 +870,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
+                - metric_start_time/otel_prometheus
                 - transform/prometheus_scope
             receivers:
                 - prometheus/opentelemetry
