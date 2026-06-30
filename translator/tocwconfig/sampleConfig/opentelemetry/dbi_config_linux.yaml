@@ -694,7 +694,7 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "pentest-postgres")
         trace_statements: []
-    transform/dbi_scope_0:
+    transform/dbi_scope:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -709,33 +709,18 @@ processors:
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        trace_statements: []
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -1109,7 +1094,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - filter/dbi_exclude_monitor_0
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
@@ -1119,7 +1104,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
@@ -1141,7 +1126,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - transform/dbi_resource_0
                 - transform/dbi_fix_start_time
             receivers:

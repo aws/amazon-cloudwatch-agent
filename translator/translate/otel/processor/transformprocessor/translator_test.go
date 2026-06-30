@@ -95,8 +95,8 @@ func TestDbiResourceTranslate(t *testing.T) {
 		`set(resource.attributes["db.instance.name"], "my-db")`,
 	}
 	transl := NewTranslatorWithName(common.DbiTransformResource+"_0",
-		WithMetricStatements(stmts),
-		WithLogStatements(stmts),
+		WithMetricResourceStatements(stmts),
+		WithLogResourceStatements(stmts),
 	)
 	assert.Equal(t, "transform/dbi_resource_0", transl.ID().String())
 
@@ -119,7 +119,7 @@ func TestDbiLogDestinationTranslate(t *testing.T) {
 		`set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")`,
 		`set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-db"], "/"))`,
 	}
-	transl := NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_0", WithLogStatements(stmts))
+	transl := NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_0", WithLogResourceStatements(stmts))
 	assert.Equal(t, "transform/dbi_logs_raw-events_0", transl.ID().String())
 
 	cfg, err := transl.Translate(nil)
@@ -128,7 +128,7 @@ func TestDbiLogDestinationTranslate(t *testing.T) {
 
 	require.Len(t, actualCfg.LogStatements, 1)
 	assert.Equal(t, "resource", string(actualCfg.LogStatements[0].Context))
-	assert.Equal(t, "propagate", string(actualCfg.LogStatements[0].ErrorMode))
+	assert.Equal(t, "ignore", string(actualCfg.LogStatements[0].ErrorMode))
 	require.Len(t, actualCfg.LogStatements[0].Statements, 2)
 	assert.Equal(t, `set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")`, actualCfg.LogStatements[0].Statements[0])
 	assert.Equal(t, `set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-db"], "/"))`, actualCfg.LogStatements[0].Statements[1])

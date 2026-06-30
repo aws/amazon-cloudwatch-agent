@@ -560,20 +560,20 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
     otlp/grpc_127_0_0_1_4317:
         protocols:

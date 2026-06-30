@@ -335,24 +335,14 @@ processors:
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
