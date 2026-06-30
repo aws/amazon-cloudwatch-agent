@@ -93,7 +93,7 @@ func (t *windowsEventsPipelineTranslator) Translate(_ *confmap.Conf) (*common.Co
 	receivers.Set(windowseventlog.NewTranslator(t.entry.name, t.entry.channel, t.entry.raw, t.entry.resource))
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
-	processors.Set(transformprocessor.NewTranslatorWithName("windows_events_scope_"+t.entry.name,
+	processors.Set(transformprocessor.NewTranslatorWithName("windows_events_scope",
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements([]string{
 			`set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`,
@@ -104,7 +104,7 @@ func (t *windowsEventsPipelineTranslator) Translate(_ *confmap.Conf) (*common.Co
 	// TODO: Replace with upstream Query XML filtering when collector is bumped past v0.124.
 	condition := t.entry.filterCondition()
 	if condition != "" {
-		processors.Set(filterprocessor.NewTranslatorWithLogCondition("windows_events_"+t.entry.name, condition))
+		processors.Set(filterprocessor.NewTranslatorWithLogCondition("windows_events_"+t.entry.name, condition, "ignore"))
 	}
 
 	return &common.ComponentTranslators{

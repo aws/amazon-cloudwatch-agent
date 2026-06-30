@@ -89,7 +89,7 @@ extensions:
     file_storage/journald:
         compaction:
             check_interval: 5s
-            directory: /tmp
+            directory: /opt/aws/amazon-cloudwatch-agent/logs/state/otel
             max_transaction_size: 65536
             rebound_needed_threshold_mib: 100
             rebound_trigger_threshold_mib: 10

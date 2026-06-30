@@ -146,7 +146,7 @@ func (t *dbiTranslator) pgReceiver(name string, extraOpts ...postgresql.Option) 
 func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
 	condition := fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
-	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+idx, condition)
+	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+idx, condition, "propagate")
 }
 
 func (t *dbiTranslator) scopeTransform() common.ComponentTranslator {

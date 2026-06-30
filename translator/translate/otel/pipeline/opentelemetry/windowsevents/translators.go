@@ -52,7 +52,8 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 	}
 
 	var entries []eventEntry
-	for i, item := range list {
+	var idx int
+	for _, item := range list {
 		m, ok := item.(map[string]any)
 		if !ok {
 			continue
@@ -62,10 +63,8 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 			continue
 		}
 
-		raw := false
-		if format, ok := m[eventFormatKey].(string); ok && format == "xml" {
-			raw = true
-		}
+		format, _ := m[eventFormatKey].(string)
+		raw := format == "xml"
 
 		resource := map[string]string{
 			"aws.log.source":  common.WindowsEventsKey,
@@ -100,13 +99,14 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		}
 
 		entries = append(entries, eventEntry{
-			name:        fmt.Sprintf("%s_%d", strings.ToLower(channel), i),
+			name:        fmt.Sprintf("%s_%d", strings.ToLower(channel), idx),
 			channel:     channel,
 			raw:         raw,
 			resource:    resource,
 			eventLevels: levels,
 			eventIDs:    ids,
 		})
+		idx++
 	}
 	return entries
 }

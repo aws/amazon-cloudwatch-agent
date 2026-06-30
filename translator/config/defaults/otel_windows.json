@@ -11,11 +11,11 @@
         "collect_list": [
           {
             "event_name": "System",
-            "event_levels": ["ERROR", "WARNING", "INFORMATION"]
+            "event_levels": ["ERROR", "WARNING"]
           },
           {
             "event_name": "Application",
-            "event_levels": ["ERROR", "WARNING", "INFORMATION"]
+            "event_levels": ["ERROR", "WARNING"]
           }
         ]
       }

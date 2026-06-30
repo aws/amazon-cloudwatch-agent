@@ -4,7 +4,6 @@
 package filestorage
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
@@ -41,8 +40,9 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*filestorage.Config)
-	cfg.Directory = filepath.Join(util.GetFileStateFolder(), "otel")
-	cfg.Compaction.Directory = os.TempDir()
+	dir := filepath.Join(util.GetFileStateFolder(), "otel")
+	cfg.Directory = dir
+	cfg.Compaction.Directory = dir
 	cfg.CreateDirectory = true
 	return cfg, nil
 }
