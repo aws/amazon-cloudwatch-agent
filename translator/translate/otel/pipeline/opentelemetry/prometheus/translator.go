@@ -53,7 +53,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	processors.Set(transformprocessor.NewTranslatorWithName("prometheus_scope",
 		transformprocessor.WithErrorMode("ignore"),
-		transformprocessor.WithScopeStatements([]string{
+		transformprocessor.WithMetricScopeStatements([]string{
 			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
 			`set(attributes["cloudwatch.solution"], "otel-prometheus")`,
 		}),

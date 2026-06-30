@@ -158,6 +158,15 @@ const (
 	LogsRouting = "logs_routing"
 )
 
+// ScopeStatements returns OTTL scope-context statements that set
+// cloudwatch.source and cloudwatch.solution attributes.
+func ScopeStatements(solution string) []string {
+	return []string{
+		`set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`,
+		fmt.Sprintf(`set(scope.attributes["cloudwatch.solution"], "%s")`, solution),
+	}
+}
+
 var (
 	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)

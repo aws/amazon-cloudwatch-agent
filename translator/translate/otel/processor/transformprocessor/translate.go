@@ -68,13 +68,29 @@ func WithScopeStatements(statements []string) Option {
 	}
 }
 
+// WithLogScopeStatements sets OTTL statements to execute in the "scope" context for logs only.
+func WithLogScopeStatements(statements []string) Option {
+	return func(t *translator) {
+		t.logScopeStatements = statements
+	}
+}
+
+// WithMetricScopeStatements sets OTTL statements to execute in the "scope" context for metrics only.
+func WithMetricScopeStatements(statements []string) Option {
+	return func(t *translator) {
+		t.metricScopeStatements = statements
+	}
+}
+
 type translator struct {
-	name             string
-	factory          processor.Factory
-	logStatements    []string
-	metricStatements []string
-	scopeStatements  []string
-	errorMode        string
+	name                  string
+	factory               processor.Factory
+	logStatements         []string
+	metricStatements      []string
+	scopeStatements       []string
+	logScopeStatements    []string
+	metricScopeStatements []string
+	errorMode             string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -95,7 +111,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 
 	// Dynamic statements (generic path for both metrics and logs)
-	if len(t.logStatements) > 0 || len(t.metricStatements) > 0 || len(t.scopeStatements) > 0 {
+	if len(t.logStatements) > 0 || len(t.metricStatements) > 0 || len(t.scopeStatements) > 0 || len(t.logScopeStatements) > 0 || len(t.metricScopeStatements) > 0 {
 		errorMode := t.errorMode
 		if errorMode == "" {
 			errorMode = "propagate"
@@ -114,6 +130,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 			cfgMap["metric_statements"] = appendStatements(cfgMap["metric_statements"], scopeBlock)
 			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], scopeBlock)
 			cfgMap["trace_statements"] = []interface{}{scopeBlock}
+		}
+		if len(t.metricScopeStatements) > 0 {
+			cfgMap["metric_statements"] = appendStatements(cfgMap["metric_statements"], buildScopeStatements(t.metricScopeStatements))
+		}
+		if len(t.logScopeStatements) > 0 {
+			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildScopeStatements(t.logScopeStatements))
 		}
 		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("failed to configure transform processor: %w", err)

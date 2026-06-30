@@ -524,24 +524,14 @@ processors:
     transform/prometheus_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
+        log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "otel-prometheus")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
+        trace_statements: []
 receivers:
     prometheus/opentelemetry:
         config:

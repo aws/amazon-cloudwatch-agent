@@ -95,10 +95,7 @@ func (t *windowsEventsPipelineTranslator) Translate(_ *confmap.Conf) (*common.Co
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	processors.Set(transformprocessor.NewTranslatorWithName("windows_events_scope",
 		transformprocessor.WithErrorMode("ignore"),
-		transformprocessor.WithScopeStatements([]string{
-			`set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`,
-			`set(scope.attributes["cloudwatch.solution"], "otel-windows-events")`,
-		}),
+		transformprocessor.WithLogScopeStatements(common.ScopeStatements("otel-windows-events")),
 	))
 
 	// TODO: Replace with upstream Query XML filtering when collector is bumped past v0.124.
