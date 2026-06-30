@@ -17,7 +17,7 @@ import (
 //go:embed config.yaml
 var defaultConfig string
 
-const spanMetricsKey = "derive_metrics_from_traces"
+const spanMetricsKey = "span_metrics_enabled"
 
 type translator struct {
 	name    string
@@ -42,7 +42,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	return common.GetYamlFileToYamlConfig(cfg, defaultConfig)
 }
 
-// IsEnabled checks if derive_metrics_from_traces is enabled in the config.
+// IsEnabled checks if span_metrics_enabled is enabled in the config.
 func IsEnabled(conf *confmap.Conf) bool {
 	if conf == nil {
 		return false

@@ -7,7 +7,7 @@
   "opentelemetry": {
     "collect": {
       "otlp": {
-        "derive_metrics_from_traces": true
+        "span_metrics_enabled": true
       }
     }
   }

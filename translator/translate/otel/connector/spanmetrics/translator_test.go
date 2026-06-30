@@ -31,12 +31,12 @@ func TestIsEnabled(t *testing.T) {
 	}{
 		{
 			name:     "enabled",
-			input:    map[string]any{"opentelemetry": map[string]any{"collect": map[string]any{"otlp": map[string]any{"derive_metrics_from_traces": true}}}},
+			input:    map[string]any{"opentelemetry": map[string]any{"collect": map[string]any{"otlp": map[string]any{"span_metrics_enabled": true}}}},
 			expected: true,
 		},
 		{
 			name:     "disabled",
-			input:    map[string]any{"opentelemetry": map[string]any{"collect": map[string]any{"otlp": map[string]any{"derive_metrics_from_traces": false}}}},
+			input:    map[string]any{"opentelemetry": map[string]any{"collect": map[string]any{"otlp": map[string]any{"span_metrics_enabled": false}}}},
 			expected: false,
 		},
 		{
