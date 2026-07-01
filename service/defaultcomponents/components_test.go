@@ -107,6 +107,7 @@ func TestComponents(t *testing.T) {
 		"forward",
 		"routing",
 		"signaltometrics",
+		"spanmetrics",
 	}
 	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
 	assert.Equal(t, len(wantConnectors), len(gotConnectors))

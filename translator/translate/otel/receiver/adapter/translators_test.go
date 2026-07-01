@@ -127,6 +127,25 @@ func TestFindReceiversInConfig(t *testing.T) {
 			os:   translatorconfig.OS_TYPE_WINDOWS,
 			want: map[component.ID]wantResult{},
 		},
+		"WithJournaldLogs": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"units":          []interface{}{"sshd.service"},
+									"priority":       "info",
+									"log_group_name": "journald_sshd",
+								},
+							},
+						},
+					},
+				},
+			},
+			os:   translatorconfig.OS_TYPE_LINUX,
+			want: map[component.ID]wantResult{},
+		},
 		"WithNoSocketListener": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{

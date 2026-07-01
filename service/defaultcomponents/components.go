@@ -7,6 +7,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/spanmetricsconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -200,6 +201,7 @@ func Factories() (otelcol.Factories, error) {
 		forwardconnector.NewFactory(),
 		routingconnector.NewFactory(),
 		signaltometricsconnector.NewFactory(),
+		spanmetricsconnector.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}

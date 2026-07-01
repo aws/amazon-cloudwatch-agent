@@ -11,3 +11,4 @@ terraform.*
 **/.terraform/*
 coverage.txt
 AGENTS.md
+local

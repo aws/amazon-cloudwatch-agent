@@ -147,6 +147,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/connector/spanmetricsconnector v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter v0.124.1
