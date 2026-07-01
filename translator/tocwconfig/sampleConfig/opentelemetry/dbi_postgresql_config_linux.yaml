@@ -226,80 +226,6 @@ connectors:
                 value: Int(attributes["postgresql.local_blks_read"])
               unit: ""
 exporters:
-    awscloudwatch:
-        backoff_retry_base: 200ms
-        endpoint_override: https://monitoring-fips.us-west-2.amazonaws.com
-        force_flush_interval: 1m0s
-        max_concurrent_publishers: 10
-        max_datums_per_call: 1000
-        max_retry_count: 5
-        max_values_per_datum: 150
-        middleware: agenthealth/metrics
-        namespace: CWAgent
-        region: us-west-2
-        resource_to_telemetry_conversion:
-            enabled: true
-        role_arn: metrics_role_arn_value_test
-        rollup_dimensions:
-            - - InstanceId
-              - InstanceType
-            - []
-    awscloudwatchlogs/emf_logs:
-        certificate_file_path: ""
-        emf_only: true
-        endpoint: https://logs-fips.us-west-2.amazonaws.com
-        external_id: ""
-        imds_retries: 1
-        local_mode: false
-        log_group_name: emf/logs/default
-        log_retention: 0
-        log_stream_name: LOG_STREAM_NAME
-        max_retries: 2
-        middleware: agenthealth/logs
-        no_verify_ssl: false
-        num_workers: 8
-        profile: ""
-        proxy_address: ""
-        raw_log: true
-        region: us-west-2
-        request_timeout_seconds: 30
-        resource_arn: ""
-        retry_on_failure:
-            enabled: true
-            initial_interval: 5s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        role_arn: log_role_arn_value_test
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 1
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
-    awsxray:
-        certificate_file_path: ""
-        endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-        external_id: ""
-        imds_retries: 1
-        index_all_attributes: false
-        local_mode: false
-        max_retries: 2
-        middleware: agenthealth/traces
-        no_verify_ssl: true
-        num_workers: 1
-        profile: ""
-        proxy_address: ""
-        region: us-west-2
-        request_timeout_seconds: 30
-        resource_arn: ""
-        role_arn: trace_role_arn_value_test
-        telemetry:
-            enabled: true
-            include_metadata: true
     otlphttp/logs:
         auth:
             authenticator: agenthealth/opentelemetry_logs
@@ -354,50 +280,7 @@ exporters:
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
-    otlphttp/traces:
-        auth:
-            authenticator: agenthealth/opentelemetry_traces
-        compression: gzip
-        encoding: proto
-        idle_conn_timeout: 1m30s
-        logs_endpoint: ""
-        max_idle_conns: 100
-        metrics_endpoint: ""
-        retry_on_failure:
-            enabled: true
-            initial_interval: 5s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 10
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
-        timeout: 30s
-        traces_endpoint: https://xray.us-west-2.amazonaws.com/v1/traces
-        write_buffer_size: 524288
 extensions:
-    agenthealth/logs:
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - PutLogEvents
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    agenthealth/metrics:
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - PutMetricData
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
     agenthealth/opentelemetry_logs:
         additional_auth: headers_setter/logs
         is_usage_data_enabled: true
@@ -416,30 +299,6 @@ extensions:
             usage_flags:
                 mode: EC2
                 region_type: ACJ
-    agenthealth/opentelemetry_traces:
-        additional_auth: sigv4auth/xray
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - '*'
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    agenthealth/statuscode:
-        is_status_code_enabled: true
-        is_usage_data_enabled: true
-        stats:
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    agenthealth/traces:
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - PutTraceSegments
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
@@ -448,9 +307,6 @@ extensions:
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 10
-    entitystore:
-        mode: ec2
-        region: us-west-2
     headers_setter/logs:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
@@ -476,14 +332,6 @@ extensions:
         region: us-west-2
         request_timeout_seconds: 30
         service: monitoring
-    sigv4auth/xray:
-        assume_role: {}
-        imds_retries: 1
-        max_retries: 2
-        num_workers: 8
-        region: us-west-2
-        request_timeout_seconds: 30
-        service: xray
 processors:
     attributestocontext/opentelemetry:
         actions:
@@ -491,19 +339,6 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
-    awsentity/resource:
-        entity_type: Resource
-        platform: ec2
-        scrape_datapoint_attribute: true
-    awsentity/service/telegraf:
-        entity_type: Service
-        platform: ec2
-        scrape_datapoint_attribute: true
-    batch/emf_logs:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 1m0s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -517,38 +352,6 @@ processors:
         send_batch_max_size: 1000
         send_batch_size: 1000
         timeout: 15s
-    batch/opentelemetry_traces:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 10000
-        send_batch_size: 10000
-        timeout: 15s
-    batch/xray:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 0
-        send_batch_size: 8192
-        timeout: 200ms
-    cumulativetodelta/hostDeltaMetrics:
-        exclude:
-            match_type: strict
-            metrics:
-                - iops_in_progress
-                - diskio_iops_in_progress
-                - diskio_ebs_volume_queue_length
-        include:
-            match_type: ""
-        initial_value: 2
-        max_staleness: 0s
-    ec2tagger:
-        ec2_instance_tag_keys:
-            - AutoScalingGroupName
-        ec2_metadata_tags:
-            - ImageId
-            - InstanceId
-            - InstanceType
-        imds_retries: 1
-        middleware: agenthealth/statuscode
-        refresh_tags_interval: 0s
-        refresh_volumes_interval: 0s
     filter/dbi_exclude_monitor_postgresql_0:
         error_mode: propagate
         logs:
@@ -861,7 +664,7 @@ processors:
               error_mode: propagate
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_logs_postgresql_server-logs_0:
@@ -872,7 +675,7 @@ processors:
               error_mode: propagate
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_postgresql_0:
@@ -883,13 +686,13 @@ processors:
               error_mode: propagate
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
-                - set(resource.attributes["db.instance.name"], "my-postgres")
+                - set(resource.attributes["db.instance.name"], "pentest-postgres")
         metric_statements:
             - context: resource
               error_mode: propagate
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
-                - set(resource.attributes["db.instance.name"], "my-postgres")
+                - set(resource.attributes["db.instance.name"], "pentest-postgres")
         trace_statements: []
     transform/dbi_scope_postgresql_0:
         error_mode: ignore
@@ -990,75 +793,7 @@ processors:
                 - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
         metric_statements: []
         trace_statements: []
-    transform/otlp_log_source:
-        error_mode: propagate
-        flatten_data: false
-        log_statements:
-            - context: resource
-              error_mode: propagate
-              statements:
-                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
-        metric_statements: []
-        trace_statements: []
-    transform/otlp_scope:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
-        metric_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
-    transform/prometheus_scope:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
-        metric_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
 receivers:
-    awsxray:
-        endpoint: 0.0.0.0:2000
-        proxy_server:
-            aws_endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-            certificate_file_path: ""
-            endpoint: 0.0.0.0:1234
-            imds_retries: 1
-            local_mode: false
-            profile: ""
-            proxy_address: ""
-            region: us-west-2
-            role_arn: trace_role_arn_value_test
-            service_name: xray
-            tls:
-                insecure: true
-        transport: udp
     filelog/postgresql_0:
         encoding: utf-8
         exclude_older_than: 0s
@@ -1081,7 +816,7 @@ receivers:
         start_at: end
         type: file_input
     hostmetrics/opentelemetry:
-        collection_interval: 1m0s
+        collection_interval: 30s
         initial_delay: 1s
         scrapers:
             cpu:
@@ -1126,46 +861,6 @@ receivers:
                 mute_process_all_errors: true
             processes: null
         timeout: 0s
-    otlp/grpc_0_0_0_0_4317:
-        protocols:
-            grpc:
-                endpoint: 0.0.0.0:4317
-                keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
-                read_buffer_size: 524288
-                transport: tcp
-    otlp/grpc_127_0_0_1_4327:
-        protocols:
-            grpc:
-                endpoint: 127.0.0.1:4327
-                keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
-                read_buffer_size: 524288
-                transport: tcp
-    otlp/http_0_0_0_0_4318:
-        protocols:
-            http:
-                cors: {}
-                endpoint: 0.0.0.0:4318
-                idle_timeout: 0s
-                logs_url_path: /v1/logs
-                metrics_url_path: /v1/metrics
-                read_header_timeout: 0s
-                traces_url_path: /v1/traces
-                write_timeout: 0s
-    otlp/http_127_0_0_1_4328:
-        protocols:
-            http:
-                cors: {}
-                endpoint: 127.0.0.1:4328
-                idle_timeout: 0s
-                logs_url_path: /v1/logs
-                metrics_url_path: /v1/metrics
-                read_header_timeout: 0s
-                traces_url_path: /v1/traces
-                write_timeout: 0s
     postgresql/events_0:
         collection_interval: 10s
         endpoint: localhost:5432
@@ -1392,116 +1087,14 @@ receivers:
             top_n_query: 200
         transport: tcp
         username: cw_monitor
-    prometheus/opentelemetry:
-        config:
-            global:
-                evaluation_interval: 1m
-                scrape_interval: 30s
-                scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
-                scrape_timeout: 10s
-            scrape_configs:
-                - enable_compression: true
-                  enable_http2: true
-                  fallback_scrape_protocol: PrometheusText0.0.4
-                  follow_redirects: true
-                  honor_timestamps: true
-                  job_name: test_app
-                  metrics_path: /metrics
-                  scheme: http
-                  scrape_interval: 30s
-                  scrape_protocols:
-                    - OpenMetricsText1.0.0
-                    - OpenMetricsText0.0.1
-                    - PrometheusText1.0.0
-                    - PrometheusText0.0.4
-                  scrape_timeout: 10s
-                  static_configs:
-                    - targets:
-                        - localhost:9090
-                  track_timestamps_staleness: false
-        report_extra_scrape_metrics: false
-        start_time_metric_regex: ""
-        trim_metric_suffixes: false
-        use_start_time_metric: false
-    telegraf_cpu:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_disk:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_diskio:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_mem:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_net:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_netstat:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_processes:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_procstat/1917393364:
-        alias_name: /var/run/example1.pid
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_socket_listener:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_statsd:
-        collection_interval: 10s
-        initial_delay: 1s
-        timeout: 0s
-    telegraf_swap:
-        collection_interval: 1m0s
-        initial_delay: 1s
-        timeout: 0s
-    udplog/emf_logs:
-        encoding: utf-8
-        id: udp_input
-        listen_address: 127.0.0.1:25888
-        multiline:
-            line_end_pattern: .^
-            line_start_pattern: ""
-            omit_pattern: false
-        operators: []
-        retry_on_failure:
-            enabled: false
-            initial_interval: 0s
-            max_elapsed_time: 0s
-            max_interval: 0s
-        type: udp_input
 service:
     extensions:
-        - agenthealth/metrics
-        - agenthealth/statuscode
-        - agenthealth/logs
-        - agenthealth/traces
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
         - headers_setter/logs
         - agenthealth/opentelemetry_logs
-        - sigv4auth/xray
-        - agenthealth/opentelemetry_traces
-        - entitystore
     pipelines:
         logs/dbi_postgresql_0:
             exporters:
@@ -1532,13 +1125,6 @@ service:
                 - transform/dbi_logs_postgresql_server-logs_0
             receivers:
                 - filelog/postgresql_0
-        logs/emf_logs:
-            exporters:
-                - awscloudwatchlogs/emf_logs
-            processors:
-                - batch/emf_logs
-            receivers:
-                - udplog/emf_logs
         logs/opentelemetry:
             exporters:
                 - otlphttp/logs
@@ -1551,15 +1137,6 @@ service:
                 - batch/opentelemetry_logs
             receivers:
                 - forward/opentelemetry
-        logs/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-                - transform/otlp_log_source
-            receivers:
-                - otlp/grpc_127_0_0_1_4327
-                - otlp/http_127_0_0_1_4328
         metrics/dbi_postgresql_0:
             exporters:
                 - forward/opentelemetry
@@ -1571,20 +1148,6 @@ service:
                 - postgresql/metrics_0
                 - count/dbi_dbload_postgresql
                 - signaltometrics/dbi_topsql_postgresql
-        metrics/host:
-            exporters:
-                - awscloudwatch
-            processors:
-                - ec2tagger
-                - awsentity/resource
-            receivers:
-                - telegraf_mem
-                - telegraf_procstat/1917393364
-                - telegraf_processes
-                - telegraf_cpu
-                - telegraf_disk
-                - telegraf_swap
-                - telegraf_netstat
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -1592,25 +1155,6 @@ service:
                 - transform/host_metrics_scope
             receivers:
                 - hostmetrics/opentelemetry
-        metrics/hostCustomMetrics:
-            exporters:
-                - awscloudwatch
-            processors:
-                - ec2tagger
-                - awsentity/service/telegraf
-            receivers:
-                - telegraf_socket_listener
-                - telegraf_statsd
-        metrics/hostDeltaMetrics:
-            exporters:
-                - awscloudwatch
-            processors:
-                - cumulativetodelta/hostDeltaMetrics
-                - ec2tagger
-                - awsentity/resource
-            receivers:
-                - telegraf_diskio
-                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
@@ -1620,53 +1164,12 @@ service:
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
-        metrics/otel_prometheus:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/prometheus_scope
-            receivers:
-                - prometheus/opentelemetry
-        metrics/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-            receivers:
-                - otlp/grpc_127_0_0_1_4327
-                - otlp/http_127_0_0_1_4328
-        traces/opentelemetry:
-            exporters:
-                - otlphttp/traces
-            processors:
-                - resourcedetection/opentelemetry
-                - transform/identity
-                - batch/opentelemetry_traces
-            receivers:
-                - forward/opentelemetry
-        traces/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-            receivers:
-                - otlp/grpc_127_0_0_1_4327
-                - otlp/http_127_0_0_1_4328
-        traces/xray:
-            exporters:
-                - awsxray
-            processors:
-                - batch/xray
-            receivers:
-                - awsxray
-                - otlp/grpc_0_0_0_0_4317
-                - otlp/http_0_0_0_0_4318
     telemetry:
         logs:
             encoding: console
-            level: debug
+            level: info
             output_paths:
-                - /tmp/fake/log/hotdog.log
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2

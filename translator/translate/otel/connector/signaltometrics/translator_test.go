@@ -14,12 +14,12 @@ import (
 )
 
 func TestTranslatorID(t *testing.T) {
-	tr := NewTranslator(common.DbiConnectorTopsql)
-	assert.Equal(t, "signaltometrics/dbi_topsql", tr.ID().String())
+	tr := NewTranslator(common.DbiConnectorTopsql+"_"+common.PostgreSQLKey, common.PostgreSQLKey)
+	assert.Equal(t, "signaltometrics/dbi_topsql_postgresql", tr.ID().String())
 }
 
 func TestTranslateTopsql(t *testing.T) {
-	tr := NewTranslator(common.DbiConnectorTopsql)
+	tr := NewTranslator(common.DbiConnectorTopsql+"_"+common.PostgreSQLKey, common.PostgreSQLKey)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
@@ -36,8 +36,35 @@ func TestTranslateTopsql(t *testing.T) {
 }
 
 func TestTranslateUnsupported(t *testing.T) {
-	tr := NewTranslator("unsupported")
+	tr := NewTranslator("dbi_topsql_unknown", "unsupported")
 	_, err := tr.Translate(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported signaltometrics connector config")
+	assert.Contains(t, err.Error(), "unsupported signaltometrics connector engine")
+}
+
+func TestTranslatorID_MySQL(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsql+"_"+common.MySQLKey, common.MySQLKey)
+	assert.Equal(t, "signaltometrics/dbi_topsql_mysql", tr.ID().String())
+}
+
+func TestTranslateTopsqlMysql(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsql+"_"+common.MySQLKey, common.MySQLKey)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	stmCfg := cfg.(*signaltometricsconfig.Config)
+	assert.Len(t, stmCfg.Logs, 14)
+	assert.Equal(t, "mysql.count_star", stmCfg.Logs[0].Name)
+	assert.Equal(t, "mysql.sum_timer_wait", stmCfg.Logs[1].Name)
+	assert.Equal(t, "mysql.sum_lock_time", stmCfg.Logs[2].Name)
+	assert.Equal(t, "mysql.sum_rows_sent", stmCfg.Logs[3].Name)
+	assert.Equal(t, "mysql.sum_rows_examined", stmCfg.Logs[4].Name)
+	assert.Equal(t, "mysql.sum_errors", stmCfg.Logs[5].Name)
+	assert.Equal(t, "mysql.sum_sort_rows", stmCfg.Logs[6].Name)
+	assert.Equal(t, "mysql.sum_created_tmp_tables", stmCfg.Logs[7].Name)
+	assert.Equal(t, "mysql.sum_created_tmp_disk_tables", stmCfg.Logs[8].Name)
+	assert.Equal(t, "mysql.sum_no_index_used", stmCfg.Logs[9].Name)
+	assert.Equal(t, "mysql.sum_select_full_join", stmCfg.Logs[10].Name)
+	assert.Equal(t, "mysql.sum_sort_scan", stmCfg.Logs[11].Name)
+	assert.Equal(t, "mysql.sum_no_good_index_used", stmCfg.Logs[12].Name)
+	assert.Equal(t, "mysql.sum_select_scan", stmCfg.Logs[13].Name)
 }
