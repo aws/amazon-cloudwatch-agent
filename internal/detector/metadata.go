@@ -30,6 +30,7 @@ const (
 	CategoryKafkaBroker Category = "KAFKA/BROKER"
 	CategoryKafkaClient Category = "KAFKA/CLIENT"
 	CategoryNvidiaGPU   Category = "NVIDIA_GPU"
+	CategoryMySQL       Category = "MYSQL"
 )
 
 // Status represents whether the resource requires more actions before telemetry is available.
