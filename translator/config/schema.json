@@ -14,6 +14,9 @@
     },
     "traces": {
       "$ref": "#/definitions/tracesDefinition"
+    },
+    "opentelemetry": {
+      "$ref": "#/definitions/opentelemetryDefinition"
     }
   },
   "additionalProperties": true,
@@ -1424,7 +1427,10 @@
         "role_arn": {
           "description": "The target IAM role with which agent can access aws resources",
           "type": "string",
-          "minLength": 20,
+          "anyOf": [
+            { "minLength": 20 },
+            { "pattern": "^\\$\\{.+\\}$" }
+          ],
           "maxLength": 2048
         }
       },
@@ -1796,6 +1802,119 @@
           "additionalProperties": false
         }
       }
+    },
+    "opentelemetryDefinition": {
+      "type": "object",
+      "properties": {
+        "collect": {
+          "type": "object",
+          "properties": {
+            "database_insights": {
+              "type": "object",
+              "properties": {
+                "postgresql": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": { "type": "string" },
+                      "instance_name": { "type": "string" },
+                      "username": { "type": "string" },
+                      "password_file": { "type": "string" },
+                      "ca_file": { "type": "string" },
+                      "logs": {
+                        "type": "object",
+                        "properties": {
+                          "file_path": { "type": "string" }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["endpoint", "instance_name", "username", "password_file"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "host_metrics": {
+              "type": "object",
+              "properties": {
+                "metrics_collection_interval": {
+                  "description": "How often the metrics defined will be collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                }
+              },
+              "additionalProperties": false
+            },
+            "container_insights": {
+              "type": "object",
+              "properties": {
+                "cluster_name": {
+                  "description": "The name of the EKS cluster",
+                  "type": "string"
+                },
+                "collection_interval": {
+                  "description": "How often metrics are collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "mode": {
+                  "description": "Pipeline mode: node (daemonset), cluster (deployment), or omit for all",
+                  "type": "string",
+                  "enum": ["node", "cluster"]
+                },
+                "logs": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Whether to collect container and host logs",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": ["cluster_name"],
+              "additionalProperties": false
+            },
+            "prometheus": {
+              "type": "object",
+              "properties": {
+                "config_path": {
+                  "description": "Path to the Prometheus scrape configuration file",
+                  "type": "string"
+                },
+                "cluster_name": {
+                  "description": "The name of the EKS cluster",
+                  "type": "string"
+                }
+              },
+              "required": ["config_path"],
+              "additionalProperties": false
+            },
+            "otlp": {
+              "type": "object",
+              "properties": {
+                "grpc_endpoint": {
+                  "description": "OTLP gRPC receiver endpoint",
+                  "type": "string"
+                },
+                "http_endpoint": {
+                  "description": "OTLP HTTP receiver endpoint",
+                  "type": "string"
+                },
+                "span_metrics_enabled": {
+                  "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

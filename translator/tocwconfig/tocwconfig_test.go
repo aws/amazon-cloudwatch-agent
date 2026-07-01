@@ -27,6 +27,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -38,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig/tomlConfigTemplate"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	systemmetricspipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
@@ -330,6 +332,60 @@ func TestOtlpMetricsConfig(t *testing.T) {
 	checkTranslation(t, "otlp_metrics_config", "windows", nil, "")
 }
 
+func TestHostMetricsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/host_metrics_config", "linux", nil, "")
+}
+
+func TestContainerInsightsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	// Cannot use checkTranslation here because the container_insights prometheus
+	// receiver references /var/run/secrets/kubernetes.io/serviceaccount/token
+	// which only exists inside K8s pods. Translate without collector validation.
+	agent.Global_Config = *new(agent.Agent)
+	translator.SetTargetPlatform("linux")
+	var input interface{}
+	blob, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_config.json")
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(blob, &input))
+	_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
+
+	var expected interface{}
+	bs, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_config.yaml")
+	require.NoError(t, err)
+	require.NoError(t, yaml.Unmarshal(bs, &expected))
+
+	var actual interface{}
+	cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+	require.NoError(t, err)
+	yamlConfig, err := mapstructure.Marshal(cfg)
+	require.NoError(t, err)
+	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+		return pretty.Sprint(x) < pretty.Sprint(y)
+	})
+	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+}
+
+func TestPrometheusOtelPipelineConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/prometheus_otel_pipeline_config", "linux", nil, "")
+}
+
+func TestPrometheusOtelPipelineEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	checkTranslation(t, "opentelemetry/prometheus_otel_pipeline_eks_config", "linux", nil, "")
+}
+
 func TestOtlpMetricsConfigKubernetes(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -363,6 +419,36 @@ func TestSharedOtlp(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	checkTranslation(t, "shared_otlp_config", "linux", nil, "")
+}
+
+func TestOtlpOtelConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/otlp_otel_config", "linux", nil, "")
+}
+
+func TestDefaultOtelConfigTranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.RegionType = config.RegionTypeCredsMap
+
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.yaml")
+}
+
+func TestOtlpOtelEKSConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	checkTranslation(t, "opentelemetry/otlp_otel_eks_config", "linux", nil, "")
 }
 
 func TestProcstatMemorySwapConfig(t *testing.T) {
@@ -1051,7 +1137,7 @@ func verifyToYamlTranslation(t *testing.T, input interface{}, expectedYamlFilePa
 		yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
 		require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
-		//assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
+		// assert.NoError(t, os.WriteFile(expectedYamlFilePath, []byte(yamlStr), 0644)) // useful for regenerating YAML
 
 		opt := cmpopts.SortSlices(func(x, y interface{}) bool {
 			return pretty.Sprint(x) < pretty.Sprint(y)
@@ -1077,10 +1163,7 @@ func checkIfEnvTranslateSucceed(t *testing.T, jsonStr string, targetOs string, e
 	translator.SetTargetPlatform(targetOs)
 	err := json.Unmarshal([]byte(jsonStr), &input)
 	if err == nil {
-		envVarsBytes := toenvconfig.ToEnvConfig(input)
-		var actualEnvVars = make(map[string]string)
-		err := json.Unmarshal(envVarsBytes, &actualEnvVars)
-		assert.NoError(t, err)
+		actualEnvVars := toenvconfig.ToEnvConfig(input)
 		assert.Equal(t, expectedEnvVars, actualEnvVars, "Expect to be equal")
 	} else {
 		t.Logf("Got error %v", err)

@@ -1,0 +1,82 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package opentelemetry
+
+import (
+	"fmt"
+
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/spanmetrics"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
+)
+
+var otelCollectKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey)
+
+type baseMetricsTranslator struct{}
+
+var _ common.PipelineTranslator = (*baseMetricsTranslator)(nil)
+
+func NewBaseMetricsTranslator() common.PipelineTranslator {
+	return &baseMetricsTranslator{}
+}
+
+func (t *baseMetricsTranslator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalMetrics, common.OpenTelemetryKey)
+}
+
+// Translate creates the shared metrics export pipeline. It activates when any
+// collect sub-section is present; it receives data via the forward connector
+// from feature pipelines (host_metrics, otlp, span_metrics).
+func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	if conf == nil || !conf.IsSet(otelCollectKey) {
+		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: otelCollectKey}
+	}
+
+	region := agent.Global_Config.Region
+	if region == "" {
+		return nil, fmt.Errorf("region is required for %s pipeline", common.OpenTelemetryKey)
+	}
+	metricsEndpoint := common.ServiceEndpoint("monitoring", region, "/v1/metrics")
+	sigv4Ext := sigv4auth.NewTranslatorWithService("monitoring")
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelMetricsName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
+
+	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
+
+	processors := common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
+	if context.CurrentContext().KubernetesMode() != "" {
+		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
+	}
+	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
+	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
+
+	receivers := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
+	connectors := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
+
+	if common.GetOrDefaultBool(conf, common.OtelSpanMetricsEnabledKey, false) {
+		sm := spanmetrics.NewTranslator(common.OpenTelemetryKey)
+		receivers.Set(sm)
+		connectors.Set(sm)
+	}
+
+	return &common.ComponentTranslators{
+		Receivers:  receivers,
+		Processors: processors,
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("metrics", otlphttp.EndpointConfig{MetricsEndpoint: metricsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
+		Connectors: connectors,
+	}, nil
+}

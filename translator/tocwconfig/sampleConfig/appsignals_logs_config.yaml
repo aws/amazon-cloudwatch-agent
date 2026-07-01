@@ -90,11 +90,11 @@ processors:
         send_batch_size: 8192
         timeout: 5s
     transform/application_signals_logs:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["temporary_key.deployment.environment"], resource.attributes["deployment.environment"])
                 - set(resource.attributes["temporary_key.deployment.environment"], "unknown") where resource.attributes["temporary_key.deployment.environment"] == nil
@@ -110,11 +110,11 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/application_signals_logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
