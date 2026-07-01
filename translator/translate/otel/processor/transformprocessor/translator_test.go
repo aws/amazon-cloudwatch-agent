@@ -134,3 +134,69 @@ func TestDbiLogDestinationTranslate(t *testing.T) {
 	assert.Equal(t, `set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-db"], "/"))`, actualCfg.LogStatements[0].Statements[1])
 	assert.Empty(t, actualCfg.MetricStatements)
 }
+
+func TestLogScopeStatements(t *testing.T) {
+	transl := NewTranslatorWithName("test_log_scope",
+		WithLogScopeStatements(common.ScopeStatementsForSolution("otel-test")),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.LogStatements, 1)
+	assert.Equal(t, "scope", string(actualCfg.LogStatements[0].Context))
+	assert.Equal(t, "ignore", string(actualCfg.LogStatements[0].ErrorMode))
+	require.Len(t, actualCfg.LogStatements[0].Statements, 2)
+	assert.Equal(t, `set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`, actualCfg.LogStatements[0].Statements[0])
+	assert.Equal(t, `set(scope.attributes["cloudwatch.solution"], "otel-test")`, actualCfg.LogStatements[0].Statements[1])
+	assert.Empty(t, actualCfg.MetricStatements)
+	assert.Empty(t, actualCfg.TraceStatements)
+}
+
+func TestMetricScopeStatements(t *testing.T) {
+	transl := NewTranslatorWithName("test_metric_scope",
+		WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-test")),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.MetricStatements, 1)
+	assert.Equal(t, "scope", string(actualCfg.MetricStatements[0].Context))
+	assert.Equal(t, "ignore", string(actualCfg.MetricStatements[0].ErrorMode))
+	require.Len(t, actualCfg.MetricStatements[0].Statements, 2)
+	assert.Equal(t, `set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")`, actualCfg.MetricStatements[0].Statements[0])
+	assert.Equal(t, `set(scope.attributes["cloudwatch.solution"], "otel-test")`, actualCfg.MetricStatements[0].Statements[1])
+	assert.Empty(t, actualCfg.LogStatements)
+	assert.Empty(t, actualCfg.TraceStatements)
+}
+
+func TestWithErrorMode(t *testing.T) {
+	transl := NewTranslatorWithName("test_error_mode",
+		WithErrorMode("propagate"),
+		WithLogResourceStatements([]string{`set(resource.attributes["key"], "val")`}),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	assert.Equal(t, "propagate", string(actualCfg.ErrorMode))
+	require.Len(t, actualCfg.LogStatements, 1)
+	assert.Equal(t, "propagate", string(actualCfg.LogStatements[0].ErrorMode))
+}
+
+func TestScopeStatementsAllSignals(t *testing.T) {
+	transl := NewTranslatorWithName("test_all_scope",
+		WithScopeStatements(common.ScopeStatementsForSolution("otel-test")),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.MetricStatements, 1)
+	assert.Equal(t, "scope", string(actualCfg.MetricStatements[0].Context))
+	require.Len(t, actualCfg.LogStatements, 1)
+	assert.Equal(t, "scope", string(actualCfg.LogStatements[0].Context))
+	require.Len(t, actualCfg.TraceStatements, 1)
+	assert.Equal(t, "scope", string(actualCfg.TraceStatements[0].Context))
+}
