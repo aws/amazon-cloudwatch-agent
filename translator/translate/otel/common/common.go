@@ -159,6 +159,8 @@ const (
 var (
 	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
+	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
 )
 
 const (
@@ -187,7 +189,6 @@ var (
 	MetricsAggregationDimensionsKey = ConfigKey(MetricsKey, AggregationDimensionsKey)
 	OTLPLogsKey                     = ConfigKey(LogsKey, MetricsCollectedKey, OtlpKey)
 	OTLPMetricsKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, OtlpKey)
-	OtelCollectLogsConfigKey        = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 )
 
 type TranslatorID interface {
