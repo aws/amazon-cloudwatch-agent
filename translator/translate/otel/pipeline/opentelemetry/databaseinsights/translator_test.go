@@ -99,7 +99,7 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	})
 
 	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, receivers)
-	assert.Equal(t, []string{"transform/dbi_scope_0", "transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
+	assert.Equal(t, []string{"transform/dbi_scope", "transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
 }
