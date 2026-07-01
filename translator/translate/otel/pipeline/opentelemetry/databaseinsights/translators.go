@@ -19,10 +19,6 @@ import (
 // characters, preventing injection of OTTL syntax or string escape sequences.
 var ottlSafeRegex = regexp.MustCompile(`^[a-zA-Z0-9._@/:\-]+$`)
 
-var (
-	dbiMysqlKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.DatabaseInsightsKey, common.MySQLKey)
-)
-
 type dbiInstanceConfig struct {
 	engine       string
 	endpoint     string
@@ -113,7 +109,7 @@ type mysqlRawInstance struct {
 }
 
 func parseDbiMysqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
-	arr, _ := conf.Get(dbiMysqlKey).([]any)
+	arr, _ := conf.Get(common.DatabaseInsightsMysqlKey).([]any)
 	var raw []mysqlRawInstance
 	if err := mapstructure.Decode(arr, &raw); err != nil {
 		return nil

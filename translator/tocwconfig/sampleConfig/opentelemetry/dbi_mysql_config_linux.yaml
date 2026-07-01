@@ -78,8 +78,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.count_star"] != nil
               description: SQL execution count
@@ -96,8 +94,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"] != nil
@@ -116,8 +112,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_lock_time"] != nil
               description: Total lock time in seconds
@@ -134,8 +128,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_rows_sent"] != nil
@@ -154,8 +146,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_rows_examined"] != nil
               description: Rows examined
@@ -172,8 +162,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_errors"] != nil
@@ -192,8 +180,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_sort_rows"] != nil
               description: Rows sorted
@@ -210,8 +196,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_tables"] != nil
@@ -230,8 +214,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_disk_tables"] != nil
               description: Temporary disk tables created
@@ -248,8 +230,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_no_index_used"] != nil
@@ -268,8 +248,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_select_full_join"] != nil
               description: Full joins without index
@@ -286,8 +264,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_sort_scan"] != nil
@@ -306,8 +282,6 @@ connectors:
                   optional: false
                 - key: db.namespace
                   optional: false
-                - key: user.name
-                  optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_no_good_index_used"] != nil
               description: Queries using no good index
@@ -324,8 +298,6 @@ connectors:
                 - key: mysql.events_statements_summary_by_digest.digest
                   optional: false
                 - key: db.namespace
-                  optional: false
-                - key: user.name
                   optional: false
               conditions:
                 - attributes["mysql.events_statements_summary_by_digest.sum_select_scan"] != nil
