@@ -23,9 +23,10 @@ func TestHostMetricsTranslator(t *testing.T) {
 	assert.EqualValues(t, "metrics/host_metrics", tt.ID().String())
 
 	testCases := map[string]struct {
-		input         map[string]interface{}
-		wantErr       error
-		expectProcess bool
+		input            map[string]interface{}
+		wantErr          error
+		expectProcess    bool
+		wantProcessNames []string
 	}{
 		"WithNilConf": {
 			input:   nil,
@@ -56,7 +57,41 @@ func TestHostMetricsTranslator(t *testing.T) {
 					},
 				},
 			},
-			expectProcess: true,
+			expectProcess:    true,
+			wantProcessNames: []string{"post(gres|master).*"},
+		},
+		"WithMysqlDatabaseInsightsKey": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"mysql": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:3306", "username": "cwagent"},
+							},
+						},
+					},
+				},
+			},
+			expectProcess:    true,
+			wantProcessNames: []string{"mysqld.*"},
+		},
+		"WithBothEngines": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"postgresql": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:5432", "username": "cwagent"},
+							},
+							"mysql": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:3306", "username": "cwagent"},
+							},
+						},
+					},
+				},
+			},
+			expectProcess:    true,
+			wantProcessNames: []string{"post(gres|master).*", "mysqld.*"},
 		},
 		"WithBothKeys": {
 			input: map[string]interface{}{
@@ -71,7 +106,8 @@ func TestHostMetricsTranslator(t *testing.T) {
 					},
 				},
 			},
-			expectProcess: true,
+			expectProcess:    true,
+			wantProcessNames: []string{"post(gres|master).*"},
 		},
 	}
 	for name, tc := range testCases {
@@ -109,7 +145,7 @@ func TestHostMetricsTranslator(t *testing.T) {
 					assert.True(t, exists, "expected process scraper")
 					include := processCfg["include"].(map[string]any)
 					assert.Equal(t, "regexp", include["match_type"])
-					assert.Equal(t, []string{"postgres.*"}, include["names"])
+					assert.Equal(t, tc.wantProcessNames, include["names"])
 				}
 			}
 		})
