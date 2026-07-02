@@ -18,7 +18,7 @@ import (
 // azureIMDSTimeout bounds one probe attempt so startup can't stall on a non-Azure host.
 const azureIMDSTimeout = 1 * time.Second
 
-// azureIMDSMaxAttempts retries transient probe errors; a definitive result is not retried.
+// azureIMDSMaxAttempts bounds probe retries; a successful response is not retried.
 const azureIMDSMaxAttempts = 2
 
 // IsAzureVMCache holds the cached result of the Azure VM detection probe.
@@ -67,7 +67,8 @@ func isAzureVM() IsAzureVMCache {
 
 // defaultProbeAzureIMDS queries the Azure IMDS via the contrib metadata provider,
 // returning true when a compute document with a VM ID is returned. The provider
-// error is transient (IMDS unreachable), so it is retried but never cached.
+// does not expose the HTTP status, so any error is treated as retryable; the
+// caller does not cache an errored result, letting a boot-time blip re-probe.
 func defaultProbeAzureIMDS() (bool, error) {
 	var lastErr error
 	for attempt := 0; attempt < azureIMDSMaxAttempts; attempt++ {
