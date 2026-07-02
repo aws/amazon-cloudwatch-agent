@@ -5,6 +5,7 @@ package containerinsights
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -17,6 +18,16 @@ import (
 const (
 	ciPrefix                  = "cw_k8s_ci_v0"
 	defaultCollectionInterval = 30 * time.Second
+
+	// envCWAgentRole is the environment variable used by the helm chart to indicate
+	// whether the agent runs as a DaemonSet (node-level) or Deployment (cluster-level).
+	envCWAgentRole = "CWAGENT_ROLE"
+	// Environment variable values for CWAGENT_ROLE
+	envRoleNode   = "NODE"
+	envRoleLeader = "LEADER"
+	// Mode values
+	modeNode    = "node"
+	modeCluster = "cluster"
 )
 
 var ciConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)
@@ -117,16 +128,27 @@ func logsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, key, false)
 }
 
-// getMode returns the container_insights.mode value ("node", "cluster", or "" for all).
+// getMode resolves the container insights pipeline mode using the following
+// priority order:
+//  1. JSON config field
+//  2. Environment variable
+//  3. Default: "node" (DaemonSet)
 func getMode(conf *confmap.Conf) string {
-	if conf == nil {
-		return ""
+	if conf != nil {
+		key := common.ConfigKey(ciConfigKey, "mode")
+		if v, ok := common.GetString(conf, key); ok && v != "" {
+			return v
+		}
 	}
-	key := common.ConfigKey(ciConfigKey, "mode")
-	if v, ok := common.GetString(conf, key); ok {
-		return v
+	if role := os.Getenv(envCWAgentRole); role != "" {
+		switch role {
+		case envRoleNode:
+			return modeNode
+		case envRoleLeader:
+			return modeCluster
+		}
 	}
-	return ""
+	return modeNode
 }
 
 type pipelineSpec struct {
