@@ -36,8 +36,11 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EC2
+                mode: AZVM
                 region_type: ACJ
+    oidctoken:
+        output_token_file: /opt/aws/amazon-cloudwatch-agent/var/run/oidc-token
+        provider: azure
     sigv4auth/monitoring:
         assume_role: {}
         imds_retries: 1
@@ -97,9 +100,8 @@ processors:
                     enabled: true
             token_file: ""
         detectors:
-            - eks
             - env
-            - ec2
+            - azure
         docker:
             resource_attributes:
                 host.name:
@@ -129,9 +131,7 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-            tags:
-                - ^kubernetes.io/cluster/.*$
-                - ^aws:autoscaling:groupName
+            tags: []
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
@@ -335,14 +335,24 @@ processors:
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements: []
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
-        trace_statements: []
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -410,6 +420,7 @@ service:
     extensions:
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
+        - oidctoken
     pipelines:
         metrics/host_metrics:
             exporters:

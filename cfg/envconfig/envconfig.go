@@ -26,6 +26,7 @@ const (
 	RunInContainer              = "RUN_IN_CONTAINER"
 	RunAsHostProcessContainer   = "RUN_AS_HOST_PROCESS_CONTAINER"
 	RunInAWS                    = "RUN_IN_AWS"
+	RunInAKS                    = "RUN_IN_AKS"
 	RunWithIRSA                 = "RUN_WITH_IRSA"
 	RunWithSELinux              = "RUN_WITH_SELINUX"
 	RunInROSA                   = "RUN_IN_ROSA"
@@ -87,6 +88,13 @@ func IsSelinuxEnabled() bool {
 
 func IsRunningInROSA() bool {
 	return os.Getenv(RunInROSA) == TrueValue
+}
+
+// IsRunningInAKS returns true when the RUN_IN_AKS environment variable is set to
+// the expected true value. The CWA Helm chart for Azure Kubernetes Service (AKS)
+// sets this variable so the translator can detect AKS without a metadata probe.
+func IsRunningInAKS() bool {
+	return os.Getenv(RunInAKS) == TrueValue
 }
 
 func GetLogsBackpressureMode() string {

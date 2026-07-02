@@ -20,11 +20,12 @@ import (
 func TestTranslate(t *testing.T) {
 	tt := NewTranslator(WithSignal(pipeline.SignalTraces))
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		mode    string
-		isECS   bool
-		want    *confmap.Conf
-		wantErr error
+		input          map[string]interface{}
+		mode           string
+		kubernetesMode string
+		isECS          bool
+		want           *confmap.Conf
+		wantErr        error
 	}{
 		"WithAppSignalsEnabledOnECS": {
 			mode:  translatorconfig.ModeEC2,
@@ -118,11 +119,53 @@ func TestTranslate(t *testing.T) {
 				},
 			}),
 		},
+		"WithAppSignalsEnabledOnAzureVM": {
+			mode: translatorconfig.ModeAzureVM,
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"detectors": []interface{}{
+					"env",
+					"azure",
+				},
+				"timeout":  "2s",
+				"override": true,
+			}),
+		},
+		"WithAppSignalsEnabledOnAKS": {
+			kubernetesMode: translatorconfig.ModeAKS,
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"detectors": []interface{}{
+					"env",
+					"aks",
+					"azure",
+				},
+				"timeout":  "2s",
+				"override": true,
+			}),
+		},
 	}
 	factory := resourcedetectionprocessor.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			context.CurrentContext().SetMode(testCase.mode)
+			// Reset so kubernetesMode/mode does not bleed across cases (map
+			// iteration order is non-deterministic).
+			context.ResetContext()
+			if testCase.kubernetesMode != "" {
+				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			} else {
+				context.CurrentContext().SetMode(testCase.mode)
+			}
 			if testCase.isECS {
 				ecsutil.GetECSUtilSingleton().Region = "test-region"
 			} else {
