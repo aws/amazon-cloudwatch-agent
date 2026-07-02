@@ -4,7 +4,6 @@
 package containerinsights
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,7 +70,6 @@ func TestNewTranslators_ModeCluster(t *testing.T) {
 
 func TestNewTranslators_DefaultMode(t *testing.T) {
 	// No mode specified, no env var - should default to node
-	os.Unsetenv(envCWAgentRole)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{

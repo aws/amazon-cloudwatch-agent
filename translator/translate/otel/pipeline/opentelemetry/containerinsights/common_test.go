@@ -4,7 +4,6 @@
 package containerinsights
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -72,7 +71,6 @@ func TestGetMode_EnvVarFallback(t *testing.T) {
 }
 
 func TestGetMode_DefaultsToNode(t *testing.T) {
-	os.Unsetenv(envCWAgentRole)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
