@@ -1,6 +1,9 @@
 {
   "agent": {
-    "region": "us-west-2"
+    "region": "us-west-2",
+    "credentials": {
+      "role_arn": "arn:aws:iam::123456789012:role/AzureVMRole"
+    }
   },
   "opentelemetry": {
     "collect": {

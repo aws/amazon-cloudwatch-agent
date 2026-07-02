@@ -22,6 +22,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/oidctoken"
@@ -115,11 +116,8 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}
 
-	// Azure VM has no AWS credentials, so it needs oidctoken to mint a bearer
-	// token for egress auth. The extension is emitted here; wiring it as the
-	// exporter authenticator (replacing sigv4auth) is handled by the Azure
-	// egress work and is intentionally not part of platform detection.
-	if context.CurrentContext().Mode() == config.ModeAzureVM {
+	// Azure VM: oidctoken fetches the token sigv4auth exchanges for AWS creds (needs role_arn).
+	if context.CurrentContext().Mode() == config.ModeAzureVM && agent.Global_Config.Role_arn != "" {
 		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
 	}
 

@@ -39,7 +39,7 @@ extensions:
                 mode: AKS
                 region_type: ACJ
     oidctoken:
-        output_token_file: /opt/aws/amazon-cloudwatch-agent/var/run/oidc-token
+        output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
         provider: azure
     server:
         listen_addr: :4311
@@ -47,7 +47,10 @@ extensions:
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
     sigv4auth/monitoring:
-        assume_role: {}
+        assume_role:
+            arn: arn:aws:iam::123456789012:role/AzureVMRole
+            sts_region: us-west-2
+            web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
         imds_retries: 1
         max_retries: 2
         num_workers: 8

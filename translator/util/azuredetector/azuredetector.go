@@ -1,8 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// Package azuredetector detects whether the CloudWatch agent is running on
-// Azure VM or Azure Kubernetes Service. Mirrors the eksdetector package.
+// Package azuredetector detects Azure VM / AKS, mirroring the eksdetector package.
 package azuredetector
 
 import (
@@ -65,10 +64,7 @@ func isAzureVM() IsAzureVMCache {
 	return azureVMCache
 }
 
-// defaultProbeAzureIMDS queries the Azure IMDS via the contrib metadata provider,
-// returning true when a compute document with a VM ID is returned. The provider
-// does not expose the HTTP status, so any error is treated as retryable; the
-// caller does not cache an errored result, letting a boot-time blip re-probe.
+// defaultProbeAzureIMDS reports whether the contrib provider returns a compute doc with a VM ID; any error is retryable and uncached.
 func defaultProbeAzureIMDS() (bool, error) {
 	var lastErr error
 	for attempt := 0; attempt < azureIMDSMaxAttempts; attempt++ {

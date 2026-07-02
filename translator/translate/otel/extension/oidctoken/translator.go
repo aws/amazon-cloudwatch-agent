@@ -15,10 +15,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-// linuxOutputTokenFile is where the extension writes the OIDC token on
-// Linux/Darwin, under the agent dir so a sibling auth component (e.g. sigv4auth)
-// reads the same path. Windows builds the equivalent path under ProgramData.
-const linuxOutputTokenFile = "/opt/aws/amazon-cloudwatch-agent/var/run/oidc-token"
+// linuxOutputTokenFile is the token path sigv4auth reads on Linux/Darwin (etc dir).
+const linuxOutputTokenFile = "/opt/aws/amazon-cloudwatch-agent/etc/.oidc-token"
 
 type translator struct {
 	factory extension.Factory
@@ -38,7 +36,7 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*oidctokenextension.Config)
 	cfg.Provider = providerForMode(context.CurrentContext().Mode())
-	cfg.OutputTokenFile = outputTokenFile(context.CurrentContext().Os())
+	cfg.OutputTokenFile = OutputTokenFile(context.CurrentContext().Os())
 	return cfg, nil
 }
 
@@ -50,11 +48,10 @@ func providerForMode(mode string) oidctokenextension.ProviderType {
 	return oidctokenextension.ProviderAuto
 }
 
-// outputTokenFile resolves the token path for the target platform (not the
-// runtime OS), mirroring the agent log-file rule so translation is deterministic.
-func outputTokenFile(targetPlatform string) string {
+// OutputTokenFile returns the token path for the target platform; sigv4auth points web_identity_token_file here.
+func OutputTokenFile(targetPlatform string) string {
 	if targetPlatform == config.OS_TYPE_WINDOWS {
-		return util.GetWindowsProgramDataPath() + "\\Amazon\\AmazonCloudWatchAgent\\var\\run\\oidc-token"
+		return util.GetWindowsProgramDataPath() + "\\Amazon\\AmazonCloudWatchAgent\\.oidc-token"
 	}
 	return linuxOutputTokenFile
 }

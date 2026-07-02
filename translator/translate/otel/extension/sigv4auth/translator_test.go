@@ -88,6 +88,17 @@ func TestTranslate(t *testing.T) {
 				STSRegion: "us-east-1",
 			},
 		},
+		"AzureVMWithRoleARN": {
+			mode:    config.ModeAzureVM,
+			region:  "us-west-2",
+			roleARN: "arn:aws:iam::123456789012:role/azure-role",
+			wantID:  component.MustNewID("sigv4auth"),
+			wantRole: sigv4authextension.AssumeRole{
+				ARN:                  "arn:aws:iam::123456789012:role/azure-role",
+				STSRegion:            "us-west-2",
+				WebIdentityTokenFile: "/opt/aws/amazon-cloudwatch-agent/etc/.oidc-token",
+			},
+		},
 		"OnPremWithProfileAndFileAndRole": {
 			service:     "logs",
 			mode:        config.ModeOnPrem,
@@ -118,6 +129,7 @@ func TestTranslate(t *testing.T) {
 				translateagent.Global_Config.Credentials[translateagent.CredentialsFile_Key] = testCase.credsFile
 			}
 			context.CurrentContext().SetMode(testCase.mode)
+			context.CurrentContext().SetOs(config.OS_TYPE_LINUX)
 
 			var tt common.ComponentTranslator
 			if testCase.service != "" {

@@ -8,11 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -265,6 +268,38 @@ func TestTranslator(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, got)
 			}
+		})
+	}
+}
+
+func TestOIDCTokenGatedOnRoleARN(t *testing.T) {
+	t.Setenv("SYSTEM_METRICS_ENABLED", "false")
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	translator.SetTargetPlatform("linux")
+	oidcID := component.MustNewID("oidctoken")
+
+	input := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"host_metrics": map[string]interface{}{"metrics_collection_interval": 10},
+			},
+		},
+	}
+
+	for name, roleARN := range map[string]string{"WithRoleARN": "arn:aws:iam::123456789012:role/AzureVMRole", "NoRoleARN": ""} {
+		t.Run(name, func(t *testing.T) {
+			context.ResetContext()
+			t.Cleanup(context.ResetContext)
+			context.CurrentContext().SetMode(config.ModeAzureVM)
+			agent.Global_Config.Region = "us-west-2"
+			agent.Global_Config.Role_arn = roleARN
+			t.Cleanup(func() { agent.Global_Config.Role_arn = "" })
+
+			got, err := TranslateWithoutValidation(input, "linux")
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			_, hasOIDC := got.Extensions[oidcID]
+			assert.Equal(t, roleARN != "", hasOIDC)
 		})
 	}
 }

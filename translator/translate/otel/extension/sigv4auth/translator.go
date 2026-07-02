@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/oidctoken"
 )
 
 type translator struct {
@@ -55,6 +56,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
 		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
+		// Azure VM: feed the oidctoken file into AssumeRoleWithWebIdentity for AWS creds.
+		if context.CurrentContext().Mode() == config.ModeAzureVM {
+			cfg.AssumeRole.WebIdentityTokenFile = oidctoken.OutputTokenFile(context.CurrentContext().Os())
+		}
 	}
 
 	return cfg, nil

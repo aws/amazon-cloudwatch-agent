@@ -46,8 +46,8 @@ func TestProviderForMode(t *testing.T) {
 func TestOutputTokenFile(t *testing.T) {
 	// The path follows the target platform, not the runtime OS, so translation
 	// is deterministic on any build host.
-	assert.Equal(t, linuxOutputTokenFile, outputTokenFile(config.OS_TYPE_LINUX))
-	assert.Equal(t, linuxOutputTokenFile, outputTokenFile(config.OS_TYPE_DARWIN))
+	assert.Equal(t, linuxOutputTokenFile, OutputTokenFile(config.OS_TYPE_LINUX))
+	assert.Equal(t, linuxOutputTokenFile, OutputTokenFile(config.OS_TYPE_DARWIN))
 	t.Setenv(util.ProgramData, "C:\\ProgramData")
-	assert.Equal(t, "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\var\\run\\oidc-token", outputTokenFile(config.OS_TYPE_WINDOWS))
+	assert.Equal(t, "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\.oidc-token", OutputTokenFile(config.OS_TYPE_WINDOWS))
 }
