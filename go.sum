@@ -278,8 +278,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayr
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260617204523-70530ca095f9/go.mod h1:gNDpUc9eYHKy9YqGYK8toPIo3QZKdYQFLnaVQDA32A0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260617204523-70530ca095f9 h1:R4Ems+YMAXLtsEZwRXw8/cf1NkrzHQsc25WPdYbUaTM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260617204523-70530ca095f9/go.mod h1:wQV77sHJJdUMIvbJna8LjlNb0omEdiVSrwQnoVAlTMM=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260623153739-5a887b09871a h1:ScKUmN6HDigSB0rceZR3CmcO/CVDTxOtrk8XQSTC+Q4=
-github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260623153739-5a887b09871a/go.mod h1:tnnmAnxuLxWKBG7NjOI3po8R+EAX/9cG1y7TWiQTMvA=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260715195404-79c2b737d730 h1:rhNSDEYjzOSuk2vVpqTdm2LLbzM/y2cT/9EVZKLu7Kk=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260715195404-79c2b737d730/go.mod h1:NAyuB/xYR3FsPuegcRvVeStWW83y5oUQhekzT856urI=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260617204523-70530ca095f9 h1:ZLP3mZHMXzUjiXxXFVI9Z5LtU25qT13Qajz84mna/LY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260617204523-70530ca095f9/go.mod h1:gSxi2fY+T8mNzlaU7qOEnaXTcKfhIpijDSyeCu5GOYo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260617204523-70530ca095f9 h1:p0HB9BwhUdkaI0ALIb3hYxi7oCTDsGUuGadeM3R36AM=
@@ -2425,8 +2425,8 @@ gopkg.in/gorethink/gorethink.v3 v3.0.5 h1:e2Uc/Xe+hpcVQFsj6MuHlYog3r0JYpnTzwDj/y
 gopkg.in/gorethink/gorethink.v3 v3.0.5/go.mod h1:+3yIIHJUGMBK+wyPH+iN5TP+88ikFDfZdqTlK3Y9q8I=
 gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
-gopkg.in/ini.v1 v1.67.0 h1:Dgnx+6+nfE+IfzjUEISNeydPJh9AXNNsWbGP9KzCsOA=
-gopkg.in/ini.v1 v1.67.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
+gopkg.in/ini.v1 v1.67.3 h1:iM9Lhz5MRSGhHVGGwCuzG9KO8PoirCXj/m/qTmOJJQw=
+gopkg.in/ini.v1 v1.67.3/go.mod h1:x/cyOwCgZqOkJoDIJ3c1KNHMo10+nLGAhh+kn3Zizss=
 gopkg.in/natefinch/lumberjack.v2 v2.0.0 h1:1Lc07Kr7qY4U2YPouBjpCLxpiyxIVoxqXgkXLknAOE8=
 gopkg.in/natefinch/lumberjack.v2 v2.0.0/go.mod h1:l0ndWWf7gzL7RNwBG7wST/UCcT4T24xpD6X8LsfU/+k=
 gopkg.in/olivere/elastic.v5 v5.0.86 h1:xFy6qRCGAmo5Wjx96srho9BitLhZl2fcnpuidPwduXM=

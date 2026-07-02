@@ -67,7 +67,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20260617204523-70530ca095f9
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260617204523-70530ca095f9
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260617204523-70530ca095f9
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260623153739-5a887b09871a
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260715195404-79c2b737d730
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260617204523-70530ca095f9
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260617204523-70530ca095f9
 )
@@ -689,7 +689,7 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/ini.v1 v1.67.3 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
 	k8s.io/kubelet v0.32.3 // indirect
