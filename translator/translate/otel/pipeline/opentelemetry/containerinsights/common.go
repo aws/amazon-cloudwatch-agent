@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -140,7 +141,7 @@ func getMode(conf *confmap.Conf) string {
 			return v
 		}
 	}
-	if role := os.Getenv(envCWAgentRole); role != "" {
+	if role := strings.ToUpper(os.Getenv(envCWAgentRole)); role != "" {
 		switch role {
 		case envRoleNode:
 			return modeNode

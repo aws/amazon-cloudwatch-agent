@@ -81,6 +81,25 @@ func TestGetMode_DefaultsToNode(t *testing.T) {
 	assert.Equal(t, modeNode, getMode(cfg))
 }
 
+func TestGetMode_EnvVarCaseInsensitive(t *testing.T) {
+	cfg := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{},
+			},
+		},
+	})
+
+	t.Setenv(envCWAgentRole, "leader") // lowercase
+	assert.Equal(t, modeCluster, getMode(cfg))
+
+	t.Setenv(envCWAgentRole, "node") // lowercase
+	assert.Equal(t, modeNode, getMode(cfg))
+
+	t.Setenv(envCWAgentRole, "Leader") // mixed case
+	assert.Equal(t, modeCluster, getMode(cfg))
+}
+
 func TestGetMode_JSONOverridesEnv(t *testing.T) {
 	t.Setenv(envCWAgentRole, envRoleNode)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
