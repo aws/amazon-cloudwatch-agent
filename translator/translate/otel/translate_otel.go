@@ -115,7 +115,10 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}
 
-	// Azure VM has no AWS credentials, so it needs oidctoken for egress auth.
+	// Azure VM has no AWS credentials, so it needs oidctoken to mint a bearer
+	// token for egress auth. The extension is emitted here; wiring it as the
+	// exporter authenticator (replacing sigv4auth) is handled by the Azure
+	// egress work and is intentionally not part of platform detection.
 	if context.CurrentContext().Mode() == config.ModeAzureVM {
 		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
 	}
