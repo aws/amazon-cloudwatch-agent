@@ -355,7 +355,15 @@ exporters:
             multiplier: 1.5
             randomization_factor: 0.5
         sending_queue:
-            batch: null
+            batch:
+                flush_timeout: 200ms
+                max_size: 0
+                min_size: 8192
+                partition:
+                    metadata_keys:
+                        - aws.log.group.name
+                        - aws.log.stream.name
+                sizer: null
             block_on_overflow: false
             num_consumers: 10
             queue_size: 1000
