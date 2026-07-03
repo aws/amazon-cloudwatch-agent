@@ -23,10 +23,11 @@ type EndpointConfig struct {
 }
 
 type translator struct {
-	name          string
-	factory       exporter.Factory
-	endpoint      EndpointConfig
-	authenticator component.ID
+	name                   string
+	factory                exporter.Factory
+	endpoint               EndpointConfig
+	authenticator          component.ID
+	queueBatchMetadataKeys []string
 }
 
 type Option func(*translator)
@@ -35,6 +36,23 @@ type Option func(*translator)
 func WithAuthenticator(id component.ID) Option {
 	return func(t *translator) {
 		t.authenticator = id
+	}
+}
+
+// WithSendingQueueBatchMetadataKeys sets sending_queue.batch.partition.metadata_keys
+// on the exporter. This is required for exporters whose routing depends on per-request
+// client.Info context metadata (e.g. headerssetter-routed logs exporters that derive
+// x-aws-log-group / x-aws-log-stream from context).
+//
+// At collector core v0.138.0 the default sending_queue enabled an exporter-level
+// batcher (flush 200ms / min 8192 items) with no partitioner. Without partition keys
+// that batcher merges requests across distinct routing metadata and resets the merged
+// batch context to context.Background(), dropping the metadata (empty headers -> the
+// log stream is silently never provisioned). Setting the partition metadata_keys makes
+// the batcher partition per key set and preserve each partition's context.
+func WithSendingQueueBatchMetadataKeys(keys ...string) Option {
+	return func(t *translator) {
+		t.queueBatchMetadataKeys = keys
 	}
 }
 
@@ -75,6 +93,13 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{
 			AuthenticatorID: t.authenticator,
 		})
+	}
+
+	if len(t.queueBatchMetadataKeys) > 0 {
+		// Partition the exporter-level sending_queue batcher by these metadata keys so it
+		// preserves per-request client.Info context instead of merging across partitions
+		// and dropping it. See WithSendingQueueBatchMetadataKeys.
+		cfg.QueueConfig.GetOrInsertDefault().Batch.GetOrInsertDefault().Partition.MetadataKeys = t.queueBatchMetadataKeys
 	}
 
 	return cfg, nil
