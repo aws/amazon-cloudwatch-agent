@@ -4,7 +4,7 @@ connectors:
             - logs/application_signals_logs_batch
         error_mode: ignore
         table:
-            - action: ""
+            - action: move
               condition: attributes["event.name"] == "aws.service_events.aggregate_profile"
               context: log
               pipelines:
@@ -15,7 +15,7 @@ connectors:
             - metrics/application_signals_metrics_logs_destination
         error_mode: ignore
         table:
-            - action: ""
+            - action: move
               condition: attributes["Telemetry.Source"] == "ServiceEvents"
               context: datapoint
               pipelines:
