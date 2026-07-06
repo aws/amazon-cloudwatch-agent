@@ -32,22 +32,6 @@ func TestTranslator(t *testing.T) {
 	cfg, ok := got.(*oidctokenextension.Config)
 	require.True(t, ok)
 	assert.Equal(t, oidctokenextension.ProviderAzure, cfg.Provider)
-	assert.Equal(t, linuxOutputTokenFile, cfg.OutputTokenFile)
+	assert.Equal(t, util.OIDCTokenFilePath(config.OS_TYPE_LINUX), cfg.OutputTokenFile)
 	assert.NoError(t, cfg.Validate())
-}
-
-func TestProviderForMode(t *testing.T) {
-	assert.Equal(t, oidctokenextension.ProviderAzure, providerForMode(config.ModeAzureVM))
-	// Any non-AzureVM mode defers to the extension's own environment detection.
-	assert.Equal(t, oidctokenextension.ProviderAuto, providerForMode(config.ModeEC2))
-	assert.Equal(t, oidctokenextension.ProviderAuto, providerForMode(config.ModeOnPrem))
-}
-
-func TestOutputTokenFile(t *testing.T) {
-	// The path follows the target platform, not the runtime OS, so translation
-	// is deterministic on any build host.
-	assert.Equal(t, linuxOutputTokenFile, OutputTokenFile(config.OS_TYPE_LINUX))
-	assert.Equal(t, linuxOutputTokenFile, OutputTokenFile(config.OS_TYPE_DARWIN))
-	t.Setenv(util.ProgramData, "C:\\ProgramData")
-	assert.Equal(t, "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\.oidc-token", OutputTokenFile(config.OS_TYPE_WINDOWS))
 }

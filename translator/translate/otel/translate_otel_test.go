@@ -272,7 +272,7 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
-func TestOIDCTokenGatedOnRoleARN(t *testing.T) {
+func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
 	t.Setenv("SYSTEM_METRICS_ENABLED", "false")
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	translator.SetTargetPlatform("linux")
@@ -286,20 +286,37 @@ func TestOIDCTokenGatedOnRoleARN(t *testing.T) {
 		},
 	}
 
-	for name, roleARN := range map[string]string{"WithRoleARN": "arn:aws:iam::123456789012:role/AzureVMRole", "NoRoleARN": ""} {
+	testCases := map[string]struct {
+		mode     string
+		roleARN  string
+		wantOIDC bool
+		wantErr  string
+	}{
+		// Azure VM/AKS reaches AWS only via the oidctoken web-identity chain, so role_arn is mandatory.
+		"AzureVMWithRoleARN":    {mode: config.ModeAzureVM, roleARN: "arn:aws:iam::123456789012:role/AzureVMRole", wantOIDC: true},
+		"AzureVMMissingRoleARN": {mode: config.ModeAzureVM, roleARN: "", wantErr: "role_arn is required"},
+		"EC2NoOIDC":             {mode: config.ModeEC2, roleARN: "", wantOIDC: false},
+	}
+
+	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			context.ResetContext()
 			t.Cleanup(context.ResetContext)
-			context.CurrentContext().SetMode(config.ModeAzureVM)
+			context.CurrentContext().SetMode(tc.mode)
 			agent.Global_Config.Region = "us-west-2"
-			agent.Global_Config.Role_arn = roleARN
-			t.Cleanup(func() { agent.Global_Config.Role_arn = "" })
+			agent.Global_Config.Role_arn = tc.roleARN
+			t.Cleanup(func() { agent.Global_Config.Region = ""; agent.Global_Config.Role_arn = "" })
 
 			got, err := TranslateWithoutValidation(input, "linux")
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tc.wantErr)
+				return
+			}
 			require.NoError(t, err)
 			require.NotNil(t, got)
 			_, hasOIDC := got.Extensions[oidcID]
-			assert.Equal(t, roleARN != "", hasOIDC)
+			assert.Equal(t, tc.wantOIDC, hasOIDC)
 		})
 	}
 }
