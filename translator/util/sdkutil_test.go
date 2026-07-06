@@ -13,8 +13,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
 )
 
-// restoreDetectionHooks snapshots the overridable detection vars and registers a
-// t.Cleanup to restore them, so tests can freely stub them without leaking state.
+// restoreDetectionHooks snapshots the overridable detection vars and restores them on cleanup so stubs don't leak.
 func restoreDetectionHooks(t *testing.T) {
 	t.Helper()
 	origIsEKS, origIsAKS, origIsAzureVM := IsEKS, IsAKS, IsAzureVM
@@ -36,8 +35,7 @@ func TestDetectAgentModeAuto(t *testing.T) {
 		isAzureVM bool
 		wantMode  string
 	}{
-		// AWS detection must be unaffected by the new Azure probe: the Azure
-		// signals are intentionally true in these cases and must NOT win.
+		// AWS detection must win: the Azure signals are intentionally true here and must NOT override it.
 		"WithRunInAWS":  {runInAws: config.RUN_IN_AWS_TRUE, isAKS: true, isAzureVM: true, wantMode: config.ModeEC2},
 		"WithEC2Region": {ec2Region: "us-east-1", isAKS: true, isAzureVM: true, wantMode: config.ModeEC2},
 		"WithECSRegion": {ecsRegion: "us-east-1", isAKS: true, isAzureVM: true, wantMode: config.ModeEC2},
@@ -68,15 +66,14 @@ func TestDetectKubernetesMode(t *testing.T) {
 		configuredMode     string
 		wantKubernetesMode string
 	}{
-		// EKS must keep precedence even if the AKS env signal is also set.
-		"EKS":           {isEKS: true, isEKSErr: nil, isAKS: true, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeEKS},
+		"EKS":           {isEKS: true, isEKSErr: nil, isAKS: false, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeEKS},
 		"K8sEC2":        {isEKS: false, isEKSErr: nil, isAKS: false, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeK8sEC2},
 		"K8sOnPrem":     {isEKS: false, isEKSErr: nil, isAKS: false, configuredMode: config.ModeOnPrem, wantKubernetesMode: config.ModeK8sOnPrem},
 		"NotKubernetes": {isEKS: false, isEKSErr: fmt.Errorf("error"), isAKS: false, configuredMode: config.ModeEC2, wantKubernetesMode: ""},
-		// AKS is detected when EKS is absent, even when the EKS probe errored
-		// (a plain non-EKS cluster / Azure VM with RUN_IN_AKS set).
-		"AKS":           {isEKS: false, isEKSErr: nil, isAKS: true, configuredMode: config.ModeAzureVM, wantKubernetesMode: config.ModeAKS},
-		"AKSWhenEKSErr": {isEKS: false, isEKSErr: fmt.Errorf("error"), isAKS: true, configuredMode: config.ModeAzureVM, wantKubernetesMode: config.ModeAKS},
+		// RUN_IN_AKS short-circuits to AKS without the EKS probe, regardless of what EKS detection would report.
+		"AKS":            {isEKS: false, isEKSErr: nil, isAKS: true, configuredMode: config.ModeAzureVM, wantKubernetesMode: config.ModeAKS},
+		"AKSWhenEKSErr":  {isEKS: false, isEKSErr: fmt.Errorf("error"), isAKS: true, configuredMode: config.ModeAzureVM, wantKubernetesMode: config.ModeAKS},
+		"AKSWinsOverEKS": {isEKS: true, isEKSErr: nil, isAKS: true, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeAKS},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {

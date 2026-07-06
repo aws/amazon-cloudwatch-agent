@@ -76,18 +76,14 @@ func TestSetKubernetesMode_UnknownClears(t *testing.T) {
 	ctx.SetKubernetesMode(config.ModeAKS)
 	ctx.SetKubernetesMode("not-a-real-mode")
 	assert.Equal(t, "", ctx.KubernetesMode())
-	// shortMode is intentionally NOT cleared by the default branch: the normal
-	// non-Kubernetes path is SetMode(host) -> SetKubernetesMode("") and must keep
-	// the host shortMode set by SetMode. Here no host mode was set, so it retains
-	// the last valid kubernetes shortMode (ShortModeAKS).
+	// The default branch intentionally keeps shortMode (SetMode sets it first); with no host mode set it retains the last k8s shortMode.
 	assert.Equal(t, config.ShortModeAKS, ctx.ShortMode())
 }
 
 func TestSetKubernetesMode_EmptyPreservesHostShortMode(t *testing.T) {
 	ResetContext()
 	ctx := CurrentContext()
-	// Mimic the real startup ordering: host mode first, then the empty
-	// (non-Kubernetes) kubernetes mode. The host shortMode must survive.
+	// Real startup ordering: host mode first, then empty (non-Kubernetes) mode; the host shortMode must survive.
 	ctx.SetMode(config.ModeAzureVM)
 	ctx.SetKubernetesMode("")
 	assert.Equal(t, "", ctx.KubernetesMode())

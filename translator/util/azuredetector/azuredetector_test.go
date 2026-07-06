@@ -26,50 +26,27 @@ func (f *fakeProvider) Metadata(context.Context) (*azuremeta.ComputeMetadata, er
 	return f.compute, f.err
 }
 
-// setProvider swaps metadataProvider for the test and resets the cache,
-// restoring both on cleanup.
+// setProvider swaps metadataProvider and resets the cache for the test, restoring both on cleanup.
 func setProvider(t *testing.T, p azuremeta.Provider) {
 	t.Helper()
 	orig := metadataProvider
 	metadataProvider = p
-	resetCacheForTesting()
+	azureVMCache.Store(nil)
 	t.Cleanup(func() {
 		metadataProvider = orig
-		resetCacheForTesting()
+		azureVMCache.Store(nil)
 	})
-}
-
-// resetCacheForTesting clears the Azure VM detection cache under its lock.
-func resetCacheForTesting() {
-	azureVMMu.Lock()
-	defer azureVMMu.Unlock()
-	azureVMCache = IsAzureVMCache{}
-	azureVMResolved = false
 }
 
 // ---- AKS (env-var) detection ----
 
-func TestIsAKS_EnvSet(t *testing.T) {
-	orig := isRunningInAKS
-	t.Cleanup(func() { isRunningInAKS = orig })
-	isRunningInAKS = func() bool { return true }
-	assert.True(t, isAKS())
-}
-
-func TestIsAKS_EnvUnset(t *testing.T) {
-	orig := isRunningInAKS
-	t.Cleanup(func() { isRunningInAKS = orig })
-	isRunningInAKS = func() bool { return false }
-	assert.False(t, isAKS())
-}
-
 func TestIsAKS_ReadsRunInAKSEnvVar(t *testing.T) {
-	// Exercise the real envconfig-backed check to confirm the wiring to RUN_IN_AKS.
+	// IsAKS is the real envconfig-backed check; confirm the wiring to RUN_IN_AKS.
 	t.Setenv(envconfig.RunInAKS, envconfig.TrueValue)
-	assert.True(t, isAKS())
+	assert.True(t, IsAKS())
 
 	t.Setenv(envconfig.RunInAKS, "")
-	assert.False(t, isAKS())
+	assert.False(t, IsAKS())
 }
 
 // ---- Azure VM (IMDS) detection ----
@@ -77,9 +54,9 @@ func TestIsAKS_ReadsRunInAKSEnvVar(t *testing.T) {
 func TestIsAzureVM_Detected(t *testing.T) {
 	setProvider(t, &fakeProvider{compute: &azuremeta.ComputeMetadata{VMID: "vm-123", Name: "vm1"}})
 
-	result := isAzureVM()
-	assert.True(t, result.Value)
-	assert.NoError(t, result.Err)
+	ok, err := detectAzureVM()
+	assert.True(t, ok)
+	assert.NoError(t, err)
 }
 
 func TestIsAzureVM_NotAzure(t *testing.T) {
@@ -91,9 +68,9 @@ func TestIsAzureVM_NotAzure(t *testing.T) {
 	for name, compute := range cases {
 		t.Run(name, func(t *testing.T) {
 			setProvider(t, &fakeProvider{compute: compute})
-			result := isAzureVM()
-			assert.False(t, result.Value)
-			assert.NoError(t, result.Err)
+			ok, err := detectAzureVM()
+			assert.False(t, ok)
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -103,26 +80,25 @@ func TestIsAzureVM_Unreachable(t *testing.T) {
 	p := &fakeProvider{err: errors.New("dial tcp 169.254.169.254: connect: no route to host")}
 	setProvider(t, p)
 
-	result := isAzureVM()
-	assert.False(t, result.Value)
-	assert.Error(t, result.Err)
+	ok, err := detectAzureVM()
+	assert.False(t, ok)
+	assert.Error(t, err)
 	assert.Equal(t, azureIMDSMaxAttempts, p.calls, "a transient error should be retried")
 }
 
 func TestIsAzureVM_TransientErrorNotCached(t *testing.T) {
-	// A probe that exhausts retries with a transient error must NOT cache a
-	// negative: a later call (IMDS now up) must be able to re-probe.
+	// A transient error that exhausts retries must NOT be cached; a later call (IMDS now up) must re-probe.
 	p := &transientThenOKProvider{failFirst: azureIMDSMaxAttempts}
 	setProvider(t, p)
 
-	first := isAzureVM()
-	assert.False(t, first.Value)
-	assert.Error(t, first.Err)
+	first, err := detectAzureVM()
+	assert.False(t, first)
+	assert.Error(t, err)
 	assert.Equal(t, azureIMDSMaxAttempts, p.calls, "first call should exhaust all retry attempts")
 
-	second := isAzureVM()
-	assert.True(t, second.Value, "a transient failure must not be cached; re-probe should succeed")
-	assert.NoError(t, second.Err)
+	second, err := detectAzureVM()
+	assert.True(t, second, "a transient failure must not be cached; re-probe should succeed")
+	assert.NoError(t, err)
 	assert.Equal(t, azureIMDSMaxAttempts+1, p.calls, "second call should require exactly one successful probe")
 }
 
@@ -132,7 +108,7 @@ func TestIsAzureVM_ResultIsCached(t *testing.T) {
 
 	first := isAzureVM()
 	second := isAzureVM()
-	assert.True(t, first.Value)
+	assert.True(t, first)
 	assert.Equal(t, first, second)
 	assert.Equal(t, 1, p.calls, "IMDS should be queried at most once due to caching")
 }

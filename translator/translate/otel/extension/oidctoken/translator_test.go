@@ -11,16 +11,15 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 func TestTranslator(t *testing.T) {
 	t.Cleanup(context.ResetContext)
 	context.ResetContext()
 	context.CurrentContext().SetMode(config.ModeAzureVM)
-	context.CurrentContext().SetOs(config.OS_TYPE_LINUX)
 
 	tt := NewTranslator()
 	assert.Equal(t, "oidctoken", tt.ID().String())
@@ -32,6 +31,6 @@ func TestTranslator(t *testing.T) {
 	cfg, ok := got.(*oidctokenextension.Config)
 	require.True(t, ok)
 	assert.Equal(t, oidctokenextension.ProviderAzure, cfg.Provider)
-	assert.Equal(t, util.OIDCTokenFilePath(config.OS_TYPE_LINUX), cfg.OutputTokenFile)
+	assert.Equal(t, paths.OIDCTokenPath, cfg.OutputTokenFile)
 	assert.NoError(t, cfg.Validate())
 }

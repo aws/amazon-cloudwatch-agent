@@ -20,8 +20,7 @@ const (
 	ModeK8sOnPrem = "K8sOnPrem"
 )
 
-// Azure platform modes. ModeAzureVM is a host-level mode analogous to
-// ModeEC2; ModeAKS is a Kubernetes-level mode analogous to ModeEKS.
+// Azure platform modes: ModeAzureVM is host-level (like ModeEC2), ModeAKS is Kubernetes-level (like ModeEKS).
 const (
 	ModeAzureVM = "AzureVM"
 	ModeAKS     = "AKS"

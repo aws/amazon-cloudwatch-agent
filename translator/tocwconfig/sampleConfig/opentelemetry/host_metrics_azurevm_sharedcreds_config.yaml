@@ -38,20 +38,19 @@ extensions:
             usage_flags:
                 mode: AZVM
                 region_type: ACJ
-    oidctoken:
-        output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
-        provider: azure
     sigv4auth/monitoring:
         assume_role:
             arn: arn:aws:iam::123456789012:role/AzureVMRole
             sts_region: us-west-2
-            web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
-        imds_retries: 1
+        imds_retries: 2
         max_retries: 2
         num_workers: 8
+        profile: default
         region: us-west-2
         request_timeout_seconds: 30
         service: monitoring
+        shared_credentials_file:
+            - /root/.aws/credentials
 processors:
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
@@ -413,7 +412,6 @@ service:
     extensions:
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
-        - oidctoken
     pipelines:
         metrics/host_metrics:
             exporters:

@@ -158,8 +158,7 @@ func TestTranslate(t *testing.T) {
 	factory := resourcedetectionprocessor.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// Reset so kubernetesMode/mode does not bleed across cases (map
-			// iteration order is non-deterministic).
+			// Reset so kubernetesMode/mode does not bleed across cases (map iteration is non-deterministic).
 			context.ResetContext()
 			if testCase.kubernetesMode != "" {
 				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)

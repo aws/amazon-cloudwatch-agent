@@ -32,8 +32,8 @@ var DefaultECSRegion = defaultECSRegion
 var IsEKS = isEKS
 
 // IsAKS/IsAzureVM are overridable detection hooks; tests override these vars.
-var IsAKS = isAKS
-var IsAzureVM = isAzureVM
+var IsAKS = azuredetector.IsAKS
+var IsAzureVM = azuredetector.IsAzureVM
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -62,9 +62,7 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeEC2
 	}
 
-	// Azure is checked only after all AWS signals, so it can't override them.
-	// AKS nodes are Azure VMs; RUN_IN_AKS is checked before the IMDS probe since
-	// an AKS pod may not reach IMDS from its container.
+	// Azure is checked only after all AWS signals; RUN_IN_AKS is checked before the IMDS probe since an AKS pod may not reach IMDS.
 	if IsAKS() {
 		fmt.Println("I! Detected from ENV instance is Azure (AKS)")
 		return config.ModeAzureVM
@@ -81,16 +79,14 @@ func DetectAgentMode(configuredMode string) string {
 }
 
 func DetectKubernetesMode(configuredMode string) string {
-	isEKS := IsEKS()
-
-	// EKS wins over AKS when confirmed.
-	if isEKS.Err == nil && isEKS.Value {
-		return config.ModeEKS
-	}
-
-	// AKS is an explicit env signal, so it applies even if the EKS probe errored.
+	// RUN_IN_AKS is an explicit env signal (no I/O), so short-circuit before the EKS in-cluster probe.
 	if IsAKS() {
 		return config.ModeAKS
+	}
+
+	isEKS := IsEKS()
+	if isEKS.Err == nil && isEKS.Value {
+		return config.ModeEKS
 	}
 
 	if isEKS.Err != nil {
@@ -145,16 +141,6 @@ func defaultECSRegion() string {
 
 func isEKS() eksdetector.IsEKSCache {
 	return eksdetector.IsEKS()
-}
-
-// isAKS dispatches to azuredetector.IsAKS dynamically (symmetric with isAzureVM).
-func isAKS() bool {
-	return azuredetector.IsAKS()
-}
-
-// isAzureVM reports Azure VM detection; an unreachable IMDS reads as not-Azure.
-func isAzureVM() bool {
-	return azuredetector.IsAzureVM().Value
 }
 
 func detectRegion(mode string, credsConfig map[string]string) (region string, regionType string) {

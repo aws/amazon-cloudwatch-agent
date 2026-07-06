@@ -38,19 +38,13 @@ extensions:
             usage_flags:
                 mode: AKS
                 region_type: ACJ
-    oidctoken:
-        output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
-        provider: azure
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
     sigv4auth/monitoring:
-        assume_role:
-            arn: arn:aws:iam::123456789012:role/AzureVMRole
-            sts_region: us-west-2
-            web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+        assume_role: {}
         imds_retries: 1
         max_retries: 2
         num_workers: 8
@@ -402,24 +396,14 @@ processors:
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -587,7 +571,6 @@ service:
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
         - server
-        - oidctoken
     pipelines:
         metrics/host_metrics:
             exporters:

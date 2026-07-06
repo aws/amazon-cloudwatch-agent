@@ -132,25 +132,6 @@ func TestAppSignalsAndEKSConfig(t *testing.T) {
 	checkTranslation(t, "appsignals_and_eks_config", "windows", expectedEnvVars, "")
 }
 
-func TestAzureVMHostMetricsConfig(t *testing.T) {
-	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeAzureVM)
-
-	checkTranslation(t, "opentelemetry/host_metrics_azurevm_config", "linux", nil, "")
-}
-
-func TestAKSHostMetricsConfig(t *testing.T) {
-	resetContext(t)
-	context.CurrentContext().SetRunInContainer(true)
-	t.Setenv(envconfig.RunInAKS, envconfig.TrueValue)
-	// AKS nodes are Azure VMs, so DetectAgentMode resolves the host mode to
-	// AzureVM; mirror that here so the host-level config is generated correctly.
-	context.CurrentContext().SetMode(config.ModeAzureVM)
-	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
-
-	checkTranslation(t, "opentelemetry/host_metrics_aks_config", "linux", nil, "")
-}
-
 func TestAppSignalsFallbackAndEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(true)

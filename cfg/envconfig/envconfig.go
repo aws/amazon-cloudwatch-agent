@@ -90,9 +90,7 @@ func IsRunningInROSA() bool {
 	return os.Getenv(RunInROSA) == TrueValue
 }
 
-// IsRunningInAKS returns true when the RUN_IN_AKS environment variable is set to
-// the expected true value. The CWA Helm chart for Azure Kubernetes Service (AKS)
-// sets this variable so the translator can detect AKS without a metadata probe.
+// IsRunningInAKS reports whether RUN_IN_AKS is set (by the AKS Helm chart) so AKS is detected without a metadata probe.
 func IsRunningInAKS() bool {
 	return os.Getenv(RunInAKS) == TrueValue
 }

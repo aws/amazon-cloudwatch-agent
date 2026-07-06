@@ -20,13 +20,13 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/oidctoken"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
@@ -116,10 +116,10 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
 	}
 
-	// Azure VM/AKS (AKS resolves to ModeAzureVM) reaches AWS only via oidctoken->sigv4 web identity, which needs role_arn.
-	if context.CurrentContext().Mode() == config.ModeAzureVM {
+	// Emit oidctoken only when a sigv4auth extension consumes it; that web-identity path needs role_arn.
+	if agent.IsAzureWebIdentity() && hasSigv4auth(pipelines.Translators.Extensions) {
 		if agent.Global_Config.Role_arn == "" {
-			return nil, errors.New("credentials.role_arn is required on Azure VM/AKS for the oidctoken web-identity credential chain")
+			return nil, errors.New("credentials.role_arn is required on Azure VM for the oidctoken web-identity credential chain")
 		}
 		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
 	}
@@ -149,6 +149,16 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		}
 	}
 	return cfg, nil
+}
+
+// hasSigv4auth reports whether a sigv4auth extension is present, i.e. some pipeline will consume the oidctoken file.
+func hasSigv4auth(extensions common.ComponentTranslatorMap) bool {
+	for _, id := range extensions.Keys() {
+		if id.Type() == sigv4auth.Type() {
+			return true
+		}
+	}
+	return false
 }
 
 // parseAgentLogLevel returns the logging level from the JSON config, or the

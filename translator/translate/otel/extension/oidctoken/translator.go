@@ -9,9 +9,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 type translator struct {
@@ -20,7 +19,6 @@ type translator struct {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-// NewTranslator returns the oidctoken extension translator (Azure provider).
 func NewTranslator() common.ComponentTranslator {
 	return &translator{factory: oidctokenextension.NewFactory()}
 }
@@ -33,6 +31,6 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*oidctokenextension.Config)
 	// Only emitted for Azure VM/AKS, so the provider is always Azure.
 	cfg.Provider = oidctokenextension.ProviderAzure
-	cfg.OutputTokenFile = util.OIDCTokenFilePath(context.CurrentContext().Os())
+	cfg.OutputTokenFile = paths.OIDCTokenPath
 	return cfg, nil
 }

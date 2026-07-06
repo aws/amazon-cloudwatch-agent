@@ -6,7 +6,7 @@ package azuredetector
 
 import (
 	"context"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	azuremeta "github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/metadataproviders/azure"
@@ -20,54 +20,39 @@ const azureIMDSTimeout = 1 * time.Second
 // azureIMDSMaxAttempts bounds probe retries; a successful response is not retried.
 const azureIMDSMaxAttempts = 2
 
-// IsAzureVMCache holds the cached result of the Azure VM detection probe.
-type IsAzureVMCache struct {
-	Value bool
-	Err   error
-}
-
 var (
-	// metadataProvider is the Azure IMDS provider; overridable in tests.
 	metadataProvider = azuremeta.NewProvider()
-	probeAzureIMDS   = defaultProbeAzureIMDS
-	isRunningInAKS   = envconfig.IsRunningInAKS
 
-	// Public detection entry points; overridable in tests (mirrors eksdetector.IsEKS).
+	// IsAzureVM probes Azure IMDS (cached) and IsAKS reads RUN_IN_AKS; both are vars so they can be stubbed.
 	IsAzureVM = isAzureVM
-	IsAKS     = isAKS
+	IsAKS     = envconfig.IsRunningInAKS
 
-	// Azure VM detection cache; mutex (not sync.Once) so tests can reset it safely.
-	azureVMMu       sync.Mutex
-	azureVMResolved bool
-	azureVMCache    IsAzureVMCache
+	// azureVMCache holds a definitive probe result; a transient error stays uncached so boot can re-probe.
+	azureVMCache atomic.Pointer[bool]
 )
 
-// isAKS reports whether RUN_IN_AKS is set (by the AKS Helm chart); no I/O.
-func isAKS() bool {
-	return isRunningInAKS()
+// isAzureVM reports whether the host is an Azure VM (cached); an unreachable probe reports false.
+func isAzureVM() bool {
+	ok, _ := detectAzureVM()
+	return ok
 }
 
-// isAzureVM probes Azure IMDS (cached). An unreachable probe reports false.
-func isAzureVM() IsAzureVMCache {
-	azureVMMu.Lock()
-	defer azureVMMu.Unlock()
-	if !azureVMResolved {
-		value, err := probeAzureIMDS()
-		result := IsAzureVMCache{Value: value, Err: err}
-		// Cache only a definitive answer so a boot-time transient error can re-probe.
-		if err == nil {
-			azureVMCache = result
-			azureVMResolved = true
-		}
-		return result
+// detectAzureVM probes Azure IMDS once, caching only a definitive result; returns the error for tests.
+func detectAzureVM() (bool, error) {
+	if c := azureVMCache.Load(); c != nil {
+		return *c, nil
 	}
-	return azureVMCache
+	value, err := probeAzureIMDS()
+	if err == nil {
+		azureVMCache.CompareAndSwap(nil, &value)
+	}
+	return value, err
 }
 
-// defaultProbeAzureIMDS reports whether the contrib provider returns a compute doc with a VM ID; any error is retryable and uncached.
-func defaultProbeAzureIMDS() (bool, error) {
+// probeAzureIMDS reports whether the contrib provider returns a compute doc with a VM ID; any error is retryable and uncached.
+func probeAzureIMDS() (bool, error) {
 	var lastErr error
-	for attempt := 0; attempt < azureIMDSMaxAttempts; attempt++ {
+	for range azureIMDSMaxAttempts {
 		ctx, cancel := context.WithTimeout(context.Background(), azureIMDSTimeout)
 		compute, err := metadataProvider.Metadata(ctx)
 		cancel()

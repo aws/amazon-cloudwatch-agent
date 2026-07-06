@@ -12,11 +12,11 @@ import (
 	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
-	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
 type translator struct {
@@ -25,6 +25,11 @@ type translator struct {
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
+
+// Type is the sigv4auth extension's component type.
+func Type() component.Type {
+	return sigv4authextension.NewFactory().Type()
+}
 
 func NewTranslator() common.ComponentTranslator {
 	return &translator{factory: sigv4authextension.NewFactory()}
@@ -56,9 +61,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
 		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
-		// Azure VM/AKS: feed the oidctoken file into AssumeRoleWithWebIdentity for AWS creds.
-		if context.CurrentContext().Mode() == config.ModeAzureVM {
-			cfg.AssumeRole.WebIdentityTokenFile = util.OIDCTokenFilePath(context.CurrentContext().Os())
+		// Feed the oidctoken file into AssumeRoleWithWebIdentity for the Azure VM web-identity chain.
+		if agent.IsAzureWebIdentity() {
+			cfg.AssumeRole.WebIdentityTokenFile = paths.OIDCTokenPath
 		}
 	}
 

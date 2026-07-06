@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -96,7 +97,7 @@ func TestTranslate(t *testing.T) {
 			wantRole: sigv4authextension.AssumeRole{
 				ARN:                  "arn:aws:iam::123456789012:role/azure-role",
 				STSRegion:            "us-west-2",
-				WebIdentityTokenFile: "/opt/aws/amazon-cloudwatch-agent/etc/.oidc-token",
+				WebIdentityTokenFile: paths.OIDCTokenPath,
 			},
 		},
 		"OnPremWithProfileAndFileAndRole": {
