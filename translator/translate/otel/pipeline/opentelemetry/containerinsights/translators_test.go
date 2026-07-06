@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func TestNewTranslators_MissingKey(t *testing.T) {
@@ -86,7 +88,7 @@ func TestNewTranslators_DefaultMode(t *testing.T) {
 
 func TestNewTranslators_EnvVarFallback_Node(t *testing.T) {
 	// No mode in config, CWAGENT_ROLE=NODE
-	t.Setenv(envCWAgentRole, envRoleNode)
+	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
@@ -103,7 +105,7 @@ func TestNewTranslators_EnvVarFallback_Node(t *testing.T) {
 
 func TestNewTranslators_EnvVarFallback_Leader(t *testing.T) {
 	// No mode in config, CWAGENT_ROLE=LEADER
-	t.Setenv(envCWAgentRole, envRoleLeader)
+	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.LEADER)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
@@ -120,7 +122,7 @@ func TestNewTranslators_EnvVarFallback_Leader(t *testing.T) {
 
 func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
 	// JSON says cluster, env var says NODE -> JSON wins
-	t.Setenv(envCWAgentRole, envRoleNode)
+	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{

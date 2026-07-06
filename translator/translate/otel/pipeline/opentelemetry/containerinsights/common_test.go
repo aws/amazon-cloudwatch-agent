@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
 func TestEscapeDollarDigit(t *testing.T) {
@@ -63,10 +65,10 @@ func TestGetMode_EnvVarFallback(t *testing.T) {
 		},
 	})
 
-	t.Setenv(envCWAgentRole, envRoleLeader)
+	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.LEADER)
 	assert.Equal(t, modeCluster, getMode(cfg))
 
-	t.Setenv(envCWAgentRole, envRoleNode)
+	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	assert.Equal(t, modeNode, getMode(cfg))
 }
 
@@ -90,18 +92,18 @@ func TestGetMode_EnvVarCaseInsensitive(t *testing.T) {
 		},
 	})
 
-	t.Setenv(envCWAgentRole, "leader") // lowercase
+	t.Setenv(envconfig.CWAGENT_ROLE, "leader") // lowercase
 	assert.Equal(t, modeCluster, getMode(cfg))
 
-	t.Setenv(envCWAgentRole, "node") // lowercase
+	t.Setenv(envconfig.CWAGENT_ROLE, "node") // lowercase
 	assert.Equal(t, modeNode, getMode(cfg))
 
-	t.Setenv(envCWAgentRole, "Leader") // mixed case
+	t.Setenv(envconfig.CWAGENT_ROLE, "Leader") // mixed case
 	assert.Equal(t, modeCluster, getMode(cfg))
 }
 
 func TestGetMode_JSONOverridesEnv(t *testing.T) {
-	t.Setenv(envCWAgentRole, envRoleNode)
+	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{

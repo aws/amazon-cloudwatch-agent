@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -20,13 +21,6 @@ const (
 	ciPrefix                  = "cw_k8s_ci_v0"
 	defaultCollectionInterval = 30 * time.Second
 
-	// envCWAgentRole is the environment variable used by the helm chart to indicate
-	// whether the agent runs as a DaemonSet (node-level) or Deployment (cluster-level).
-	envCWAgentRole = "CWAGENT_ROLE"
-	// Environment variable values for CWAGENT_ROLE
-	envRoleNode   = "NODE"
-	envRoleLeader = "LEADER"
-	// Mode values
 	modeNode    = "node"
 	modeCluster = "cluster"
 )
@@ -141,11 +135,11 @@ func getMode(conf *confmap.Conf) string {
 			return v
 		}
 	}
-	if role := strings.ToUpper(os.Getenv(envCWAgentRole)); role != "" {
+	if role := strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)); role != "" {
 		switch role {
-		case envRoleNode:
+		case envconfig.NODE:
 			return modeNode
-		case envRoleLeader:
+		case envconfig.LEADER:
 			return modeCluster
 		}
 	}
