@@ -49,7 +49,7 @@ jobs:
         if: needs.changes.outputs.lint == 'true'
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
           cache: false
 
       - name: Check out code
@@ -116,7 +116,7 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
           cache: false
 
       - name: Check out code
@@ -163,7 +163,7 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
           cache: false
 
       - name: Check out code
