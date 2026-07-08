@@ -41,6 +41,10 @@ on:
         description: 'Filter tests to specific test directory (e.g., ./test/cloudwatchlogs). Leave empty to run all tests.'
         type: string
         required: false
+      helm_chart_branch:
+        description: 'Override helm chart branch (default: latest release-* branch)'
+        type: string
+        required: false
 
 jobs:
   CheckBuildTestArtifacts:
@@ -87,3 +91,4 @@ jobs:
       test_repo_branch: ${{ inputs.test_repo_branch }}
       test_os_filter: ${{ inputs.test_os_filter }}
       test_dir_filter: ${{ inputs.test_dir_filter }}
+      helm_chart_branch: ${{ inputs.helm_chart_branch }}
