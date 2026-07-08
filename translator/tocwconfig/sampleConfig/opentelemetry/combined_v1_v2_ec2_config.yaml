@@ -1386,6 +1386,14 @@ receivers:
                   honor_timestamps: true
                   job_name: test_app
                   metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      replacement: $$1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_name
+                      target_label: pod
                   scheme: http
                   scrape_interval: 30s
                   scrape_protocols:
@@ -1553,12 +1561,12 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
-                - telegraf_processes
                 - telegraf_mem
                 - telegraf_netstat
                 - telegraf_disk
                 - telegraf_procstat/1917393364
+                - telegraf_cpu
+                - telegraf_processes
                 - telegraf_swap
         metrics/host_metrics:
             exporters:
@@ -1574,8 +1582,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1584,8 +1592,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

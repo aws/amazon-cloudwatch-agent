@@ -587,9 +587,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -2081,6 +2081,14 @@ receivers:
                   honor_timestamps: true
                   job_name: test_app
                   metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      replacement: $$1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_name
+                      target_label: pod
                   scheme: http
                   scrape_interval: 30s
                   scrape_protocols:
@@ -2418,13 +2426,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_swap
-                - telegraf_mem
-                - telegraf_processes
-                - telegraf_netstat
-                - telegraf_disk
                 - telegraf_procstat/1917393364
+                - telegraf_processes
+                - telegraf_disk
+                - telegraf_mem
                 - telegraf_cpu
+                - telegraf_swap
+                - telegraf_netstat
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -2449,8 +2457,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
