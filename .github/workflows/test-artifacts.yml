@@ -1202,7 +1202,12 @@ jobs:
           if grep -q 'helm_chart_branch' *.tf 2>/dev/null; then
             HELM_BRANCH="${HELM_CHART_BRANCH_INPUT}"
             if [ -z "$HELM_BRANCH" ]; then
-              HELM_BRANCH="feature/karpenter-integration"
+              HELM_BRANCH=$(curl -sL "https://api.github.com/repos/aws-observability/helm-charts/git/matching-refs/heads/release-" \
+                | jq -r '.[].ref | ltrimstr("refs/heads/")' \
+                | sort -V | tail -n 1)
+            fi
+            if [ -z "$HELM_BRANCH" ]; then
+              HELM_BRANCH="main"
             fi
             echo "Using helm chart branch: $HELM_BRANCH"
           fi
