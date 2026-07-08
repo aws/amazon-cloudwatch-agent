@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
@@ -160,6 +161,50 @@ func TestPrometheusReceiverTranslator(t *testing.T) {
 	cfg, err := receiver.Translate(conf)
 	require.NoError(t, err)
 	assert.NotNil(t, cfg)
+}
+
+func TestPrometheusReceiverTranslatorDollarEscape(t *testing.T) {
+	// Create a prometheus config with relabel_configs that use $1 capture group references.
+	// Without escaping, the OTel expandconverter would treat $1 as an env var and blank it out.
+	content := []byte(`scrape_configs:
+  - job_name: k8s_pods
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.*)
+        target_label: pod
+        replacement: $1
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        target_label: __address__
+        replacement: $1:$2
+`)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "prometheus_relabel.yml")
+	require.NoError(t, os.WriteFile(path, content, 0600))
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"prometheus": map[string]interface{}{
+					"config_path": path,
+				},
+			},
+		},
+	})
+
+	receiver := &prometheusReceiverTranslator{}
+	cfg, err := receiver.Translate(conf)
+	require.NoError(t, err)
+
+	promCfg := cfg.(*prometheusreceiver.Config)
+	require.Len(t, promCfg.PrometheusConfig.ScrapeConfigs, 1)
+
+	relabelCfgs := promCfg.PrometheusConfig.ScrapeConfigs[0].RelabelConfigs
+	require.Len(t, relabelCfgs, 2)
+	// $$1 is the correct value at this stage — the expandconverter resolves $$1 → $1 at
+	// collector startup. Without the escape, $1 would be treated as an env var and blanked out.
+	assert.Equal(t, "$$1", relabelCfgs[0].Replacement, "first relabel $1 should be escaped to $$1 for expandconverter")
+	assert.Equal(t, "$$1:$$2", relabelCfgs[1].Replacement, "second relabel $1:$2 should be escaped to $$1:$$2 for expandconverter")
 }
 
 func TestPrometheusReceiverTranslatorMissingFile(t *testing.T) {

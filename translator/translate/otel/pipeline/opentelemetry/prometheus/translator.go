@@ -103,18 +103,14 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 		return nil, fmt.Errorf("unable to read prometheus config from path %s: %w", configPath, err)
 	}
 
+	// Prevent OTel expandconverter from misinterpreting Prometheus regex backreferences.
+	escaped := escapeDollarDigit(string(content))
 	var stringMap map[string]interface{}
-	if err := yaml.Unmarshal(content, &stringMap); err != nil {
+	if err := yaml.Unmarshal([]byte(escaped), &stringMap); err != nil {
 		return nil, fmt.Errorf("unable to parse prometheus config from %s: %w", configPath, err)
 	}
 
 	componentParser := confmap.NewFromStringMap(stringMap)
-	// NOTE: Prometheus relabel configs use $1, $2 for capture group references.
-	// The OTel confmap expandconverter interprets these as environment variable
-	// references (os.Expand), which can cause failures or empty replacements.
-	// This is a known limitation when prometheus configs with relabel_configs
-	// are loaded through the OTel config resolver pipeline.
-
 	var promCfg prometheusreceiver.PromConfig
 	if err := componentParser.Unmarshal(&promCfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal prometheus config from %s: %w", configPath, err)
@@ -124,4 +120,18 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
 
 	return cfg, nil
+}
+
+// escapeDollarDigit escapes bare $ followed by a digit so the expandconverter
+// does not interpret regex backreferences (e.g., $1 in relabel_configs) as env vars.
+func escapeDollarDigit(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] == '$' && i+1 < len(s) && s[i+1] >= '0' && s[i+1] <= '9' {
+			out = append(out, '$', '$')
+		} else {
+			out = append(out, s[i])
+		}
+	}
+	return string(out)
 }
