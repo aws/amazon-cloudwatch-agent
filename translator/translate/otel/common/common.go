@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,8 @@ const (
 	RoleARNKey                                     = "role_arn"
 	SigV4Auth                                      = "sigv4auth"
 	MetricsCollectionIntervalKey                   = "metrics_collection_interval"
+	CollectionIntervalKey                          = "collection_interval"
+	ClusterNameKey                                 = "cluster_name"
 	AggregationDimensionsKey                       = "aggregation_dimensions"
 	MeasurementKey                                 = "measurement"
 	DropOriginalMetricsKey                         = "drop_original_metrics"
@@ -593,3 +596,7 @@ func EscapeDollarDigit(s string) string {
 	}
 	return string(out)
 }
+
+// ClusterNameRegex restricts cluster_name to safe characters, preventing
+// OTTL injection and template metacharacter issues.
+var ClusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)

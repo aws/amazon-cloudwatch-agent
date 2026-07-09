@@ -535,6 +535,16 @@ processors:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-prometheus")
         trace_statements: []
+    transform/set_cluster_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        trace_statements: []
 receivers:
     prometheus/opentelemetry:
         config:
@@ -607,6 +617,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/prometheus_scope
+                - transform/set_cluster_name
             receivers:
                 - prometheus/opentelemetry
     telemetry:

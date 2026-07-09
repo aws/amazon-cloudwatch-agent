@@ -5,9 +5,6 @@ package containerinsights
 
 import (
 	"fmt"
-	"os"
-	"regexp"
-	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -19,8 +16,6 @@ import (
 
 const (
 	ciPrefix                  = "cw_k8s_ci_v0"
-	defaultCollectionInterval = 30 * time.Second
-
 	modeNode    = "node"
 	modeCluster = "cluster"
 )
@@ -76,28 +71,20 @@ func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, 
 	return t.cfg, nil
 }
 
-// clusterNameRegex restricts cluster_name to safe characters, preventing
-// OTTL injection and template metacharacter issues in YAML templates.
-var clusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
 func getClusterName(conf *confmap.Conf) (string, error) {
-	key := common.ConfigKey(ciConfigKey, "cluster_name")
-	name, ok := common.GetString(conf, key)
-	if !ok || name == "" {
-		return "", fmt.Errorf("cluster_name is required for container_insights")
+	name := common.GetOtelClusterName(conf)
+	if name == "" {
+		return "", fmt.Errorf("cluster_name is required for container_insights: set opentelemetry::cluster_name in config")
 	}
-	if !clusterNameRegex.MatchString(name) {
-		return "", fmt.Errorf("cluster_name contains invalid characters: %q (must match %s)", name, clusterNameRegex.String())
+	if !common.ClusterNameRegex.MatchString(name) {
+		return "", fmt.Errorf("cluster_name contains invalid characters: %q (must match %s)", name, common.ClusterNameRegex.String())
 	}
 	return name, nil
 }
 
 func getCollectionInterval(conf *confmap.Conf) time.Duration {
-	key := common.ConfigKey(ciConfigKey, "collection_interval")
-	if v, ok := common.GetNumber(conf, key); ok && v > 0 {
-		return time.Duration(v) * time.Second
-	}
-	return defaultCollectionInterval
+	return common.GetCollectionInterval(conf, ciConfigKey)
 }
 
 // logsEnabled returns true if container_insights.logs.enabled is set to true.

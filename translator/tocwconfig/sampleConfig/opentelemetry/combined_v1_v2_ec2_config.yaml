@@ -542,9 +542,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -1027,6 +1027,16 @@ processors:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-prometheus")
         trace_statements: []
+    transform/set_cluster_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        metric_statements: []
+        trace_statements: []
 receivers:
     awsxray:
         endpoint: 0.0.0.0:2000
@@ -1413,21 +1423,6 @@ receivers:
                   honor_timestamps: true
                   job_name: test_app
                   metrics_path: /metrics
-                  relabel_configs:
-                    - action: replace
-                      regex: (.*)
-                      replacement: $$$$1
-                      separator: ;
-                      source_labels:
-                        - __meta_kubernetes_pod_name
-                      target_label: pod
-                    - action: replace
-                      regex: (.*)
-                      replacement: $$$${1}
-                      separator: ;
-                      source_labels:
-                        - __address__
-                      target_label: host
                   scheme: http
                   scrape_interval: 30s
                   scrape_protocols:
@@ -1574,6 +1569,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/otlp_scope
+                - transform/set_cluster_name
                 - transform/otlp_log_source
             receivers:
                 - otlp/grpc_127_0_0_1_4327
@@ -1596,11 +1592,11 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
-                - telegraf_netstat
-                - telegraf_mem
-                - telegraf_procstat/1917393364
                 - telegraf_swap
+                - telegraf_mem
+                - telegraf_netstat
+                - telegraf_procstat/1917393364
+                - telegraf_cpu
                 - telegraf_processes
                 - telegraf_disk
         metrics/host_metrics:
@@ -1608,6 +1604,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/host_metrics_scope
+                - transform/set_cluster_name
             receivers:
                 - hostmetrics/opentelemetry
         metrics/hostCustomMetrics:
@@ -1617,8 +1614,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1643,6 +1640,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/prometheus_scope
+                - transform/set_cluster_name
             receivers:
                 - prometheus/opentelemetry
         metrics/otlp:
@@ -1650,6 +1648,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/otlp_scope
+                - transform/set_cluster_name
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328

@@ -4,6 +4,8 @@
 package otlp
 
 import (
+	"fmt"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -58,6 +60,25 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithScopeStatements(common.ScopeStatementsForSolution("otel-otlp")),
 	))
+	// Apply root-level cluster name if set
+	if clusterName := common.GetOtelClusterName(conf); clusterName != "" {
+		if !common.ClusterNameRegex.MatchString(clusterName) {
+			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
+		}
+		stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+		switch t.signal {
+		case pipeline.SignalMetrics:
+			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+				transformprocessor.WithMetricResourceStatements([]string{stmt}),
+			))
+		case pipeline.SignalLogs:
+			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+				transformprocessor.WithLogResourceStatements([]string{stmt}),
+			))
+		// Traces are not handled: WithTraceResourceStatements is not yet supported.
+		// Traces sent via OTLP on EKS should include k8s.cluster.name from the SDK.
+		}
+	}
 	if t.signal == pipeline.SignalLogs {
 		processors.Set(transformprocessor.NewTranslatorWithName("otlp_log_source",
 			transformprocessor.WithLogResourceStatements([]string{
