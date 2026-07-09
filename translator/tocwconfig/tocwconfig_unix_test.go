@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -182,4 +183,31 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 		return fmt.Sprintf("%v", x) < fmt.Sprintf("%v", y)
 	})
 	assert.Empty(t, cmp.Diff(expected, actual, opt))
+}
+
+func TestAzureVMHostMetricsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeAzureVM)
+
+	checkTranslation(t, "opentelemetry/host_metrics_azurevm_config", "linux", nil, "")
+}
+
+func TestAzureVMHostMetricsSharedCredsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeAzureVM)
+	// common-config.toml creds: sigv4auth assumes the role directly, so no oidctoken/web_identity path.
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+
+	checkTranslation(t, "opentelemetry/host_metrics_azurevm_sharedcreds_config", "linux", nil, "")
+}
+
+func TestAKSHostMetricsConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetRunInContainer(true)
+	t.Setenv(envconfig.RunInAKS, envconfig.TrueValue)
+	// AKS nodes are Azure VMs, so DetectAgentMode resolves host mode to AzureVM; mirror that here.
+	context.CurrentContext().SetMode(config.ModeAzureVM)
+	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
+
+	checkTranslation(t, "opentelemetry/host_metrics_aks_config", "linux", nil, "")
 }
