@@ -42,16 +42,15 @@ extensions:
         output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
         provider: azure
     sigv4auth/monitoring:
-        assume_role:
-            arn: arn:aws:iam::123456789012:role/AzureVMRole
-            sts_region: us-west-2
-            web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+        assume_role: {}
         imds_retries: 1
         max_retries: 2
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 30
+        role_arn: arn:aws:iam::123456789012:role/AzureVMRole
         service: monitoring
+        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
 processors:
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
