@@ -41,8 +41,10 @@ jobs:
       should_run: ${{ steps.check.outputs.has_label }}
     steps:
       - id: check
+        env:
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}
         run: |
-          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
+          if [[ "$HAS_LABEL" == "true" ]]; then
             echo "has_label=true" >> $GITHUB_OUTPUT
           else
             echo "has_label=false" >> $GITHUB_OUTPUT
@@ -82,11 +84,16 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
       - name: Echo test variables
+        env:
+          GITHUB_SHA_VAL: ${{ github.sha }}
+          OUT_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          OUT_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+          OUT_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
         run: |
-          echo "build_id: ${{ github.sha }}"
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "build_id: $GITHUB_SHA_VAL"
+          echo "CWA_GITHUB_TEST_REPO_NAME: $OUT_REPO_NAME"
+          echo "CWA_GITHUB_TEST_REPO_URL: $OUT_REPO_URL"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: $OUT_REPO_BRANCH"
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -160,12 +167,14 @@ jobs:
 
       - name: Paginate ec2_linux_matrix
         id: paginate-matrix
+        env:
+          EC2_LINUX_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_matrix }}
         run: |
           # GitHub Actions matrix limit is 256 jobs per workflow run.
           # Use 200 per page for headroom. Up to 5 pages supported (1000 tests).
           # The ec2_linux_matrix is @json-encoded (double-encoded), so decode first.
           PAGE_SIZE=200
-          FULL_MATRIX=$(echo '${{ steps.set-matrix.outputs.ec2_linux_matrix }}' | jq -r '.')
+          FULL_MATRIX=$(echo "$EC2_LINUX_MATRIX" | jq -r '.')
           TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
           PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
 
@@ -184,9 +193,12 @@ jobs:
           done
 
       - name: Echo test plan matrix
+        env:
+          EC2_LINUX_PAGE_COUNT: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
+          EC2_SELINUX_MATRIX: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
         run: |
-          echo "ec2_linux_matrix pages: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}"
-          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
+          echo "ec2_linux_matrix pages: $EC2_LINUX_PAGE_COUNT"
+          echo "ec2_selinux_matrix: $EC2_SELINUX_MATRIX"
 
 
   EC2LinuxIntegrationTest-0:
@@ -349,18 +361,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check for ready for testing label
+        env:
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          HAS_SKIP_TESTING: ${{ contains(github.event.pull_request.labels.*.name, 'skip testing') }}
+          HAS_READY_FOR_TESTING: ${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}
         run: |
-          if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
+          if [[ "$PR_DRAFT" == "true" ]]; then
             echo "Draft PR - skipping label check."
             exit 0
           fi
 
-          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'skip testing') }}" == "true" ]]; then
+          if [[ "$HAS_SKIP_TESTING" == "true" ]]; then
             echo "'skip testing' label found - bypassing integration test requirement."
             exit 0
           fi
 
-          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" != "true" ]]; then
+          if [[ "$HAS_READY_FOR_TESTING" != "true" ]]; then
             echo "Missing 'ready for testing' label. Please add before merging."
             exit 1
           fi
@@ -377,16 +393,15 @@ jobs:
     if: always()
     steps:
       - name: Check Job Status
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          # Convert needs context to JSON and process with jq
-          needs_json='${{ toJSON(needs) }}'
-
           failed_jobs=()
           successful_jobs=()
 
           # Loop through all jobs in needs context
-          for job in $(echo "$needs_json" | jq -r 'keys[]'); do
-            result=$(echo "$needs_json" | jq -r ".[\"$job\"].result")
+          for job in $(echo "$NEEDS_JSON" | jq -r 'keys[]'); do
+            result=$(echo "$NEEDS_JSON" | jq -r ".[\"$job\"].result")
 
             if [[ "$result" == "failure" ]]; then
               failed_jobs+=("$job")

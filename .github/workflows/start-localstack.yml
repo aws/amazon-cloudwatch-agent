@@ -63,7 +63,11 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Echo Localstack Config
-        run: echo repo name ${{inputs.test_repo_name}} repo branch ${{ inputs.test_repo_branch }} region ${{ inputs.region }}
+        env:
+          INPUT_TEST_REPO_NAME: ${{ inputs.test_repo_name }}
+          INPUT_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch }}
+          INPUT_REGION: ${{ inputs.region }}
+        run: echo "repo name $INPUT_TEST_REPO_NAME repo branch $INPUT_TEST_REPO_BRANCH region $INPUT_REGION"
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -78,17 +82,23 @@ jobs:
 
       - name: Terraform apply
         id: localstack
+        env:
+          INPUT_TEST_REPO_URL: ${{ inputs.test_repo_url }}
+          INPUT_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch }}
+          INPUT_GITHUB_SHA: ${{ inputs.github_sha }}
+          INPUT_S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          INPUT_REGION: ${{ inputs.region }}
         run: >
           echo run terraform and execute test code &&
           terraform apply --auto-approve
-          -var="ssh_key_value=${{env.PRIVATE_KEY}}"
-          -var="github_test_repo=${{inputs.test_repo_url}}"
-          -var="github_test_repo_branch=${{inputs.test_repo_branch}}"
-          -var="cwa_github_sha=${{inputs.github_sha}}"
-          -var="s3_bucket=${{inputs.s3_integration_bucket}}"
-          -var="region=${{inputs.region}}"
-          -var="ssh_key_name=${{env.KEY_NAME}}" &&
+          -var="ssh_key_value=$PRIVATE_KEY"
+          -var="github_test_repo=$INPUT_TEST_REPO_URL"
+          -var="github_test_repo_branch=$INPUT_TEST_REPO_BRANCH"
+          -var="cwa_github_sha=$INPUT_GITHUB_SHA"
+          -var="s3_bucket=$INPUT_S3_BUCKET"
+          -var="region=$INPUT_REGION"
+          -var="ssh_key_name=$KEY_NAME" &&
           LOCAL_STACK_HOST_NAME=$(terraform output -raw public_dns) &&
           echo $LOCAL_STACK_HOST_NAME &&
           echo "local_stack_host_name=$LOCAL_STACK_HOST_NAME" >> "$GITHUB_OUTPUT" &&
-          aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate
+          aws s3 cp terraform.tfstate "s3://$INPUT_S3_BUCKET/integration-test/local-stack-terraform-state/$INPUT_GITHUB_SHA/terraform.tfstate"

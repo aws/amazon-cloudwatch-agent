@@ -123,13 +123,20 @@ jobs:
           echo "::set-output name=ECR_TARGET_ALLOCATOR_REPO::$(echo "${{ vars.ECR_TARGET_ALLOCATOR_STAGING_REPO }}" | awk -F'/' '{print $NF}')"
 
       - name: Echo test variables
+        env:
+          OUT_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          OUT_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+          OUT_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          OUT_ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}
+          OUT_ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}
+          OUT_ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}
         run: |
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "ECR_INTEGRATION_TEST_REPO: ${{ steps.set-outputs.outputs.ECR_INTEGRATION_TEST_REPO }}"
-          echo "ECR_OPERATOR_REPO: ${{ steps.set-outputs.outputs.ECR_OPERATOR_REPO }}"
-          echo "ECR_TARGET_ALLOCATOR_REPO: ${{ steps.set-outputs.outputs.ECR_TARGET_ALLOCATOR_REPO }}"
+          echo "CWA_GITHUB_TEST_REPO_NAME: $OUT_REPO_NAME"
+          echo "CWA_GITHUB_TEST_REPO_URL: $OUT_REPO_URL"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: $OUT_REPO_BRANCH"
+          echo "ECR_INTEGRATION_TEST_REPO: $OUT_ECR_INTEGRATION_TEST_REPO"
+          echo "ECR_OPERATOR_REPO: $OUT_ECR_OPERATOR_REPO"
+          echo "ECR_TARGET_ALLOCATOR_REPO: $OUT_ECR_TARGET_ALLOCATOR_REPO"
 
   GenerateTestMatrix:
     needs: [BuildAgent, BuildOperator]
@@ -156,8 +163,10 @@ jobs:
           echo "::set-output name=eks_e2e_jmx_matrix::$(echo $(cat generator/resources/eks_e2e_jmx_complete_test_matrix.json))"
 
       - name: Echo test plan matrix
+        env:
+          EKS_E2E_JMX_MATRIX: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}
         run: |
-          echo "eks_e2e_jmx_matrix: ${{ steps.set-matrix.outputs.eks_e2e_jmx_matrix }}"
+          echo "eks_e2e_jmx_matrix: $EKS_E2E_JMX_MATRIX"
 
   EKSE2EJVMTomcatTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]

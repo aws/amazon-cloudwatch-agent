@@ -119,9 +119,12 @@ jobs:
     permissions:
       actions: write
     steps:
-      - run: gh workflow run integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
+        run: gh workflow run integration-test.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_run_id=$RUN_ID" -f "build_sha=$GITHUB_SHA_VAL"
 
   StartApplicationSignalsE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
@@ -131,9 +134,12 @@ jobs:
     permissions:
       actions: write
     steps:
-      - run: gh workflow run application-signals-e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
+        run: gh workflow run application-signals-e2e-test.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_run_id=$RUN_ID" -f "build_sha=$GITHUB_SHA_VAL"
 
   StartEKSE2ETests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
@@ -142,9 +148,11 @@ jobs:
     permissions:
       actions: write
     steps:
-      - run: gh workflow run e2e-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_sha=${{ github.sha }}
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
+        run: gh workflow run e2e-test.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_sha=$GITHUB_SHA_VAL"
 
   StartWorkloadDiscoveryIntegrationTests:
     needs: [ BuildAndUploadPackages, BuildAndUploadITAR, BuildAndUploadCN, BuildDocker, BuildDistributor ]
@@ -153,6 +161,9 @@ jobs:
     permissions:
       actions: write
     steps:
-      - run: gh workflow run wd-integration-test.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_run_id=${{ github.run_id }} -f build_sha=${{ github.sha }}
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA_VAL: ${{ github.sha }}
+        run: gh workflow run wd-integration-test.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_run_id=$RUN_ID" -f "build_sha=$GITHUB_SHA_VAL"

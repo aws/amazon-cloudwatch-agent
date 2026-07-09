@@ -88,6 +88,8 @@ jobs:
       # @TODO we can add a matrix in the future but for for now, we will only deploy to AL2.
       - name: Terraform apply
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          GITHUB_SHA_VAL: ${{ github.sha }}
         with:
           max_attempts: 3
           timeout_minutes: 60
@@ -98,7 +100,7 @@ jobs:
             terraform apply --auto-approve \
               -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
               -var="github_test_repo_branch=${{env.CWA_GITHUB_TEST_REPO_BRANCH}}" \
-              -var="cwa_github_sha=${{ github.sha }}" \
+              -var="cwa_github_sha=$GITHUB_SHA_VAL" \
               -var="user=ec2-user" \
               -var="ami=cloudwatch-agent-integration-test-al2*" \
               -var="arc=amd64" \
