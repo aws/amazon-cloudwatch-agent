@@ -184,15 +184,15 @@ extensions:
     entitystore:
         mode: ec2
         region: us-west-2
-    file_storage/journald:
+    file_storage/opentelemetry:
         compaction:
             check_interval: 5s
-            directory: /var/lib/otelcol/file_storage
+            directory: /opt/aws/amazon-cloudwatch-agent/logs/state/otel
             max_transaction_size: 65536
             rebound_needed_threshold_mib: 100
             rebound_trigger_threshold_mib: 10
         create_directory: true
-        directory: /opt/aws/amazon-cloudwatch-agent/logs/state
+        directory: /opt/aws/amazon-cloudwatch-agent/logs/state/otel
         directory_permissions: "0750"
         timeout: 1s
 processors:
@@ -452,7 +452,7 @@ receivers:
             max_elapsed_time: 5m0s
             max_interval: 30s
         start_at: end
-        storage: file_storage/journald
+        storage: file_storage/opentelemetry
         type: journald_input
         units:
             - systemd
@@ -467,7 +467,7 @@ receivers:
             max_elapsed_time: 5m0s
             max_interval: 30s
         start_at: end
-        storage: file_storage/journald
+        storage: file_storage/opentelemetry
         type: journald_input
         units:
             - nginx
@@ -558,7 +558,7 @@ service:
         - agenthealth/statuscode
         - agenthealth/logs
         - agenthealth/traces
-        - file_storage/journald
+        - file_storage/opentelemetry
         - entitystore
     pipelines:
         logs/emf_logs:

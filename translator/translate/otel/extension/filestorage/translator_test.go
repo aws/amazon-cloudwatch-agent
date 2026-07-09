@@ -16,7 +16,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	tt := NewTranslator()
-	assert.Equal(t, "file_storage/journald", tt.ID().String())
+	assert.Equal(t, "file_storage/opentelemetry", tt.ID().String())
 
 	conf := confmap.NewFromStringMap(map[string]interface{}{})
 	got, err := tt.Translate(conf)
@@ -25,6 +25,7 @@ func TestTranslator(t *testing.T) {
 
 	gotCfg, ok := got.(*filestorage.Config)
 	require.True(t, ok)
-	assert.Equal(t, "/opt/aws/amazon-cloudwatch-agent/logs/state", gotCfg.Directory)
+	assert.Equal(t, "/opt/aws/amazon-cloudwatch-agent/logs/state/otel", gotCfg.Directory)
+	assert.Equal(t, "/opt/aws/amazon-cloudwatch-agent/logs/state/otel", gotCfg.Compaction.Directory)
 	assert.True(t, gotCfg.CreateDirectory)
 }
