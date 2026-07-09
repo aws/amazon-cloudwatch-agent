@@ -156,6 +156,8 @@ jobs:
           done
 
       - name: Validate total node count
+        env:
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |
           echo "Waiting 30 minutes for scaling operations to complete and stabilize..."
           sleep 1800
@@ -164,7 +166,7 @@ jobs:
           ACTUAL_NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
           
           # Determine expected count based on trigger type
-          if [ "${{ github.event.schedule }}" = "0 21 * * 1" ]; then
+          if [ "$EVENT_SCHEDULE" = "0 21 * * 1" ]; then
             EXPECTED_NODE_COUNT=0
           else
             EXPECTED_NODE_COUNT=$(($NODE_GROUP_COUNT * $DESIRED_CAPACITY_PER_NODEGROUP + $LEADER_NODE_DESIRED_CAPACITY))

@@ -75,9 +75,14 @@ jobs:
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Echo Test Info
+        env:
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          INPUT_LOCALSTACK_HOST: ${{ inputs.localstack_host }}
         run: |
-          echo run cache_if_success os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
-          echo localstack input ${{ inputs.localstack_host }}
+          echo "run cache_if_success os $MATRIX_OS arc $MATRIX_ARC test dir $MATRIX_TEST_DIR"
+          echo "localstack input $INPUT_LOCALSTACK_HOST"
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -89,41 +94,65 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          INPUT_TEST_DIR: ${{ inputs.test_dir }}
+          MATRIX_AGENT_START: ${{ matrix.arrays.agentStartCommand }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_BINARY_NAME: ${{ matrix.arrays.binaryName }}
+          MATRIX_CA_CERT_PATH: ${{ matrix.arrays.caCertPath }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_EXCLUDED_TESTS: ${{ matrix.arrays.excludedTests }}
+          INPUT_TEST_REPO_URL: ${{ inputs.test_repo_url }}
+          INPUT_TEST_REPO_BRANCH: ${{ inputs.test_repo_branch }}
+          MATRIX_INSTALL_AGENT: ${{ matrix.arrays.installAgentCommand }}
+          INPUT_IS_SELINUX_TEST: ${{ inputs.is_selinux_test }}
+          MATRIX_SELINUX_BRANCH: ${{ matrix.arrays.selinux_branch }}
+          INPUT_LOCALSTACK_HOST: ${{ inputs.localstack_host }}
+          INPUT_PLUGINS: ${{ github.event.inputs.plugins }}
+          INPUT_REGION: ${{ inputs.region }}
+          INPUT_S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          INPUT_IS_ONPREM_TEST: ${{ inputs.is_onprem_test }}
+          MATRIX_USERNAME: ${{ matrix.arrays.username }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
-            cd ${{inputs.test_dir}}
+            cd "$INPUT_TEST_DIR"
           fi
 
           terraform init
           if terraform apply --auto-approve \
-            -var="agent_start=${{ matrix.arrays.agentStartCommand }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="arc=${{ matrix.arrays.arc }}" \
-            -var="binary_name=${{ matrix.arrays.binaryName }}" \
-            -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-            -var="cwa_github_sha=${{inputs.build_id}}" \
-            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="excluded_tests='${{ matrix.arrays.excludedTests }}'" \
-            -var="github_test_repo=${{ inputs.test_repo_url }}" \
-            -var="github_test_repo_branch=${{inputs.test_repo_branch}}" \
-            -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-            -var="is_selinux_test=${{ inputs.is_selinux_test }}" \
-            -var="selinux_branch=${{ matrix.arrays.selinux_branch }}" \
-            -var="local_stack_host_name=${{ inputs.localstack_host }}" \
-            -var="plugin_tests='${{ github.event.inputs.plugins }}'" \
-            -var="region=${{ inputs.region }}" \
-            -var="s3_bucket=${{ inputs.s3_integration_bucket }}" \
-            -var="ssh_key_name=${{env.KEY_NAME}}" \
-            -var="ssh_key_value=${{env.PRIVATE_KEY}}" \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="test_name=${{ matrix.arrays.os }}" \
-            -var="is_onprem=${{ inputs.is_onprem_test }}" \
-            -var="user=${{ matrix.arrays.username }}"; then
-            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve
+            -var="agent_start=$MATRIX_AGENT_START" \
+            -var="ami=$MATRIX_AMI" \
+            -var="arc=$MATRIX_ARC" \
+            -var="binary_name=$MATRIX_BINARY_NAME" \
+            -var="ca_cert_path=$MATRIX_CA_CERT_PATH" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
+            -var="excluded_tests='$MATRIX_EXCLUDED_TESTS'" \
+            -var="github_test_repo=$INPUT_TEST_REPO_URL" \
+            -var="github_test_repo_branch=$INPUT_TEST_REPO_BRANCH" \
+            -var="install_agent=$MATRIX_INSTALL_AGENT" \
+            -var="is_selinux_test=$INPUT_IS_SELINUX_TEST" \
+            -var="selinux_branch=$MATRIX_SELINUX_BRANCH" \
+            -var="local_stack_host_name=$INPUT_LOCALSTACK_HOST" \
+            -var="plugin_tests='$INPUT_PLUGINS'" \
+            -var="region=$INPUT_REGION" \
+            -var="s3_bucket=$INPUT_S3_BUCKET" \
+            -var="ssh_key_name=$KEY_NAME" \
+            -var="ssh_key_value=$PRIVATE_KEY" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="test_name=$MATRIX_OS" \
+            -var="is_onprem=$INPUT_IS_ONPREM_TEST" \
+            -var="user=$MATRIX_USERNAME"; then
+            terraform destroy -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" -auto-approve
           else
-            terraform destroy -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" -auto-approve && exit 1
+            terraform destroy -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" -auto-approve && exit 1
           fi
       
       - name: "[WIP] ✅ Passed"
@@ -143,16 +172,21 @@ jobs:
       #This is here just in case workflow cancel
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          INPUT_TEST_DIR: ${{ inputs.test_dir }}
+          INPUT_REGION: ${{ inputs.region }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         with:
           max_attempts: 2
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
-              cd ${{inputs.test_dir}}
+              cd "$INPUT_TEST_DIR"
             fi
 
-            terraform destroy -lock-timeout=5m -var="region=${{ inputs.region }}" -var="ami=${{ matrix.arrays.ami }}" --auto-approve
+            terraform destroy -lock-timeout=5m -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" --auto-approve

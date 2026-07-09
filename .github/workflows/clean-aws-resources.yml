@@ -138,7 +138,9 @@ jobs:
 
       - name: Clean old host
         working-directory: tool/clean
-        run: go run ./clean_host/clean_host.go ${{ matrix.region }}
+        env:
+          MATRIX_REGION: ${{ matrix.region }}
+        run: go run ./clean_host/clean_host.go "$MATRIX_REGION"
 
   clean-hosts-china:
     runs-on: ubuntu-latest

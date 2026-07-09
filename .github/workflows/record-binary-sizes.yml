@@ -27,10 +27,12 @@ jobs:
         env:
           S3_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
           COMMIT_HASH: ${{ github.sha }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           export COMMIT_DATE=$(git log -1 --format=%ct)
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            export TAG="${{ github.ref_name }}"
+          if [[ "$REF_TYPE" == "tag" ]]; then
+            export TAG="$REF_NAME"
           else
             export TAG=""
           fi

@@ -35,8 +35,10 @@ jobs:
           filters: .github/config/file-filters.yml
 
       - name: List all updated files
+        env:
+          BUILD_FILES: ${{ steps.filter.outputs.build_files }}
         run: |
-          for file in ${{ steps.filter.outputs.build_files }}; do
+          for file in $BUILD_FILES; do
             echo "$file"
           done
 
@@ -142,7 +144,10 @@ jobs:
 
       - name: Build
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
-        run: make amazon-cloudwatch-agent-${{ matrix.family }}
+        env:
+          MATRIX_FAMILY: ${{ matrix.family }}
+        shell: bash
+        run: make "amazon-cloudwatch-agent-$MATRIX_FAMILY"
 
       - name: Collect binary sizes
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true' && matrix.family != 'darwin' && matrix.os != 'windows-latest' && github.event_name == 'pull_request'
@@ -221,16 +226,15 @@ jobs:
     if: ${{ !cancelled() }}
     steps:
       - name: Check Job Status
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          # Convert needs context to JSON and process with jq
-          needs_json='${{ toJSON(needs) }}'
-
           failed_jobs=()
           successful_jobs=()
 
           # Loop through all jobs in needs context
-          for job in $(echo "$needs_json" | jq -r 'keys[]'); do
-            result=$(echo "$needs_json" | jq -r ".[\"$job\"].result")
+          for job in $(echo "$NEEDS_JSON" | jq -r 'keys[]'); do
+            result=$(echo "$NEEDS_JSON" | jq -r ".[\"$job\"].result")
 
             if [[ "$result" == "failure" ]]; then
               failed_jobs+=("$job")
