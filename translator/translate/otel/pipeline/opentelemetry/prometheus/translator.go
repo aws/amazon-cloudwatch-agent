@@ -51,19 +51,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-prometheus")),
 	))
-	// Use the shared root-level cluster name (opentelemetry::cluster_name)
-	clusterName := common.GetOtelClusterName(conf)
-	if clusterName == "" {
-		return nil, fmt.Errorf("cluster_name is required for prometheus: set opentelemetry::cluster_name in config")
+	// Apply root-level cluster name if set (opentelemetry::cluster_name)
+	if clusterName := common.GetOtelClusterName(conf); clusterName != "" {
+		if !common.ClusterNameRegex.MatchString(clusterName) {
+			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
+		}
+		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			transformprocessor.WithMetricResourceStatements([]string{
+				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
+			}),
+		))
 	}
-	if !common.ClusterNameRegex.MatchString(clusterName) {
-		return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
-	}
-	processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-		transformprocessor.WithMetricResourceStatements([]string{
-			fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
-		}),
-	))
 
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](receiver),

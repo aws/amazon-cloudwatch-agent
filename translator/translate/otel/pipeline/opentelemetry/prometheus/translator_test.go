@@ -142,9 +142,9 @@ func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
 
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
-	require.Error(t, err)
-	assert.Nil(t, got)
-	assert.Contains(t, err.Error(), "cluster_name is required for prometheus: set opentelemetry::cluster_name in config")
+	require.NoError(t, err)
+	assert.Equal(t, 1, got.Processors.Len())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
 }
 
 func TestPrometheusReceiverTranslator(t *testing.T) {
