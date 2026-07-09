@@ -75,8 +75,8 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
 				transformprocessor.WithLogResourceStatements([]string{stmt}),
 			))
-		// Traces are not handled: WithTraceResourceStatements is not yet supported.
-		// Traces sent via OTLP on EKS should include k8s.cluster.name from the SDK.
+			// Traces are not handled: WithTraceResourceStatements is not yet supported.
+			// Traces sent via OTLP on EKS should include k8s.cluster.name from the SDK.
 		}
 	}
 	if t.signal == pipeline.SignalLogs {

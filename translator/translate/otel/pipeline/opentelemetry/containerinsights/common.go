@@ -71,7 +71,6 @@ func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, 
 	return t.cfg, nil
 }
 
-
 func getClusterName(conf *confmap.Conf) (string, error) {
 	name := common.GetOtelClusterName(conf)
 	if name == "" {
