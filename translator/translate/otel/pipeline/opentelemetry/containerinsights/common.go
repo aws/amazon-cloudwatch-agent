@@ -5,18 +5,24 @@ package containerinsights
 
 import (
 	"fmt"
+	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 const (
 	ciPrefix                  = "cw_k8s_ci_v0"
 	defaultCollectionInterval = 30 * time.Second
+
+	modeNode    = "node"
+	modeCluster = "cluster"
 )
 
 var ciConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)
@@ -117,16 +123,27 @@ func logsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, key, false)
 }
 
-// getMode returns the container_insights.mode value ("node", "cluster", or "" for all).
+// getMode resolves the container insights pipeline mode using the following
+// priority order:
+//  1. JSON config field
+//  2. Environment variable
+//  3. Default: "node" (DaemonSet)
 func getMode(conf *confmap.Conf) string {
-	if conf == nil {
-		return ""
+	if conf != nil {
+		key := common.ConfigKey(ciConfigKey, "mode")
+		if v, ok := common.GetString(conf, key); ok && v != "" {
+			return v
+		}
 	}
-	key := common.ConfigKey(ciConfigKey, "mode")
-	if v, ok := common.GetString(conf, key); ok {
-		return v
+	if role := strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)); role != "" {
+		switch role {
+		case envconfig.NODE:
+			return modeNode
+		case envconfig.LEADER:
+			return modeCluster
+		}
 	}
-	return ""
+	return modeNode
 }
 
 type pipelineSpec struct {
