@@ -67,6 +67,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20260617204523-70530ca095f9
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260617204523-70530ca095f9
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260617204523-70530ca095f9
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260623153739-5a887b09871a
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260617204523-70530ca095f9
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260617204523-70530ca095f9
 )
@@ -195,6 +196,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver v0.124.1
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.124.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver v0.124.1
@@ -619,7 +621,7 @@ require (
 	go.opentelemetry.io/collector/component/componentstatus v0.124.0 // indirect
 	go.opentelemetry.io/collector/config/configcompression v1.30.0
 	go.opentelemetry.io/collector/config/configgrpc v0.124.0 // indirect
-	go.opentelemetry.io/collector/config/confignet v1.30.0 // indirect
+	go.opentelemetry.io/collector/config/confignet v1.30.0
 	go.opentelemetry.io/collector/config/configretry v1.30.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.30.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.30.0 // indirect

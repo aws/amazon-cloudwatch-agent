@@ -38,10 +38,17 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	var opts []hostmetrics.Option
 	opts = append(opts, hostmetrics.WithName(common.OpenTelemetryKey))
 	if conf.IsSet(common.DatabaseInsightsConfigKey) {
+		var processNames []string
+		if conf.IsSet(common.DatabaseInsightsPostgresKey) {
+			processNames = append(processNames, "post(gres|master).*")
+		}
+		if conf.IsSet(common.DatabaseInsightsMysqlKey) {
+			processNames = append(processNames, "mysqld.*")
+		}
 		opts = append(opts, hostmetrics.WithProcessScraper(map[string]any{
 			"include": map[string]any{
 				"match_type": "regexp",
-				"names":      []string{"post(gres|master).*"},
+				"names":      processNames,
 			},
 			"mute_process_all_errors": true,
 			"metrics": map[string]any{

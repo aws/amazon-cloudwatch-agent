@@ -278,6 +278,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayr
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260617204523-70530ca095f9/go.mod h1:gNDpUc9eYHKy9YqGYK8toPIo3QZKdYQFLnaVQDA32A0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260617204523-70530ca095f9 h1:R4Ems+YMAXLtsEZwRXw8/cf1NkrzHQsc25WPdYbUaTM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260617204523-70530ca095f9/go.mod h1:wQV77sHJJdUMIvbJna8LjlNb0omEdiVSrwQnoVAlTMM=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260623153739-5a887b09871a h1:ScKUmN6HDigSB0rceZR3CmcO/CVDTxOtrk8XQSTC+Q4=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260623153739-5a887b09871a/go.mod h1:tnnmAnxuLxWKBG7NjOI3po8R+EAX/9cG1y7TWiQTMvA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260617204523-70530ca095f9 h1:ZLP3mZHMXzUjiXxXFVI9Z5LtU25qT13Qajz84mna/LY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260617204523-70530ca095f9/go.mod h1:gSxi2fY+T8mNzlaU7qOEnaXTcKfhIpijDSyeCu5GOYo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260617204523-70530ca095f9 h1:p0HB9BwhUdkaI0ALIb3hYxi7oCTDsGUuGadeM3R36AM=
