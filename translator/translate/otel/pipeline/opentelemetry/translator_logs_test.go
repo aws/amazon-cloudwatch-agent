@@ -4,6 +4,7 @@
 package opentelemetry
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 
@@ -19,7 +20,11 @@ func TestBaseLogsTranslator(t *testing.T) {
 	tt := NewBaseLogsTranslator()
 	assert.EqualValues(t, "logs/opentelemetry", tt.ID().String())
 
-	missingErr := &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelLogsKeys, " or ")}
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	missingErr := &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(keys, " or ")}
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		wantErr error

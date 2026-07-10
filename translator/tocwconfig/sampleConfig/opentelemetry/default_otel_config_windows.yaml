@@ -684,16 +684,16 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/windows_events_scope
                 - filter/windows_events_application
+                - transform/windows_events_scope
             receivers:
                 - windowseventlog/application
         logs/windows_events_system:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/windows_events_scope
                 - filter/windows_events_system
+                - transform/windows_events_scope
             receivers:
                 - windowseventlog/system
         metrics/opentelemetry:

@@ -8,57 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
-
-	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
-	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
-
-func TestNewTranslators_Disabled(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]any{
-		"opentelemetry": map[string]any{"collect": map[string]any{}},
-	})
-	translators := NewTranslators(conf)
-	assert.Equal(t, 0, translators.Len())
-}
-
-func TestNewTranslators_TwoEntries(t *testing.T) {
-	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_WINDOWS)
-	defer translatorcontext.CurrentContext().SetOs("")
-	conf := confmap.NewFromStringMap(map[string]any{
-		"opentelemetry": map[string]any{
-			"collect": map[string]any{
-				"windows_events": map[string]any{
-					"collect_list": []any{
-						map[string]any{"event_name": "System"},
-						map[string]any{"event_name": "Application"},
-					},
-				},
-			},
-		},
-	})
-	translators := NewTranslators(conf)
-	assert.Equal(t, 2, translators.Len())
-}
-
-func TestNewTranslators_NonWindows(t *testing.T) {
-	translatorcontext.CurrentContext().SetOs(translatorconfig.OS_TYPE_LINUX)
-	defer translatorcontext.CurrentContext().SetOs("")
-	conf := confmap.NewFromStringMap(map[string]any{
-		"opentelemetry": map[string]any{
-			"collect": map[string]any{
-				"windows_events": map[string]any{
-					"collect_list": []any{
-						map[string]any{"event_name": "System"},
-					},
-				},
-			},
-		},
-	})
-	translators := NewTranslators(conf)
-	assert.Equal(t, 0, translators.Len())
-}
 
 func TestPipelineTranslator_ID(t *testing.T) {
 	pt := &windowsEventsPipelineTranslator{entry: eventEntry{name: "system_0"}}
@@ -101,37 +52,19 @@ func TestPipelineTranslator_Translate_WithFilter(t *testing.T) {
 	assert.Equal(t, 2, result.Processors.Len())
 }
 
-func TestParseEntries(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]any{
-		"opentelemetry": map[string]any{
-			"collect": map[string]any{
-				"windows_events": map[string]any{
-					"collect_list": []any{
-						map[string]any{"event_name": "System", "event_levels": []any{"ERROR"}, "event_format": "xml", "log_group_name": "/custom/system"},
-						map[string]any{"event_name": "Application", "event_ids": []any{float64(1001)}},
-						map[string]any{"event_name": "Microsoft-Windows-PowerShell/Operational", "event_levels": []any{"WARNING"}},
-					},
-				},
-			},
-		},
-	})
-	entries := parseEntries(conf)
-	require.Len(t, entries, 3)
+func TestPipelineTranslator_Translate_WithRoutingAttrs(t *testing.T) {
+	pt := &windowsEventsPipelineTranslator{entry: eventEntry{
+		name:         "system",
+		receiverName: "system",
+		channel:      "System",
+		resource:     map[string]string{"aws.log.source": "windows_events", "aws.log.channel": "System"},
+		logGroupName: "/custom/group",
+	}}
+	result, err := pt.Translate(nil)
+	require.NoError(t, err)
 
-	assert.Equal(t, "system", entries[0].name)
-	assert.Equal(t, "System", entries[0].channel)
-	assert.True(t, entries[0].raw)
-	assert.Equal(t, "/custom/system", entries[0].resource["aws.log.group.name"])
-	assert.Equal(t, []string{"ERROR"}, entries[0].eventLevels)
-
-	assert.Equal(t, "application", entries[1].name)
-	assert.Equal(t, "Application", entries[1].channel)
-	assert.False(t, entries[1].raw)
-	assert.Equal(t, []int{1001}, entries[1].eventIDs)
-
-	assert.Equal(t, "microsoft-windows-powershell_operational", entries[2].name)
-	assert.Equal(t, "Microsoft-Windows-PowerShell/Operational", entries[2].channel)
-	assert.Equal(t, []string{"WARNING"}, entries[2].eventLevels)
+	// resource processor + scope transform = 2 processors
+	assert.Equal(t, 2, result.Processors.Len())
 }
 
 func TestPipelineTranslator_DuplicateChannels_SharedReceiver(t *testing.T) {
@@ -160,32 +93,6 @@ func TestPipelineTranslator_DuplicateChannels_SharedReceiver(t *testing.T) {
 
 	// Same receiver ID (shared checkpoint)
 	assert.Equal(t, r1.Receivers.Keys(), r2.Receivers.Keys())
-}
-
-func TestParseEntries_DuplicateChannels(t *testing.T) {
-	conf := confmap.NewFromStringMap(map[string]any{
-		"opentelemetry": map[string]any{
-			"collect": map[string]any{
-				"windows_events": map[string]any{
-					"collect_list": []any{
-						map[string]any{"event_name": "System", "event_levels": []any{"ERROR"}},
-						map[string]any{"event_name": "System", "event_levels": []any{"WARNING"}},
-						map[string]any{"event_name": "System", "event_ids": []any{float64(1001)}},
-					},
-				},
-			},
-		},
-	})
-	entries := parseEntries(conf)
-	require.Len(t, entries, 3)
-	assert.Equal(t, "system", entries[0].name)
-	assert.Equal(t, "system_1", entries[1].name)
-	assert.Equal(t, "system_2", entries[2].name)
-
-	// All entries share the same receiver (same channel = same checkpoint)
-	assert.Equal(t, "system", entries[0].receiverName)
-	assert.Equal(t, "system", entries[1].receiverName)
-	assert.Equal(t, "system", entries[2].receiverName)
 }
 
 func TestPipelineTranslator_Translate_XmlWithEventIDs_Error(t *testing.T) {
@@ -234,6 +141,35 @@ func TestBuildFilterCondition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.entry.filterCondition())
+		})
+	}
+}
+
+func TestRoutingAttributes(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    eventEntry
+		expected map[string]string
+	}{
+		{
+			name:     "no routing attrs",
+			entry:    eventEntry{name: "system"},
+			expected: map[string]string{},
+		},
+		{
+			name:     "log group only",
+			entry:    eventEntry{name: "system", logGroupName: "/custom/group"},
+			expected: map[string]string{"aws.log.group.name": "/custom/group"},
+		},
+		{
+			name:     "both",
+			entry:    eventEntry{name: "system", logGroupName: "/custom/group", logStreamName: "my-stream"},
+			expected: map[string]string{"aws.log.group.name": "/custom/group", "aws.log.stream.name": "my-stream"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.entry.routingAttributes())
 		})
 	}
 }

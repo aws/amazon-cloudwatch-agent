@@ -53,6 +53,7 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 
 	var entries []eventEntry
 	seen := map[string]int{}
+	channelReceiver := map[string]string{}
 	for _, item := range list {
 		m, ok := item.(map[string]any)
 		if !ok {
@@ -70,12 +71,9 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 			"aws.log.source":  common.WindowsEventsKey,
 			"aws.log.channel": channel,
 		}
-		if logGroup, ok := m[logGroupNameKey].(string); ok && logGroup != "" {
-			resource["aws.log.group.name"] = logGroup
-		}
-		if logStream, ok := m[logStreamNameKey].(string); ok && logStream != "" {
-			resource["aws.log.stream.name"] = logStream
-		}
+
+		logGroupName, _ := m[logGroupNameKey].(string)
+		logStreamName, _ := m[logStreamNameKey].(string)
 
 		var levels []string
 		if rawLevels, ok := m[eventLevelsKey].([]any); ok {
@@ -105,14 +103,23 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		}
 		seen[sanitized]++
 
+		receiverName := name
+		if rn, ok := channelReceiver[channel]; ok {
+			receiverName = rn
+		} else {
+			channelReceiver[channel] = name
+		}
+
 		entries = append(entries, eventEntry{
-			name:         name,
-			receiverName: sanitized,
-			channel:      channel,
-			raw:          raw,
-			resource:     resource,
-			eventLevels:  levels,
-			eventIDs:     ids,
+			name:          name,
+			receiverName:  receiverName,
+			channel:       channel,
+			raw:           raw,
+			resource:      resource,
+			logGroupName:  logGroupName,
+			logStreamName: logStreamName,
+			eventLevels:   levels,
+			eventIDs:      ids,
 		})
 	}
 	return entries

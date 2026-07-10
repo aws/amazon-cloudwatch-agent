@@ -45,11 +45,14 @@ var otelLogsKeys = []string{
 	common.OtelCollectLogsConfigKey,
 	common.DatabaseInsightsConfigKey,
 	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
-	common.WindowsEventsConfigKey,
 }
 
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if err := common.ValidateAnySet(conf, t.ID(), otelLogsKeys); err != nil {
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil {
 		return nil, err
 	}
 

@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/filestorage"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/windowseventlog"
 )
@@ -35,13 +36,26 @@ var severityNumbers = map[string]int{
 }
 
 type eventEntry struct {
-	name         string
-	receiverName string
-	channel      string
-	raw          bool
-	resource     map[string]string
-	eventLevels  []string
-	eventIDs     []int
+	name          string
+	receiverName  string
+	channel       string
+	raw           bool
+	resource      map[string]string
+	logGroupName  string
+	logStreamName string
+	eventLevels   []string
+	eventIDs      []int
+}
+
+func (e eventEntry) routingAttributes() map[string]string {
+	attrs := make(map[string]string)
+	if e.logGroupName != "" {
+		attrs["aws.log.group.name"] = e.logGroupName
+	}
+	if e.logStreamName != "" {
+		attrs["aws.log.stream.name"] = e.logStreamName
+	}
+	return attrs
 }
 
 // filterCondition builds an OTTL drop condition. When both levels and IDs are present, they are ANDed.
@@ -99,16 +113,23 @@ func (t *windowsEventsPipelineTranslator) Translate(_ *confmap.Conf) (*common.Co
 	receivers.Set(windowseventlog.NewTranslator(t.entry.receiverName, t.entry.channel, t.entry.raw, t.entry.resource))
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
-	processors.Set(transformprocessor.NewTranslatorWithName("windows_events_scope",
-		transformprocessor.WithErrorMode(common.OTTLErrorModeIgnore),
-		transformprocessor.WithLogScopeStatements(common.ScopeStatementsForSolution("otel-windows-events")),
-	))
 
 	// TODO: Replace with upstream Query XML filtering when collector is bumped past v0.124.
 	condition := t.entry.filterCondition()
 	if condition != "" {
 		processors.Set(filterprocessor.NewTranslatorWithLogCondition("windows_events_"+t.entry.name, condition, common.OTTLErrorModeIgnore))
 	}
+
+	if attrs := t.entry.routingAttributes(); len(attrs) > 0 {
+		processors.Set(resourceprocessor.NewTranslator(
+			common.WithName("windows_events_"+t.entry.name),
+			resourceprocessor.WithAttributes(attrs),
+		))
+	}
+	processors.Set(transformprocessor.NewTranslatorWithName("windows_events_scope",
+		transformprocessor.WithErrorMode(common.OTTLErrorModeIgnore),
+		transformprocessor.WithLogScopeStatements(common.ScopeStatementsForSolution("otel-windows-events")),
+	))
 
 	return &common.ComponentTranslators{
 		Receivers:  receivers,

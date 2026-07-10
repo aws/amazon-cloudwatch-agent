@@ -105,6 +105,15 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
+    resource/windows_events_system:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: aws.log.group.name
+              pattern: ""
+              value: /aws/cwagent/windows-events/System
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -482,7 +491,6 @@ receivers:
         poll_interval: 1s
         resource:
             aws.log.channel: System
-            aws.log.group.name: /aws/cwagent/windows-events/System
             aws.log.source: windows_events
         retry_on_failure:
             enabled: false
@@ -516,16 +524,17 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/windows_events_scope
                 - filter/windows_events_application
+                - transform/windows_events_scope
             receivers:
                 - windowseventlog/application
         logs/windows_events_system:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/windows_events_scope
                 - filter/windows_events_system
+                - resource/windows_events_system
+                - transform/windows_events_scope
             receivers:
                 - windowseventlog/system
     telemetry:
