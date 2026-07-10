@@ -8,7 +8,7 @@
   "opentelemetry": {
     "collect": {
       "host_metrics": {
-        "metrics_collection_interval": 10
+        "collection_interval": 10
       }
     }
   }
