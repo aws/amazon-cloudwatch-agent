@@ -72,7 +72,7 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 				transformprocessor.WithMetricResourceStatements([]string{stmt}),
 			))
 		case pipeline.SignalLogs:
-			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name_logs",
 				transformprocessor.WithLogResourceStatements([]string{stmt}),
 			))
 			// Traces are not handled: WithTraceResourceStatements is not yet supported.

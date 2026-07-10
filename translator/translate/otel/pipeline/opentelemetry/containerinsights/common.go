@@ -5,6 +5,8 @@ package containerinsights
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -15,7 +17,7 @@ import (
 )
 
 const (
-	ciPrefix                  = "cw_k8s_ci_v0"
+	ciPrefix    = "cw_k8s_ci_v0"
 	modeNode    = "node"
 	modeCluster = "cluster"
 )
