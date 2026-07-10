@@ -1,33 +1,6 @@
 connectors:
     forward/opentelemetry: {}
 exporters:
-    otlphttp/logs:
-        auth:
-            authenticator: agenthealth/opentelemetry_logs
-        compression: gzip
-        encoding: proto
-        idle_conn_timeout: 1m30s
-        logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
-        max_idle_conns: 100
-        metrics_endpoint: ""
-        retry_on_failure:
-            enabled: true
-            initial_interval: 5s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 10
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
-        timeout: 30s
-        traces_endpoint: ""
-        write_buffer_size: 524288
     otlphttp/metrics:
         auth:
             authenticator: agenthealth/opentelemetry_metrics
@@ -55,43 +28,7 @@ exporters:
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
-    otlphttp/traces:
-        auth:
-            authenticator: agenthealth/opentelemetry_traces
-        compression: gzip
-        encoding: proto
-        idle_conn_timeout: 1m30s
-        logs_endpoint: ""
-        max_idle_conns: 100
-        metrics_endpoint: ""
-        retry_on_failure:
-            enabled: true
-            initial_interval: 5s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 10
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
-        timeout: 30s
-        traces_endpoint: https://xray.us-west-2.amazonaws.com/v1/traces
-        write_buffer_size: 524288
 extensions:
-    agenthealth/opentelemetry_logs:
-        additional_auth: headers_setter/logs
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - '*'
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
@@ -99,82 +36,27 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EC2
+                mode: AZVM
                 region_type: ACJ
-    agenthealth/opentelemetry_traces:
-        additional_auth: sigv4auth/xray
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - '*'
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    awscloudwatchlogsprovisioner:
-        additional_auth: sigv4auth/logs
-        imds_retries: 1
-        logs_provision_failure_backoff: 30s
-        max_retries: 2
-        num_workers: 8
-        region: us-west-2
-        request_timeout_seconds: 10
-    headers_setter/logs:
-        additional_auth: awscloudwatchlogsprovisioner
-        headers:
-            - action: upsert
-              from_context: aws.log.group.name
-              key: x-aws-log-group
-            - action: upsert
-              from_context: aws.log.stream.name
-              key: x-aws-log-stream
-    sigv4auth/logs:
-        assume_role: {}
-        imds_retries: 1
-        max_retries: 2
-        num_workers: 8
-        region: us-west-2
-        request_timeout_seconds: 30
-        service: logs
+    oidctoken:
+        output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+        provider: azure
     sigv4auth/monitoring:
-        assume_role: {}
+        assume_role:
+            arn: arn:aws:iam::123456789012:role/AzureVMRole
+            sts_region: us-west-2
+            web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
         imds_retries: 1
         max_retries: 2
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 30
         service: monitoring
-    sigv4auth/xray:
-        assume_role: {}
-        imds_retries: 1
-        max_retries: 2
-        num_workers: 8
-        region: us-west-2
-        request_timeout_seconds: 30
-        service: xray
 processors:
-    attributestocontext/opentelemetry:
-        actions:
-            - from_resource_attribute: aws.log.group.name
-              key: aws.log.group.name
-            - from_resource_attribute: aws.log.stream.name
-              key: aws.log.stream.name
-    batch/opentelemetry_logs:
-        metadata_cardinality_limit: 1000
-        metadata_keys:
-            - aws.log.group.name
-            - aws.log.stream.name
-        send_batch_max_size: 10000
-        send_batch_size: 10000
-        timeout: 30s
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 30s
-    batch/opentelemetry_traces:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 10000
-        send_batch_size: 10000
         timeout: 30s
     resourcedetection/opentelemetry:
         aks:
@@ -221,9 +103,8 @@ processors:
                     enabled: true
             token_file: ""
         detectors:
-            - eks
             - env
-            - ec2
+            - azure
         docker:
             resource_attributes:
                 host.name:
@@ -253,9 +134,7 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-            tags:
-                - ^kubernetes.io/cluster/.*$
-                - ^aws:autoscaling:groupName
+            tags: []
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
@@ -456,6 +335,17 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -483,120 +373,55 @@ processors:
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
-    transform/logs_cleanup:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: resource
-              error_mode: ignore
-              statements:
-                - delete_key(resource.attributes, "aws.log.group.name")
-                - delete_key(resource.attributes, "aws.log.stream.name")
-                - delete_key(resource.attributes, "aws.log.source")
-        metric_statements: []
-        trace_statements: []
-    transform/logs_routing:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: resource
-              error_mode: ignore
-              statements:
-                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
-                - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
-                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.id"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil
-                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
-                - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
-        metric_statements: []
-        trace_statements: []
-    transform/otlp_log_source:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: resource
-              error_mode: ignore
-              statements:
-                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
-        metric_statements: []
-        trace_statements: []
-    transform/otlp_scope:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
-        metric_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
-    otlp/grpc_127_0_0_1_4317:
-        protocols:
-            grpc:
-                endpoint: 127.0.0.1:4317
-                keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
-                read_buffer_size: 524288
-                transport: tcp
-    otlp/http_127_0_0_1_4318:
-        protocols:
-            http:
-                cors: {}
-                endpoint: 127.0.0.1:4318
-                idle_timeout: 0s
-                logs_url_path: /v1/logs
-                metrics_url_path: /v1/metrics
-                read_header_timeout: 0s
-                traces_url_path: /v1/traces
-                write_timeout: 0s
+    hostmetrics/opentelemetry:
+        collection_interval: 10s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            processes: null
+        timeout: 0s
 service:
     extensions:
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
-        - sigv4auth/logs
-        - awscloudwatchlogsprovisioner
-        - headers_setter/logs
-        - agenthealth/opentelemetry_logs
-        - sigv4auth/xray
-        - agenthealth/opentelemetry_traces
+        - oidctoken
     pipelines:
-        logs/opentelemetry:
-            exporters:
-                - otlphttp/logs
-            processors:
-                - resourcedetection/opentelemetry
-                - transform/identity
-                - transform/logs_routing
-                - attributestocontext/opentelemetry
-                - transform/logs_cleanup
-                - batch/opentelemetry_logs
-            receivers:
-                - forward/opentelemetry
-        logs/otlp:
+        metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/otlp_scope
-                - transform/otlp_log_source
+                - transform/host_metrics_scope
             receivers:
-                - otlp/grpc_127_0_0_1_4317
-                - otlp/http_127_0_0_1_4318
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
@@ -606,31 +431,6 @@ service:
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
-        metrics/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-            receivers:
-                - otlp/grpc_127_0_0_1_4317
-                - otlp/http_127_0_0_1_4318
-        traces/opentelemetry:
-            exporters:
-                - otlphttp/traces
-            processors:
-                - resourcedetection/opentelemetry
-                - transform/identity
-                - batch/opentelemetry_traces
-            receivers:
-                - forward/opentelemetry
-        traces/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-            receivers:
-                - otlp/grpc_127_0_0_1_4317
-                - otlp/http_127_0_0_1_4318
     telemetry:
         logs:
             encoding: console
