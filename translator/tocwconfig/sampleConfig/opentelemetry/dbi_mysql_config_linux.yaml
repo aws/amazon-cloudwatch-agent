@@ -9,7 +9,7 @@ connectors:
                     - key: db.system.name
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Active sessions by database
             mysql.active_sessions.by_host:
                 attributes:
@@ -17,7 +17,7 @@ connectors:
                     - key: network.peer.address
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Active sessions by host
             mysql.active_sessions.by_sql:
                 attributes:
@@ -25,7 +25,7 @@ connectors:
                     - key: mysql.events_statements_current.digest
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Active sessions by query digest
             mysql.active_sessions.by_sql_wait:
                 attributes:
@@ -34,7 +34,7 @@ connectors:
                     - key: mysql.wait_type
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Active sessions by query and wait
             mysql.active_sessions.by_user:
                 attributes:
@@ -42,7 +42,7 @@ connectors:
                     - key: user.name
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Active sessions by user
             mysql.active_sessions.by_wait:
                 attributes:
@@ -50,14 +50,14 @@ connectors:
                     - key: mysql.wait_type
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Active sessions by wait event
             mysql.active_sessions.count:
                 attributes:
                     - key: db.system.name
                     - key: db.namespace
                 conditions:
-                    - attributes["mysql.threads.processlist_command"] == "Query"
+                    - attributes["mysql.session.status"] != "idle"
                 description: Total active sessions
         metrics:
             metric.count:
