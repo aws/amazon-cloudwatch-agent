@@ -4,8 +4,8 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -18,17 +18,22 @@ import (
 
 // Clean integration hosts if they have been open longer than 1 day
 func main() {
-	err := cleanHost()
-	if err != nil {
+	clean.RegisterCommonFlags()
+	flag.Parse()
+	region := flag.Arg(0)
+	if region == "" {
+		log.Fatal("Region argument is required, e.g. clean_host.go <region>")
+	}
+	if err := cleanHost(region); err != nil {
 		log.Fatalf("errors cleaning %v", err)
 	}
 }
 
-func cleanHost() error {
+func cleanHost(region string) error {
 	log.Print("Begin to clean EC2 Host")
 
 	cxt := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(cxt, config.WithRegion(os.Args[1]))
+	defaultConfig, err := config.LoadDefaultConfig(cxt, config.WithRegion(region))
 	if err != nil {
 		return err
 	}
@@ -83,10 +88,12 @@ func terminateInstances(cxt context.Context, ec2client *ec2.Client) {
 		}
 
 		log.Printf("instances to terminate %v", instanceIds)
-		terminateInstance := ec2.TerminateInstancesInput{InstanceIds: instanceIds}
-		_, err := ec2client.TerminateInstances(cxt, &terminateInstance)
-		if err != nil {
-			log.Printf("Error %v terminating instances %v", err, instanceIds)
+		if !clean.Skip("terminate instances %v", instanceIds) {
+			terminateInstance := ec2.TerminateInstancesInput{InstanceIds: instanceIds}
+			_, err := ec2client.TerminateInstances(cxt, &terminateInstance)
+			if err != nil {
+				log.Printf("Error %v terminating instances %v", err, instanceIds)
+			}
 		}
 		if describeInstanceOutput.NextToken == nil {
 			break
