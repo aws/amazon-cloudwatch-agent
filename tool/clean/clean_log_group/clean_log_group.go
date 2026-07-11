@@ -52,7 +52,6 @@ func init() {
 		inactiveThreshold: 1 * clean.KeepDurationOneDay,
 		numWorkers:        15,
 		exceptionList:     []string{"lambda"},
-		dryRun:            true,
 	}
 
 }
@@ -61,8 +60,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 	// Parse command line flags
-	flag.BoolVar(&cfg.dryRun, "dry-run", false, "Enable dry-run mode (no actual deletion)")
+	clean.RegisterCommonFlags()
 	flag.Parse()
+	cfg.dryRun = clean.DryRun
 	// Load AWS configuration
 	awsCfg, err := loadAWSConfig(ctx)
 	if err != nil {
