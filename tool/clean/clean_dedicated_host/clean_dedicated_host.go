@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"time"
 
@@ -24,6 +25,8 @@ const tagName = "tag:Name"
 const tagValue = "IntegrationTestMacDedicatedHost"
 
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
 	err := cleanDedicatedHost()
 	if err != nil {
 		log.Fatalf("errors cleaning %v", err)
@@ -62,6 +65,9 @@ func cleanDedicatedHost() error {
 	}
 
 	log.Printf("Dedicated hosts to release %v", dedicatedHostIds)
+	if clean.Skip("release dedicated hosts %v", dedicatedHostIds) {
+		return nil
+	}
 	releaseDedicatedHost := ec2.ReleaseHostsInput{HostIds: dedicatedHostIds}
 	_, err = ec2client.ReleaseHosts(cxt, &releaseDedicatedHost)
 	return err
