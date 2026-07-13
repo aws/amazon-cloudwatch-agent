@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -37,17 +36,23 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cmd/amazon-cloudwatch-agent/internal"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
-	"github.com/aws/amazon-cloudwatch-agent/internal/merge/confmap"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	cwaLogger "github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	_ "github.com/aws/amazon-cloudwatch-agent/plugins"
+	_ "github.com/aws/amazon-cloudwatch-agent/plugins" // do not remove, necessary for telegraf to know what plugins are used
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
 	"github.com/aws/amazon-cloudwatch-agent/service/configprovider"
 	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
 	"github.com/aws/amazon-cloudwatch-agent/service/registry"
+	"github.com/aws/amazon-cloudwatch-agent/tool/cmdwrapper"
+	"github.com/aws/amazon-cloudwatch-agent/tool/downloader"
+	downloaderflags "github.com/aws/amazon-cloudwatch-agent/tool/downloader/flags"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/tool/translator"
+	"github.com/aws/amazon-cloudwatch-agent/tool/wizard"
+	wizardflags "github.com/aws/amazon-cloudwatch-agent/tool/wizard/flags"
+	translatorflags "github.com/aws/amazon-cloudwatch-agent/translator/flags"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 )
 
@@ -153,7 +158,7 @@ func reloadLoop(
 					select {
 					case <-ticker.C:
 						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
-							if err := loadEnvironmentVariables(envConfigPath); err != nil {
+							if err := envconfig.LoadFile(envConfigPath); err != nil {
 								log.Printf("E! Unable to load env variables: %v\n", err)
 							}
 							// Sets the log level based on environment variable
@@ -192,30 +197,6 @@ func reloadLoop(
 	}
 }
 
-// loadEnvironmentVariables updates OS ENV vars with key/val from the given JSON file.
-// The "config-translator" program populates that file.
-func loadEnvironmentVariables(path string) error {
-	if path == "" {
-		return fmt.Errorf("no env config file specified")
-	}
-
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("cannot read env config file %s due to: %s", path, err.Error())
-	}
-	envVars := map[string]string{}
-	err = json.Unmarshal(bytes, &envVars)
-	if err != nil {
-		return fmt.Errorf("cannot create env config due to: %s", err.Error())
-	}
-
-	for key, val := range envVars {
-		os.Setenv(key, val)
-		log.Printf("I! %s is set to \"%s\"\n", key, val)
-	}
-	return nil
-}
-
 func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
 	if configPath == "" {
 		return "", fmt.Errorf("no config file specified")
@@ -236,7 +217,7 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = loadEnvironmentVariables(envConfigPath)
+	err = envconfig.LoadFile(envConfigPath)
 	if err != nil && !*fSchemaTest {
 		log.Printf("W! Failed to load environment variables due to %s\n", err.Error())
 	}
@@ -341,11 +322,16 @@ func runAgent(ctx context.Context,
 
 	otelConfigs := fOtelConfigs
 	// try merging configs together, will return nil if nothing to merge
-	merged, err := mergeConfigs(otelConfigs)
+	merged, err := mergeConfigs(otelConfigs, envconfig.IsUsageDataEnabled())
 	if err != nil {
 		return err
 	}
 	if merged != nil {
+		if _, err = os.Stat(paths.YamlConfigPath); err == nil {
+			useragent.Get().AddFeatureFlags(featureFlagOtelMergeJSON)
+		} else {
+			useragent.Get().AddFeatureFlags(featureFlagOtelMergeYAML)
+		}
 		_ = os.Setenv(envconfig.CWAgentMergedOtelConfig, toyamlconfig.ToYamlConfig(merged.ToStringMap()))
 		otelConfigs = []string{"env:" + envconfig.CWAgentMergedOtelConfig}
 	} else {
@@ -411,37 +397,6 @@ func getCollectorParams(factories otelcol.Factories, providerSettings otelcol.Co
 	}
 }
 
-// mergeConfigs tries to merge configurations together. If nothing to merge, returns nil without an error.
-func mergeConfigs(configPaths []string) (*confmap.Conf, error) {
-	var loaders []confmap.Loader
-	if envconfig.IsRunningInContainer() {
-		content, ok := os.LookupEnv(envconfig.CWOtelConfigContent)
-		if ok && len(content) > 0 {
-			log.Printf("D! Merging OTEL configuration from: %s", envconfig.CWOtelConfigContent)
-			loaders = append(loaders, confmap.NewByteLoader(envconfig.CWOtelConfigContent, []byte(content)))
-		}
-	}
-	// If using environment variable or passing in more than one config
-	if len(loaders) > 0 || len(configPaths) > 1 {
-		log.Printf("D! Merging OTEL configurations from: %s", configPaths)
-		for _, configPath := range configPaths {
-			loaders = append(loaders, confmap.NewFileLoader(configPath))
-		}
-		result := confmap.New()
-		for _, loader := range loaders {
-			conf, err := loader.Load()
-			if err != nil {
-				return nil, fmt.Errorf("failed to load OTEL configs: %w", err)
-			}
-			if err = result.Merge(conf); err != nil {
-				return nil, fmt.Errorf("failed to merge OTEL configs: %w", err)
-			}
-		}
-		return result, nil
-	}
-	return nil, nil
-}
-
 func components(telegrafConfig *config.Config) (otelcol.Factories, error) {
 	telegrafAdapter := adapter.NewAdapter(telegrafConfig)
 
@@ -492,6 +447,40 @@ func (p *program) Stop(_ service.Service) error {
 
 func main() {
 	flag.Var(&fOtelConfigs, configprovider.OtelConfigFlagName, "YAML configuration files to run OTel pipeline")
+
+	// Check for subcommands first
+	if len(os.Args) > 1 {
+		subcommand := os.Args[1]
+		if subcommand == translatorflags.TranslatorCommand || subcommand == downloaderflags.Command || subcommand == wizardflags.Command {
+			subcommands := map[string]map[string]cmdwrapper.Flag{
+				translatorflags.TranslatorCommand: translatorflags.TranslatorFlags,
+				downloaderflags.Command:           downloaderflags.DownloaderFlags,
+				wizardflags.Command:               wizardflags.WizardFlags,
+			}
+			handlers := map[string]func(map[string]*string) error{
+				translatorflags.TranslatorCommand: translator.RunTranslator,
+				downloaderflags.Command:           downloader.RunDownloaderFromFlags,
+				wizardflags.Command:               wizard.RunWizardFromFlags,
+			}
+
+			if err := cmdwrapper.HandleSubcommand(subcommands, handlers); err != nil {
+				log.Fatalf("E! %s", err.Error())
+			}
+			return
+		}
+	}
+
+	// Override flag.Usage to include subcommand help
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nAvailable subcommands:\n")
+		fmt.Fprintf(os.Stderr, "  %s\t\tTranslate configuration files\n", translatorflags.TranslatorCommand)
+		fmt.Fprintf(os.Stderr, "  %s\t\tDownload configuration from remote sources\n", downloaderflags.Command)
+		fmt.Fprintf(os.Stderr, "  %s\t\t\tInteractive configuration wizard\n", wizardflags.Command)
+		fmt.Fprintf(os.Stderr, "\nUse '%s <subcommand> --help' for more information about a subcommand.\n", os.Args[0])
+	}
+
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
 		_ = fOtelConfigs.Set(getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath))
@@ -594,26 +583,13 @@ func main() {
 		if *fEnvConfig != "" {
 			parts := strings.SplitN(*fSetEnv, "=", 2)
 			if len(parts) == 2 {
-				bytes, err := os.ReadFile(*fEnvConfig)
-				if err != nil {
-					log.Fatalf("E! Failed to read env config: %v", err)
-				}
-				envVars := map[string]string{}
-				err = json.Unmarshal(bytes, &envVars)
-				if err != nil {
-					log.Fatalf("E! Failed to unmarshal env config: %v", err)
-				}
-				envVars[parts[0]] = parts[1]
-				bytes, err = json.MarshalIndent(envVars, "", "\t")
-				if err != nil {
-					log.Fatalf("E! Failed to marshal env config: %v", err)
-				}
-				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
+				if err := envconfig.MergeFile(*fEnvConfig, map[string]string{parts[0]: parts[1]}); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}
 		}
 		return
+
 	}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {

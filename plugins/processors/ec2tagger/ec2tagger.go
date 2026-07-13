@@ -100,6 +100,11 @@ func getOtelAttributes(m pmetric.Metric) []pcommon.Map {
 		for i := 0; i < dps.Len(); i++ {
 			attributes = append(attributes, dps.At(i).Attributes())
 		}
+	case pmetric.MetricTypeExponentialHistogram:
+		dps := m.ExponentialHistogram().DataPoints()
+		for i := 0; i < dps.Len(); i++ {
+			attributes = append(attributes, dps.At(i).Attributes())
+		}
 	}
 	return attributes
 }
@@ -135,27 +140,36 @@ func (t *Tagger) updateOtelAttributes(attributes []pcommon.Map) {
 	for _, attr := range attributes {
 		if t.ec2TagCache != nil {
 			for k, v := range t.ec2TagCache {
-				attr.PutStr(k, v)
-			}
-		}
-		if t.ec2MetadataLookup.instanceId {
-			attr.PutStr(mdKeyInstanceId, t.ec2MetadataRespond.instanceId)
-		}
-		if t.ec2MetadataLookup.imageId {
-			attr.PutStr(mdKeyImageId, t.ec2MetadataRespond.imageId)
-		}
-		if t.ec2MetadataLookup.instanceType {
-			attr.PutStr(mdKeyInstanceType, t.ec2MetadataRespond.instanceType)
-		}
-		if t.volumeSerialCache != nil {
-			if devName, found := attr.Get(t.DiskDeviceTagKey); found {
-				serial := t.volumeSerialCache.Serial(devName.Str())
-				if serial != "" {
-					attr.PutStr(AttributeVolumeId, serial)
+				if _, exists := attr.Get(k); !exists {
+					attr.PutStr(k, v)
 				}
 			}
 		}
-		// If append_dimensions are applied, then remove the host dimension.
+		if t.ec2MetadataLookup.instanceId {
+			if _, exists := attr.Get(MdKeyInstanceID); !exists {
+				attr.PutStr(MdKeyInstanceID, t.ec2MetadataRespond.instanceId)
+			}
+		}
+		if t.ec2MetadataLookup.imageId {
+			if _, exists := attr.Get(MdKeyImageID); !exists {
+				attr.PutStr(MdKeyImageID, t.ec2MetadataRespond.imageId)
+			}
+		}
+		if t.ec2MetadataLookup.instanceType {
+			if _, exists := attr.Get(MdKeyInstanceType); !exists {
+				attr.PutStr(MdKeyInstanceType, t.ec2MetadataRespond.instanceType)
+			}
+		}
+		if t.volumeSerialCache != nil {
+			if _, exists := attr.Get(AttributeVolumeId); !exists {
+				if devName, found := attr.Get(t.DiskDeviceTagKey); found {
+					serial := t.volumeSerialCache.Serial(devName.Str())
+					if serial != "" {
+						attr.PutStr(AttributeVolumeId, serial)
+					}
+				}
+			}
+		}
 		attr.Remove("host")
 	}
 }
@@ -349,8 +363,8 @@ func (t *Tagger) Start(ctx context.Context, host component.Host) error {
 		t.ec2API = t.ec2Provider(ec2CredentialConfig)
 
 		if client, ok := t.ec2API.(*ec2.EC2); ok {
-			if t.Config.MiddlewareID != nil {
-				awsmiddleware.TryConfigure(t.logger, host, *t.Config.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
+			if t.MiddlewareID != nil {
+				awsmiddleware.TryConfigure(t.logger, host, *t.MiddlewareID, awsmiddleware.SDKv1(&client.Handlers))
 			}
 		}
 
@@ -379,7 +393,7 @@ func (t *Tagger) refreshLoopToUpdateTags() {
 		//are fetched successfully because initial retrieval might not get all of them.
 		//When the specified key is "*", there is no way for us to check if all
 		//tags are fetched. So there is no need to do refresh in this case.
-		needRefresh = !(len(t.EC2InstanceTagKeys) == 1 && t.EC2InstanceTagKeys[0] == "*")
+		needRefresh = len(t.EC2InstanceTagKeys) != 1 || t.EC2InstanceTagKeys[0] != "*"
 
 		stopAfterFirstSuccess = true
 		refreshInterval = defaultRefreshInterval
@@ -404,7 +418,7 @@ func (t *Tagger) refreshLoopToUpdateVolumes() {
 
 	refreshInterval := t.RefreshVolumesInterval
 	if refreshInterval.Seconds() == 0 {
-		needRefresh = !(len(t.EBSDeviceKeys) == 1 && t.EBSDeviceKeys[0] == "*")
+		needRefresh = len(t.EBSDeviceKeys) != 1 || t.EBSDeviceKeys[0] != "*"
 
 		stopAfterFirstSuccess = true
 		refreshInterval = defaultRefreshInterval
@@ -454,11 +468,11 @@ For more information on IMDS, please follow this document https://docs.aws.amazo
 func (t *Tagger) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 	for _, tag := range t.EC2MetadataTags {
 		switch tag {
-		case mdKeyInstanceId:
+		case MdKeyInstanceID:
 			t.ec2MetadataLookup.instanceId = true
-		case mdKeyImageId:
+		case MdKeyImageID:
 			t.ec2MetadataLookup.imageId = true
-		case mdKeyInstanceType:
+		case MdKeyInstanceType:
 			t.ec2MetadataLookup.instanceType = true
 		default:
 			t.logger.Error("ec2tagger: Unsupported EC2 Metadata key", zap.String("mdKey", tag))

@@ -1,0 +1,20 @@
+{
+  "agent": {
+    "metrics_collection_interval": "60s"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "diskio": {
+        "measurement": [
+          "diskio_instance_store_total_read_ops",
+          "diskio_instance_store_total_write_ops",
+          "diskio_instance_store_total_read_bytes",
+          "diskio_instance_store_total_write_bytes",
+          "diskio_instance_store_performance_exceeded_iops",
+          "diskio_instance_store_performance_exceeded_tp",
+          "diskio_instance_store_volume_queue_length"
+        ]
+      }
+    }
+  }
+}

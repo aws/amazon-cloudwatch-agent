@@ -163,6 +163,13 @@ type CloudWatchAPI interface {
 	ListDashboardsPages(*cloudwatch.ListDashboardsInput, func(*cloudwatch.ListDashboardsOutput, bool) bool) error
 	ListDashboardsPagesWithContext(aws.Context, *cloudwatch.ListDashboardsInput, func(*cloudwatch.ListDashboardsOutput, bool) bool, ...request.Option) error
 
+	ListManagedInsightRules(*cloudwatch.ListManagedInsightRulesInput) (*cloudwatch.ListManagedInsightRulesOutput, error)
+	ListManagedInsightRulesWithContext(aws.Context, *cloudwatch.ListManagedInsightRulesInput, ...request.Option) (*cloudwatch.ListManagedInsightRulesOutput, error)
+	ListManagedInsightRulesRequest(*cloudwatch.ListManagedInsightRulesInput) (*request.Request, *cloudwatch.ListManagedInsightRulesOutput)
+
+	ListManagedInsightRulesPages(*cloudwatch.ListManagedInsightRulesInput, func(*cloudwatch.ListManagedInsightRulesOutput, bool) bool) error
+	ListManagedInsightRulesPagesWithContext(aws.Context, *cloudwatch.ListManagedInsightRulesInput, func(*cloudwatch.ListManagedInsightRulesOutput, bool) bool, ...request.Option) error
+
 	ListMetricStreams(*cloudwatch.ListMetricStreamsInput) (*cloudwatch.ListMetricStreamsOutput, error)
 	ListMetricStreamsWithContext(aws.Context, *cloudwatch.ListMetricStreamsInput, ...request.Option) (*cloudwatch.ListMetricStreamsOutput, error)
 	ListMetricStreamsRequest(*cloudwatch.ListMetricStreamsInput) (*request.Request, *cloudwatch.ListMetricStreamsOutput)
@@ -196,6 +203,10 @@ type CloudWatchAPI interface {
 	PutInsightRule(*cloudwatch.PutInsightRuleInput) (*cloudwatch.PutInsightRuleOutput, error)
 	PutInsightRuleWithContext(aws.Context, *cloudwatch.PutInsightRuleInput, ...request.Option) (*cloudwatch.PutInsightRuleOutput, error)
 	PutInsightRuleRequest(*cloudwatch.PutInsightRuleInput) (*request.Request, *cloudwatch.PutInsightRuleOutput)
+
+	PutManagedInsightRules(*cloudwatch.PutManagedInsightRulesInput) (*cloudwatch.PutManagedInsightRulesOutput, error)
+	PutManagedInsightRulesWithContext(aws.Context, *cloudwatch.PutManagedInsightRulesInput, ...request.Option) (*cloudwatch.PutManagedInsightRulesOutput, error)
+	PutManagedInsightRulesRequest(*cloudwatch.PutManagedInsightRulesInput) (*request.Request, *cloudwatch.PutManagedInsightRulesOutput)
 
 	PutMetricAlarm(*cloudwatch.PutMetricAlarmInput) (*cloudwatch.PutMetricAlarmOutput, error)
 	PutMetricAlarmWithContext(aws.Context, *cloudwatch.PutMetricAlarmInput, ...request.Option) (*cloudwatch.PutMetricAlarmOutput, error)

@@ -1,10 +1,13 @@
 exporters:
     awscloudwatch:
+        backoff_retry_base: 200ms
         drop_original_metrics:
             CPU_USAGE_IDLE: true
             cpu_time_active: true
         force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
         max_datums_per_call: 1000
+        max_retry_count: 5
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
@@ -15,21 +18,11 @@ exporters:
         add_metric_suffixes: true
         auth:
             authenticator: sigv4auth
-        compression: ""
-        disable_keep_alives: false
         endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        export_created_metric:
-            enabled: false
-        http2_ping_timeout: 0s
-        http2_read_idle_timeout: 0s
         idle_conn_timeout: 1m30s
         max_batch_size_bytes: 3000000
-        max_conns_per_host: 0
         max_idle_conns: 100
-        max_idle_conns_per_host: 0
         namespace: ""
-        proxy_url: ""
-        read_buffer_size: 0
         remote_write_queue:
             enabled: true
             num_consumers: 5
@@ -48,17 +41,6 @@ exporters:
         target_info:
             enabled: true
         timeout: 5s
-        tls:
-            ca_file: ""
-            cert_file: ""
-            include_system_ca_certs_pool: false
-            insecure: false
-            insecure_skip_verify: false
-            key_file: ""
-            max_version: ""
-            min_version: ""
-            reload_interval: 0s
-            server_name_override: ""
         write_buffer_size: 524288
 extensions:
     agenthealth/metrics:
@@ -81,9 +63,12 @@ extensions:
         mode: ec2
         region: us-west-2
     sigv4auth:
-        assume_role:
-            sts_region: us-west-2
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
         region: us-west-2
+        request_timeout_seconds: 30
 processors:
     awsentity/resource:
         entity_type: Resource
@@ -145,12 +130,13 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
+                - set(unit, "unit") where name == "disk_free"
+                - set(name, "DISK_FREE") where name == "disk_free"
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
                 - set(unit, "unit") where name == "cpu_usage_nice"
-                - set(unit, "unit") where name == "disk_free"
-                - set(name, "DISK_FREE") where name == "disk_free"
         trace_statements: []
     transform/jmx:
         error_mode: propagate
@@ -158,6 +144,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
@@ -165,6 +152,7 @@ processors:
         trace_statements: []
 receivers:
     jmx:
+        aggregate_across_mbeans: true
         collection_interval: 1m0s
         endpoint: localhost:8080
         jar_path: ../../packaging/opentelemetry-jmx-metrics.jar
@@ -229,9 +217,6 @@ service:
                 - jmx
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -242,7 +227,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

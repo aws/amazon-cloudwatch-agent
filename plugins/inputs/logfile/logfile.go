@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/globpath"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
@@ -30,6 +30,8 @@ type LogFile struct {
 	FileStateFolder string `toml:"file_state_folder"`
 	//destination
 	Destination string `toml:"destination"`
+	//maximum number of distinct, non-overlapping offset ranges to store.
+	MaxPersistState int `toml:"max_persist_state"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -39,8 +41,9 @@ type LogFile struct {
 	started           bool
 }
 
-func NewLogFile() *LogFile {
+var _ logs.LogCollection = (*LogFile)(nil)
 
+func NewLogFile() *LogFile {
 	return &LogFile{
 		configs:           make(map[*FileConfig]map[string]*tailerSrc),
 		done:              make(chan struct{}),
@@ -84,8 +87,8 @@ const sampleConfig = `
       ## Whether file is a named pipe
       pipe = false
       destination = "cloudwatchlogs"
-      ## Max size of each log event, defaults to 262144 (256KB)
-      max_event_size = 262144
+      ## Max size of each log event, defaults to 1048576 (1MB)
+      max_event_size = 1048576
       ## Suffix to be added to truncated logline to indicate its truncation, defaults to "[Truncated...]"
       truncate_suffix = "[Truncated...]"
 
@@ -187,14 +190,27 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				}
 			}
 
+			stateManager := state.NewFileRangeManager(state.ManagerConfig{
+				StateFileDir:      t.FileStateFolder,
+				Name:              filename,
+				MaxPersistedItems: max(1, t.MaxPersistState),
+			})
+
 			var seekFile *tail.SeekInfo
-			offset, err := t.restoreState(filename)
+			restored, err := stateManager.Restore()
 			if err == nil { // Missing state file would be an error too
-				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: offset}
+				seekFile = &tail.SeekInfo{Whence: io.SeekStart, Offset: restored.Last().EndOffsetInt64()}
 			} else if !fileconfig.Pipe && !fileconfig.FromBeginning {
 				seekFile = &tail.SeekInfo{Whence: io.SeekEnd, Offset: 0}
 			}
 
+			var initialStateOffset int64
+			var gapsToRead state.RangeList
+			if restored.OnlyUseMaxOffset() {
+				initialStateOffset = restored.Last().EndOffsetInt64()
+			} else {
+				gapsToRead = state.InvertRanges(restored)
+			}
 			isutf16 := false
 			if fileconfig.Encoding == "utf-16" || fileconfig.Encoding == "utf-16le" || fileconfig.Encoding == "UTF-16" || fileconfig.Encoding == "UTF-16LE" {
 				isutf16 = true
@@ -205,6 +221,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 					ReOpen:      false,
 					Follow:      true,
 					Location:    seekFile,
+					GapsToRead:  gapsToRead,
 					MustExist:   true,
 					Pipe:        fileconfig.Pipe,
 					Poll:        true,
@@ -235,15 +252,11 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				}
 			}
 
-			destination := fileconfig.Destination
-			if destination == "" {
-				destination = t.Destination
-			}
-
 			src := NewTailerSrc(
 				groupName, streamName,
 				t.Destination,
-				t.getStateFilePath(filename),
+				stateManager,
+				initialStateOffset,
 				fileconfig.LogGroupClass,
 				fileconfig.FilePath,
 				tailer,
@@ -253,7 +266,6 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.timestampFromLogLine,
 				fileconfig.Enc,
 				fileconfig.MaxEventSize,
-				fileconfig.TruncateSuffix,
 				fileconfig.RetentionInDays,
 				fileconfig.BackpressureMode,
 			)
@@ -326,42 +338,6 @@ func (t *LogFile) getTargetFiles(fileconfig *FileConfig) ([]string, error) {
 	return targetFileList, nil
 }
 
-// The plugin will look at the state folder, and restore the offset of the file seeked if such state exists.
-func (t *LogFile) restoreState(filename string) (int64, error) {
-	filePath := t.getStateFilePath(filename)
-
-	if _, err := os.Stat(filePath); err != nil {
-		t.Log.Debugf("The state file %s for %s does not exist: %v", filePath, filename, err)
-		return 0, err
-	}
-
-	byteArray, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Log.Warnf("Issue encountered when reading offset from file %s: %v", filename, err)
-		return 0, err
-	}
-
-	offset, err := strconv.ParseInt(strings.Split(string(byteArray), "\n")[0], 10, 64)
-	if err != nil {
-		t.Log.Warnf("Issue encountered when parsing offset value %v: %v", byteArray, err)
-		return 0, err
-	}
-
-	if offset < 0 {
-		return 0, fmt.Errorf("negative state file offset, %v, %v", filePath, offset)
-	}
-	t.Log.Infof("Reading from offset %v in %s", offset, filename)
-	return offset, nil
-}
-
-func (t *LogFile) getStateFilePath(filename string) string {
-	if t.FileStateFolder == "" {
-		return ""
-	}
-
-	return filepath.Join(t.FileStateFolder, escapeFilePath(filename))
-}
-
 func (t *LogFile) cleanupStateFolder() {
 	files, err := filepath.Glob(t.FileStateFolder + string(filepath.Separator) + "*")
 	if err != nil {
@@ -428,14 +404,6 @@ func isCompressedFile(filename string) bool {
 		return true
 	}
 	return false
-}
-
-func escapeFilePath(filePath string) string {
-	escapedFilePath := filepath.ToSlash(filePath)
-	escapedFilePath = strings.Replace(escapedFilePath, "/", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, " ", "_", -1)
-	escapedFilePath = strings.Replace(escapedFilePath, ":", "_", -1)
-	return escapedFilePath
 }
 
 func generateLogGroupName(fileName string) string {

@@ -158,3 +158,16 @@ func TestContainerInsights(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, len(expectedCfg.Metrics.Exclude.MetricNames), len(actualCfg.Metrics.Exclude.MetricNames))
 }
+
+func TestDbiExcludeMonitor(t *testing.T) {
+	condition := `attributes["user.name"] == "cw_monitor" or attributes["postgresql.rolname"] == "cw_monitor"`
+	tr := NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_0", condition)
+	assert.Equal(t, "filter/dbi_exclude_monitor_0", tr.ID().String())
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	fCfg := cfg.(*filterprocessor.Config)
+	require.NotNil(t, fCfg.Logs)
+	require.Len(t, fCfg.Logs.LogConditions, 1)
+	assert.Equal(t, condition, fCfg.Logs.LogConditions[0])
+}

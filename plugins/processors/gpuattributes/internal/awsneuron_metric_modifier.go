@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -48,6 +49,8 @@ const (
 	RuntimeTagOverride                            = "DEFAULT"
 	NeuronExecutionErrorsAggregatedMetric         = containerinsightscommon.NeuronExecutionErrors + "_total"
 	NeuronDeviceHardwareEccEventsAggregatedMetric = containerinsightscommon.NeuronDeviceHardwareEccEvents + "_total"
+	NeuronCoreLabel                               = "neuroncore"
+	NeuronCoresPerDeviceAttributeKey              = "neuroncore_per_device_count"
 )
 
 type AwsNeuronMetricModifier struct {
@@ -65,6 +68,11 @@ type MetricDatapointAggregationKey struct {
 	runtimeTag           string
 	aggregatedMetricName string
 	deviceId             string
+}
+
+type NeuronCoreUtilizationDatapointAggregationKey struct {
+	runtimeTag string
+	coreID     string
 }
 
 var (
@@ -135,7 +143,17 @@ func (md *AwsNeuronMetricModifier) ModifyMetric(originalMetric pmetric.Metric, m
 		keepSpecificDatapointBasedOnAttribute(originalMetric, MemoryLocation, "neuron_device")
 	}
 
-	modifiedMetricSlice := md.extractDatapointsAsMetricsAndAggregate(originalMetric)
+	var modifiedMetricSlice pmetric.MetricSlice
+
+	// For NeuronCoreUtilization metrics, perform additional aggregation to calculate the maximum utilization
+	// value per core across all datapoints. This ensures we capture peak utilization rather than average values,
+	// which is more useful for monitoring core performance and potential bottlenecks.
+	if originalMetric.Name() == containerinsightscommon.NeuronCoreUtilization {
+		modifiedMetricSlice = md.aggregateCoreUtilizationMetrics(originalMetric)
+	} else {
+		modifiedMetricSlice = md.extractDatapointsAsMetricsAndAggregate(originalMetric)
+	}
+
 	md.duplicateMetrics(modifiedMetricSlice, originalMetricName, originalMetric.Sum().DataPoints(), metrics)
 }
 
@@ -200,6 +218,7 @@ func keepSpecificDatapointBasedOnAttribute(originalMetric pmetric.Metric, attrib
 func (md *AwsNeuronMetricModifier) extractDatapointsAsMetricsAndAggregate(originalMetric pmetric.Metric) pmetric.MetricSlice {
 	newMetricSlice := pmetric.NewMetricSlice()
 	uniqueAttribute := metricModificationsMap[originalMetric.Name()].UniqueAttribute
+
 	if uniqueAttribute == "" {
 		originalMetric.CopyTo(newMetricSlice.AppendEmpty())
 		return newMetricSlice
@@ -284,6 +303,41 @@ func (md *AwsNeuronMetricModifier) duplicateMetrics(metricsSlice pmetric.MetricS
 			}
 		}
 	}
+}
+
+func (md *AwsNeuronMetricModifier) aggregateCoreUtilizationMetrics(originalMetric pmetric.Metric) pmetric.MetricSlice {
+	newMetricSlice := pmetric.NewMetricSlice()
+	originalMetricDatapoints := originalMetric.Sum().DataPoints()
+	aggregatedValuesPerCore := map[NeuronCoreUtilizationDatapointAggregationKey]float64{}
+	for i := 0; i < originalMetricDatapoints.Len(); i++ {
+		originalDatapoint := originalMetricDatapoints.At(i)
+		runtimeTag, _ := originalDatapoint.Attributes().Get(RuntimeTag)
+		coreIDTag, _ := originalDatapoint.Attributes().Get(NeuronCoreLabel)
+		key := NeuronCoreUtilizationDatapointAggregationKey{runtimeTag: runtimeTag.Str(), coreID: coreIDTag.Str()}
+		aggregatedValuesPerCore[key] = max(aggregatedValuesPerCore[key], originalDatapoint.DoubleValue(), 0)
+	}
+
+	if len(aggregatedValuesPerCore) == 0 {
+		return newMetricSlice
+	}
+
+	aggregatedMetric := setMetricMetadata(newMetricSlice.AppendEmpty(), originalMetric.Name(), originalMetric.Unit())
+	aggregateDatapoints := aggregatedMetric.SetEmptySum().DataPoints()
+	firstOriginalDatapoint := originalMetricDatapoints.At(0)
+	neuronCoresPerDevice, _ := firstOriginalDatapoint.Attributes().Get(NeuronCoresPerDeviceAttributeKey)
+	neuronCoresPerDeviceInt, _ := strconv.Atoi(neuronCoresPerDevice.Str())
+	// Creating body for the aggregated metric and add it to the new newMetricSlice for each Core
+	for aggregatedMetricMetadata, value := range aggregatedValuesPerCore {
+		datapoint := aggregateDatapoints.AppendEmpty()
+		firstOriginalDatapoint.CopyTo(datapoint)
+		datapoint.SetDoubleValue(value)
+		datapoint.Attributes().PutStr(RuntimeTag, aggregatedMetricMetadata.runtimeTag)
+		datapoint.Attributes().PutStr(NeuronCoreLabel, aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronCoreAttributeKey, "core"+aggregatedMetricMetadata.coreID)
+		coreID, _ := strconv.Atoi(aggregatedMetricMetadata.coreID)
+		datapoint.Attributes().PutStr(NeuronDeviceAttributeKey, "device"+strconv.Itoa(coreID/neuronCoresPerDeviceInt))
+	}
+	return newMetricSlice
 }
 
 // This method creates new metrics by prefixing the metric name with each k8 concepts (pod, node and container).

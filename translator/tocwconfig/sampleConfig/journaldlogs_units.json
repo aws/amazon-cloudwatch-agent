@@ -1,0 +1,17 @@
+{
+  "logs": {
+    "concurrency": 1,
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "journald-sshd",
+            "log_stream_name": "journald-stream",
+            "units": ["sshd"],
+            "retention_in_days": 7
+          }
+        ]
+      }
+    }
+  }
+}

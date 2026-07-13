@@ -1,0 +1,8 @@
+{
+  "agent": {
+    "omit_hostname": false,
+    "usage_metadata": [
+      {"ObservabilitySolution": "TOMCAT"}
+    ]
+  }
+}

@@ -6,94 +6,16 @@ package eksdetector
 import (
 	"encoding/base64"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
 
-func TestNewDetector(t *testing.T) {
-	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{}, nil
-	}
-
-	testDetector1, err := NewDetector()
-	assert.NoError(t, err)
-	assert.NotNil(t, testDetector1)
-
-	getInClusterConfig = func() (*rest.Config, error) {
-		return nil, fmt.Errorf("error")
-	}
-	_, err = NewDetector()
-	assert.Error(t, err)
-}
-
-func TestIsEKSSingleton(t *testing.T) {
-	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{}, nil
-	}
-
-	NewDetector = TestEKSDetector
-	value1 := IsEKS()
-	assert.NoError(t, value1.Err)
-	value2 := IsEKS()
-	assert.NoError(t, value2.Err)
-
-	assert.True(t, value1 == value2)
-}
-
 // Tests EKS resource detector running in EKS environment
 func TestEKS(t *testing.T) {
-	testDetector := new(MockDetector)
-	NewDetector = func() (Detector, error) {
-		return testDetector, nil
-	}
-
-	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(map[string]string{conventions.AttributeK8SClusterName: "my-cluster"}, nil)
-
-	isEks := IsEKS()
-	assert.True(t, isEks.Value)
-	assert.NoError(t, isEks.Err)
-
-	testDetector.On("getConfigMap", authConfigNamespace, authConfigConfigMap).Return(nil, fmt.Errorf("configmap not found"))
-	testDetector.On("getIssuer").Return("https://oidc.eks.us-west-2.amazonaws.com/id/someid", nil)
-
-	isEks = IsEKS()
-	assert.True(t, isEks.Value)
-	assert.NoError(t, isEks.Err)
-}
-
-func Test_getConfigMap(t *testing.T) {
-	// No matching configmap
-	client := fake.NewSimpleClientset()
-	testDetector := &EksDetector{Clientset: client}
-	res, err := testDetector.getConfigMap("test", "test")
-	assert.Error(t, err)
-	assert.Nil(t, res)
-
-	// matching configmap
-	cm := &v1.ConfigMap{
-		TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: authConfigNamespace, Name: authConfigConfigMap},
-		Data:       make(map[string]string),
-	}
-
-	client = fake.NewSimpleClientset(cm)
-	testDetector = &EksDetector{Clientset: client}
-
-	res, err = testDetector.getConfigMap(authConfigNamespace, authConfigConfigMap)
-	assert.NoError(t, err)
-	assert.NotNil(t, res)
-}
-
-func Test_getIssuer(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	testDetector := &EksDetector{Clientset: client}
+	resetCacheForTesting() // Reset cache for consistency
 
 	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
 	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
@@ -103,28 +25,181 @@ func Test_getIssuer(t *testing.T) {
 		return &rest.Config{BearerToken: dummyToken}, nil
 	}
 
-	issuer, err := testDetector.getIssuer()
+	isEks := IsEKS()
+	assert.True(t, isEks.Value)
+	assert.NoError(t, isEks.Err)
+}
+
+func TestNonEKS(t *testing.T) {
+	resetCacheForTesting()
+
+	payload := `{"iss":"https://kubernetes.default.svc.cluster.local"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	isEks := IsEKS()
+	assert.False(t, isEks.Value)
+	assert.NoError(t, isEks.Err)
+}
+
+func TestEmptyToken(t *testing.T) {
+	resetCacheForTesting()
+
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: ""}, nil
+	}
+
+	isEks := IsEKS()
+	assert.False(t, isEks.Value)
+	assert.Error(t, isEks.Err)
+	assert.Contains(t, isEks.Err.Error(), "empty token in config")
+}
+
+func Test_getIssuer(t *testing.T) {
+	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	issuer, err := getIssuer()
 	assert.NoError(t, err)
 	assert.Equal(t, "https://oidc.eks.us-west-2.amazonaws.com/id/someid", issuer)
 }
 
-func Test_getClientError(t *testing.T) {
-	//InClusterConfig error
+// resetCacheForTesting resets the EKS detection cache - only used in tests
+func resetCacheForTesting() {
+	isEKSCacheSingleton = IsEKSCache{}
+	once = sync.Once{}
+}
+
+func TestEKS_IRSA_EnvVar(t *testing.T) {
+	resetCacheForTesting()
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+
+	getEnv = func(key string) string {
+		if key == "AWS_WEB_IDENTITY_TOKEN_FILE" {
+			return "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
+		}
+		return ""
+	}
 	getInClusterConfig = func() (*rest.Config, error) {
-		return nil, fmt.Errorf("test error")
+		return nil, fmt.Errorf("should not be called")
 	}
 
-	_, err := getClient()
-	assert.Error(t, err)
+	result := IsEKS()
+	assert.True(t, result.Value)
+	assert.NoError(t, result.Err)
+}
 
-	//Getting Kubernetes client error
+func TestEKS_PodIdentity_EnvVar(t *testing.T) {
+	resetCacheForTesting()
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+
+	getEnv = func(key string) string {
+		if key == "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE" {
+			return "/var/run/secrets/pods.eks-pod-identity.amazonaws.com/serviceaccount/token"
+		}
+		return ""
+	}
 	getInClusterConfig = func() (*rest.Config, error) {
-		return &rest.Config{}, nil
-	}
-	getKubernetesClient = func(confs *rest.Config) (kubernetes.Interface, error) {
-		return nil, fmt.Errorf("test error")
+		return nil, fmt.Errorf("should not be called")
 	}
 
-	_, err = getClient()
-	assert.Error(t, err)
+	result := IsEKS()
+	assert.True(t, result.Value)
+	assert.NoError(t, result.Err)
+}
+
+func TestEKS_EnvVarsAbsent_FallsThrough(t *testing.T) {
+	resetCacheForTesting()
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+
+	getEnv = func(_ string) string { return "" }
+
+	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	result := IsEKS()
+	assert.True(t, result.Value)
+	assert.NoError(t, result.Err)
+}
+
+func TestNonEKS_EnvVarsAbsent_NonEKSToken(t *testing.T) {
+	resetCacheForTesting()
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+
+	getEnv = func(_ string) string { return "" }
+
+	payload := `{"iss":"https://kubernetes.default.svc.cluster.local"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	result := IsEKS()
+	assert.False(t, result.Value)
+	assert.NoError(t, result.Err)
+}
+
+func TestEKS_PartialEnvVars_IRSAWithoutEKS(t *testing.T) {
+	resetCacheForTesting()
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+
+	getEnv = func(key string) string {
+		if key == "AWS_WEB_IDENTITY_TOKEN_FILE" {
+			return "/var/run/secrets/some-other-provider/token"
+		}
+		return ""
+	}
+
+	payload := `{"iss":"https://oidc.eks.us-west-2.amazonaws.com/id/someid"}`
+	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
+	dummyToken := "header." + encodedPayload + ".signature"
+	getInClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{BearerToken: dummyToken}, nil
+	}
+
+	result := IsEKS()
+	assert.True(t, result.Value)
+	assert.NoError(t, result.Err)
+}
+
+func TestEKS_BothEnvVarsSet(t *testing.T) {
+	resetCacheForTesting()
+	origGetEnv := getEnv
+	defer func() { getEnv = origGetEnv }()
+
+	getEnv = func(key string) string {
+		switch key {
+		case "AWS_WEB_IDENTITY_TOKEN_FILE":
+			return "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
+		case "AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE":
+			return "/var/run/secrets/pods.eks-pod-identity.amazonaws.com/serviceaccount/token"
+		}
+		return ""
+	}
+	getInClusterConfig = func() (*rest.Config, error) {
+		return nil, fmt.Errorf("should not be called")
+	}
+
+	result := IsEKS()
+	assert.True(t, result.Value)
+	assert.NoError(t, result.Err)
 }

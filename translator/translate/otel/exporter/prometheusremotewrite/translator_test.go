@@ -66,3 +66,59 @@ func TestTranslator(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslatorDualStackEndpoint(t *testing.T) {
+	tt := NewTranslatorWithName("dualstack-endpoint-test")
+
+	testCases := map[string]struct {
+		region           string
+		workspaceID      string
+		useDualStack     bool
+		expectedEndpoint string
+	}{
+		"StandardEndpoint": {
+			region:           "us-east-1",
+			workspaceID:      "ws-12345678",
+			useDualStack:     false,
+			expectedEndpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345678/api/v1/remote_write",
+		},
+		"DualStackEndpoint": {
+			region:           "us-east-1",
+			workspaceID:      "ws-12345678",
+			useDualStack:     true,
+			expectedEndpoint: "https://aps-workspaces.us-east-1.api.aws/workspaces/ws-12345678/api/v1/remote_write",
+		},
+		"DualStackEndpointEuWest1": {
+			region:           "eu-west-1",
+			workspaceID:      "ws-abcdefgh",
+			useDualStack:     true,
+			expectedEndpoint: "https://aps-workspaces.eu-west-1.api.aws/workspaces/ws-abcdefgh/api/v1/remote_write",
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			agent.Global_Config.Region = testCase.region
+			agent.Global_Config.UseDualStackEndpoint = testCase.useDualStack
+
+			input := map[string]interface{}{
+				"metrics": map[string]interface{}{
+					"metrics_destinations": map[string]interface{}{
+						"amp": map[string]interface{}{
+							"workspace_id": testCase.workspaceID,
+						},
+					},
+				},
+			}
+
+			conf := confmap.NewFromStringMap(input)
+			got, err := tt.Translate(conf)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+
+			gotCfg, ok := got.(*prometheusremotewriteexporter.Config)
+			require.True(t, ok)
+			assert.Equal(t, testCase.expectedEndpoint, gotCfg.ClientConfig.Endpoint)
+		})
+	}
+}

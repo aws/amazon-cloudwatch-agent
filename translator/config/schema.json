@@ -14,6 +14,9 @@
     },
     "traces": {
       "$ref": "#/definitions/tracesDefinition"
+    },
+    "opentelemetry": {
+      "$ref": "#/definitions/opentelemetryDefinition"
     }
   },
   "additionalProperties": true,
@@ -131,6 +134,9 @@
             },
             "diskio": {
               "$ref": "#/definitions/metricsDefinition/definitions/diskioDefinitions"
+            },
+            "efa": {
+              "$ref": "#/definitions/metricsDefinition/definitions/efaDefinitions"
             },
             "statsd": {
               "$ref": "#/definitions/metricsDefinition/definitions/statsdDefinitions"
@@ -286,6 +292,9 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 4096
+            },
+            "append_dimensions": {
+              "$ref": "#/definitions/generalAppendDimensionsDefinition"
             }
           },
           "additionalProperties": false
@@ -353,6 +362,28 @@
             {
               "$ref": "#/definitions/metricsDefinition/definitions/basicResourcesDefinition"
             }
+          ]
+        },
+        "efaDefinitions": {
+          "type": "object",
+          "properties": {
+            "metrics_collection_interval": {
+              "$ref": "#/definitions/timeIntervalDefinition"
+            },
+            "measurement": {
+              "$ref": "#/definitions/metricsDefinition/definitions/metricsMeasurementDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "measurement"
           ]
         },
         "jmxDefinitions": {
@@ -630,6 +661,28 @@
             },
             "windows_events": {
               "$ref": "#/definitions/logsDefinition/definitions/logsWindowsEventsDefinition"
+            },
+            "journald": {
+              "$ref": "#/definitions/logsDefinition/definitions/logsJournaldDefinition"
+            },
+            "application_signals": {
+              "type": "object",
+              "properties": {
+                "log_group_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "log_stream_name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "disabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
             }
           },
           "minProperties": 1,
@@ -1058,6 +1111,22 @@
                       "uniqueItems": true
                     }
                   },
+                  "event_ids":{
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 65535
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                       "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
+                  },
                   "log_stream_name": {
                     "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
                   },
@@ -1079,8 +1148,18 @@
                   }
                 },
                 "required": [
-                  "event_name",
-                  "event_levels"
+                  "event_name"
+                ],
+                "anyOf": [
+                  {
+                    "required": ["event_levels"]
+                  },
+                  {
+                    "required": ["event_ids"]
+                  },
+                  {
+                    "required": ["filters"]
+                  }
                 ],
                 "additionalProperties": false
               },
@@ -1093,6 +1172,74 @@
           "required": [
             "collect_list"
           ]
+        },
+        "logsJournaldDefinition": {
+          "type": "object",
+          "descriptions": "Specifies the journald logs to be collected on linux systems",
+          "properties": {
+            "collect_list": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "log_group_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupNameDefinition"
+                  },
+                  "log_stream_name": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logStreamNameDefinition"
+                  },
+                  "log_group_class": {
+                    "$ref": "#/definitions/logsDefinition/definitions/logGroupClassDefinition"
+                  },
+                  "retention_in_days": {
+                    "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "filters": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/logsDefinition/definitions/filterDefinition"
+                    }
+                  },
+                  "units": {
+                    "type": "array",
+                    "description": "Array of systemd units to read from",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  },
+                  "priority": {
+                    "type": "string",
+                    "description": "Minimum priority level to collect",
+                    "enum": ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug", "0", "1", "2", "3", "4", "5", "6", "7"]
+                  },
+                  "matches": {
+                    "type": "array",
+                    "description": "Array of journald field match objects for filtering log entries",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "minItems": 1,
+                    "uniqueItems": true
+                  }
+                },
+                "required": ["log_group_name"],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 16384,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "collect_list"
+          ],
+          "additionalProperties": false
         },
         "logGroupNameDefinition": {
           "type": "string",
@@ -1280,7 +1427,10 @@
         "role_arn": {
           "description": "The target IAM role with which agent can access aws resources",
           "type": "string",
-          "minLength": 20,
+          "anyOf": [
+            { "minLength": 20 },
+            { "pattern": "^\\$\\{.+\\}$" }
+          ],
           "maxLength": 2048
         }
       },
@@ -1352,6 +1502,18 @@
         },
         "tls": {
           "$ref": "#/definitions/tlsDefinitions"
+        },
+        "service.name": {
+          "description": "The name of the service to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "deployment.environment": {
+          "description": "The name of the environment to associate with the telemetry produced by the agent.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 259
         }
       },
       "additionalProperties": false
@@ -1640,7 +1802,119 @@
           "additionalProperties": false
         }
       }
+    },
+    "opentelemetryDefinition": {
+      "type": "object",
+      "properties": {
+        "collect": {
+          "type": "object",
+          "properties": {
+            "database_insights": {
+              "type": "object",
+              "properties": {
+                "postgresql": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": { "type": "string" },
+                      "instance_name": { "type": "string" },
+                      "username": { "type": "string" },
+                      "password_file": { "type": "string" },
+                      "ca_file": { "type": "string" },
+                      "logs": {
+                        "type": "object",
+                        "properties": {
+                          "file_path": { "type": "string" }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["endpoint", "instance_name", "username", "password_file"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "host_metrics": {
+              "type": "object",
+              "properties": {
+                "metrics_collection_interval": {
+                  "description": "How often the metrics defined will be collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                }
+              },
+              "additionalProperties": false
+            },
+            "container_insights": {
+              "type": "object",
+              "properties": {
+                "cluster_name": {
+                  "description": "The name of the EKS cluster",
+                  "type": "string"
+                },
+                "collection_interval": {
+                  "description": "How often metrics are collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "mode": {
+                  "description": "Pipeline mode: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
+                  "type": "string",
+                  "enum": ["node", "cluster"]
+                },
+                "logs": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Whether to collect container and host logs",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": ["cluster_name"],
+              "additionalProperties": false
+            },
+            "prometheus": {
+              "type": "object",
+              "properties": {
+                "config_path": {
+                  "description": "Path to the Prometheus scrape configuration file",
+                  "type": "string"
+                },
+                "cluster_name": {
+                  "description": "The name of the EKS cluster",
+                  "type": "string"
+                }
+              },
+              "required": ["config_path"],
+              "additionalProperties": false
+            },
+            "otlp": {
+              "type": "object",
+              "properties": {
+                "grpc_endpoint": {
+                  "description": "OTLP gRPC receiver endpoint",
+                  "type": "string"
+                },
+                "http_endpoint": {
+                  "description": "OTLP HTTP receiver endpoint",
+                  "type": "string"
+                },
+                "span_metrics_enabled": {
+                  "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   }
 }
-

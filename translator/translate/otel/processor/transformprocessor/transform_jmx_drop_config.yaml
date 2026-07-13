@@ -1,5 +1,6 @@
 metric_statements:
   - context: resource
+    error_mode: propagate
     statements:
       - delete_matching_keys(attributes, "^cloud.*")
       - delete_matching_keys(attributes, "^host.*")

@@ -87,7 +87,7 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	}
 
 	if context.CurrentContext().RunInContainer() {
-		translators.Receivers.Set(otlp.NewTranslator(common.WithName(common.PipelineNameJmx)))
+		translators.Receivers.Merge(otlp.NewTranslators(conf, common.PipelineNameJmx, pipeline.SignalMetrics.String()))
 		translators.Processors.Set(metricstransformprocessor.NewTranslatorWithName(common.JmxKey))
 		if hasAppendDimensions(conf, t.Index()) {
 			translators.Processors.Set(resourceprocessor.NewTranslator(common.WithName(common.PipelineNameJmx), common.WithIndex(t.Index())))

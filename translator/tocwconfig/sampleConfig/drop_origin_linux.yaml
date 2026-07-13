@@ -1,12 +1,15 @@
 exporters:
     awscloudwatch:
+        backoff_retry_base: 200ms
         drop_original_metrics:
             CPU_USAGE_IDLE: true
             cpu_time_active: true
             nvidia_smi_temperature_gpu: true
             nvidia_smi_utilization_gpu: true
         force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
         max_datums_per_call: 1000
+        max_retry_count: 5
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
@@ -54,6 +57,7 @@ processors:
         log_statements: []
         metric_statements:
             - context: metric
+              error_mode: propagate
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
@@ -91,9 +95,6 @@ service:
                 - telegraf_nvidia_smi
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -104,7 +105,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

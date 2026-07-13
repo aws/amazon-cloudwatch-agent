@@ -4,13 +4,17 @@
 package agenthealth
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/metadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -25,12 +29,12 @@ func TestTranslate(t *testing.T) {
 		agent.FlagRegionType: config.RegionTypeNotFound,
 	}
 	testCases := map[string]struct {
-		input          map[string]interface{}
+		input          map[string]any
 		isEnvUsageData bool
 		want           *agenthealth.Config
 	}{
 		"WithUsageData/NotInConfig": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{}},
+			input:          map[string]any{"agent": map[string]any{}},
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: true,
@@ -41,7 +45,7 @@ func TestTranslate(t *testing.T) {
 			},
 		},
 		"WithUsageData/FalseInConfig": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{"usage_data": false}},
+			input:          map[string]any{"agent": map[string]any{"usage_data": false}},
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: false,
@@ -52,7 +56,7 @@ func TestTranslate(t *testing.T) {
 			},
 		},
 		"WithUsageData/FalseInEnv": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{"usage_data": true}},
+			input:          map[string]any{"agent": map[string]any{"usage_data": true}},
 			isEnvUsageData: false,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: false,
@@ -63,13 +67,135 @@ func TestTranslate(t *testing.T) {
 			},
 		},
 		"WithUsageData/BothTrue": {
-			input:          map[string]interface{}{"agent": map[string]interface{}{"usage_data": true}},
+			input:          map[string]any{"agent": map[string]any{"usage_data": true}},
 			isEnvUsageData: true,
 			want: &agenthealth.Config{
 				IsUsageDataEnabled: true,
 				Stats: &agent.StatsConfig{
 					Operations: operations,
 					UsageFlags: usageFlags,
+				},
+			},
+		},
+		"WithUsageMetadata/OnlyUnsupported": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{map[string]any{
+						"unsupported_key": "unsupported_value",
+					},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+			},
+		},
+		"WithUsageMetadata/Mixed": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{
+						map[string]any{
+							"ObservabilitySolution": "jvm",
+							"test":                  "value",
+						},
+						map[string]any{
+							"unsupported_key": "unsupported_value",
+						},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{"obs_jvm"},
+			},
+		},
+		"WithUsageMetadata/Supported": {
+			input:          testutil.GetJson(t, filepath.Join("testdata", "config.json")),
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{"obs_jvm"},
+			},
+		},
+		"WithUsageMetadata/AliasResolution": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{
+						map[string]any{"ObservabilitySolution": "jvm_ec2"},
+						map[string]any{"ObservabilitySolution": "tomcat_ec2"},
+						map[string]any{"ObservabilitySolution": "nvidia_gpu_ec2"},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{"obs_jvm", "obs_nvidia_gpu", "obs_tomcat"},
+			},
+		},
+		"WithUsageMetadata/AllWorkloads": {
+			input: map[string]any{
+				"agent": map[string]any{
+					"usage_data": true,
+					"usage_metadata": []any{
+						map[string]any{"ObservabilitySolution": "ec2_health"},
+						map[string]any{"ObservabilitySolution": "jvm_ec2"},
+						map[string]any{"ObservabilitySolution": "tomcat_ec2"},
+						map[string]any{"ObservabilitySolution": "kafka_broker"},
+						map[string]any{"ObservabilitySolution": "kafka_producer"},
+						map[string]any{"ObservabilitySolution": "kafka_consumer"},
+						map[string]any{"ObservabilitySolution": "nvidia_gpu_ec2"},
+						map[string]any{"ObservabilitySolution": "application_signals"},
+						map[string]any{"ObservabilitySolution": "statsd"},
+						map[string]any{"ObservabilitySolution": "collectd"},
+						map[string]any{"ObservabilitySolution": "prometheus"},
+						map[string]any{"ObservabilitySolution": "otel_metrics"},
+						map[string]any{"ObservabilitySolution": "process_monitoring"},
+					},
+				},
+			},
+			isEnvUsageData: true,
+			want: &agenthealth.Config{
+				IsUsageDataEnabled: true,
+				Stats: &agent.StatsConfig{
+					Operations: operations,
+					UsageFlags: usageFlags,
+				},
+				UsageMetadata: []metadata.Metadata{
+					"obs_application_signals",
+					"obs_collectd",
+					"obs_ec2_health",
+					"obs_jvm",
+					"obs_kafka_broker",
+					"obs_kafka_consumer",
+					"obs_kafka_producer",
+					"obs_nvidia_gpu",
+					"obs_otel_metrics",
+					"obs_process_monitoring",
+					"obs_prometheus",
+					"obs_statsd",
+					"obs_tomcat",
 				},
 			},
 		},
@@ -85,4 +211,18 @@ func TestTranslate(t *testing.T) {
 			assert.Equal(t, testCase.want, got)
 		})
 	}
+}
+
+func TestTranslateWithAdditionalAuth(t *testing.T) {
+	context.CurrentContext().SetMode(config.ModeEC2)
+	translateagent.Global_Config.RegionType = config.RegionTypeNotFound
+	authID := component.MustNewIDWithName("sigv4auth", "monitoring")
+	tt := NewTranslator(MetricsName, []string{"*"}, WithAdditionalAuth(authID)).(*translator)
+	tt.isUsageDataEnabled = true
+	conf := confmap.NewFromStringMap(map[string]any{"agent": map[string]any{}})
+	got, err := tt.Translate(conf)
+	assert.NoError(t, err)
+	cfg := got.(*agenthealth.Config)
+	assert.NotNil(t, cfg.AdditionalAuth)
+	assert.Equal(t, authID, *cfg.AdditionalAuth)
 }

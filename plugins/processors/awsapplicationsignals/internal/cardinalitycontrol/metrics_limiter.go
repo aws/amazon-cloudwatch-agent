@@ -51,8 +51,7 @@ type MetricsLimiter struct {
 
 	logger   *zap.Logger
 	ctx      context.Context
-	mapLock  sync.RWMutex
-	services map[string]*service
+	services sync.Map
 }
 
 func NewMetricsLimiter(config *config.LimiterConfig, logger *zap.Logger) Limiter {
@@ -70,7 +69,7 @@ func NewMetricsLimiter(config *config.LimiterConfig, logger *zap.Logger) Limiter
 
 		logger:   logger,
 		ctx:      ctx,
-		services: map[string]*service{},
+		services: sync.Map{},
 	}
 
 	go func() {
@@ -97,18 +96,16 @@ func (m *MetricsLimiter) Admit(metricName string, attributes, resourceAttributes
 	}
 	admitted := true
 
-	m.mapLock.RLock()
-	svc := m.services[serviceName]
-	m.mapLock.RUnlock()
-	if svc == nil {
-		m.mapLock.Lock()
-		svc = m.services[serviceName]
-		if svc == nil {
-			svc = newService(serviceName, m.DropThreshold, m.RotationInterval, m.ctx, m.logger)
-			m.services[serviceName] = svc
+	val, loaded := m.services.Load(serviceName)
+	if !loaded {
+		valToStore := newService(serviceName, m.DropThreshold, m.RotationInterval, m.ctx, m.logger)
+		val, loaded = m.services.LoadOrStore(serviceName, valToStore)
+		if loaded {
+			valToStore.cancelFunc()
+			m.logger.Info(fmt.Sprintf("[%s] cancel newly created service entry as an existing one is found", serviceName))
 		}
-		m.mapLock.Unlock()
 	}
+	svc := val.(*service)
 
 	metricData := newMetricData(serviceName, metricName, labels)
 
@@ -118,8 +115,10 @@ func (m *MetricsLimiter) Admit(metricName string, attributes, resourceAttributes
 		return true, nil
 	}
 
-	if !svc.admitMetricData(metricData) {
-		svc.rollupMetricData(attributes)
+	svc.rwLock.Lock()
+	defer svc.rwLock.Unlock()
+	if !svc.admitMetricDataLocked(metricData) {
+		svc.rollupMetricDataLocked(attributes)
 
 		svc.totalRollup++
 		admitted = false
@@ -130,10 +129,6 @@ func (m *MetricsLimiter) Admit(metricName string, attributes, resourceAttributes
 	}
 
 	svc.totalMetricSent++
-
-	svc.rwLock.RLock()
-	defer svc.rwLock.RUnlock()
-
 	svc.totalCount++
 	svc.InsertMetricDataToPrimary(metricData)
 	svc.InsertMetricDataToSecondary(metricData)
@@ -156,23 +151,19 @@ func (m *MetricsLimiter) filterAWSDeclaredAttributes(attributes, resourceAttribu
 }
 
 func (m *MetricsLimiter) removeStaleServices() {
-	var svcToRemove []string
-	for name, svc := range m.services {
-		if svc.rotations > 3 {
-			if svc.countSnapshot[0] == svc.countSnapshot[1] && svc.countSnapshot[1] == svc.countSnapshot[2] {
-				svc.cancelFunc()
-				svcToRemove = append(svcToRemove, name)
-			}
+	m.services.Range(func(key, value any) bool {
+		svc, ok := value.(*service)
+		if !ok {
+			m.logger.Warn("failed to convert type with key" + key.(string) + ".")
+			return true
 		}
-	}
-
-	m.mapLock.Lock()
-	defer m.mapLock.Unlock()
-
-	for _, name := range svcToRemove {
-		m.logger.Info("remove stale service " + name + ".")
-		delete(m.services, name)
-	}
+		if svc.isStale() {
+			svc.cancelFunc()
+			m.logger.Info("remove stale service " + key.(string) + ".")
+			m.services.Delete(key)
+		}
+		return true
+	})
 }
 
 type service struct {
@@ -290,7 +281,7 @@ func (t *topKMetrics) Push(oldMetric, newMetric *MetricData) {
 		// Check if this oldMetric is the new minimum, find the new minMetric after the updates
 		if t.minMetric.hashKey == hashValue {
 			// Find the new minMetrics after update the frequency
-			t.minMetric = t.findMinMetric()
+			t.minMetric = t.findMinMetricLocked()
 		}
 		return
 	}
@@ -300,7 +291,7 @@ func (t *topKMetrics) Push(oldMetric, newMetric *MetricData) {
 		if newMetric.frequency > t.minMetric.frequency {
 			delete(t.metricMap, t.minMetric.hashKey)
 			t.metricMap[hashValue] = newMetric
-			t.minMetric = t.findMinMetric()
+			t.minMetric = t.findMinMetricLocked()
 		}
 	} else {
 		// Check if this newMetric is the new minimum.
@@ -311,8 +302,17 @@ func (t *topKMetrics) Push(oldMetric, newMetric *MetricData) {
 	}
 }
 
-// findMinMetric removes and returns the key-value pair with the minimum value.
-func (t *topKMetrics) findMinMetric() *MetricData {
+func (t *topKMetrics) Admit(metric *MetricData) bool {
+	_, found := t.metricMap[metric.hashKey]
+	if len(t.metricMap) < t.sizeLimit || found {
+		return true
+	}
+	return false
+}
+
+// findMinMetricLocked removes and returns the key-value pair with the minimum value.
+// It assumes the caller already holds the read/write lock.
+func (t *topKMetrics) findMinMetricLocked() *MetricData {
 	// Find the new minimum metric and smallest frequency.
 	var newMinMetric *MetricData
 	smallestFrequency := int(^uint(0) >> 1) // Initialize with the maximum possible integer value
@@ -326,15 +326,11 @@ func (t *topKMetrics) findMinMetric() *MetricData {
 	return newMinMetric
 }
 
-func (s *service) admitMetricData(metric *MetricData) bool {
-	_, found := s.primaryTopK.metricMap[metric.hashKey]
-	if len(s.primaryTopK.metricMap) < s.primaryTopK.sizeLimit || found {
-		return true
-	}
-	return false
+func (s *service) admitMetricDataLocked(metric *MetricData) bool {
+	return s.primaryTopK.Admit(metric)
 }
 
-func (s *service) rollupMetricData(attributes pcommon.Map) {
+func (s *service) rollupMetricDataLocked(attributes pcommon.Map) {
 	for _, indexAttr := range awsDeclaredMetricAttributes {
 		if (indexAttr == common.CWMetricAttributeEnvironment) || (indexAttr == common.CWMetricAttributeLocalService) || (indexAttr == common.CWMetricAttributeRemoteService) {
 			continue
@@ -347,6 +343,44 @@ func (s *service) rollupMetricData(attributes pcommon.Map) {
 			attributes.PutStr(indexAttr, "-")
 		}
 	}
+}
+
+func (s *service) rotateVisitRecords() error {
+	s.rwLock.Lock()
+	defer s.rwLock.Unlock()
+
+	cmsDepth := s.primaryCMS.depth
+	cmsWidth := s.primaryCMS.width
+	topKLimit := s.primaryTopK.sizeLimit
+
+	nextPrimaryCMS := s.secondaryCMS
+	nextPrimaryTopK := s.secondaryTopK
+
+	s.secondaryCMS = NewCountMinSketch(cmsDepth, cmsWidth)
+	s.secondaryTopK = newTopKMetrics(topKLimit)
+
+	if nextPrimaryCMS != nil && nextPrimaryTopK != nil {
+		s.primaryCMS = nextPrimaryCMS
+		s.primaryTopK = nextPrimaryTopK
+	} else {
+		s.logger.Info(fmt.Sprintf("[%s] secondary visit records are nil.", s.name))
+	}
+
+	s.countSnapshot[s.rotations%3] = s.totalCount
+	s.rotations++
+
+	return nil
+}
+
+func (s *service) isStale() bool {
+	s.rwLock.RLock()
+	defer s.rwLock.RUnlock()
+	if s.rotations > 3 {
+		if s.countSnapshot[0] == s.countSnapshot[1] && s.countSnapshot[1] == s.countSnapshot[2] {
+			return true
+		}
+	}
+	return false
 }
 
 // As a starting point, you can use rules of thumb, such as setting the depth to be around 4-6 times the logarithm of the expected number of distinct items and the width based on your memory constraints. However, these are rough guidelines, and the optimal size will depend on your unique application and requirements.
@@ -374,7 +408,7 @@ func newService(name string, limit int, rotationInterval time.Duration, parentCt
 			select {
 			case <-rotationTicker.C:
 				svc.logger.Info(fmt.Sprintf("[%s] rotating visit records, current rotation %d", name, svc.rotations))
-				if err := rotateVisitRecords(svc); err != nil {
+				if err := svc.rotateVisitRecords(); err != nil {
 					svc.logger.Error(fmt.Sprintf("[%s] failed to rotate visit records.", name), zap.Error(err))
 				}
 			case <-ctx.Done():
@@ -388,31 +422,4 @@ func newService(name string, limit int, rotationInterval time.Duration, parentCt
 
 	svc.logger.Info(fmt.Sprintf("[%s] service entry is created.\n", name))
 	return svc
-}
-
-func rotateVisitRecords(svc *service) error {
-	svc.rwLock.Lock()
-	defer svc.rwLock.Unlock()
-
-	cmsDepth := svc.primaryCMS.depth
-	cmsWidth := svc.primaryCMS.width
-	topKLimit := svc.primaryTopK.sizeLimit
-
-	nextPrimaryCMS := svc.secondaryCMS
-	nextPrimaryTopK := svc.secondaryTopK
-
-	svc.secondaryCMS = NewCountMinSketch(cmsDepth, cmsWidth)
-	svc.secondaryTopK = newTopKMetrics(topKLimit)
-
-	if nextPrimaryCMS != nil && nextPrimaryTopK != nil {
-		svc.primaryCMS = nextPrimaryCMS
-		svc.primaryTopK = nextPrimaryTopK
-	} else {
-		svc.logger.Info(fmt.Sprintf("[%s] secondary visit records are nil.", svc.name))
-	}
-
-	svc.countSnapshot[svc.rotations%3] = svc.totalCount
-	svc.rotations++
-
-	return nil
 }

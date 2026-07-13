@@ -68,7 +68,7 @@ func (p *podWatcher) onAddOrUpdatePod(pod, oldPod *corev1.Pod) {
 	if workloadAndNamespace != "" {
 		p.podToWorkloadAndNamespace.Store(pod.Name, workloadAndNamespace)
 		podLabels := mapset.NewSet[string]()
-		for key, value := range pod.ObjectMeta.Labels {
+		for key, value := range pod.Labels {
 			podLabels.Add(key + "=" + value)
 		}
 		if podLabels.Cardinality() > 0 {

@@ -71,6 +71,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.ProxyConfig.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
+	cfg.ProxyConfig.AdditionalRoutingRules = []awsproxy.RoutingRule{
+		{
+			Paths:       []string{"list-instrumentation-configurations", "report-instrumentation-configuration-status"},
+			ServiceName: "application-signals",
+			AWSEndpoint: fmt.Sprintf("https://application-signals.%s.api.aws", cfg.ProxyConfig.Region),
+		},
+	}
 	return cfg, nil
 }
 

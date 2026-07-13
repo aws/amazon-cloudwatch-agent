@@ -1,0 +1,12 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "collect": {
+      "prometheus": {
+        "config_path": "/opt/aws/prometheus.yml"
+      }
+    }
+  }
+}

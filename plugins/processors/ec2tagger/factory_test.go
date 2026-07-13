@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pipeline"
@@ -25,11 +26,13 @@ func TestCreateDefaultConfig(t *testing.T) {
 }
 
 func TestCreateProcessor(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 	factory := NewFactory()
 	require.NotNil(t, factory)
 
 	cfg := factory.CreateDefaultConfig()
-	setting := processortest.NewNopSettings()
+	setting := processortest.NewNopSettings(component.MustNewType("ec2tagger"))
 
 	tProcessor, err := factory.CreateTraces(context.Background(), setting, cfg, consumertest.NewNop())
 	assert.Equal(t, err, pipeline.ErrSignalNotSupported)

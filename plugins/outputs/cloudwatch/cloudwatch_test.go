@@ -17,6 +17,8 @@ import (
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
@@ -25,6 +27,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.uber.org/zap"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/useragent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/publisher"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
@@ -396,13 +399,11 @@ func newCloudWatchClient(
 	svc cloudwatchiface.CloudWatchAPI,
 	forceFlushInterval time.Duration,
 ) *CloudWatch {
+	cfg := createDefaultConfig().(*Config)
+	cfg.ForceFlushInterval = forceFlushInterval
 	cloudwatch := &CloudWatch{
-		svc: svc,
-		config: &Config{
-			ForceFlushInterval: forceFlushInterval,
-			MaxDatumsPerCall:   defaultMaxDatumsPerCall,
-			MaxValuesPerDatum:  defaultMaxValuesPerDatum,
-		},
+		svc:    svc,
+		config: cfg,
 	}
 	cloudwatch.startRoutines()
 	return cloudwatch
@@ -525,14 +526,14 @@ func TestMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
+	cfg := createDefaultConfig().(*Config)
+	cfg.Region = "test-region"
+	cfg.Namespace = "test-namespace"
+	cfg.ForceFlushInterval = time.Second
+	cfg.EndpointOverride = server.URL
+	cfg.MiddlewareID = &id
 	cw := &CloudWatch{
-		config: &Config{
-			Region:             "test-region",
-			Namespace:          "test-namespace",
-			ForceFlushInterval: time.Second,
-			EndpointOverride:   server.URL,
-			MiddlewareID:       &id,
-		},
+		config: cfg,
 		logger: zap.NewNop(),
 	}
 	ctx := context.Background()
@@ -557,7 +558,7 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestBackoffRetries(t *testing.T) {
-	c := &CloudWatch{}
+	c := &CloudWatch{config: createDefaultConfig().(*Config)}
 	sleeps := []time.Duration{
 		time.Millisecond * 200,
 		time.Millisecond * 400,
@@ -637,7 +638,7 @@ func TestCreateEntityMetricData(t *testing.T) {
 func TestWriteToCloudWatchEntity(t *testing.T) {
 	timestampNow := aws.Time(time.Now())
 	expectedPMDInput := &cloudwatch.PutMetricDataInput{
-		Namespace:              aws.String(""),
+		Namespace:              aws.String("CWAgent"),
 		StrictEntityValidation: aws.Bool(false),
 		EntityMetricData: []*cloudwatch.EntityMetricData{
 			{
@@ -708,4 +709,72 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 	})
 
 	assert.Equal(t, expectedPMDInput, input)
+}
+
+func TestUserAgentFeatureFlags(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	testCases := []struct {
+		name               string
+		metricNames        []string
+		expectedFeatureStr string
+	}{
+		{
+			name:               "NoFeatures",
+			metricNames:        []string{"other_metric"},
+			expectedFeatureStr: "",
+		},
+		{
+			name:               "EBSOnly",
+			metricNames:        []string{"diskio_ebs_total_read_ops"},
+			expectedFeatureStr: " feature:(nvme_ebs)",
+		},
+		{
+			name:               "InstanceStoreOnly",
+			metricNames:        []string{"diskio_instance_store_total_read_ops"},
+			expectedFeatureStr: " feature:(nvme_is)",
+		},
+		{
+			name:               "BothFeatures",
+			metricNames:        []string{"diskio_ebs_total_read_ops", "diskio_instance_store_total_read_ops"},
+			expectedFeatureStr: " feature:(nvme_ebs nvme_is)",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sess := session.Must(session.NewSession(&aws.Config{
+				Region:   aws.String("us-west-2"),
+				Endpoint: aws.String("http://localhost:12345"),
+			}))
+			realSvc := cloudwatch.New(sess)
+			cfg := createDefaultConfig().(*Config)
+			cfg.ForceFlushInterval = time.Second
+			cw := &CloudWatch{
+				svc:    realSvc,
+				config: cfg,
+				logger: zap.NewNop(),
+			}
+
+			useragent.Get().Reset()
+			handler := useragent.NewHandler(true)
+			configurer := awsmiddleware.NewConfigurer([]awsmiddleware.RequestHandler{handler}, nil)
+			require.NoError(t, configurer.Configure(awsmiddleware.SDKv1(&realSvc.Handlers)))
+
+			// Process metrics to trigger detection
+			for _, name := range tc.metricNames {
+				cw.handleMetricName(name)
+			}
+
+			// Create a test request and run the Build handlers
+			testReq := &request.Request{
+				HTTPRequest: &http.Request{Header: http.Header{}},
+				Operation:   &request.Operation{Name: opPutMetricData},
+			}
+			realSvc.Handlers.Build.Run(testReq)
+
+			gotUA := testReq.HTTPRequest.Header.Get("User-Agent")
+			assert.Contains(t, gotUA, tc.expectedFeatureStr)
+		})
+	}
 }

@@ -25,6 +25,12 @@ var appSignalsDefaultResourceDetectionConfig string
 //go:embed configs/ecs_config.yaml
 var appSignalsECSResourceDetectionConfig string
 
+//go:embed configs/azure_config.yaml
+var azureVMResourceDetectionConfig string
+
+//go:embed configs/aks_config.yaml
+var aksResourceDetectionConfig string
+
 type translator struct {
 	name    string
 	signal  pipeline.Signal
@@ -49,6 +55,13 @@ func WithSignal(signal pipeline.Signal) Option {
 	})
 }
 
+// WithName sets the component name suffix.
+func WithName(name string) Option {
+	return optionFunc(func(t *translator) {
+		t.name = name
+	})
+}
+
 var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(opts ...Option) common.ComponentTranslator {
@@ -65,7 +78,9 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*resourcedetectionprocessor.Config)
-	cfg.MiddlewareID = &agenthealth.StatusCodeID
+	if t.name != common.OpenTelemetryKey {
+		cfg.MiddlewareID = &agenthealth.StatusCodeID
+	}
 	mode := context.CurrentContext().KubernetesMode()
 	if mode == "" {
 		mode = context.CurrentContext().Mode()
@@ -79,6 +94,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	switch mode {
 	case config.ModeECS:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsECSResourceDetectionConfig)
+	case config.ModeAKS:
+		return common.GetYamlFileToYamlConfig(cfg, aksResourceDetectionConfig)
+	case config.ModeAzureVM:
+		return common.GetYamlFileToYamlConfig(cfg, azureVMResourceDetectionConfig)
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}

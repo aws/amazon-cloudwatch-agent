@@ -114,7 +114,7 @@ func populateDataPointsForHistogram(
 	timestamp pcommon.Timestamp,
 ) {
 	for field, value := range fields {
-		d, ok := value.(distribution.Distribution)
+		d, ok := value.(distribution.ClassicDistribution)
 		if !ok {
 			continue
 		}

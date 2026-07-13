@@ -4,6 +4,9 @@
 package agenthealth
 
 import (
+	"maps"
+	"slices"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
@@ -12,6 +15,8 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/metadata"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	translateagent "github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -22,7 +27,8 @@ const (
 	OperationPutLogEvents     = "PutLogEvents"
 	OperationPutTraceSegments = "PutTraceSegments"
 
-	usageDataKey = "usage_data"
+	usageDataKey     = "usage_data"
+	usageMetadataKey = "usage_metadata"
 )
 
 var (
@@ -35,11 +41,22 @@ var (
 type Name string
 
 var (
-	MetricsName    = Name(pipeline.SignalMetrics.String())
-	LogsName       = Name(pipeline.SignalLogs.String())
-	TracesName     = Name(pipeline.SignalTraces.String())
-	StatusCodeName = Name("statuscode")
+	MetricsName     = Name(pipeline.SignalMetrics.String())
+	OtelMetricsName = Name("opentelemetry_metrics")
+	LogsName        = Name(pipeline.SignalLogs.String())
+	OtelLogsName    = Name("opentelemetry_logs")
+	TracesName      = Name(pipeline.SignalTraces.String())
+	OtelTracesName  = Name("opentelemetry_traces")
+	StatusCodeName  = Name("statuscode")
 )
+
+type Option func(*translator)
+
+func WithAdditionalAuth(id component.ID) Option {
+	return func(t *translator) {
+		t.additionalAuth = &id
+	}
+}
 
 type translator struct {
 	name                string
@@ -47,6 +64,7 @@ type translator struct {
 	isUsageDataEnabled  bool
 	factory             extension.Factory
 	isStatusCodeEnabled bool
+	additionalAuth      *component.ID
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -61,13 +79,17 @@ func NewTranslatorWithStatusCode(name Name, operations []string, isStatusCodeEna
 	}
 }
 
-func NewTranslator(name Name, operations []string) common.ComponentTranslator {
-	return &translator{
+func NewTranslator(name Name, operations []string, opts ...Option) common.ComponentTranslator {
+	t := &translator{
 		name:               string(name),
 		operations:         operations,
 		factory:            agenthealth.NewFactory(),
 		isUsageDataEnabled: envconfig.IsUsageDataEnabled(),
 	}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
@@ -81,7 +103,24 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if usageData, ok := common.GetBool(conf, common.ConfigKey(common.AgentKey, usageDataKey)); ok {
 		cfg.IsUsageDataEnabled = cfg.IsUsageDataEnabled && usageData
 	}
+	usageMetadata := common.GetArray[map[string]any](conf, common.ConfigKey(common.AgentKey, usageMetadataKey))
+	usageMetadataSet := collections.NewSet[string]()
+	for _, umd := range usageMetadata {
+		for k, v := range umd {
+			valueStr, ok := v.(string)
+			if !ok {
+				continue
+			}
+			if md := metadata.Build(k, valueStr); metadata.IsSupported(md) {
+				usageMetadataSet.Add(metadata.Resolve(md))
+			}
+		}
+	}
+	if len(usageMetadataSet) > 0 {
+		cfg.UsageMetadata = slices.Sorted(maps.Keys(usageMetadataSet))
+	}
 	cfg.IsStatusCodeEnabled = t.isStatusCodeEnabled
+	cfg.AdditionalAuth = t.additionalAuth
 	cfg.Stats = &agent.StatsConfig{
 		Operations: t.operations,
 		UsageFlags: map[agent.Flag]any{

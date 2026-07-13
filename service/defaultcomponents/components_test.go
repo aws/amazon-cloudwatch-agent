@@ -20,16 +20,24 @@ func TestComponents(t *testing.T) {
 		"awscontainerinsightreceiver",
 		"awscontainerinsightskueuereceiver",
 		"awsecscontainermetrics",
-		"awsebsnvmereceiver",
+		"awsefareceiver",
+		"awsekshyperpodreceiver",
+		"awsnvmereceiver",
 		"awsxray",
+		"collectd",
 		"filelog",
+		"hostmetrics",
 		"jaeger",
+		"journald",
 		"jmx",
 		"kafka",
+		"kubeletstats",
 		"nop",
 		"otlp",
 		"prometheus",
+		"postgresql",
 		"statsd",
+		"systemmetrics",
 		"tcplog",
 		"udplog",
 		"zipkin",
@@ -41,26 +49,33 @@ func TestComponents(t *testing.T) {
 	}
 
 	wantProcessors := []string{
-		"awsapplicationsignals",
-		"awsentity",
 		"attributes",
+		"attributestocontext",
+		"awsapplicationsignals",
+		"awsattributelimit",
+		"awsdevicepodcorrelation",
+		"awsentity",
+		"awsneuron",
 		"batch",
 		"cumulativetodelta",
 		"deltatocumulative",
 		"deltatorate",
 		"ec2tagger",
-		"metricsgeneration",
 		"filter",
 		"gpuattributes",
-		"kueueattributes",
+		"groupbyattrs",
 		"groupbytrace",
 		"k8sattributes",
+		"kueueattributes",
 		"memory_limiter",
+		"metricsgeneration",
+		"metricstarttime",
 		"metricstransform",
-		"resourcedetection",
-		"resource",
-		"rollup",
+		"nodemetadataenricher",
 		"probabilistic_sampler",
+		"resource",
+		"resourcedetection",
+		"rollup",
 		"span",
 		"tail_sampling",
 		"transform",
@@ -72,12 +87,13 @@ func TestComponents(t *testing.T) {
 	}
 
 	wantExporters := []string{
+		"awscloudwatch",
 		"awscloudwatchlogs",
 		"awsemf",
-		"awscloudwatch",
 		"awsxray",
 		"debug",
 		"nop",
+		"otlphttp",
 		"prometheusremotewrite",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
@@ -86,14 +102,31 @@ func TestComponents(t *testing.T) {
 		assert.Contains(t, gotExporters, typeStr)
 	}
 
+	wantConnectors := []string{
+		"count",
+		"forward",
+		"routing",
+		"signaltometrics",
+		"spanmetrics",
+	}
+	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
+	assert.Equal(t, len(wantConnectors), len(gotConnectors))
+	for _, typeStr := range wantConnectors {
+		assert.Contains(t, gotConnectors, typeStr)
+	}
+
 	wantExtensions := []string{
 		"agenthealth",
+		"awscloudwatchlogsprovisioner",
 		"awsproxy",
 		"ecs_observer",
 		"entitystore",
-		"k8smetadata",
 		"file_storage",
+		"headers_setter",
 		"health_check",
+		"k8smetadata",
+		"nodemetadatacache",
+		"oidctoken",
 		"pprof",
 		"server",
 		"sigv4auth",

@@ -1,0 +1,8 @@
+{
+  "agent": {
+    "debug": true,
+    "usage_metadata": [
+      {"ObservabilitySolution": "JVM"}
+    ]
+  }
+}

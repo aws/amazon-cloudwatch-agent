@@ -4,9 +4,6 @@
 package toenvconfig
 
 import (
-	"encoding/json"
-	"log"
-
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -21,10 +18,24 @@ const (
 	usageDataKey      = "usage_data"
 )
 
-func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
+// TranslatorManagedKeys is the set of env-config.json keys that ToEnvConfig may produce.
+var TranslatorManagedKeys = []string{
+	envconfig.AWS_CA_BUNDLE,
+	envconfig.AWS_SDK_LOG_LEVEL,
+	envconfig.AWS_USE_DUALSTACK_ENDPOINT,
+	envconfig.CWAGENT_LOG_LEVEL,
+	envconfig.CWAGENT_USAGE_DATA,
+	envconfig.CWAGENT_USER_AGENT,
+	envconfig.CWAgentLogsBackpressureMode,
+	envconfig.HTTP_PROXY,
+	envconfig.HTTPS_PROXY,
+	envconfig.NO_PROXY,
+}
+
+func ToEnvConfig(jsonConfigValue map[string]any) map[string]string {
 	envVars := make(map[string]string)
 
-	if agentMap, ok := jsonConfigValue[agent.SectionKey].(map[string]interface{}); ok {
+	if agentMap, ok := jsonConfigValue[agent.SectionKey].(map[string]any); ok {
 		// Set CWAGENT_USER_AGENT to env config if specified by the json config in agent section
 		if userAgent, ok := agentMap[userAgentKey].(string); ok {
 			envVars[envconfig.CWAGENT_USER_AGENT] = userAgent
@@ -40,6 +51,14 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		// Set CWAGENT_USAGE_DATA to FALSE in env config if present and false in agent section
 		if usageData, ok := agentMap[usageDataKey].(bool); ok && !usageData {
 			envVars[envconfig.CWAGENT_USAGE_DATA] = "FALSE"
+		}
+
+		if useDualStack, ok := agentMap[agent.UseDualStackEndpointKey].(bool); ok {
+			if useDualStack {
+				envVars[envconfig.AWS_USE_DUALSTACK_ENDPOINT] = "true"
+			} else {
+				envVars[envconfig.AWS_USE_DUALSTACK_ENDPOINT] = "false"
+			}
 		}
 	}
 
@@ -68,9 +87,5 @@ func ToEnvConfig(jsonConfigValue map[string]interface{}) []byte {
 		envVars[envconfig.CWAgentLogsBackpressureMode] = backpressureMode
 	}
 
-	bytes, err := json.MarshalIndent(envVars, "", "\t")
-	if err != nil {
-		log.Panicf("Failed to create json map for environment variables. Reason: %s", err.Error())
-	}
-	return bytes
+	return envVars
 }

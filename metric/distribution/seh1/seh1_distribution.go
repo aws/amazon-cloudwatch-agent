@@ -25,7 +25,7 @@ type SEH1Distribution struct {
 	unit        string
 }
 
-func NewSEH1Distribution() distribution.Distribution {
+func NewSEH1Distribution() distribution.ClassicDistribution {
 	return &SEH1Distribution{
 		maximum:     0, // negative number is not supported for now, so zero is the min value
 		minimum:     math.MaxFloat64,
@@ -184,6 +184,11 @@ func (sd *SEH1Distribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, unit 
 		v := dp.BucketCounts().At(i)
 		sd.buckets[int16(k)] = float64(v)
 	}
+}
+
+func (seh1Distribution *SEH1Distribution) Resize(_ int) []distribution.Distribution {
+	// it has already considered the list max size.
+	return []distribution.Distribution{seh1Distribution}
 }
 
 func (seh1Distribution *SEH1Distribution) CanAdd(value float64, sizeLimit int) bool {

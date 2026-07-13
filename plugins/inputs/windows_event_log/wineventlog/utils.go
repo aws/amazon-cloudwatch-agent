@@ -18,15 +18,20 @@ import (
 
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 )
 
 const (
 	bookmarkTemplate         = `<BookmarkList><Bookmark Channel="%s" RecordId="%d" IsCurrent="True"/></BookmarkList>`
-	eventLogQueryTemplate    = `<QueryList><Query Id="0"><Select Path="%s">%s</Select></Query></QueryList>`
+	eventLogQueryTemplate    = `<QueryList><Query Id="0"><Select Path="%s">*[System[%s]]</Select></Query></QueryList>`
 	eventLogLevelFilter      = "Level='%s'"
+	eventLogeventIDFilter    = "EventID='%d'"
 	eventIgnoreOldFilter     = "TimeCreated[timediff(@SystemTime) &lt;= %d]"
+	eventRangeFilter         = "EventRecordID &gt; %d and EventRecordID &lt;= %d"
 	emptySpaceScanLength     = 100
 	UnknownBytesPerCharacter = 0
+	cutOffPeriod             = time.Hour * 24 * 14
 
 	CRITICAL    = "CRITICAL"
 	ERROR       = "ERROR"
@@ -38,10 +43,10 @@ const (
 
 var NumberOfBytesPerCharacter = UnknownBytesPerCharacter
 
-func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
+func RenderEventXML(w WindowsEventAPI, eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 	var bufferUsed, propertyCount uint32
 
-	if err := EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(renderBuf)), &renderBuf[0], &bufferUsed, &propertyCount); err != nil {
+	if err := w.EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(renderBuf)), &renderBuf[0], &bufferUsed, &propertyCount); err != nil {
 		return nil, fmt.Errorf("error when rendering events. Details: %v", err)
 	}
 
@@ -50,39 +55,67 @@ func RenderEventXML(eventHandle EvtHandle, renderBuf []byte) ([]byte, error) {
 	return utf16ToUTF8Bytes(renderBuf, bufferUsed)
 }
 
-func CreateBookmark(channel string, recordID uint64) (h EvtHandle, err error) {
+func CreateBookmark(w WindowsEventAPI, channel string, recordID uint64) (h EvtHandle, err error) {
 	xml := fmt.Sprintf(bookmarkTemplate, channel, recordID)
 	p, err := syscall.UTF16PtrFromString(xml)
 	if err != nil {
 		return 0, err
 	}
-	h, err = EvtCreateBookmark(p)
+	h, err = w.EvtCreateBookmark(p)
 	if err != nil {
 		return 0, fmt.Errorf("error when creating a bookmark. Details: %v", err)
 	}
 	return h, nil
 }
 
-func CreateQuery(path string, levels []string) (*uint16, error) {
-	var filterLevels string
-	for _, level := range levels {
-		if filterLevels == "" {
-			filterLevels = fmt.Sprintf(eventLogLevelFilter, level)
-		} else {
-			filterLevels = filterLevels + " or " + fmt.Sprintf(eventLogLevelFilter, level)
-		}
+func CreateQuery(path string, levels []string, eventIDs []int) (*uint16, error) {
+	return createWindowsEventFilter(path, levels, eventIDs)
+}
+
+func CreateRangeQuery(path string, levels []string, eventIDs []int, r state.Range) (*uint16, error) {
+	rangeFilter := fmt.Sprintf(eventRangeFilter, r.StartOffset(), r.EndOffset())
+	return createWindowsEventFilter(path, levels, eventIDs, rangeFilter)
+}
+
+func createWindowsEventFilter(path string, levels []string, eventIDs []int, additionalFilters ...string) (*uint16, error) {
+	// Add log levels
+	var levelsFilter string
+	formattedLevels := make([]string, len(levels))
+	for i, level := range levels {
+		formattedLevels[i] = fmt.Sprintf(eventLogLevelFilter, level)
+	}
+	if len(formattedLevels) > 0 {
+		levelsFilter = fmt.Sprintf("(%s)", strings.Join(formattedLevels, " or "))
 	}
 
-	//Ignore events older than 2 weeks
+	// Add eventIDs
+	var eventIDFilter string
+	formattedeventIDs := make([]string, len(eventIDs))
+	for i, eventIDs := range eventIDs {
+		formattedeventIDs[i] = fmt.Sprintf(eventLogeventIDFilter, eventIDs)
+	}
+	if len(formattedeventIDs) > 0 {
+		eventIDFilter = fmt.Sprintf("(%s)", strings.Join(formattedeventIDs, " or "))
+	}
+
+	// Ignore events older than 2 weeks
 	cutOffPeriod := (time.Hour * 24 * 14).Nanoseconds()
 	ignoreOlderThanTwoWeeksFilter := fmt.Sprintf(eventIgnoreOldFilter, cutOffPeriod/int64(time.Millisecond))
-	if filterLevels != "" {
-		filterLevels = "*[System[(" + filterLevels + ") and " + ignoreOlderThanTwoWeeksFilter + "]]"
-	} else {
-		filterLevels = "*[System[" + ignoreOlderThanTwoWeeksFilter + "]]"
+
+	var filters []string
+	if levelsFilter != "" {
+		filters = append(filters, levelsFilter)
+	}
+	if eventIDFilter != "" {
+		filters = append(filters, eventIDFilter)
+	}
+	filters = append(filters, ignoreOlderThanTwoWeeksFilter)
+	// Add any additional filters (e.g. record IDs)
+	if len(additionalFilters) > 0 {
+		filters = append(filters, strings.Join(additionalFilters, " and "))
 	}
 
-	xml := fmt.Sprintf(eventLogQueryTemplate, path, filterLevels)
+	xml := fmt.Sprintf(eventLogQueryTemplate, path, strings.Join(filters, " and "))
 	return syscall.UTF16PtrFromString(xml)
 }
 

@@ -449,7 +449,7 @@ func TestTimestampFormat_InvalidRegex(t *testing.T) {
 	r := new(TimestampRegex)
 	var input interface{}
 	e := json.Unmarshal([]byte(`{
-		"timestamp_format":"%Y-%m-%dT%H:%M%S+00:00"
+		"timestamp_format":"%Y-%m-%dT%H:%M%S+00:00\\"
 	}`), &input)
 	assert.Nil(t, e)
 

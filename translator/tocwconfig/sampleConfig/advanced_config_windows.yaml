@@ -1,7 +1,10 @@
 exporters:
     awscloudwatch:
+        backoff_retry_base: 200ms
         force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
         max_datums_per_call: 1000
+        max_retry_count: 5
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
@@ -92,18 +95,15 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/3762679655
-                - telegraf_win_perf_counters/2073218482
-                - telegraf_win_perf_counters/2039663244
                 - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_win_perf_counters/3610923661
                 - telegraf_win_perf_counters/3446270237
+                - telegraf_win_perf_counters/3762679655
+                - telegraf_win_perf_counters/2073218482
+                - telegraf_win_perf_counters/2039663244
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             output_paths:
@@ -114,7 +114,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

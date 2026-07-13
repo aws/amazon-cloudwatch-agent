@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pipeline"
@@ -29,7 +30,7 @@ func TestCreateProcessor(t *testing.T) {
 	require.NotNil(t, factory)
 
 	cfg := factory.CreateDefaultConfig()
-	setting := processortest.NewNopSettings()
+	setting := processortest.NewNopSettings(component.MustNewType("kueueattributes"))
 
 	tProcessor, err := factory.CreateTraces(context.Background(), setting, cfg, consumertest.NewNop())
 	assert.Equal(t, err, pipeline.ErrSignalNotSupported)

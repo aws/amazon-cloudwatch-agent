@@ -5,6 +5,7 @@ package entitystore
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,8 +17,11 @@ import (
 	"go.opentelemetry.io/collector/extension"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
@@ -76,6 +80,10 @@ type EntityStore struct {
 	metadataprovider ec2metadataprovider.MetadataProvider
 
 	podTerminationCheckInterval time.Duration
+
+	// leaseWriter creates and renews a Kubernetes Lease with IMDS metadata
+	// for KSM node metadata enrichment
+	leaseWriter *LeaseWriter
 }
 
 var _ extension.Extension = (*EntityStore)(nil)
@@ -102,6 +110,12 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 		// https://github.com/kubernetes/cloud-provider-aws/issues/762
 		if e.kubernetesMode == "" {
 			go e.serviceprovider.startServiceProvider()
+		} else if getEnv(envconfig.OtelCIVersion) != "" {
+			e.startLeaseWriter()
+		} else {
+			e.logger.Debug("Skipping LeaseWriter - OTEL_CI_VERSION not set",
+				zap.String("OTEL_CI_VERSION", getEnv(envconfig.OtelCIVersion)),
+			)
 		}
 	}
 	if e.kubernetesMode != "" {
@@ -114,6 +128,9 @@ func (e *EntityStore) Start(ctx context.Context, host component.Host) error {
 }
 
 func (e *EntityStore) Shutdown(_ context.Context) error {
+	if e.leaseWriter != nil {
+		e.leaseWriter.Stop()
+	}
 	close(e.done)
 	if e.eksInfo != nil && e.eksInfo.podToServiceEnvMap != nil {
 		e.eksInfo.podToServiceEnvMap.Stop()
@@ -260,20 +277,59 @@ func (e *EntityStore) createServiceKeyAttributes(serviceAttr ServiceAttribute) m
 	return serviceKeyAttr
 }
 
-var getMetaDataProvider = func() ec2metadataprovider.MetadataProvider {
-	mdCredentialConfig := &configaws.CredentialConfig{}
-	return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
+// startLeaseWriter initializes and starts the LeaseWriter for publishing
+// IMDS metadata as a Kubernetes Lease. Must be called after ec2Info is
+// initialized (the LeaseWriter's waitForEC2Info handles the race).
+func (e *EntityStore) startLeaseWriter() {
+	if e.leaseWriter != nil {
+		return
+	}
+	nodeName := getEnv("K8S_NODE_NAME")
+	if nodeName == "" {
+		e.logger.Error("K8S_NODE_NAME env var not set, skipping LeaseWriter startup")
+		return
+	}
+	namespace := getEnv("K8S_NAMESPACE")
+	if namespace == "" {
+		namespace = "amazon-cloudwatch"
+	}
+
+	k8sConfig, err := getK8sConfig()
+	if err != nil {
+		e.logger.Error("Failed to create in-cluster K8s config for LeaseWriter", zap.Error(err))
+		return
+	}
+	clientset, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		e.logger.Error("Failed to create K8s clientset for LeaseWriter", zap.Error(err))
+		return
+	}
+
+	lw := NewLeaseWriter(&e.ec2Info, nodeName, namespace, clientset.CoordinationV1(), e.logger)
+	lw.Start()
+	e.leaseWriter = lw
 }
 
-var getEC2Provider = func(region string, ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
-	ec2CredentialConfig.Region = region
-	return ec2.New(
-		ec2CredentialConfig.Credentials(),
-		&aws.Config{
-			LogLevel: configaws.SDKLogLevel(),
-			Logger:   configaws.SDKLogger{},
-		})
-}
+var (
+	// Package-level vars for testability.
+	getEnv       = os.Getenv
+	getK8sConfig = rest.InClusterConfig
+
+	getMetaDataProvider = func() ec2metadataprovider.MetadataProvider {
+		mdCredentialConfig := &configaws.CredentialConfig{}
+		return ec2metadataprovider.NewMetadataProvider(mdCredentialConfig.Credentials(), retryer.GetDefaultRetryNumber())
+	}
+
+	getEC2Provider = func(region string, ec2CredentialConfig *configaws.CredentialConfig) ec2iface.EC2API {
+		ec2CredentialConfig.Region = region
+		return ec2.New(
+			ec2CredentialConfig.Credentials(),
+			&aws.Config{
+				LogLevel: configaws.SDKLogLevel(),
+				Logger:   configaws.SDKLogger{},
+			})
+	}
+)
 
 func addNonEmptyToMap(m map[string]*string, key, value string) {
 	if value != "" {

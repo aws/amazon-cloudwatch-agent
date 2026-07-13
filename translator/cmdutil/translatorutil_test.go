@@ -6,35 +6,441 @@ package cmdutil
 import (
 	"encoding/json"
 	"os"
-	"path"
+	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
-	jsonConfigValue := map[string]interface{}{
-		"agent": map[string]interface{}{
+func TestTranslateJSONMapToEnvConfigFile(t *testing.T) {
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
 			"user_agent":        "cwagent",
 			"debug":             true,
 			"aws_sdk_log_level": "loglevel",
 		},
 	}
-	envConfigPath := path.Join(t.TempDir(), "env-config.json")
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 	expectedFile := "testdata/env-config.json"
 
-	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
-	var actualJson map[string]interface{}
-	var expectedJson map[string]interface{}
+	var actualJSON map[string]any
+	var expectedJSON map[string]any
 	actual, _ := os.ReadFile(envConfigPath)
 	expected, _ := os.ReadFile(expectedFile)
-	json.Unmarshal(actual, actualJson)
-	json.Unmarshal(expected, expectedJson)
+	require.NoError(t, json.Unmarshal(actual, &actualJSON))
+	require.NoError(t, json.Unmarshal(expected, &expectedJSON))
 
-	assert.Equal(t, expectedJson[envconfig.CWAGENT_USER_AGENT], actualJson[envconfig.CWAGENT_USER_AGENT])
-	assert.Equal(t, expectedJson[envconfig.CWAGENT_LOG_LEVEL], actualJson[envconfig.CWAGENT_LOG_LEVEL])
-	assert.Equal(t, expectedJson[envconfig.AWS_SDK_LOG_LEVEL], actualJson[envconfig.AWS_SDK_LOG_LEVEL])
+	assert.Equal(t, expectedJSON[envconfig.CWAGENT_USER_AGENT], actualJSON[envconfig.CWAGENT_USER_AGENT])
+	assert.Equal(t, expectedJSON[envconfig.CWAGENT_LOG_LEVEL], actualJSON[envconfig.CWAGENT_LOG_LEVEL])
+	assert.Equal(t, expectedJSON[envconfig.AWS_SDK_LOG_LEVEL], actualJSON[envconfig.AWS_SDK_LOG_LEVEL])
+}
+
+func TestTranslateJSONMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Pre-populate env-config.json with existing values
+	existing := map[string]string{
+		"MY_CUSTOM_VAR": "custom_value",
+		"ENV_REGION":    "us-west-2",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
+
+	// Translate with new values
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
+			"debug": true,
+		},
+	}
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	// Verify merged result
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	assert.Equal(t, "custom_value", result["MY_CUSTOM_VAR"])
+	assert.Equal(t, "us-west-2", result["ENV_REGION"])
+	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
+}
+
+func TestTranslateJSONMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Pre-populate with a value that translation will also produce
+	existing := map[string]string{
+		"CWAGENT_LOG_LEVEL": "WARN",
+		"MY_CUSTOM_VAR":     "keep_me",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
+
+	// Translate with debug=true which sets CWAGENT_LOG_LEVEL=DEBUG
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
+			"debug": true,
+		},
+	}
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
+	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
+}
+
+func TestTranslateJSONMapToEnvConfigFile_ClearsStaleTranslatorManagedKeys(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Simulate a previous translation that set CWAGENT_USER_AGENT
+	existing := map[string]string{
+		envconfig.CWAGENT_USER_AGENT: "old-agent",
+		"MY_CUSTOM_VAR":              "keep_me",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
+
+	// Re-translate without user_agent so CWAGENT_USER_AGENT should be cleared
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{},
+	}
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	_, exists := result[envconfig.CWAGENT_USER_AGENT]
+	assert.False(t, exists)
+	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
+}
+
+func TestAgentConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validAgent.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["invalid_type"] = 5
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidAgent.json", false, expectedErrorMap)
+}
+
+func TestTracesConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validTrace.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["array_min_properties"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidTrace.json", false, expectedErrorMap)
+}
+
+func TestJMXConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validJMX.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["additional_property_not_allowed"] = 1
+	expectedErrorMap["number_any_of"] = 1
+	expectedErrorMap["number_one_of"] = 1
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidJMX.json", false, expectedErrorMap)
+}
+
+func TestOTLPMetricsConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validOTLPMetrics.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["array_min_items"] = 1
+	expectedErrorMap["number_one_of"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidOTLPMetrics.json", false, expectedErrorMap)
+}
+
+func TestLogFilesConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogFiles.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["array_min_items"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithNoFileConfigured.json", false, expectedErrorMap)
+	expectedErrorMap1 := map[string]int{}
+	expectedErrorMap1["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithMissingFilePath.json", false, expectedErrorMap1)
+	expectedErrorMap2 := map[string]int{}
+	expectedErrorMap2["unique"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithDuplicateEntry.json", false, expectedErrorMap2)
+}
+
+func TestLogWindowsEventConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogWindowsEvents.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["number_not"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventName.json", false, expectedErrorMap)
+	expectedErrorMap1 := map[string]int{}
+	expectedErrorMap1["required"] = 2
+	expectedErrorMap1["number_any_of"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithMissingEventNameAndLevel.json", false, expectedErrorMap1)
+	expectedErrorMap2 := map[string]int{}
+	expectedErrorMap2["invalid_type"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventLevelType.json", false, expectedErrorMap2)
+	expectedErrorMap3 := map[string]int{}
+	expectedErrorMap3["enum"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogWindowsEventsWithInvalidEventFormatType.json", false, expectedErrorMap3)
+}
+
+func TestMetricsConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLinuxMetrics.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validWindowsMetrics.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsWithAppSignals.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["invalid_type"] = 2
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidAggregationDimensions.json", false, expectedErrorMap)
+	expectedErrorMap1 := map[string]int{}
+	expectedErrorMap1["array_min_properties"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithNoMetricsDefined.json", false, expectedErrorMap1)
+	expectedErrorMap2 := map[string]int{}
+	expectedErrorMap2["required"] = 1
+	expectedErrorMap2["invalid_type"] = 2
+	expectedErrorMap2["number_one_of"] = 2
+	expectedErrorMap2["number_all_of"] = 3
+	expectedErrorMap2["unique"] = 1
+	expectedErrorMap2["number_gte"] = 1
+	expectedErrorMap2["string_gte"] = 2
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidMeasurement.json", false, expectedErrorMap2)
+	expectedErrorMap3 := map[string]int{}
+	expectedErrorMap3["invalid_type"] = 2
+	expectedErrorMap3["number_all_of"] = 2
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidAppendDimensions.json", false, expectedErrorMap3)
+	expectedErrorMap4 := map[string]int{}
+	expectedErrorMap4["enum"] = 1
+	expectedErrorMap4["array_max_items"] = 1
+	expectedErrorMap4["invalid_type"] = 1
+	expectedErrorMap4["number_all_of"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithinvalidMetricsCollected.json", false, expectedErrorMap4)
+	expectedErrorMap5 := map[string]int{}
+	expectedErrorMap5["additional_property_not_allowed"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithAdditionalProperties.json", false, expectedErrorMap5)
+	expectedErrorMap6 := map[string]int{}
+	expectedErrorMap6["required"] = 1
+	expectedErrorMap6["invalid_type"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsWithInvalidMetrics_Collected.json", false, expectedErrorMap6)
+}
+
+func TestProcstatConfig(t *testing.T) {
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["invalid_type"] = 1
+	expectedErrorMap["number_all_of"] = 1
+	expectedErrorMap["number_any_of"] = 1
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidProcstatMeasurement.json", false, expectedErrorMap)
+
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validProcstatConfig.json", true, map[string]int{})
+}
+
+func TestEthtoolConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validEthtoolConfig.json", true, map[string]int{})
+}
+
+func TestCollectdConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validCollectdConfig.json", true, map[string]int{})
+}
+
+func TestNvidiaGpuConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validNvidiaGpuConfig.json", true, map[string]int{})
+}
+
+func TestValidLogFilterConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogFilesWithFilters.json", true, map[string]int{})
+}
+
+func TestInvalidLogFilterConfig(t *testing.T) {
+	expectedErrorMap := map[string]int{
+		"additional_property_not_allowed": 1,
+		"enum":                            1,
+	}
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithFilters.json", false, expectedErrorMap)
+}
+
+func TestMetricsDestinationsConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsDestinations.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidMetricsDestinations.json", false, expectedErrorMap)
+}
+func TestContainerInsightsJmxConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validContainerInsightsJmx.json", true, map[string]int{})
+}
+
+// Validate all sampleConfig files schema
+func TestSampleConfigSchema(t *testing.T) {
+	if files, err := os.ReadDir("../../translator/tocwconfig/sampleConfig/"); err == nil {
+		re := regexp.MustCompile(".json")
+		for _, file := range files {
+			if re.MatchString(file.Name()) {
+				t.Logf("Validating ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
+				checkIfSchemaValidateAsExpected(t, "../../translator/tocwconfig/sampleConfig/"+file.Name(), true, map[string]int{})
+				t.Logf("Validated ../../translator/tocwconfig/sampleConfig/%s\n", file.Name())
+			}
+		}
+	} else {
+		panic(err)
+	}
+}
+
+func checkIfSchemaValidateAsExpected(t *testing.T, jsonInputPath string, shouldSuccess bool, expectedErrorMap map[string]int) {
+	actualErrorMap := make(map[string]int)
+
+	jsonInputMap, err := util.GetJsonMapFromFile(jsonInputPath)
+	if err != nil {
+		t.Fatalf("Failed to get json map from %v with error: %v", jsonInputPath, err)
+	}
+
+	result, err := RunSchemaValidation(jsonInputMap)
+	if err != nil {
+		t.Fatalf("Failed to run schema validation: %v", err)
+	}
+
+	if result.Valid() {
+		assert.True(t, shouldSuccess, "It should fail the schemaValidation!")
+	} else {
+		errorDetails := result.Errors()
+		for _, errorDetail := range errorDetails {
+			t.Logf("String: %v \n", errorDetail.String())
+			t.Logf("Context: %v \n", errorDetail.Context().String())
+			t.Logf("Description: %v \n", errorDetail.Description())
+			t.Logf("Details: %v \n", errorDetail.Details())
+			t.Logf("Field: %v \n", errorDetail.Field())
+			t.Logf("Type: %v \n", errorDetail.Type())
+			t.Logf("Value: %v \n", errorDetail.Value())
+			if _, ok := actualErrorMap[errorDetail.Type()]; ok {
+				actualErrorMap[errorDetail.Type()]++
+			} else {
+				actualErrorMap[errorDetail.Type()] = 1
+			}
+		}
+		assert.Equal(t, expectedErrorMap, actualErrorMap, "Unexpected error set!")
+		assert.False(t, shouldSuccess, "It should pass the schemaValidation!")
+	}
+}
+
+func TestGenerateMergedJsonConfigMap_OnlyYAML(t *testing.T) {
+	testCases := map[string]string{
+		"WithYAMLFile":    "config.yaml",
+		"WithYAMLTmpFile": "config.yaml.tmp",
+	}
+	for name, file := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, file), nil, 0600))
+
+			translatorcontext.ResetContext()
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetInputJsonDirPath(tmpDir)
+			ctx.SetMultiConfig("default")
+
+			got, err := GenerateMergedJsonConfigMap(ctx)
+
+			assert.ErrorIs(t, err, ErrOnlyYAML)
+			assert.Nil(t, got)
+		})
+	}
+}
+
+func TestGenerateMergedJsonConfigMap_MixedJSONAndYAML(t *testing.T) {
+	for _, mode := range []string{"append", "remove"} {
+		t.Run(mode, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.json"), []byte(`{"agent":{"debug":true}}`), 0600))
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))
+
+			translatorcontext.ResetContext()
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetInputJsonDirPath(tmpDir)
+			ctx.SetMultiConfig(mode)
+
+			result, err := GenerateMergedJsonConfigMap(ctx)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, result)
+		})
+	}
+}
+
+func TestGenerateMergedJsonConfigMap_DefaultModeWithTmpJSONAndYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "config.json.tmp"), []byte(`{"agent":{"debug":true}}`), 0600))
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))
+
+	translatorcontext.ResetContext()
+	ctx := translatorcontext.CurrentContext()
+	ctx.SetInputJsonDirPath(tmpDir)
+	ctx.SetMultiConfig("default")
+
+	result, err := GenerateMergedJsonConfigMap(ctx)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+}
+
+func TestGenerateMergedJsonConfigMap_EnvVarJSONWithYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))
+
+	t.Setenv(envconfig.RunInContainer, envconfig.TrueValue)
+	t.Setenv(envconfig.CWConfigContent, `{"agent":{"debug":true}}`)
+
+	translatorcontext.ResetContext()
+	ctx := translatorcontext.CurrentContext()
+	ctx.SetInputJsonDirPath(tmpDir)
+	ctx.SetMultiConfig("default")
+
+	result, err := GenerateMergedJsonConfigMap(ctx)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+}
+
+func TestOpenTelemetryHostMetricsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryHostMetrics.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["additional_property_not_allowed"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryCollect.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryDatabaseInsightsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryDatabaseInsights.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryDatabaseInsights.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryPrometheusSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryPrometheus.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryPrometheus.json", false, expectedErrorMap)
+}
+
+func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
+}
+
+func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+	jsonMap, err := util.GetJsonMapFromJsonBytes([]byte(cfg))
+	require.NoError(t, err)
+	result, err := RunSchemaValidation(jsonMap)
+	require.NoError(t, err)
+	assert.True(t, result.Valid(), "default otel config must pass schema validation: %v", result.Errors())
+}
+
+func TestCombinedV1V2SchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validCombinedV1V2Config.json", true, map[string]int{})
 }

@@ -1,0 +1,11 @@
+receivers:
+  nop:
+
+exporters:
+  awsemf:
+
+service:
+  pipelines:
+    logs:
+      receivers: [nop]
+      exporters: [awsemf]

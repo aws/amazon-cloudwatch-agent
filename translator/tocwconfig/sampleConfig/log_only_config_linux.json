@@ -1,0 +1,34 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "amazon-cloudwatch-agent.log"
+          },
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "system-messages"
+          }
+        ]
+      },
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "system-logs",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 7,
+            "units": ["systemd", "sshd"]
+          },
+          {
+            "log_group_name": "application-logs",
+            "log_stream_name": "{instance_id}-app",
+            "retention_in_days": 30,
+            "units": ["nginx", "apache2"]
+          }
+        ]
+      }
+    }
+  }
+}

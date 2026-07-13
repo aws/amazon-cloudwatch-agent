@@ -1,3 +1,4 @@
+aggregate_across_mbeans: true
 endpoint: my_jmx_host:12345
 target_system: jvm,tomcat
 collection_interval: 60s

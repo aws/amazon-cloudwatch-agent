@@ -10,10 +10,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 )
 
 func TestTranslate(t *testing.T) {
 	tt := NewTranslator()
+	originalRegion := agent.Global_Config.Region
+	agent.Global_Config.Region = "us-east-1"
+	t.Cleanup(func() { agent.Global_Config.Region = originalRegion })
 	conf := confmap.NewFromStringMap(map[string]any{"traces": map[string]any{}})
 	got, err := tt.Translate(conf)
 	if err == nil {
@@ -22,8 +27,16 @@ func TestTranslate(t *testing.T) {
 		require.True(t, ok)
 		wantCfg := awsproxy.NewFactory().CreateDefaultConfig().(*awsproxy.Config)
 		wantCfg.ProxyConfig.IMDSRetries = 1
+		wantCfg.ProxyConfig.Region = "us-east-1"
 		// Upstream defaults to localhost but we want to stick with 0.0.0.0 as the default for AppSignals
 		wantCfg.ProxyConfig.Endpoint = "0.0.0.0:2000"
+		wantCfg.ProxyConfig.AdditionalRoutingRules = []awsproxy.RoutingRule{
+			{
+				Paths:       []string{"list-instrumentation-configurations", "report-instrumentation-configuration-status"},
+				ServiceName: "application-signals",
+				AWSEndpoint: "https://application-signals.us-east-1.api.aws",
+			},
+		}
 		assert.Equal(t, wantCfg, gotCfg)
 	}
 }

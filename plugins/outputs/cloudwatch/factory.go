@@ -31,10 +31,13 @@ func NewFactory() exporter.Factory {
 
 func createDefaultConfig() component.Config {
 	return &Config{
-		Namespace:          "CWAgent",
-		MaxDatumsPerCall:   defaultMaxDatumsPerCall,
-		MaxValuesPerDatum:  defaultMaxValuesPerDatum,
-		ForceFlushInterval: defaultForceFlushInterval,
+		Namespace:               "CWAgent",
+		MaxDatumsPerCall:        defaultMaxDatumsPerCall,
+		MaxValuesPerDatum:       defaultMaxValuesPerDatum,
+		ForceFlushInterval:      defaultForceFlushInterval,
+		MaxRetryCount:           defaultRetryCount,
+		BackoffRetryBase:        backoffRetryBase,
+		MaxConcurrentPublishers: maxConcurrentPublisher,
 		ResourceToTelemetrySettings: resourcetotelemetry.Settings{
 			Enabled: true,
 		},

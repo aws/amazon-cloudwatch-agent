@@ -1,0 +1,34 @@
+{
+  "agent": {
+    "metrics_collection_interval": "60s"
+  },
+  "metrics": {
+    "metrics_collected": {
+      "diskio": {
+        "resources": ["*"],
+        "measurement": [
+          "diskio_ebs_total_read_ops",
+          "diskio_ebs_total_write_ops",
+          "diskio_ebs_total_read_bytes",
+          "diskio_ebs_total_write_bytes",
+          "diskio_ebs_total_read_time",
+          "diskio_ebs_total_write_time",
+          "diskio_ebs_volume_performance_exceeded_iops",
+          "diskio_ebs_volume_performance_exceeded_tp",
+          "diskio_ebs_ec2_instance_performance_exceeded_iops",
+          "diskio_ebs_ec2_instance_performance_exceeded_tp",
+          "diskio_ebs_volume_queue_length",
+          "diskio_instance_store_total_read_ops",
+          "diskio_instance_store_total_write_ops",
+          "diskio_instance_store_total_read_bytes",
+          "diskio_instance_store_total_write_bytes",
+          "diskio_instance_store_total_read_time",
+          "diskio_instance_store_total_write_time",
+          "diskio_instance_store_performance_exceeded_iops",
+          "diskio_instance_store_performance_exceeded_tp",
+          "diskio_instance_store_volume_queue_length"
+        ]
+      }
+    }
+  }
+}

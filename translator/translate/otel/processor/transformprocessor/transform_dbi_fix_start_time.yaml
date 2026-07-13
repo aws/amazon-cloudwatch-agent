@@ -1,0 +1,12 @@
+error_mode: ignore
+metric_statements:
+  - context: datapoint
+    error_mode: ignore
+    statements:
+      - set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0
+      - replace_match(datapoint.attributes["postgresql.wait_event_type"], "", "CPU")
+      - replace_match(datapoint.attributes["postgresql.wait_event"], "", "CPU")
+      - replace_match(datapoint.attributes["postgresql.application_name"], "", "unknown")
+      - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
+      - replace_match(datapoint.attributes["postgresql.query_id"], "", "unknown")
+      - replace_match(datapoint.attributes["user.name"], "", "unknown")

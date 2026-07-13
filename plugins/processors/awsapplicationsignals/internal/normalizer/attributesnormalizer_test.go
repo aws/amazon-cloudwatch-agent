@@ -78,7 +78,7 @@ func TestRenameAttributes_for_trace(t *testing.T) {
 }
 
 func TestNormalizedResourceAttributeKeys(t *testing.T) {
-	assert.Equal(t, 31, len(normalizedResourceAttributeKeys))
+	assert.Equal(t, 34, len(normalizedResourceAttributeKeys))
 	for key := range attributesRenamingForMetric {
 		assert.Contains(t, normalizedResourceAttributeKeys, key)
 	}

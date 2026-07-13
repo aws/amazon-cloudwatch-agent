@@ -11,14 +11,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // TestGetStateFilePathGood tests getStateFilePath with good input.
 func TestGetStateFilePathGood(t *testing.T) {
-	fileStateFolder := filepath.Join(os.TempDir(), "CloudWatchAgentTest")
-	// cleanup
-	defer os.RemoveAll(fileStateFolder)
+	fileStateFolder := t.TempDir()
 	plugin := Plugin{
 		FileStateFolder: fileStateFolder,
 	}
@@ -27,26 +26,19 @@ func TestGetStateFilePathGood(t *testing.T) {
 		LogStreamName: "MyStream",
 		Name:          "SystemEventLog",
 	}
-	pathname, err := getStateFilePath(&plugin, &ec)
-	t.Log(pathname)
-	if err != nil {
-		t.Errorf("expected nil, actual %v", err)
-	}
+	stateManagerCfg, err := getStateManagerConfig(&plugin, &ec)
+	assert.NoError(t, err)
+	t.Log(stateManagerCfg.StateFilePath())
 	expected := filepath.Join(fileStateFolder,
 		"Amazon_CloudWatch_WindowsEventLog_MyGroup_MyStream_SystemEventLog")
-	if pathname != expected {
-		t.Errorf("expected %s, actual %s", expected, pathname)
-	}
-	if _, err := os.Stat(fileStateFolder); os.IsNotExist(err) {
-		t.Errorf("expected %s, to exist", fileStateFolder)
-	}
+	assert.Equal(t, expected, stateManagerCfg.StateFilePath())
+	_, err = os.Stat(fileStateFolder)
+	assert.False(t, os.IsNotExist(err))
 }
 
 // TestGetStateFilePathEscape tests getStateFilePath() with special characters.
 func TestGetStateFilePathEscape(t *testing.T) {
-	fileStateFolder := filepath.Join(os.TempDir(), "CloudWatchAgentTest")
-	// cleanup
-	defer os.RemoveAll(fileStateFolder)
+	fileStateFolder := t.TempDir()
 	plugin := Plugin{
 		FileStateFolder: fileStateFolder,
 	}
@@ -55,16 +47,12 @@ func TestGetStateFilePathEscape(t *testing.T) {
 		LogStreamName: "My::Stream//  ",
 		Name:          "System  Event//Log::",
 	}
-	pathname, err := getStateFilePath(&plugin, &ec)
-	t.Log(pathname)
-	if err != nil {
-		t.Errorf("expected nil, actual %v", err)
-	}
+	stateManagerCfg, err := getStateManagerConfig(&plugin, &ec)
+	assert.NoError(t, err)
+	t.Log(stateManagerCfg.StateFilePath())
 	expected := filepath.Join(fileStateFolder,
 		"Amazon_CloudWatch_WindowsEventLog_My__Group_____My__Stream_____System__Event__Log__")
-	if pathname != expected {
-		t.Errorf("expected %s, actual %s", expected, pathname)
-	}
+	assert.Equal(t, expected, stateManagerCfg.StateFilePath())
 }
 
 // TestGetStateFilePathEmpty tests getStateFilePath() with empty folder.
@@ -78,11 +66,9 @@ func TestGetStateFilePathEmpty(t *testing.T) {
 		LogStreamName: "MyStream",
 		Name:          "SystemEventLog",
 	}
-	pathname, err := getStateFilePath(&plugin, &ec)
-	t.Log(pathname)
-	if err == nil {
-		t.Errorf("expected non-nil")
-	}
+	stateManagerCfg, err := getStateManagerConfig(&plugin, &ec)
+	t.Log(stateManagerCfg.StateFilePath())
+	assert.Error(t, err)
 }
 
 // TestGetStateFilePathSpecialChars tests getStateFilePath() with bad folder.
@@ -97,11 +83,9 @@ func TestGetStateFilePathSpecialChars(t *testing.T) {
 		LogStreamName: "MyStream",
 		Name:          "SystemEventLog",
 	}
-	pathname, err := getStateFilePath(&plugin, &ec)
-	t.Log(pathname)
-	if err == nil {
-		t.Errorf("expected non-nil")
-	}
+	stateManagerCfg, err := getStateManagerConfig(&plugin, &ec)
+	t.Log(stateManagerCfg.StateFilePath())
+	assert.Error(t, err)
 }
 
 func TestWindowsDuplicateStart(t *testing.T) {

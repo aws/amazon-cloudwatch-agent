@@ -4,39 +4,67 @@
 package sigv4auth
 
 import (
+	"fmt"
+
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type translator struct {
-	name    string
+	service string
 	factory extension.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator() common.ComponentTranslator {
-	return NewTranslatorWithName("")
+// Type is the sigv4auth extension's component type.
+func Type() component.Type {
+	return sigv4authextension.NewFactory().Type()
 }
 
-func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, sigv4authextension.NewFactory()}
+func NewTranslator() common.ComponentTranslator {
+	return &translator{factory: sigv4authextension.NewFactory()}
+}
+
+func NewTranslatorWithService(service string) common.ComponentTranslator {
+	return &translator{service: service, factory: sigv4authextension.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {
-	return component.NewIDWithName(t.factory.Type(), t.name)
+	return component.NewIDWithName(t.factory.Type(), t.service)
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*sigv4authextension.Config)
 	cfg.Region = agent.Global_Config.Region
+	if t.service != "" {
+		cfg.Service = t.service
+	}
+	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
+		cfg.Profile = fmt.Sprintf("%v", profileKey)
+	}
+	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
+		cfg.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
+	}
+	if mode := context.CurrentContext().Mode(); mode == config.ModeOnPrem || mode == config.ModeOnPremise {
+		cfg.LocalMode = true
+	}
+	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
 		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
+		// Feed the oidctoken file into AssumeRoleWithWebIdentity for the Azure VM web-identity chain.
+		if agent.IsAzureWebIdentity() {
+			cfg.AssumeRole.WebIdentityTokenFile = paths.OIDCTokenPath
+		}
 	}
 
 	return cfg, nil

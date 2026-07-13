@@ -61,7 +61,7 @@ func (t *translator) ID() component.ID {
 // tcp:localhost:25888
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if !conf.IsSet(baseKey) ||
-		(conf.IsSet(common.ConfigKey(serviceAddressKey)) && !strings.Contains(fmt.Sprintf("%v", conf.Get(serviceAddressKey)), common.Tcp)) {
+		(conf.IsSet(common.ConfigKey(serviceAddressKey)) && !strings.Contains(fmt.Sprintf("%v", conf.Get(serviceAddressKey)), common.TCP)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprintf("missing %s or tcp service address", baseKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*tcplogreceiver.TCPLogConfig)

@@ -3,10 +3,6 @@
 
 name: Upload Dependencies and Test Repo to S3
 
-env:
-  PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY  }}
-  KEY_NAME: ${{ secrets.KEY_NAME }}
-
 on:
   workflow_call:
     inputs:
@@ -29,29 +25,35 @@ on:
 
 jobs:
   UploadDependenciesAndTestRepo:
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ inputs.test_repo_name }}
           ref: ${{ inputs.test_repo_branch }}
       
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ inputs.terraform_assume_role }}
           aws-region: ${{ inputs.region }}
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.22.2
+          go-version: ~1.26.4
 
       - name: Upload Dependencies and Test Repo
+        env:
+          S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          GITHUB_SHA_INPUT: ${{ inputs.github_sha }}
         run: |
           go mod tidy
           go mod vendor
           mkdir test-repo
           tar -czf ./test-repo/amazon-cloudwatch-agent-test.tar.gz --exclude='test-repo' .
-          aws s3 cp ./test-repo/amazon-cloudwatch-agent-test.tar.gz s3://${{ inputs.s3_integration_bucket }}/integration-test/cloudwatch-agent-test-repo/${{ inputs.github_sha }}.tar.gz --quiet
+          aws s3 cp ./test-repo/amazon-cloudwatch-agent-test.tar.gz "s3://${S3_BUCKET}/integration-test/cloudwatch-agent-test-repo/${GITHUB_SHA_INPUT}.tar.gz" --quiet

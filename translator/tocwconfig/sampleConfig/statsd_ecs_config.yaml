@@ -1,7 +1,10 @@
 exporters:
     awscloudwatch:
+        backoff_retry_base: 200ms
         force_flush_interval: 1m0s
+        max_concurrent_publishers: 10
         max_datums_per_call: 1000
+        max_retry_count: 5
         max_values_per_datum: 150
         middleware: agenthealth/metrics
         namespace: CWAgent
@@ -42,9 +45,6 @@ service:
                 - telegraf_statsd
     telemetry:
         logs:
-            development: false
-            disable_caller: false
-            disable_stacktrace: false
             encoding: console
             level: info
             sampling:
@@ -53,7 +53,6 @@ service:
                 thereafter: 500
                 tick: 10s
         metrics:
-            address: ""
             level: None
         traces:
             level: None

@@ -20,11 +20,12 @@ import (
 func TestTranslate(t *testing.T) {
 	tt := NewTranslator(WithSignal(pipeline.SignalTraces))
 	testCases := map[string]struct {
-		input   map[string]interface{}
-		mode    string
-		isECS   bool
-		want    *confmap.Conf
-		wantErr error
+		input          map[string]interface{}
+		mode           string
+		kubernetesMode string
+		isECS          bool
+		want           *confmap.Conf
+		wantErr        error
 	}{
 		"WithAppSignalsEnabledOnECS": {
 			mode:  translatorconfig.ModeEC2,
@@ -118,11 +119,52 @@ func TestTranslate(t *testing.T) {
 				},
 			}),
 		},
+		"WithAppSignalsEnabledOnAzureVM": {
+			mode: translatorconfig.ModeAzureVM,
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"detectors": []interface{}{
+					"env",
+					"azure",
+				},
+				"timeout":  "2s",
+				"override": true,
+			}),
+		},
+		"WithAppSignalsEnabledOnAKS": {
+			kubernetesMode: translatorconfig.ModeAKS,
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"detectors": []interface{}{
+					"env",
+					"aks",
+					"azure",
+				},
+				"timeout":  "2s",
+				"override": true,
+			}),
+		},
 	}
 	factory := resourcedetectionprocessor.NewFactory()
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			context.CurrentContext().SetMode(testCase.mode)
+			// Reset so kubernetesMode/mode does not bleed across cases (map iteration is non-deterministic).
+			context.ResetContext()
+			if testCase.kubernetesMode != "" {
+				context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			} else {
+				context.CurrentContext().SetMode(testCase.mode)
+			}
 			if testCase.isECS {
 				ecsutil.GetECSUtilSingleton().Region = "test-region"
 			} else {
@@ -143,4 +185,28 @@ func TestTranslate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTranslate_OpenTelemetryKey_NoMiddleware(t *testing.T) {
+	tt := NewTranslator(WithName("opentelemetry"))
+	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = ""
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	gotCfg := got.(*resourcedetectionprocessor.Config)
+	assert.Nil(t, gotCfg.MiddlewareID)
+}
+
+func TestTranslate_NonOpenTelemetryKey_HasMiddleware(t *testing.T) {
+	tt := NewTranslator(WithSignal(pipeline.SignalTraces))
+	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = ""
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	gotCfg := got.(*resourcedetectionprocessor.Config)
+	assert.NotNil(t, gotCfg.MiddlewareID)
 }

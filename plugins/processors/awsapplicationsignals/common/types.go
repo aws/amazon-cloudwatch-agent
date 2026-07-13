@@ -47,6 +47,9 @@ const (
 const (
 	MetricAttributeRemoteDbUser                       = "RemoteDbUser"
 	MetricAttributeRemoteResourceCfnPrimaryIdentifier = "RemoteResourceCfnPrimaryIdentifier"
+	MetricAttributeRemoteResourceAccountID            = "RemoteResourceAccountId"
+	MetricAttributeRemoteResourceAccountAccessKey     = "RemoteResourceAccountAccessKey"
+	MetricAttributeRemoteResourceRegion               = "RemoteResourceRegion"
 )
 
 const (

@@ -13,6 +13,8 @@ type Collection struct {
 	Files *Files
 	// windows events
 	WinEvents *Events
+	// journald logs
+	Journald *Journald
 }
 
 func (config *Collection) ToMap(ctx *runtime.Context) (string, map[string]interface{}) {
@@ -27,14 +29,18 @@ func (config *Collection) ToMap(ctx *runtime.Context) (string, map[string]interf
 		util.AddToMap(ctx, resultMap, config.WinEvents)
 	}
 
+	if config.Journald != nil {
+		util.AddToMap(ctx, resultMap, config.Journald)
+	}
+
 	return "logs_collected", resultMap
 }
 
-func (config *Collection) AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat string, eventLevels []string, retention int, logGroupClass string) {
+func (config *Collection) AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat string, eventLevels []string, eventIDs []int, filters []*EventFilter, retention int, logGroupClass string) {
 	if config.WinEvents == nil {
 		config.WinEvents = &Events{}
 	}
-	config.WinEvents.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, retention, logGroupClass)
+	config.WinEvents.AddWindowsEvent(eventName, logGroupName, logStreamName, eventFormat, eventLevels, eventIDs, filters, retention, logGroupClass)
 }
 
 func (config *Collection) AddLogFile(filePath, logGroupName, logStreamName string, timestampFormat, timezone, multiLineStartPattern, encoding string, retention int, logGroupClass string) {
@@ -42,4 +48,11 @@ func (config *Collection) AddLogFile(filePath, logGroupName, logStreamName strin
 		config.Files = &Files{}
 	}
 	config.Files.AddLogFile(filePath, logGroupName, logStreamName, timestampFormat, timezone, multiLineStartPattern, encoding, retention, logGroupClass)
+}
+
+func (config *Collection) AddJournald(logGroupName, logStreamName string, units []string, priority string, matches []map[string]string, filters []*JournaldFilter, retention int) {
+	if config.Journald == nil {
+		config.Journald = &Journald{}
+	}
+	config.Journald.AddJournald(logGroupName, logStreamName, units, priority, matches, filters, retention)
 }

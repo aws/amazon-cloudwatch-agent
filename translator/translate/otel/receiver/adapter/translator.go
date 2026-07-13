@@ -8,7 +8,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/receiver/scraperhelper"
+	"go.opentelemetry.io/collector/scraper/scraperhelper"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
@@ -61,6 +61,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || !conf.IsSet(t.cfgKey) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: t.cfgKey}
 	}
+
 	cfg := &adapter.Config{
 		ControllerConfig: scraperhelper.NewDefaultControllerConfig(),
 		AliasName:        t.ID().String(),

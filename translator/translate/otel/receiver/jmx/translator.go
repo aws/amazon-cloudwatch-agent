@@ -116,6 +116,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	intervalKeyChain := []string{
 		common.ConfigKey(common.AgentKey, common.MetricsCollectionIntervalKey),
 	}
+	cfg.AggregateAcrossMBeans = true
 	cfg.CollectionInterval = common.GetOrDefaultDuration(conf, intervalKeyChain, defaultCollectionInterval)
 	collectionInterval, err := common.ParseDuration(jmxMap[common.MetricsCollectionIntervalKey])
 	if err == nil {

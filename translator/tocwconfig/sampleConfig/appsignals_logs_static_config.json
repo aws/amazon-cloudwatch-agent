@@ -1,0 +1,13 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "logs": {
+    "logs_collected": {
+      "application_signals": {
+        "log_group_name": "/static/my-app",
+        "log_stream_name": "my-stream"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+namespace: traces.span.metrics
+metrics_flush_interval: 30s
+dimensions:
+  - name: http.response.status_code
+  - name: http.request.method
+  - name: http.route
+  - name: http.status_code
+  - name: http.method
+  - name: rpc.grpc.status_code
+  - name: rpc.response.status_code
+  - name: error.type

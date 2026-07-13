@@ -13,8 +13,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
-	"go.opentelemetry.io/collector/receiver/scraperhelper"
 	otelscraper "go.opentelemetry.io/collector/scraper"
+	"go.opentelemetry.io/collector/scraper/scraperhelper"
 )
 
 const (
@@ -73,7 +73,7 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Se
 		return nil, err
 	}
 
-	return scraperhelper.NewScraperControllerReceiver(
+	return scraperhelper.NewMetricsController(
 		&cfg.ControllerConfig, settings, consumer,
 		scraperhelper.AddScraper(settings.ID.Type(), scraper),
 	)

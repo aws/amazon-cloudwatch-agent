@@ -6,10 +6,12 @@ package agent
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/logger"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -117,6 +119,26 @@ func noAgentConfig(t *testing.T, osType string) {
 		"collection_jitter":   "0s",
 	}
 	assert.Equal(t, agent, val, "Expect to be equal")
+}
+
+func TestMerge(t *testing.T) {
+	result := map[string]any{}
+	a := new(Agent)
+	for _, testFile := range []string{"config1.json", "config2.json", "config3.json"} {
+		a.Merge(testutil.GetJson(t, filepath.Join("testdata", testFile)), result)
+	}
+	assert.Empty(t, translator.ErrorMessages)
+	assert.Equal(t, map[string]any{
+		"agent": map[string]any{
+			"debug":         true,
+			"omit_hostname": false,
+			"usage_metadata": []any{
+				map[string]any{"ObservabilitySolution": "JVM"},
+				map[string]any{"ObservabilitySolution": "TOMCAT"},
+				map[string]any{"ObservabilitySolution": "EC2_HEALTH"},
+			},
+		},
+	}, result)
 }
 
 func TestInternal(t *testing.T) {

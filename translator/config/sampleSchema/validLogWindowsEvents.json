@@ -14,10 +14,24 @@
             "event_format": "xml"
           },
           {
+            "event_name": "Security",
+            "event_ids": [
+              4624,
+              4625
+            ],
+            "log_group_name": "Security",
+            "log_stream_name": "Security",
+            "event_format": "text"
+          },
+          {
             "event_name": "Application",
             "event_levels": [
               "INFORMATION",
               "ERROR"
+            ],
+            "event_ids": [
+              1001,
+              2225
             ],
             "log_group_name": "Application",
             "log_stream_name": "Application",

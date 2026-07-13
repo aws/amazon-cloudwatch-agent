@@ -12,8 +12,8 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/files/collect_list"
-	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events"
-	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windows_events/collect_list"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windowsevents"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/logs_collected/windowsevents/collect_list"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/ecs"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/kubernetes"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs/metrics_collected/prometheus"
@@ -38,5 +38,6 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/swap"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/rollup_dimensions"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/traces"
 )

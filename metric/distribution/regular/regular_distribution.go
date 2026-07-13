@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
+	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
 )
 
 type RegularDistribution struct {
@@ -22,7 +24,7 @@ type RegularDistribution struct {
 	unit        string
 }
 
-func NewRegularDistribution() distribution.Distribution {
+func NewRegularDistribution() distribution.ClassicDistribution {
 	return &RegularDistribution{
 		maximum:     0, // negative number is not supported for now, so zero is the min value
 		minimum:     math.MaxFloat64,
@@ -171,6 +173,24 @@ func (rd *RegularDistribution) ConvertFromOtel(dp pmetric.HistogramDataPoint, un
 		v := dp.BucketCounts().At(i)
 		rd.buckets[k] = float64(v)
 	}
+}
+
+func (regularDist *RegularDistribution) Resize(listMaxSize int) []distribution.Distribution {
+	distList := []distribution.Distribution{}
+	values, _ := regularDist.ValuesAndCounts()
+	sort.Float64s(values)
+	newSEH1Dist := seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
+	for i := 0; i < len(values); i++ {
+		if !newSEH1Dist.CanAdd(values[i], listMaxSize) {
+			distList = append(distList, newSEH1Dist)
+			newSEH1Dist = seh1.NewSEH1Distribution().(*seh1.SEH1Distribution)
+		}
+		newSEH1Dist.AddEntry(values[i], regularDist.GetCount(values[i]))
+	}
+	if newSEH1Dist.Size() > 0 {
+		distList = append(distList, newSEH1Dist)
+	}
+	return distList
 }
 
 func (regularDist *RegularDistribution) GetCount(value float64) float64 {

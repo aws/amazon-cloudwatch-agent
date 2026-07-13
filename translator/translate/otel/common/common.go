@@ -21,82 +21,91 @@ import (
 )
 
 const (
-	AgentKey                           = "agent"
-	DebugKey                           = "debug"
-	MetricsKey                         = "metrics"
-	LogsKey                            = "logs"
-	TracesKey                          = "traces"
-	MetricsCollectedKey                = "metrics_collected"
-	LogsCollectedKey                   = "logs_collected"
-	TracesCollectedKey                 = "traces_collected"
-	MetricsDestinationsKey             = "metrics_destinations"
-	ECSKey                             = "ecs"
-	KubernetesKey                      = "kubernetes"
-	CloudWatchKey                      = "cloudwatch"
-	CloudWatchLogsKey                  = "cloudwatchlogs"
-	PrometheusKey                      = "prometheus"
-	PrometheusConfigPathKey            = "prometheus_config_path"
-	AMPKey                             = "amp"
-	WorkspaceIDKey                     = "workspace_id"
-	EMFProcessorKey                    = "emf_processor"
-	DisableMetricExtraction            = "disable_metric_extraction"
-	XrayKey                            = "xray"
-	OtlpKey                            = "otlp"
-	JmxKey                             = "jmx"
-	TLSKey                             = "tls"
-	Endpoint                           = "endpoint"
-	EndpointOverrideKey                = "endpoint_override"
-	RegionOverrideKey                  = "region_override"
-	ProxyOverrideKey                   = "proxy_override"
-	InsecureKey                        = "insecure"
-	LocalModeKey                       = "local_mode"
-	CredentialsKey                     = "credentials"
-	RoleARNKey                         = "role_arn"
-	SigV4Auth                          = "sigv4auth"
-	MetricsCollectionIntervalKey       = "metrics_collection_interval"
-	AggregationDimensionsKey           = "aggregation_dimensions"
-	MeasurementKey                     = "measurement"
-	DropOriginalMetricsKey             = "drop_original_metrics"
-	ForceFlushIntervalKey              = "force_flush_interval"
-	ContainerInsightsMetricGranularity = "metric_granularity" // replaced with enhanced_container_insights
-	EnhancedContainerInsights          = "enhanced_container_insights"
-	ResourcesKey                       = "resources"
-	PreferFullPodName                  = "prefer_full_pod_name"
-	EnableAcceleratedComputeMetric     = "accelerated_compute_metrics"
-	EnableKueueContainerInsights       = "kueue_container_insights"
-	AppendDimensionsKey                = "append_dimensions"
-	Console                            = "console"
-	DiskKey                            = "disk"
-	DiskIOKey                          = "diskio"
-	NetKey                             = "net"
-	Emf                                = "emf"
-	StructuredLog                      = "structuredlog"
-	ServiceAddress                     = "service_address"
-	Udp                                = "udp"
-	Tcp                                = "tcp"
-	TlsKey                             = "tls"
-	Tags                               = "tags"
-	Region                             = "region"
-	LogGroupName                       = "log_group_name"
-	LogStreamName                      = "log_stream_name"
-	NameKey                            = "name"
-	RenameKey                          = "rename"
-	UnitKey                            = "unit"
+	AgentKey                                       = "agent"
+	DebugKey                                       = "debug"
+	MetricsKey                                     = "metrics"
+	LogsKey                                        = "logs"
+	TracesKey                                      = "traces"
+	MetricsCollectedKey                            = "metrics_collected"
+	LogsCollectedKey                               = "logs_collected"
+	TracesCollectedKey                             = "traces_collected"
+	OpenTelemetryKey                               = "opentelemetry"
+	CollectKey                                     = "collect"
+	HostMetricsKey                                 = "host_metrics"
+	OtelContainerInsightsKey                       = "container_insights"
+	MetricsDestinationsKey                         = "metrics_destinations"
+	ECSKey                                         = "ecs"
+	KubernetesKey                                  = "kubernetes"
+	CloudWatchKey                                  = "cloudwatch"
+	CloudWatchLogsKey                              = "cloudwatchlogs"
+	PrometheusKey                                  = "prometheus"
+	PrometheusConfigPathKey                        = "prometheus_config_path"
+	AMPKey                                         = "amp"
+	WorkspaceIDKey                                 = "workspace_id"
+	EMFProcessorKey                                = "emf_processor"
+	DisableMetricExtraction                        = "disable_metric_extraction"
+	XrayKey                                        = "xray"
+	OtlpKey                                        = "otlp"
+	JmxKey                                         = "jmx"
+	TLSKey                                         = "tls"
+	Endpoint                                       = "endpoint"
+	EndpointOverrideKey                            = "endpoint_override"
+	RegionOverrideKey                              = "region_override"
+	ProxyOverrideKey                               = "proxy_override"
+	InsecureKey                                    = "insecure"
+	LocalModeKey                                   = "local_mode"
+	CredentialsKey                                 = "credentials"
+	RoleARNKey                                     = "role_arn"
+	SigV4Auth                                      = "sigv4auth"
+	MetricsCollectionIntervalKey                   = "metrics_collection_interval"
+	AggregationDimensionsKey                       = "aggregation_dimensions"
+	MeasurementKey                                 = "measurement"
+	DropOriginalMetricsKey                         = "drop_original_metrics"
+	ForceFlushIntervalKey                          = "force_flush_interval"
+	ContainerInsightsMetricGranularity             = "metric_granularity" // replaced with enhanced_container_insights
+	EnhancedContainerInsights                      = "enhanced_container_insights"
+	ResourcesKey                                   = "resources"
+	PreferFullPodName                              = "prefer_full_pod_name"
+	EnableAcceleratedComputeMetric                 = "accelerated_compute_metrics"
+	AcceleratedComputeGPUMetricsCollectionInterval = "accelerated_compute_gpu_metrics_collection_interval"
+	HighFrequencyGpuMetrics                        = "high_frequency_gpu_metrics"
+	EnableKueueContainerInsights                   = "kueue_container_insights"
+	AppendDimensionsKey                            = "append_dimensions"
+	Console                                        = "console"
+	DiskKey                                        = "disk"
+	DiskIOKey                                      = "diskio"
+	EfaKey                                         = "efa"
+	NetKey                                         = "net"
+	Emf                                            = "emf"
+	StructuredLog                                  = "structuredlog"
+	ServiceAddress                                 = "service_address"
+	UDP                                            = "udp"
+	TCP                                            = "tcp"
+	Tags                                           = "tags"
+	Region                                         = "region"
+	LogGroupName                                   = "log_group_name"
+	LogStreamName                                  = "log_stream_name"
+	CollectListKey                                 = "collect_list"
+	NameKey                                        = "name"
+	RenameKey                                      = "rename"
+	UnitKey                                        = "unit"
+	JournaldKey                                    = "journald"
 )
 
 const (
-	CollectDMetricKey = "collectd"
-	CollectDPluginKey = "socket_listener"
-	CPUMetricKey      = "cpu"
-	DiskMetricKey     = "disk"
-	DiskIoMetricKey   = "diskio"
-	StatsDMetricKey   = "statsd"
-	SwapMetricKey     = "swap"
-	MemMetricKey      = "mem"
-	NetMetricKey      = "net"
-	NetStatMetricKey  = "netstat"
-	ProcessMetricKey  = "process"
-	ProcStatMetricKey = "procstat"
+	CollectDMetricKey       = "collectd"
+	CollectDPluginKey       = "socket_listener"
+	CPUMetricKey            = "cpu"
+	DiskMetricKey           = "disk"
+	DiskIoMetricKey         = "diskio"
+	StatsDMetricKey         = "statsd"
+	SwapMetricKey           = "swap"
+	MemMetricKey            = "mem"
+	NetMetricKey            = "net"
+	NetStatMetricKey        = "netstat"
+	ProcessMetricKey        = "process"
+	ProcStatMetricKey       = "procstat"
+	SystemMetricsEnabledKey = "system_metrics_enabled"
 
 	//Windows Plugins
 	MemMetricKeyWindows          = "Memory"
@@ -121,23 +130,58 @@ const (
 	PipelineNameEmfLogs              = "emf_logs"
 	PipelineNamePrometheus           = "prometheus"
 	PipelineNameKueue                = "kueueContainerInsights"
+	PipelineNameSystemMetrics        = "systemmetrics"
 	AppSignals                       = "application_signals"
 	AppSignalsFallback               = "app_signals"
 	AppSignalsRules                  = "rules"
 )
 
+// DBI (Database Insights) constants
+const (
+	DatabaseInsightsKey = "database_insights"
+	PostgreSQLKey       = "postgresql"
+
+	// DBI component names
+	DbiTransformFixStartTime = "dbi_fix_start_time"
+	DbiTransformResource     = "dbi_resource"
+	DbiTransformLogs         = "dbi_logs"
+	DbiFilterExcludeMonitor  = "dbi_exclude_monitor"
+	DbiConnectorDbload       = "dbi_dbload"
+	DbiConnectorTopsql       = "dbi_topsql"
+)
+
+// OpenTelemetry pipeline processor names
+const (
+	Identity    = "identity"
+	LogsRouting = "logs_routing"
+)
+
+var (
+	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
+	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
+	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
+)
+
+const (
+	DiskIOPrefix = "diskio_"
+)
+
 var (
 	AppSignalsTraces          = ConfigKey(TracesKey, TracesCollectedKey, AppSignals)
 	AppSignalsMetrics         = ConfigKey(LogsKey, MetricsCollectedKey, AppSignals)
+	AppSignalsLogs            = ConfigKey(LogsKey, LogsCollectedKey, AppSignals)
 	AppSignalsTracesFallback  = ConfigKey(TracesKey, TracesCollectedKey, AppSignalsFallback)
 	AppSignalsMetricsFallback = ConfigKey(LogsKey, MetricsCollectedKey, AppSignalsFallback)
 
 	AppSignalsConfigKeys = map[pipeline.Signal][]string{
 		pipeline.SignalTraces:  {AppSignalsTraces, AppSignalsTracesFallback},
 		pipeline.SignalMetrics: {AppSignalsMetrics, AppSignalsMetricsFallback},
+		pipeline.SignalLogs:    {AppSignalsLogs},
 	}
-	JmxConfigKey               = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
-	ContainerInsightsConfigKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
+	SystemMetricsEnabledConfigKey = ConfigKey(AgentKey, SystemMetricsEnabledKey)
+	JmxConfigKey                  = ConfigKey(MetricsKey, MetricsCollectedKey, JmxKey)
+	ContainerInsightsConfigKey    = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey)
 
 	JmxTargets = []string{"activemq", "cassandra", "hbase", "hadoop", "jetty", "jvm", "kafka", "kafka-consumer", "kafka-producer", "solr", "tomcat", "wildfly"}
 
@@ -265,6 +309,7 @@ type ComponentTranslators struct {
 	Processors ComponentTranslatorMap
 	Exporters  ComponentTranslatorMap
 	Extensions ComponentTranslatorMap
+	Connectors ComponentTranslatorMap
 }
 
 // PipelineTranslator is a Translator that converts a JSON config into a pipeline

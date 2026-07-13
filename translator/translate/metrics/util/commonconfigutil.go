@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 const (
@@ -55,9 +56,9 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 	// Add HighResolution tags
 	if isHighResolution {
 		if result[Append_Dimensions_Mapped_Key] != nil {
-			util.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
+			tagutil.AddHighResolutionTag(result[Append_Dimensions_Mapped_Key])
 		} else {
-			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+			result[Append_Dimensions_Mapped_Key] = map[string]interface{}{tagutil.HighResolutionTagKey: "true"}
 		}
 	}
 	return true
@@ -65,7 +66,8 @@ func ProcessLinuxCommonConfig(input interface{}, pluginName string, path string,
 func ProcessAppendDimensions(inputMap map[string]interface{}, pluginName string, result map[string]interface{}) {
 	// Set append_dimensions as tags
 	if val, ok := inputMap[Append_Dimensions_Key]; ok {
-		result[Append_Dimensions_Mapped_Key] = util.FilterReservedKeys(val)
+		filtered := tagutil.FilterReservedKeys(val)
+		result[Append_Dimensions_Mapped_Key] = util.ResolveAWSMetadataPlaceholders(filtered)
 	}
 
 	// Apply any specific rules for the plugin
@@ -136,9 +138,9 @@ func ProcessWindowsCommonConfig(input interface{}, pluginName string, path strin
 	// Add HighResolution tags
 	if isHighRsolution {
 		if returnVal[Append_Dimensions_Mapped_Key] != nil {
-			util.AddHighResolutionTag(returnVal[Append_Dimensions_Mapped_Key])
+			tagutil.AddHighResolutionTag(returnVal[Append_Dimensions_Mapped_Key])
 		} else {
-			returnVal[Append_Dimensions_Mapped_Key] = map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+			returnVal[Append_Dimensions_Mapped_Key] = map[string]interface{}{tagutil.HighResolutionTagKey: "true"}
 		}
 	}
 
@@ -188,9 +190,9 @@ func ProcessMetricsAggregationInterval(input interface{}, defaultValue, pluginNa
 				val = fmt.Sprintf("%ds", int(floatVal))
 				if valStr, ok := val.(string); ok && valStr == "0s" {
 					// customer specifically disabled the metrics aggregation interval by putting "0"
-					return Append_Dimensions_Mapped_Key, map[string]interface{}{util.High_Resolution_Tag_Key: "true"}
+					return Append_Dimensions_Mapped_Key, map[string]interface{}{tagutil.HighResolutionTagKey: "true"}
 				}
-				return Append_Dimensions_Mapped_Key, map[string]interface{}{util.Aggregation_Interval_Tag_Key: val}
+				return Append_Dimensions_Mapped_Key, map[string]interface{}{tagutil.AggregationIntervalTagKey: val}
 			} else {
 				translator.AddErrorMessages(
 					fmt.Sprintf("metrics plugin %s", pluginName),
@@ -198,7 +200,7 @@ func ProcessMetricsAggregationInterval(input interface{}, defaultValue, pluginNa
 			}
 		}
 		if defaultValue != "" {
-			return Append_Dimensions_Mapped_Key, map[string]interface{}{util.Aggregation_Interval_Tag_Key: defaultValue}
+			return Append_Dimensions_Mapped_Key, map[string]interface{}{tagutil.AggregationIntervalTagKey: defaultValue}
 		}
 	}
 	return

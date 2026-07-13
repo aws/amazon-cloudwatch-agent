@@ -12,18 +12,21 @@ import (
 
 const (
 	//the following are the names of environment variables
-	HTTP_PROXY                  = "HTTP_PROXY"         //nolint:revive
-	HTTPS_PROXY                 = "HTTPS_PROXY"        //nolint:revive
-	NO_PROXY                    = "NO_PROXY"           //nolint:revive
-	AWS_CA_BUNDLE               = "AWS_CA_BUNDLE"      //nolint:revive
-	AWS_SDK_LOG_LEVEL           = "AWS_SDK_LOG_LEVEL"  //nolint:revive
-	CWAGENT_USER_AGENT          = "CWAGENT_USER_AGENT" //nolint:revive
-	CWAGENT_LOG_LEVEL           = "CWAGENT_LOG_LEVEL"  //nolint:revive
-	CWAGENT_USAGE_DATA          = "CWAGENT_USAGE_DATA" //nolint:revive
-	IMDS_NUMBER_RETRY           = "IMDS_NUMBER_RETRY"  //nolint:revive
+	HTTP_PROXY                  = "HTTP_PROXY"                 //nolint:revive
+	HTTPS_PROXY                 = "HTTPS_PROXY"                //nolint:revive
+	NO_PROXY                    = "NO_PROXY"                   //nolint:revive
+	AWS_CA_BUNDLE               = "AWS_CA_BUNDLE"              //nolint:revive
+	AWS_SDK_LOG_LEVEL           = "AWS_SDK_LOG_LEVEL"          //nolint:revive
+	AWS_USE_DUALSTACK_ENDPOINT  = "AWS_USE_DUALSTACK_ENDPOINT" //nolint:revive
+	CWAGENT_USER_AGENT          = "CWAGENT_USER_AGENT"         //nolint:revive
+	CWAGENT_LOG_LEVEL           = "CWAGENT_LOG_LEVEL"          //nolint:revive
+	CWAGENT_ROLE                = "CWAGENT_ROLE"               //nolint:revive
+	CWAGENT_USAGE_DATA          = "CWAGENT_USAGE_DATA"         //nolint:revive
+	IMDS_NUMBER_RETRY           = "IMDS_NUMBER_RETRY"          //nolint:revive
 	RunInContainer              = "RUN_IN_CONTAINER"
 	RunAsHostProcessContainer   = "RUN_AS_HOST_PROCESS_CONTAINER"
 	RunInAWS                    = "RUN_IN_AWS"
+	RunInAKS                    = "RUN_IN_AKS"
 	RunWithIRSA                 = "RUN_WITH_IRSA"
 	RunWithSELinux              = "RUN_WITH_SELINUX"
 	RunInROSA                   = "RUN_IN_ROSA"
@@ -35,6 +38,8 @@ const (
 	CWOtelConfigContent         = "CW_OTEL_CONFIG_CONTENT"
 	CWAgentMergedOtelConfig     = "CWAGENT_MERGED_OTEL_CONFIG"
 	CWAgentLogsBackpressureMode = "CWAGENT_LOGS_BACKPRESSURE_MODE"
+	SystemMetricsEnabled        = "SYSTEM_METRICS_ENABLED"
+	OtelCIVersion               = "OTEL_CI_VERSION"
 
 	// confused deputy prevention related headers
 	AmzSourceAccount = "AMZ_SOURCE_ACCOUNT" // populates the "x-amz-source-account" header
@@ -42,8 +47,9 @@ const (
 )
 
 const (
-	// TrueValue is the expected string set on an environment variable to indicate true.
-	TrueValue = "True"
+	TrueValue = "True"   // TrueValue is the expected string set on an environment variable to indicate true.
+	LEADER    = "LEADER" //nolint:revive
+	NODE      = "NODE"   //nolint:revive
 )
 
 var (
@@ -82,6 +88,11 @@ func IsSelinuxEnabled() bool {
 
 func IsRunningInROSA() bool {
 	return os.Getenv(RunInROSA) == TrueValue
+}
+
+// IsRunningInAKS reports whether RUN_IN_AKS is set (by the AKS Helm chart) so AKS is detected without a metadata probe.
+func IsRunningInAKS() bool {
+	return os.Getenv(RunInAKS) == TrueValue
 }
 
 func GetLogsBackpressureMode() string {

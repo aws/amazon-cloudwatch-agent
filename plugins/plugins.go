@@ -8,6 +8,9 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/ecsdecorator"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/processors/k8sdecorator"
 
+	// Enabled cloudwatch-agent stanza operators
+	_ "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/parser/containerlog"
+
 	// Enabled cloudwatch-agent input plugins
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile"
 	_ "github.com/aws/amazon-cloudwatch-agent/plugins/inputs/nvidia_smi"
