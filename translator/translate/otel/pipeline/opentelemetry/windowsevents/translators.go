@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -52,9 +53,7 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 	}
 
 	var entries []eventEntry
-	seen := map[string]int{}
-	channelReceiver := map[string]string{}
-	for _, item := range list {
+	for i, item := range list {
 		m, ok := item.(map[string]any)
 		if !ok {
 			continue
@@ -97,22 +96,9 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		}
 
 		sanitized := sanitizeName(channel)
-		name := sanitized
-		if n := seen[sanitized]; n > 0 {
-			name = fmt.Sprintf("%s_%d", sanitized, n)
-		}
-		seen[sanitized]++
-
-		receiverName := name
-		if rn, ok := channelReceiver[channel]; ok {
-			receiverName = rn
-		} else {
-			channelReceiver[channel] = name
-		}
-
 		entries = append(entries, eventEntry{
-			name:          name,
-			receiverName:  receiverName,
+			name:          fmt.Sprintf("%s_%d", sanitized, i),
+			receiverName:  fmt.Sprintf("%s_%s", sanitized, receiverHash(channel, format)),
 			channel:       channel,
 			raw:           raw,
 			resource:      resource,
@@ -123,6 +109,10 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		})
 	}
 	return entries
+}
+
+func receiverHash(channel, format string) string {
+	return hash.HashName(channel + "\x00" + format)
 }
 
 func sanitizeName(channel string) string {

@@ -89,7 +89,7 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
-    filter/windows_events_application:
+    filter/windows_events_application_1:
         error_mode: ignore
         logs:
             log_record:
@@ -97,7 +97,7 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
-    filter/windows_events_system:
+    filter/windows_events_system_0:
         error_mode: ignore
         logs:
             log_record:
@@ -105,7 +105,7 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
-    resource/windows_events_system:
+    resource/windows_events_system_0:
         attributes:
             - action: upsert
               converted_type: ""
@@ -466,7 +466,7 @@ processors:
         metric_statements: []
         trace_statements: []
 receivers:
-    windowseventlog/application:
+    windowseventlog/application_2122316671:
         channel: Application
         id: windows_eventlog_input
         max_reads: 100
@@ -483,7 +483,7 @@ receivers:
         start_at: end
         storage: file_storage/opentelemetry
         type: windows_eventlog_input
-    windowseventlog/system:
+    windowseventlog/system_653521908:
         channel: System
         id: windows_eventlog_input
         max_reads: 100
@@ -520,23 +520,23 @@ service:
                 - batch/opentelemetry_logs
             receivers:
                 - forward/opentelemetry
-        logs/windows_events_application:
+        logs/windows_events_application_1:
             exporters:
                 - forward/opentelemetry
             processors:
-                - filter/windows_events_application
+                - filter/windows_events_application_1
                 - transform/windows_events_scope
             receivers:
-                - windowseventlog/application
-        logs/windows_events_system:
+                - windowseventlog/application_2122316671
+        logs/windows_events_system_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - filter/windows_events_system
-                - resource/windows_events_system
+                - filter/windows_events_system_0
+                - resource/windows_events_system_0
                 - transform/windows_events_scope
             receivers:
-                - windowseventlog/system
+                - windowseventlog/system_653521908
     telemetry:
         logs:
             encoding: console
