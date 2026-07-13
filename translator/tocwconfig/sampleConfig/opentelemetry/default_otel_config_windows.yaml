@@ -191,22 +191,6 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
-    filter/windows_events_application_1:
-        error_mode: ignore
-        logs:
-            log_record:
-                - not((severity_number == 17 or severity_number == 13))
-        metrics: {}
-        spans: {}
-        traces: {}
-    filter/windows_events_system_0:
-        error_mode: ignore
-        logs:
-            log_record:
-                - not((severity_number == 17 or severity_number == 13))
-        metrics: {}
-        spans: {}
-        traces: {}
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -610,12 +594,13 @@ receivers:
                 read_header_timeout: 0s
                 traces_url_path: /v1/traces
                 write_timeout: 0s
-    windowseventlog/application_2122316671:
-        channel: Application
+    windowseventlog/application_3497854245:
+        channel: ""
         id: windows_eventlog_input
         max_reads: 100
         operators: []
         poll_interval: 1s
+        query: <QueryList><Query Id="0"><Select Path="Application">*[System[(Level='2' or Level='3') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>
         resource:
             aws.log.channel: Application
             aws.log.source: windows_events
@@ -627,12 +612,13 @@ receivers:
         start_at: end
         storage: file_storage/opentelemetry
         type: windows_eventlog_input
-    windowseventlog/system_653521908:
-        channel: System
+    windowseventlog/system_396641996:
+        channel: ""
         id: windows_eventlog_input
         max_reads: 100
         operators: []
         poll_interval: 1s
+        query: <QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='3') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>
         resource:
             aws.log.channel: System
             aws.log.source: windows_events
@@ -681,18 +667,16 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - filter/windows_events_application_1
                 - transform/windows_events_scope
             receivers:
-                - windowseventlog/application_2122316671
+                - windowseventlog/application_3497854245
         logs/windows_events_system_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - filter/windows_events_system_0
                 - transform/windows_events_scope
             receivers:
-                - windowseventlog/system_653521908
+                - windowseventlog/system_396641996
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
