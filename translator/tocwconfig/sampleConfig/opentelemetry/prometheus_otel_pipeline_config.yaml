@@ -393,7 +393,7 @@ receivers:
                   relabel_configs:
                     - action: replace
                       regex: (.*)
-                      replacement: $$1
+                      replacement: $$$$1
                       separator: ;
                       source_labels:
                         - __meta_kubernetes_pod_name

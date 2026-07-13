@@ -122,13 +122,14 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	return cfg, nil
 }
 
-// escapeDollarDigit escapes bare $ followed by a digit so the expandconverter
-// does not interpret regex backreferences (e.g., $1 in relabel_configs) as env vars.
+// escapeDollarDigit escapes bare $ followed by a digit with $$$$ so the value
+// survives both the confmap resolver's escapeDollarSigns pass ($$$$ → $$) and
+// the expandconverter pass ($$ → $), preserving regex backreferences like $1.
 func escapeDollarDigit(s string) string {
 	var out []byte
 	for i := 0; i < len(s); i++ {
 		if s[i] == '$' && i+1 < len(s) && s[i+1] >= '0' && s[i+1] <= '9' {
-			out = append(out, '$', '$')
+			out = append(out, '$', '$', '$', '$')
 		} else {
 			out = append(out, s[i])
 		}
