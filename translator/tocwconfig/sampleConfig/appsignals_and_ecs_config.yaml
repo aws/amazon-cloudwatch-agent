@@ -1452,11 +1452,11 @@ processors:
                     enabled: false
         timeout: 2s
     transform/application_signals_logs:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["temporary_key.service.name"], resource.attributes["service.name"])
                 - set(resource.attributes["temporary_key.service.name"], "unknown_service") where resource.attributes["temporary_key.service.name"] == nil
@@ -1465,11 +1465,11 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/application_signals_logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "temporary_key.service.name")

@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/spanmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -62,11 +63,20 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
 
+	receivers := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
+	connectors := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
+
+	if common.GetOrDefaultBool(conf, common.OtelSpanMetricsEnabledKey, false) {
+		sm := spanmetrics.NewTranslator(common.OpenTelemetryKey)
+		receivers.Set(sm)
+		connectors.Set(sm)
+	}
+
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
+		Receivers:  receivers,
 		Processors: processors,
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("metrics", otlphttp.EndpointConfig{MetricsEndpoint: metricsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
-		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
+		Connectors: connectors,
 	}, nil
 }

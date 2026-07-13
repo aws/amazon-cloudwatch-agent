@@ -74,16 +74,21 @@ var apiserverYAML string
 var kubeStateMetricsYAML string
 
 // NewTranslators returns all container insights pipeline translators.
-// The pipelines generated depend on the "mode" config field:
+// The pipelines generated depend on the resolved mode (see getMode for priority):
 //   - "node": daemonset pipelines (per-node metrics + logs)
 //   - "cluster": deployment pipelines (cluster-wide metrics)
-//   - omitted: all pipelines
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
+
+	// Guard: no container_insights config key means no pipelines to build.
+	if conf == nil || !conf.IsSet(ciConfigKey) {
+		return translators
+	}
+
 	mode := getMode(conf)
 
 	// Daemonset metrics pipelines
-	if mode == "" || mode == "node" {
+	if mode == modeNode {
 		translators.Set(newYAMLPipeline("kubeletstats", pipeline.SignalMetrics, kubeletstatsYAML))
 		translators.Set(newYAMLPipeline("cadvisor", pipeline.SignalMetrics, cadvisorYAML))
 		translators.Set(newYAMLPipeline("node_exporter", pipeline.SignalMetrics, nodeExporterYAML))
@@ -101,7 +106,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	}
 
 	// Deployment metrics pipelines
-	if mode == "cluster" {
+	if mode == modeCluster {
 		translators.Set(newYAMLPipeline("apiserver", pipeline.SignalMetrics, apiserverYAML))
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
 	}

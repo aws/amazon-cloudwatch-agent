@@ -1859,7 +1859,7 @@
                   "$ref": "#/definitions/timeIntervalDefinition"
                 },
                 "mode": {
-                  "description": "Pipeline mode: node (daemonset), cluster (deployment), or omit for all",
+                  "description": "Pipeline mode: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
                   "type": "string",
                   "enum": ["node", "cluster"]
                 },
@@ -1902,6 +1902,10 @@
                 "http_endpoint": {
                   "description": "OTLP HTTP receiver endpoint",
                   "type": "string"
+                },
+                "span_metrics_enabled": {
+                  "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
+                  "type": "boolean"
                 }
               },
               "additionalProperties": false

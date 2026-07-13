@@ -6,7 +6,9 @@
   },
   "opentelemetry": {
     "collect": {
-      "otlp": {}
+      "otlp": {
+        "span_metrics_enabled": true
+      }
     }
   }
 }

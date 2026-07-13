@@ -1,5 +1,28 @@
 connectors:
     forward/opentelemetry: {}
+    spanmetrics/opentelemetry:
+        aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
+        dimensions:
+            - name: http.response.status_code
+            - name: http.request.method
+            - name: http.route
+            - name: http.status_code
+            - name: http.method
+            - name: rpc.grpc.status_code
+            - name: rpc.response.status_code
+            - name: error.type
+        dimensions_cache_size: 1000
+        events:
+            enabled: false
+        exemplars:
+            enabled: false
+        histogram:
+            disable: false
+            unit: ms
+        metrics_expiration: 0s
+        metrics_flush_interval: 30s
+        namespace: traces.span.metrics
+        resource_metrics_cache_size: 1000
 exporters:
     otlphttp/logs:
         auth:
@@ -165,6 +188,14 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
+    batch/opentelemetry_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 30s
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
@@ -172,14 +203,6 @@ processors:
         timeout: 30s
     batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 10000
-        send_batch_size: 10000
-        timeout: 30s
-    batch/opentelemetry_logs:
-        metadata_cardinality_limit: 1000
-        metadata_keys:
-            - aws.log.group.name
-            - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
@@ -471,7 +494,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         metric_statements:
@@ -479,7 +502,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         trace_statements:
@@ -487,15 +510,15 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
@@ -521,11 +544,11 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/otlp_log_source:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
@@ -537,20 +560,20 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
     otlp/grpc_127_0_0_1_4317:
         protocols:
@@ -613,6 +636,7 @@ service:
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
+                - spanmetrics/opentelemetry
         metrics/otlp:
             exporters:
                 - forward/opentelemetry
@@ -624,6 +648,7 @@ service:
         traces/opentelemetry:
             exporters:
                 - otlphttp/traces
+                - spanmetrics/opentelemetry
             processors:
                 - resourcedetection/opentelemetry
                 - transform/identity

@@ -82,8 +82,11 @@ func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error)
 	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics"), countConn, s2mConn),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.scopeTransform(), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformFixStartTime)),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics"), countConn, s2mConn),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](
+			t.scopeTransform(),
+			transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricResourceStatements(t.resourceStatements())),
+			transformprocessor.NewTranslatorWithName(common.DbiTransformFixStartTime)),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd, countConn, s2mConn),
@@ -108,8 +111,21 @@ func (t *dbiTranslator) translateRawEvents() (*common.ComponentTranslators, erro
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("events", postgresql.WithQuerySampleInterval(60*time.Second))),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter(), t.scopeTransform(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_raw-events_"+idx, transformprocessor.WithLogStatements(t.logStatements("raw-events")))),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("events", postgresql.WithQuerySampleInterval(60*time.Second))),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](
+			t.excludeMonitorFilter(),
+			t.scopeTransform(),
+			resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)),
+			transformprocessor.NewTranslatorWithName(
+				common.DbiTransformResource+"_"+idx,
+				transformprocessor.WithMetricResourceStatements(t.resourceStatements()),
+				transformprocessor.WithLogResourceStatements(t.resourceStatements()),
+			),
+			transformprocessor.NewTranslatorWithName(
+				common.DbiTransformLogs+"_raw-events_"+idx,
+				transformprocessor.WithLogResourceStatements(t.logStatements("raw-events")),
+			),
+		),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),
@@ -121,8 +137,23 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](filelog.NewTranslator(filelog.WithNamePrefix("postgresql"), filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath))),
-		Processors: common.NewTranslatorMap[component.Config, component.ID](t.scopeTransform(), resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)), transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricStatements(t.resourceStatements()), transformprocessor.WithLogStatements(t.resourceStatements())), transformprocessor.NewTranslatorWithName(common.DbiTransformLogs+"_server-logs_"+idx, transformprocessor.WithLogStatements(t.logStatements("server-logs")))),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](
+			filelog.NewTranslator(filelog.WithNamePrefix("postgresql"),
+				filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath)),
+		),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](
+			t.scopeTransform(),
+			resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)),
+			transformprocessor.NewTranslatorWithName(
+				common.DbiTransformResource+"_"+idx,
+				transformprocessor.WithMetricResourceStatements(t.resourceStatements()),
+				transformprocessor.WithLogResourceStatements(t.resourceStatements()),
+			),
+			transformprocessor.NewTranslatorWithName(
+				common.DbiTransformLogs+"_server-logs_"+idx,
+				transformprocessor.WithLogResourceStatements(t.logStatements("server-logs")),
+			),
+		),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),
@@ -150,13 +181,10 @@ func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 }
 
 func (t *dbiTranslator) scopeTransform() common.ComponentTranslator {
-	idx := strconv.Itoa(t.instanceIndex)
-	return transformprocessor.NewTranslatorWithName("dbi_scope_"+idx,
+	return transformprocessor.NewTranslatorWithName("dbi_scope",
 		transformprocessor.WithErrorMode("ignore"),
-		transformprocessor.WithScopeStatements([]string{
-			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
-			`set(attributes["cloudwatch.solution"], "otel-database-insights")`,
-		}),
+		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-database-insights")),
+		transformprocessor.WithLogScopeStatements(common.ScopeStatementsForSolution("otel-database-insights")),
 	)
 }
 
