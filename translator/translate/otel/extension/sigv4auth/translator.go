@@ -43,7 +43,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.service)
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*sigv4authextension.Config)
 	cfg.Region = agent.Global_Config.Region
 	if t.service != "" {
@@ -60,10 +60,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
-		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
-		// Feed the oidctoken file into AssumeRoleWithWebIdentity for the Azure VM web-identity chain.
+		cfg.RoleARN = agent.Global_Config.Role_arn
 		if agent.IsAzureWebIdentity() {
-			cfg.AssumeRole.WebIdentityTokenFile = paths.OIDCTokenPath
+			cfg.WebIdentityTokenFile = paths.OIDCTokenPath
 		}
 	}
 
