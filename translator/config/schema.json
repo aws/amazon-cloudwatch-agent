@@ -1858,8 +1858,8 @@
                   "description": "How often metrics are collected",
                   "$ref": "#/definitions/timeIntervalDefinition"
                 },
-                "mode": {
-                  "description": "Pipeline mode: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
+                "role": {
+                  "description": "Pipeline role: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
                   "type": "string",
                   "enum": ["node", "cluster"]
                 },

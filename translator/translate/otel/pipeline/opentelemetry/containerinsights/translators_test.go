@@ -25,7 +25,7 @@ func TestNewTranslators_ModeNode(t *testing.T) {
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
 					"cluster_name": "test-cluster",
-					"mode":         "node",
+					"role":         "node",
 				},
 			},
 		},
@@ -41,7 +41,7 @@ func TestNewTranslators_ModeNodeWithLogs(t *testing.T) {
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
 					"cluster_name": "test-cluster",
-					"mode":         "node",
+					"role":         "node",
 					"logs": map[string]interface{}{
 						"enabled": true,
 					},
@@ -60,7 +60,7 @@ func TestNewTranslators_ModeCluster(t *testing.T) {
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
 					"cluster_name": "test-cluster",
-					"mode":         "cluster",
+					"role":         "cluster",
 				},
 			},
 		},
@@ -128,7 +128,7 @@ func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
 					"cluster_name": "test-cluster",
-					"mode":         "cluster",
+					"role":         "cluster",
 				},
 			},
 		},

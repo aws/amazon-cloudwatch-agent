@@ -104,7 +104,7 @@ func logsEnabled(conf *confmap.Conf) bool {
 //  3. Default: "node" (DaemonSet)
 func getMode(conf *confmap.Conf) string {
 	if conf != nil {
-		key := common.ConfigKey(ciConfigKey, "mode")
+		key := common.ConfigKey(ciConfigKey, "role")
 		if v, ok := common.GetString(conf, key); ok && v != "" {
 			return v
 		}

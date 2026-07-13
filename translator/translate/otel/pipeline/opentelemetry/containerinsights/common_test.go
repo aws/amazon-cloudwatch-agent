@@ -17,7 +17,7 @@ func TestGetMode_JSONConfig(t *testing.T) {
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"mode": "cluster",
+					"role": "cluster",
 				},
 			},
 		},
@@ -77,7 +77,7 @@ func TestGetMode_JSONOverridesEnv(t *testing.T) {
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"mode": "cluster",
+					"role": "cluster",
 				},
 			},
 		},
