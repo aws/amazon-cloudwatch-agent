@@ -186,6 +186,23 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	assert.Empty(t, cmp.Diff(expected, actual, opt))
 }
 
+func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeAzureVM)
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.RegionType = config.RegionTypeCredsMap
+
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_azurevm.yaml")
+}
+
 func TestAzureVMHostMetricsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeAzureVM)
