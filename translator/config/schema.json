@@ -1321,6 +1321,7 @@
         "syslogListenerDefinition": {
           "type": "object",
           "description": "Configuration for a syslog listener",
+          "required": ["listen_address"],
           "properties": {
             "listen_address": {
               "type": "string",

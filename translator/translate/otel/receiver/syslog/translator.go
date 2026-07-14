@@ -59,9 +59,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		"on_error": "drop",
 	}
 
-	// TLS only applies to TCP listeners
-	if protocol == "tcp" && len(t.tlsConfig) > 0 {
-		cfgMap[protocol].(map[string]any)["tls"] = t.tlsConfig
+	// TCP-specific settings
+	if protocol == "tcp" {
+		cfgMap[protocol].(map[string]any)["max_log_size"] = 64 * 1024 // 64KB - bounds per-connection buffer allocation
+		if len(t.tlsConfig) > 0 {
+			cfgMap[protocol].(map[string]any)["tls"] = t.tlsConfig
+		}
 	}
 
 	cfg := t.factory.CreateDefaultConfig()

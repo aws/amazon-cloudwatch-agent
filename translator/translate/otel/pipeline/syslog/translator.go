@@ -5,6 +5,8 @@ package syslog
 
 import (
 	"fmt"
+	"net"
+	"regexp"
 	"strings"
 
 	"go.opentelemetry.io/collector/component"
@@ -172,17 +174,22 @@ func normalizeSyslogSections(raw any) []map[string]any {
 // validateUniqueListeners checks that no listen address appears in more than
 // one syslog section. Returns an error if a duplicate is found.
 func validateUniqueListeners(sections []map[string]any) error {
-	seen := make(map[string]int) // address → section index
+	seen := make(map[string]int) // resolved address → section index
 	for i, section := range sections {
 		for _, listener := range normalizeListeners(section) {
 			addr, _ := listener["listen_address"].(string)
 			if addr == "" {
 				continue
 			}
-			if prevSection, exists := seen[addr]; exists {
-				return fmt.Errorf("syslog listen address %q is defined in both section %d and section %d; each address must be unique across all sections", addr, prevSection, i)
+			tlsConfig := toTLSConfig(listener)
+			resolved, err := resolveListenAddress(addr, tlsConfig)
+			if err != nil {
+				continue // resolution errors are caught later during translation
 			}
-			seen[addr] = i
+			if prevSection, exists := seen[resolved]; exists {
+				return fmt.Errorf("syslog listen address %q is defined in both section %d and section %d; each address must be unique across all sections", resolved, prevSection, i)
+			}
+			seen[resolved] = i
 		}
 	}
 	return nil
@@ -414,11 +421,24 @@ func buildOTTLCondition(matchMap map[string]any) string {
 }
 
 func buildAttributeCondition(attr, value string) string {
-	escaped := escapeOTTL(value)
 	if isGlobPattern(value) {
-		return fmt.Sprintf(`IsMatch(attributes["%s"], "%s")`, attr, escaped)
+		regex := globToRegex(value)
+		return fmt.Sprintf(`IsMatch(attributes["%s"], "%s")`, attr, escapeOTTL(regex))
 	}
+	escaped := escapeOTTL(value)
 	return fmt.Sprintf(`attributes["%s"] == "%s"`, attr, escaped)
+}
+
+// globToRegex converts a glob pattern to an anchored RE2 regex.
+// All regex metacharacters are escaped, then glob wildcards are translated
+// to their regex equivalents: * → .*, ? → ., [...] → [...].
+func globToRegex(glob string) string {
+	escaped := regexp.QuoteMeta(glob)
+	escaped = strings.ReplaceAll(escaped, `\*`, `.*`)
+	escaped = strings.ReplaceAll(escaped, `\?`, `.`)
+	escaped = strings.ReplaceAll(escaped, `\[`, `[`)
+	escaped = strings.ReplaceAll(escaped, `\]`, `]`)
+	return "^" + escaped + "$"
 }
 
 // isGlobPattern detects if a string contains glob characters.
@@ -465,7 +485,7 @@ func resolveListenAddress(listenAddress string, tlsConfig map[string]any) (strin
 		}
 	}
 
-	return fmt.Sprintf("%s://%s:%s", protocol, host, port), nil
+	return fmt.Sprintf("%s://%s", protocol, net.JoinHostPort(host, port)), nil
 }
 
 // splitHostPort splits a host:port string. Handles IPv6 [host]:port notation.
