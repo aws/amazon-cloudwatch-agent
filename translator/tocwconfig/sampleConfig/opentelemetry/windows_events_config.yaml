@@ -468,13 +468,13 @@ receivers:
         start_at: end
         storage: file_storage/opentelemetry
         type: windows_eventlog_input
-    windowseventlog/system_2384140678:
+    windowseventlog/system_1384911762:
         channel: ""
         id: windows_eventlog_input
         max_reads: 100
         operators: []
         poll_interval: 1s
-        query: <QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='3' or Level='4' or Level='0') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>
+        query: <QueryList><Query Id="0"><Select Path="System">*[System[(Level='2' or Level='4' or Level='0' or Level='3') and TimeCreated[timediff(@SystemTime) &lt;= 1209600000]]]</Select></Query></QueryList>
         resource:
             aws.log.channel: System
             aws.log.source: windows_events
@@ -520,7 +520,7 @@ service:
                 - resource/windows_events_system_0
                 - transform/windows_events_scope
             receivers:
-                - windowseventlog/system_2384140678
+                - windowseventlog/system_1384911762
     telemetry:
         logs:
             encoding: console

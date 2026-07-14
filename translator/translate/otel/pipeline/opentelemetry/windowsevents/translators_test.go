@@ -108,8 +108,8 @@ func TestParseEntries_ReceiverNames(t *testing.T) {
 	entries := parseEntries(conf)
 	require.Len(t, entries, 2)
 
-	// Receiver names are hash-based on (channel, format) and stable
-	assert.Equal(t, "system_2384140678", entries[0].receiverName())
+	// Receiver names are hash-based on (channel, format, sorted levels, sorted ids) and stable
+	assert.Equal(t, "system_1384911762", entries[0].receiverName())
 	assert.Equal(t, "application_3497854245", entries[1].receiverName())
 }
 
@@ -136,6 +136,26 @@ func TestParseEntries_DuplicateChannelsDifferentFilters(t *testing.T) {
 	// Different filters produce different receivers (different query XMLs)
 	assert.NotEqual(t, entries[0].receiverName(), entries[1].receiverName())
 	assert.NotEqual(t, entries[1].receiverName(), entries[2].receiverName())
+}
+
+func TestParseEntries_SameLevelsDifferentOrderShareReceiver(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{
+			"collect": map[string]any{
+				"windows_events": map[string]any{
+					"collect_list": []any{
+						map[string]any{"event_name": "System", "event_levels": []any{"ERROR", "WARNING"}, "log_group_name": "/group-a"},
+						map[string]any{"event_name": "System", "event_levels": []any{"WARNING", "ERROR"}, "log_group_name": "/group-b"},
+					},
+				},
+			},
+		},
+	})
+	entries := parseEntries(conf)
+	require.Len(t, entries, 2)
+
+	// Same levels in different order should produce the same receiver hash
+	assert.Equal(t, entries[0].receiverName(), entries[1].receiverName())
 }
 
 func TestParseEntries_DuplicateChannelsSameFiltersShareReceiver(t *testing.T) {

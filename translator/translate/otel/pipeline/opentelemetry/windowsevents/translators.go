@@ -5,6 +5,7 @@ package windowsevents
 
 import (
 	"log"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/collector/confmap"
@@ -25,11 +26,9 @@ const (
 	logStreamNameKey = "log_stream_name"
 )
 
-var configKey = common.WindowsEventsConfigKey
-
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-	if conf == nil || !conf.IsSet(configKey) {
+	if conf == nil || !conf.IsSet(common.WindowsEventsConfigKey) {
 		return translators
 	}
 	if translatorcontext.CurrentContext().Os() != translatorconfig.OS_TYPE_WINDOWS {
@@ -43,7 +42,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 }
 
 func parseEntries(conf *confmap.Conf) []eventEntry {
-	key := common.ConfigKey(configKey, collectListKey)
+	key := common.ConfigKey(common.WindowsEventsConfigKey, collectListKey)
 	val := conf.Get(key)
 	list, ok := val.([]any)
 	if !ok || len(list) == 0 {
@@ -94,6 +93,9 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 				}
 			}
 		}
+
+		slices.Sort(levels)
+		slices.Sort(ids)
 
 		entries = append(entries, eventEntry{
 			index:         index,
