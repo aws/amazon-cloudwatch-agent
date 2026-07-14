@@ -5,6 +5,7 @@ package opentelemetry
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -39,10 +40,20 @@ func (t *baseLogsTranslator) ID() pipeline.ID {
 	return pipeline.NewIDWithName(pipeline.SignalLogs, common.OpenTelemetryKey)
 }
 
+// otelLogsKeys are the config keys that activate the base opentelemetry logs pipeline.
+var otelLogsKeys = []string{
+	common.OtelCollectLogsConfigKey,
+	common.DatabaseInsightsConfigKey,
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+}
+
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	otlpKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)
-	if conf == nil || (!conf.IsSet(common.OtelCollectLogsConfigKey) && !conf.IsSet(common.DatabaseInsightsConfigKey) && !conf.IsSet(otlpKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + otlpKey}
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil {
+		return nil, err
 	}
 
 	region := agent.Global_Config.Region
@@ -74,12 +85,16 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		{Key: "aws.log.group.name", FromResourceAttribute: "aws.log.group.name"},
 		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
 	})
+	cleanupStmts := []string{
+		`delete_key(resource.attributes, "aws.log.group.name")`,
+		`delete_key(resource.attributes, "aws.log.stream.name")`,
+		`delete_key(resource.attributes, "aws.log.source")`,
+	}
+	if runtime.GOOS == "windows" && conf != nil && conf.IsSet(common.WindowsEventsConfigKey) {
+		cleanupStmts = append(cleanupStmts, `delete_key(resource.attributes, "aws.log.channel")`)
+	}
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
-		transformprocessor.WithLogResourceStatements([]string{
-			`delete_key(resource.attributes, "aws.log.group.name")`,
-			`delete_key(resource.attributes, "aws.log.stream.name")`,
-			`delete_key(resource.attributes, "aws.log.source")`,
-		}),
+		transformprocessor.WithLogResourceStatements(cleanupStmts),
 	)
 	batch := batchprocessor.NewTranslator(
 		common.WithName("opentelemetry_logs"),

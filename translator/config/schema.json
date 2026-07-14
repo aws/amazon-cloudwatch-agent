@@ -1909,6 +1909,68 @@
                 }
               },
               "additionalProperties": false
+            },
+            "windows_events": {
+              "type": "object",
+              "properties": {
+                "collect_list": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "event_name": {
+                        "description": "The Windows Event Log channel to collect from",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "event_levels": {
+                        "description": "Event severity levels to collect",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": ["CRITICAL", "ERROR", "WARNING", "INFORMATION", "VERBOSE"]
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "event_ids": {
+                        "description": "Specific event IDs to collect",
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 65535
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "event_format": {
+                        "description": "Output format: xml (raw XML) or text (structured)",
+                        "type": "string",
+                        "enum": ["text", "xml"]
+                      },
+                      "log_group_name": {
+                        "description": "CloudWatch Logs group name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "log_stream_name": {
+                        "description": "CloudWatch Logs stream name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      }
+                    },
+                    "required": ["event_name"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["collect_list"],
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
