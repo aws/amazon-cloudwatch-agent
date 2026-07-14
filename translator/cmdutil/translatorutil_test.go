@@ -441,6 +441,16 @@ func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
 	assert.True(t, result.Valid(), "default otel config must pass schema validation: %v", result.Errors())
 }
 
+func TestOpenTelemetryWindowsEventsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryWindowsEvents.json", true, map[string]int{})
+}
+
+func TestOpenTelemetryWindowsEventsInvalidSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryWindowsEvents.json", false, map[string]int{
+		"enum": 1,
+	})
+}
+
 func TestCombinedV1V2SchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validCombinedV1V2Config.json", true, map[string]int{})
 }

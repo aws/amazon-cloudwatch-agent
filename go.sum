@@ -1387,6 +1387,8 @@ github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceive
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.124.1/go.mod h1:cVf9mR1NQUOSxKaG68d1f6J1R1gD+es8N4KlfXzMrzY=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.124.1 h1:ViSLfZ+rwltr/cJyUzxwH7+Ew/qDs4KyQpMFsDbRd/g=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.124.1/go.mod h1:mEiB1YGSaguEyYsq803/QgBiJVofgknWgJ3eqgvlj7I=
+github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.124.1 h1:4gVuHekKmzaLU1tZvIAntbkJhpThoCkZEwJCdL7SrOs=
+github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.124.1/go.mod h1:BcBDxsZysvBLwjGhjLP62QY9Db6uXqvhSIQJkhVfEz0=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.124.1 h1:XkxqUEoukMWXF+EpEWeM9itXKt62yKi13Lzd8ZEASP4=
 github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver v0.124.1/go.mod h1:CuCZVPz+yn88b5vhZPAlxaMrVuhAVexUV6f8b07lpUc=
 github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029 h1:lXQqyLroROhwR2Yq/kXbLzVecgmVeZh2TFLg6OxCd+w=

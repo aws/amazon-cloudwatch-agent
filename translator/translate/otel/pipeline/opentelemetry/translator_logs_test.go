@@ -4,6 +4,8 @@
 package opentelemetry
 
 import (
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,17 +20,22 @@ func TestBaseLogsTranslator(t *testing.T) {
 	tt := NewBaseLogsTranslator()
 	assert.EqualValues(t, "logs/opentelemetry", tt.ID().String())
 
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	missingErr := &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(keys, " or ")}
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		wantErr error
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
+			wantErr: missingErr,
 		},
 		"WithoutCollectKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
+			wantErr: missingErr,
 		},
 		"WithCollectKeyButNoLogs": {
 			input: map[string]interface{}{
@@ -36,7 +43,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 					"collect": map[string]interface{}{},
 				},
 			},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)},
+			wantErr: missingErr,
 		},
 		"WithCollectLogsKey": {
 			input: map[string]interface{}{
