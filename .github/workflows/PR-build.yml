@@ -144,6 +144,56 @@ jobs:
         if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true'
         run: make amazon-cloudwatch-agent-${{ matrix.family }}
 
+      - name: Collect binary sizes
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true' && matrix.family != 'darwin' && matrix.os != 'windows-latest' && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          RUNNER_OS: ${{ matrix.os }}
+        run: .github/scripts/collect-binary-sizes.sh
+
+      - name: Upload size report
+        if: steps.cached_binaries.outputs.cache-hit != 'true' && needs.changes.outputs.build == 'true' && matrix.family != 'darwin' && matrix.os != 'windows-latest' && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: size-report-${{ matrix.os }}
+          path: size-report-*.json
+          if-no-files-found: ignore
+          retention-days: 1
+
+  binary-size-report:
+    name: Binary Size Report
+    needs: [build, changes]
+    if: needs.changes.outputs.build == 'true' && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        id: download
+        continue-on-error: true
+        with:
+          pattern: size-report-*
+          merge-multiple: true
+          path: ./size-reports
+
+      - name: Configure AWS Credentials
+        if: steps.download.outcome == 'success'
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Generate and post report
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: .github/scripts/report-binary-sizes.sh ./size-reports
+
   test-data-race:
     needs: [lint, changes]
     name: Test data race
@@ -168,7 +218,7 @@ jobs:
     name: Verify All PR Build Jobs
     needs: [ changes, lint, build, test-data-race ]
     runs-on: ubuntu-latest
-    if: always()
+    if: ${{ !cancelled() }}
     steps:
       - name: Check Job Status
         run: |
