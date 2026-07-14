@@ -11,6 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
 
 func TestRunDownloader_DefaultOtel(t *testing.T) {
@@ -21,9 +23,9 @@ func TestRunDownloader_DefaultOtel(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(outputDir, "default_otel.tmp"))
 	require.NoError(t, err)
 
-	expected, err := os.ReadFile("../../translator/config/defaults/otel.json")
-	require.NoError(t, err)
-	assert.JSONEq(t, string(expected), string(content))
+	expected, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+	assert.JSONEq(t, expected, string(content))
 }
 
 func TestRunDownloader_DefaultBare(t *testing.T) {

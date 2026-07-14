@@ -6,6 +6,7 @@ package transformprocessor
 import (
 	_ "embed"
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
@@ -118,7 +119,7 @@ func (t *translator) hasDynamicStatements() bool {
 		len(t.metricScopeStatements) > 0
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*transformprocessor.Config)
 
 	if t.hasDynamicStatements() {
@@ -175,6 +176,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	if t.name == common.LogsRouting {
 		if context.CurrentContext().KubernetesMode() != "" {
 			return common.GetYamlFileToYamlConfig(cfg, transformLogsRoutingK8sConfig)
+		}
+		if runtime.GOOS == "windows" && conf != nil && conf.IsSet(common.WindowsEventsConfigKey) {
+			return common.GetYamlFileToYamlConfig(cfg, transformLogsRoutingHostWindowsConfig)
 		}
 		return common.GetYamlFileToYamlConfig(cfg, transformLogsRoutingHostConfig)
 	}

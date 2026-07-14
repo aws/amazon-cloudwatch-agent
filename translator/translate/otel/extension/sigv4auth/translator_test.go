@@ -21,17 +21,18 @@ import (
 
 func TestTranslate(t *testing.T) {
 	testCases := map[string]struct {
-		service     string
-		mode        string
-		region      string
-		roleARN     string
-		profile     string
-		credsFile   string
-		wantID      component.ID
-		wantProfile string
-		wantFile    []string
-		wantLocal   bool
-		wantRole    sigv4authextension.AssumeRole
+		service              string
+		mode                 string
+		region               string
+		roleARN              string
+		profile              string
+		credsFile            string
+		wantID               component.ID
+		wantProfile          string
+		wantFile             []string
+		wantLocal            bool
+		wantRoleARN          string
+		wantWebIdentityToken string
 	}{
 		"Default": {
 			mode:   config.ModeEC2,
@@ -80,25 +81,19 @@ func TestTranslate(t *testing.T) {
 			wantLocal: true,
 		},
 		"WithRoleARN": {
-			mode:    config.ModeEC2,
-			region:  "us-east-1",
-			roleARN: "arn:aws:iam::123456789012:role/test-role",
-			wantID:  component.MustNewID("sigv4auth"),
-			wantRole: sigv4authextension.AssumeRole{
-				ARN:       "arn:aws:iam::123456789012:role/test-role",
-				STSRegion: "us-east-1",
-			},
+			mode:        config.ModeEC2,
+			region:      "us-east-1",
+			roleARN:     "arn:aws:iam::123456789012:role/test-role",
+			wantID:      component.MustNewID("sigv4auth"),
+			wantRoleARN: "arn:aws:iam::123456789012:role/test-role",
 		},
 		"AzureVMWithRoleARN": {
-			mode:    config.ModeAzureVM,
-			region:  "us-west-2",
-			roleARN: "arn:aws:iam::123456789012:role/azure-role",
-			wantID:  component.MustNewID("sigv4auth"),
-			wantRole: sigv4authextension.AssumeRole{
-				ARN:                  "arn:aws:iam::123456789012:role/azure-role",
-				STSRegion:            "us-west-2",
-				WebIdentityTokenFile: paths.OIDCTokenPath,
-			},
+			mode:                 config.ModeAzureVM,
+			region:               "us-west-2",
+			roleARN:              "arn:aws:iam::123456789012:role/azure-role",
+			wantID:               component.MustNewID("sigv4auth"),
+			wantRoleARN:          "arn:aws:iam::123456789012:role/azure-role",
+			wantWebIdentityToken: paths.OIDCTokenPath,
 		},
 		"OnPremWithProfileAndFileAndRole": {
 			service:     "logs",
@@ -111,10 +106,7 @@ func TestTranslate(t *testing.T) {
 			wantProfile: "AmazonCloudWatchAgent",
 			wantFile:    []string{"/opt/aws/amazon-cloudwatch-agent/etc/credentials"},
 			wantLocal:   true,
-			wantRole: sigv4authextension.AssumeRole{
-				ARN:       "arn:aws:iam::123456789012:role/agent",
-				STSRegion: "us-west-2",
-			},
+			wantRoleARN: "arn:aws:iam::123456789012:role/agent",
 		},
 	}
 
@@ -140,7 +132,7 @@ func TestTranslate(t *testing.T) {
 			}
 			assert.Equal(t, testCase.wantID, tt.ID())
 
-			got, err := tt.Translate(confmap.NewFromStringMap(map[string]interface{}{}))
+			got, err := tt.Translate(confmap.NewFromStringMap(map[string]any{}))
 			require.NoError(t, err)
 			gotCfg, ok := got.(*sigv4authextension.Config)
 			require.True(t, ok)
@@ -150,7 +142,9 @@ func TestTranslate(t *testing.T) {
 			assert.Equal(t, testCase.wantProfile, gotCfg.Profile)
 			assert.Equal(t, testCase.wantFile, gotCfg.SharedCredentialsFile)
 			assert.Equal(t, testCase.wantLocal, gotCfg.LocalMode)
-			assert.Equal(t, testCase.wantRole, gotCfg.AssumeRole)
+			assert.Equal(t, testCase.wantRoleARN, gotCfg.RoleARN)
+			assert.Equal(t, testCase.wantWebIdentityToken, gotCfg.WebIdentityTokenFile)
+			assert.Zero(t, gotCfg.AssumeRole)
 		})
 	}
 }
@@ -159,7 +153,7 @@ func TestTranslate(t *testing.T) {
 // Global_Config is mutated by Translate, so each subtest must start from a clean slate.
 func resetGlobalState(t *testing.T) {
 	t.Helper()
-	translateagent.Global_Config.Credentials = make(map[string]interface{})
+	translateagent.Global_Config.Credentials = make(map[string]any)
 	translateagent.Global_Config.Region = ""
 	translateagent.Global_Config.Role_arn = ""
 }
