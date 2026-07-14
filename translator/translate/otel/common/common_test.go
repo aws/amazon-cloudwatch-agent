@@ -5,6 +5,7 @@ package common
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
 )
 
 type testTranslator struct {
@@ -383,4 +385,35 @@ func TestIsAnySet(t *testing.T) {
 			assert.Equal(t, testCase.want, IsAnySet(conf, testCase.keys))
 		})
 	}
+}
+
+func TestValidateAnySet(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{
+			"collect": map[string]any{
+				"otlp": map[string]any{},
+			},
+		},
+	})
+	id := pipeline.NewIDWithName(pipeline.SignalLogs, "test")
+	keys := []string{"opentelemetry::collect::logs", "opentelemetry::collect::otlp", "opentelemetry::collect::windows_events"}
+
+	t.Run("NilConf", func(t *testing.T) {
+		err := ValidateAnySet(nil, id, keys)
+		var missingErr *MissingKeyError
+		require.ErrorAs(t, err, &missingErr)
+		assert.Equal(t, id, missingErr.ID)
+		assert.Equal(t, strings.Join(keys, " or "), missingErr.JsonKey)
+	})
+	t.Run("NoneSet", func(t *testing.T) {
+		empty := confmap.NewFromStringMap(map[string]any{})
+		err := ValidateAnySet(empty, id, keys)
+		var missingErr *MissingKeyError
+		require.ErrorAs(t, err, &missingErr)
+		assert.Equal(t, id, missingErr.ID)
+	})
+	t.Run("OneSet", func(t *testing.T) {
+		err := ValidateAnySet(conf, id, keys)
+		assert.NoError(t, err)
+	})
 }

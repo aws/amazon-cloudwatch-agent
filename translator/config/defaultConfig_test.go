@@ -4,7 +4,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,10 +13,7 @@ import (
 func TestDefaultJSONConfigFor_Otel(t *testing.T) {
 	cfg, ok := DefaultJSONConfigFor("otel")
 	require.True(t, ok)
-
-	expected, err := os.ReadFile("defaults/otel.json")
-	require.NoError(t, err)
-	assert.JSONEq(t, string(expected), cfg)
+	assert.JSONEq(t, defaultOtelConfig, cfg)
 }
 
 func TestDefaultJSONConfigFor_Unknown(t *testing.T) {

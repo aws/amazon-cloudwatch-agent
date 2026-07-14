@@ -1,0 +1,24 @@
+{
+  "agent": {
+    "credentials": {
+      "role_arn": "${CWAGENT_ROLE_ARN}"
+    }
+  },
+  "opentelemetry": {
+    "collect": {
+      "otlp": {},
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": ["ERROR", "WARNING"]
+          },
+          {
+            "event_name": "Application",
+            "event_levels": ["ERROR", "WARNING"]
+          }
+        ]
+      }
+    }
+  }
+}
