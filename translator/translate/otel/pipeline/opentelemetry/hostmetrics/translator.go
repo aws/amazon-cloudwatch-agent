@@ -19,6 +19,7 @@ import (
 const pipelineNameHostMetrics = "host_metrics"
 
 var hostMetricsKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostMetricsKey)
+var otelClusterNameKey = common.ConfigKey(common.OpenTelemetryKey, common.ClusterNameKey)
 
 type hostMetricsTranslator struct{}
 
@@ -65,7 +66,7 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-host-metrics")),
 	))
 	// Apply root-level cluster name if set
-	if clusterName := common.GetOtelClusterName(conf); clusterName != "" {
+	if clusterName, ok := common.GetString(conf, otelClusterNameKey); ok && clusterName != "" {
 		if !common.ClusterNameRegex.MatchString(clusterName) {
 			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
 		}

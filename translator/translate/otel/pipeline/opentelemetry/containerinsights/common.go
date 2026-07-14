@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	ciPrefix    = "cw_k8s_ci_v0"
-	modeNode    = "node"
-	modeCluster = "cluster"
+	ciPrefix                  = "cw_k8s_ci_v0"
+	defaultCollectionInterval = 30 * time.Second
+	roleNode                  = "node"
+	roleCluster               = "cluster"
 )
 
 var ciConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)
@@ -73,8 +74,10 @@ func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, 
 	return t.cfg, nil
 }
 
+var otelClusterNameKey = common.ConfigKey(common.OpenTelemetryKey, common.ClusterNameKey)
+
 func getClusterName(conf *confmap.Conf) (string, error) {
-	name := common.GetOtelClusterName(conf)
+	name, _ := common.GetString(conf, otelClusterNameKey)
 	if name == "" {
 		return "", fmt.Errorf("cluster_name is required for container_insights: set opentelemetry::cluster_name in config")
 	}
@@ -85,7 +88,9 @@ func getClusterName(conf *confmap.Conf) (string, error) {
 }
 
 func getCollectionInterval(conf *confmap.Conf) time.Duration {
-	return common.GetCollectionInterval(conf, ciConfigKey)
+	return common.GetOrDefaultDuration(conf, []string{
+		common.ConfigKey(ciConfigKey, common.CollectionIntervalKey),
+	}, defaultCollectionInterval)
 }
 
 // logsEnabled returns true if container_insights.logs.enabled is set to true.
@@ -97,12 +102,12 @@ func logsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, key, false)
 }
 
-// getMode resolves the container insights pipeline mode using the following
+// getRole resolves the container insights pipeline role using the following
 // priority order:
 //  1. JSON config field
 //  2. Environment variable
 //  3. Default: "node" (DaemonSet)
-func getMode(conf *confmap.Conf) string {
+func getRole(conf *confmap.Conf) string {
 	if conf != nil {
 		key := common.ConfigKey(ciConfigKey, "role")
 		if v, ok := common.GetString(conf, key); ok && v != "" {
@@ -112,12 +117,12 @@ func getMode(conf *confmap.Conf) string {
 	if role := strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)); role != "" {
 		switch role {
 		case envconfig.NODE:
-			return modeNode
+			return roleNode
 		case envconfig.LEADER:
-			return modeCluster
+			return roleCluster
 		}
 	}
-	return modeNode
+	return roleNode
 }
 
 type pipelineSpec struct {
