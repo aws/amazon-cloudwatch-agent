@@ -5,6 +5,7 @@ package clean
 
 import (
 	"flag"
+	"fmt"
 	"log"
 )
 
@@ -38,7 +39,10 @@ func RegisterCommonFlags() {
 //	// ... perform the real deletion ...
 func Skip(action string, args ...any) bool {
 	if DryRun {
-		log.Printf("[dry-run] would "+action, args...)
+		// Forward action as the format string (rather than concatenating a prefix
+		// into it) so `go vet` recognizes Skip as a printf wrapper and validates
+		// format/arg mismatches at every call site.
+		log.Print("[dry-run] would ", fmt.Sprintf(action, args...))
 		return true
 	}
 	return false

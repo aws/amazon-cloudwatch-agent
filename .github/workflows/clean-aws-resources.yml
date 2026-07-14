@@ -18,8 +18,8 @@ env:
   # Scheduled (cron) runs perform real deletions. Any manual (workflow_dispatch)
   # run defaults to a dry run unless dry_run=false is explicitly passed — so a
   # manual trigger, including an API dispatch that omits the input, never deletes
-  # by accident. (github.event.inputs does not receive the input's UI default,
-  # hence the explicit event_name gate.)
+  # by accident. UI dispatches include the input's default; an API dispatch that
+  # omits dry_run yields an empty string, which the || falls back to 'true'.
   DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (github.event.inputs.dry_run || 'true') }}
 
 jobs:
@@ -40,7 +40,7 @@ jobs:
 
       - name: Clean old ami
         working-directory: tool/clean
-        run: go run --tags=clean ./clean_ami/clean_ami.go -dry-run=${DRY_RUN}
+        run: go run --tags=clean ./clean_ami/clean_ami.go -dry-run="${DRY_RUN}"
 
   clean-old-file-systems:
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
 
       - name: Clean old file system
         working-directory: tool/clean
-        run: go run --tags=clean ./clean_file_system/clean_file_system.go -dry-run=${DRY_RUN}
+        run: go run --tags=clean ./clean_file_system/clean_file_system.go -dry-run="${DRY_RUN}"
 
   clean-opensource-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
 
       - name: Clean old dedicated host
         working-directory: tool/clean
-        run: go run --tags=clean ./clean_dedicated_host/clean_dedicated_host.go -dry-run=${DRY_RUN}
+        run: go run --tags=clean ./clean_dedicated_host/clean_dedicated_host.go -dry-run="${DRY_RUN}"
 
   clean-internal-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -112,7 +112,7 @@ jobs:
 
       - name: Clean old dedicated host
         working-directory: tool/clean
-        run: go run --tags=clean ./clean_dedicated_host/clean_dedicated_host.go -dry-run=${DRY_RUN}
+        run: go run --tags=clean ./clean_dedicated_host/clean_dedicated_host.go -dry-run="${DRY_RUN}"
 
   clean-hosts:
     runs-on: ubuntu-latest
@@ -152,7 +152,7 @@ jobs:
 
       - name: Clean old host
         working-directory: tool/clean
-        run: go run ./clean_host/clean_host.go -dry-run=${DRY_RUN} ${{ matrix.region }}
+        run: go run ./clean_host/clean_host.go -dry-run="${DRY_RUN}" ${{ matrix.region }}
 
   clean-hosts-china:
     runs-on: ubuntu-latest
@@ -171,7 +171,7 @@ jobs:
 
       - name: Clean old hosts
         working-directory: tool/clean
-        run: go run ./clean_host/clean_host.go -dry-run=${DRY_RUN} cn-north-1
+        run: go run ./clean_host/clean_host.go -dry-run="${DRY_RUN}" cn-north-1
 
   clean-ecs-resources:
     runs-on: ubuntu-latest
@@ -190,7 +190,7 @@ jobs:
 
       - name: Clean old ecs resources
         working-directory: tool/clean
-        run: go run --tags=clean ./clean_ecs/clean_ecs.go -dry-run=${DRY_RUN} us-west-2
+        run: go run --tags=clean ./clean_ecs/clean_ecs.go -dry-run="${DRY_RUN}" us-west-2
 
   clean-eks-clusters:
     runs-on: ubuntu-latest
@@ -209,7 +209,7 @@ jobs:
 
       - name: Clean old eks cluster
         working-directory: tool/clean
-        run: go run ./clean_eks/clean_eks.go -dry-run=${DRY_RUN}
+        run: go run ./clean_eks/clean_eks.go -dry-run="${DRY_RUN}"
   clean-ebs-volumes:
     runs-on: ubuntu-latest
     permissions:
@@ -227,7 +227,7 @@ jobs:
 
       - name: Clean old unused ebs volumes
         working-directory: tool/clean
-        run: go run ./clean_ebs/clean_ebs.go -dry-run=${DRY_RUN}
+        run: go run ./clean_ebs/clean_ebs.go -dry-run="${DRY_RUN}"
 
   clean-asg:
     runs-on: ubuntu-latest
@@ -246,7 +246,7 @@ jobs:
 
       - name: Clean old asg
         working-directory: tool/clean
-        run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go -dry-run=${DRY_RUN}
+        run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go -dry-run="${DRY_RUN}"
 
   clean-launch-configs:
     runs-on: ubuntu-latest
@@ -265,7 +265,7 @@ jobs:
 
       - name: Clean old launch configuration
         working-directory: tool/clean
-        run: go run ./clean_launch_configuration/clean_launch_configuration.go -dry-run=${DRY_RUN}
+        run: go run ./clean_launch_configuration/clean_launch_configuration.go -dry-run="${DRY_RUN}"
   clean-iam-roles:
     runs-on: ubuntu-latest
     permissions:
@@ -283,7 +283,7 @@ jobs:
 
       - name: Clean old IAM roles
         working-directory: tool/clean
-        run: go run ./clean_iam_roles/clean_iam_roles.go -dry-run=${DRY_RUN}
+        run: go run ./clean_iam_roles/clean_iam_roles.go -dry-run="${DRY_RUN}"
   clean-log-groups:
     runs-on: ubuntu-latest
     permissions:
@@ -301,7 +301,7 @@ jobs:
 
       - name: Clean old Log Groups
         working-directory: tool/clean
-        run: go run ./clean_log_group/clean_log_group.go -dry-run=${DRY_RUN}
+        run: go run ./clean_log_group/clean_log_group.go -dry-run="${DRY_RUN}"
   clean-security-groups:
     runs-on: ubuntu-latest
     permissions:
@@ -321,5 +321,5 @@ jobs:
         working-directory: tool/clean
         run: |
           set -e
-          go run ./clean_security_group/clean_security_group.go -dry-run=${DRY_RUN} || { echo "Failed to clean security groups"; exit 1; }
+          go run ./clean_security_group/clean_security_group.go -dry-run="${DRY_RUN}" || { echo "Failed to clean security groups"; exit 1; }
 
