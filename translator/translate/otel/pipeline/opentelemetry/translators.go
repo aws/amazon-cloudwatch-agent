@@ -13,6 +13,7 @@ import (
 	hi "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/hostmetrics"
 	otelotlp "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/otlp"
 	prom "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/prometheus"
+	we "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/windowsevents"
 )
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
@@ -25,5 +26,6 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators.Merge(dbi.NewTranslators(conf))
 	translators.Merge(ci.NewTranslators(conf))
 	translators.Merge(otelotlp.NewTranslators(conf))
+	translators.Merge(we.NewTranslators(conf))
 	return translators
 }

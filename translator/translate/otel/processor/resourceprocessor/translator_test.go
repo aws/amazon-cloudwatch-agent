@@ -191,6 +191,43 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
+func TestTranslateStaticAttributes(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_single"),
+		WithAttributes(map[string]string{
+			"key1": "value1",
+		}),
+	)
+	assert.Equal(t, "resource/test_single", tt.ID().String())
+
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+
+	gotCfg, ok := got.(*resourceprocessor.Config)
+	require.True(t, ok)
+	require.Len(t, gotCfg.AttributesActions, 1)
+	assert.Equal(t, "key1", gotCfg.AttributesActions[0].Key)
+	assert.Equal(t, "value1", gotCfg.AttributesActions[0].Value)
+	assert.Equal(t, "upsert", string(gotCfg.AttributesActions[0].Action))
+}
+
+func TestTranslateStaticAttributes_MultipleKeys(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_multi"),
+		WithAttributes(map[string]string{
+			"key1": "value1",
+			"key2": "value2",
+		}),
+	)
+
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+
+	gotCfg, ok := got.(*resourceprocessor.Config)
+	require.True(t, ok)
+	assert.Len(t, gotCfg.AttributesActions, 2)
+}
+
 func TestContainerInsightsJmx(t *testing.T) {
 	transl := NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)).(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*resourceprocessor.Config)
