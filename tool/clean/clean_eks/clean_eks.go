@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
+	ekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/clean"
 )
@@ -29,9 +31,9 @@ const betaEksEndpoint = "https://api.beta.us-west-2.wesley.amazonaws.com"
 const reapingTagKey = "cleaner:reaping"
 
 var (
-	// ClustersToClean is the allowlist of EKS cluster name prefixes the cleaner
+	// clustersToClean is the allowlist of EKS cluster name prefixes the cleaner
 	// is permitted to delete.
-	ClustersToClean = []string{
+	clustersToClean = []string{
 		"cwagent-eks-integ-",
 		"cwagent-operator-helm-integ-",
 		"cwagent-helm-chart-integ-",
@@ -138,7 +140,7 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 				log.Printf("Ignoring cluster %s with a launch-date %s since it was created in the last %s", cluster, *describeClusterOutput.Cluster.CreatedAt, clean.KeepDurationOneDay)
 				continue
 			}
-			if !clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, ClustersToClean) {
+			if !clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, clustersToClean) {
 				log.Printf("Ignoring cluster %s since it doesnt match any of the clean regexes", cluster)
 				continue
 			}
@@ -366,6 +368,9 @@ func deleteVpcAndDependencies(ctx context.Context, ec2Client *ec2.Client, vpcID,
 	return nil
 }
 
+// The per-VPC delete helpers below each issue a single (unpaginated) Describe.
+// Orphaned test VPCs hold only a handful of each resource, so one page always
+// suffices; add pagination if that assumption ever changes.
 func deleteVpcEndpoints(ctx context.Context, ec2Client *ec2.Client, vpcID string) {
 	out, err := ec2Client.DescribeVpcEndpoints(ctx, &ec2.DescribeVpcEndpointsInput{
 		Filters: []ec2types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
@@ -602,7 +607,11 @@ func waitVpcEndpointsGone(ctx context.Context, ec2Client *ec2.Client, vpcID stri
 			log.Printf("timed out waiting for %d endpoint(s) in VPC %s to delete", remaining, vpcID)
 			return
 		}
-		time.Sleep(pollInterval)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(pollInterval):
+		}
 	}
 }
 
@@ -629,7 +638,11 @@ func waitNatGatewaysGone(ctx context.Context, ec2Client *ec2.Client, vpcID strin
 			log.Printf("timed out waiting for %d NAT gateway(s) in VPC %s to delete", remaining, vpcID)
 			return
 		}
-		time.Sleep(pollInterval)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(pollInterval):
+		}
 	}
 }
 
@@ -721,6 +734,13 @@ func vpcsInUseByClusters(ctx context.Context, client *eks.Client) (map[string]bo
 		for _, name := range out.Clusters {
 			desc, err := client.DescribeCluster(ctx, &eks.DescribeClusterInput{Name: aws.String(name)})
 			if err != nil {
+				var notFound *ekstypes.ResourceNotFoundException
+				if errors.As(err, &notFound) {
+					// Cluster is being deleted (e.g. by terminateClusters, which ran just
+					// before) — it no longer holds a VPC, so skip it rather than aborting
+					// the whole reap pass. Genuine errors still fail closed below.
+					continue
+				}
 				return nil, fmt.Errorf("describing cluster %s: %w", name, err)
 			}
 			if desc.Cluster != nil && desc.Cluster.ResourcesVpcConfig != nil {
