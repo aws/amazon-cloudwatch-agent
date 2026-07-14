@@ -113,8 +113,8 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: AZVM
-                region_type: ACJ
+                mode: EC2
+                region_type: CM
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
@@ -122,8 +122,8 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: AZVM
-                region_type: ACJ
+                mode: EC2
+                region_type: CM
     agenthealth/opentelemetry_traces:
         additional_auth: sigv4auth/xray
         is_usage_data_enabled: true
@@ -131,8 +131,8 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: AZVM
-                region_type: ACJ
+                mode: EC2
+                region_type: CM
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
@@ -142,7 +142,6 @@ extensions:
         region: us-west-2
         request_timeout_seconds: 10
         role_arn: ${CWAGENT_ROLE_ARN}
-        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
     headers_setter/logs:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
@@ -152,9 +151,6 @@ extensions:
             - action: upsert
               from_context: aws.log.stream.name
               key: x-aws-log-stream
-    oidctoken:
-        output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
-        provider: azure
     sigv4auth/logs:
         assume_role: {}
         imds_retries: 1
@@ -164,7 +160,6 @@ extensions:
         request_timeout_seconds: 30
         role_arn: ${CWAGENT_ROLE_ARN}
         service: logs
-        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
     sigv4auth/monitoring:
         assume_role: {}
         imds_retries: 1
@@ -174,7 +169,6 @@ extensions:
         request_timeout_seconds: 30
         role_arn: ${CWAGENT_ROLE_ARN}
         service: monitoring
-        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
     sigv4auth/xray:
         assume_role: {}
         imds_retries: 1
@@ -184,7 +178,6 @@ extensions:
         request_timeout_seconds: 30
         role_arn: ${CWAGENT_ROLE_ARN}
         service: xray
-        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
 processors:
     attributestocontext/opentelemetry:
         actions:
@@ -256,7 +249,8 @@ processors:
             token_file: ""
         detectors:
             - env
-            - azure
+            - ecs
+            - ec2
         docker:
             resource_attributes:
                 host.name:
@@ -286,7 +280,8 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-            tags: []
+            tags:
+                - ^aws:autoscaling:groupName
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
@@ -296,19 +291,19 @@ processors:
                 aws.ecs.task.arn:
                     enabled: true
                 aws.ecs.task.family:
-                    enabled: true
+                    enabled: false
                 aws.ecs.task.id:
-                    enabled: true
+                    enabled: false
                 aws.ecs.task.revision:
-                    enabled: true
+                    enabled: false
                 aws.log.group.arns:
-                    enabled: true
+                    enabled: false
                 aws.log.group.names:
-                    enabled: true
+                    enabled: false
                 aws.log.stream.arns:
-                    enabled: true
+                    enabled: false
                 aws.log.stream.names:
-                    enabled: true
+                    enabled: false
                 cloud.account.id:
                     enabled: true
                 cloud.availability_zone:
@@ -495,24 +490,30 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
+                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
+                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         metric_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
+                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
+                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         trace_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
+                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
+                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
         error_mode: ignore
@@ -606,7 +607,6 @@ service:
         - agenthealth/opentelemetry_logs
         - sigv4auth/xray
         - agenthealth/opentelemetry_traces
-        - oidctoken
     pipelines:
         logs/opentelemetry:
             exporters:
@@ -669,8 +669,6 @@ service:
         logs:
             encoding: console
             level: info
-            output_paths:
-                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2
