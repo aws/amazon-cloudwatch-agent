@@ -3,11 +3,6 @@
 
 package config
 
-import _ "embed"
-
-//go:embed defaults/otel.json
-var defaultOtelConfig string
-
 var defaultConfigs = map[string]string{
 	"otel": defaultOtelConfig,
 }
