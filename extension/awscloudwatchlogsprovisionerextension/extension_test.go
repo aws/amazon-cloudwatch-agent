@@ -347,7 +347,11 @@ func TestEnsureProvisioned_Singleflight(t *testing.T) {
 
 func TestStart_StoresHost(t *testing.T) {
 	authID := component.MustNewID("sigv4auth")
-	cfg := &Config{AdditionalAuth: &authID}
+	cfg := &Config{
+		Region:               "us-east-1",
+		LogsProvisionTimeout: 10 * time.Second,
+		AdditionalAuth:       &authID,
+	}
 	ext := newExtension(zaptest.NewLogger(t), cfg)
 
 	host := &mockHost{
@@ -363,7 +367,11 @@ func TestStart_StoresHost(t *testing.T) {
 
 func TestRoundTripper_MissingAdditionalAuth(t *testing.T) {
 	authID := component.MustNewID("sigv4auth")
-	cfg := &Config{AdditionalAuth: &authID}
+	cfg := &Config{
+		Region:               "us-east-1",
+		LogsProvisionTimeout: 10 * time.Second,
+		AdditionalAuth:       &authID,
+	}
 	ext := newExtension(zaptest.NewLogger(t), cfg)
 
 	host := &mockHost{extensions: map[component.ID]component.Component{}}

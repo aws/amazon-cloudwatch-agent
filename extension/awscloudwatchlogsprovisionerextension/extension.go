@@ -131,6 +131,11 @@ type provisionerRoundTripper struct {
 }
 
 func (rt *provisionerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Clone the request before modifying headers to comply with the
+	// http.RoundTripper contract (must not modify the original request).
+	// This prevents races under retries or HTTP/2 multiplexing.
+	req = req.Clone(req.Context())
+
 	// Inject log group/stream headers from config if set.
 	// This avoids relying on confighttp.ClientConfig.Headers which uses
 	// configopaque.String and gets nil'd during YAML serialization.

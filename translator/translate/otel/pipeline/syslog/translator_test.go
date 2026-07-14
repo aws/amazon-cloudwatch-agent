@@ -157,7 +157,7 @@ func TestBuildOTTLCondition(t *testing.T) {
 		{
 			name:  "hostname glob",
 			match: map[string]any{"hostname": "web-*"},
-			want:  `IsMatch(attributes["hostname"], "web-*")`,
+			want:  `IsMatch(attributes["hostname"], "^web-.*$")`,
 		},
 		{
 			name:  "hostname exact",
@@ -172,7 +172,7 @@ func TestBuildOTTLCondition(t *testing.T) {
 		{
 			name:  "multiple conditions",
 			match: map[string]any{"hostname": "web-*", "app_name": "nginx"},
-			want:  `IsMatch(attributes["hostname"], "web-*") and attributes["app_name"] == "nginx"`,
+			want:  `IsMatch(attributes["hostname"], "^web-.*$") and attributes["app_name"] == "nginx"`,
 		},
 		{
 			name:  "empty",
@@ -752,12 +752,12 @@ func TestResolveListenAddress(t *testing.T) {
 		{
 			name:    "ipv6 with brackets and port",
 			address: "tcp://[::1]:514",
-			want:    "tcp://::1:514",
+			want:    "tcp://[::1]:514",
 		},
 		{
 			name:    "ipv6 with brackets no port",
 			address: "tcp://[::1]",
-			want:    "tcp://::1:5514",
+			want:    "tcp://[::1]:5514",
 		},
 	}
 	for _, tt := range tests {
