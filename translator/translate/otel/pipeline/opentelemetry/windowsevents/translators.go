@@ -4,14 +4,13 @@
 package windowsevents
 
 import (
-	"fmt"
 	"log"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/hash"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -27,11 +26,9 @@ const (
 	logStreamNameKey = "log_stream_name"
 )
 
-var configKey = common.WindowsEventsConfigKey
-
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-	if conf == nil || !conf.IsSet(configKey) {
+	if conf == nil || !conf.IsSet(common.WindowsEventsConfigKey) {
 		return translators
 	}
 	if translatorcontext.CurrentContext().Os() != translatorconfig.OS_TYPE_WINDOWS {
@@ -45,7 +42,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 }
 
 func parseEntries(conf *confmap.Conf) []eventEntry {
-	key := common.ConfigKey(configKey, collectListKey)
+	key := common.ConfigKey(common.WindowsEventsConfigKey, collectListKey)
 	val := conf.Get(key)
 	list, ok := val.([]any)
 	if !ok || len(list) == 0 {
@@ -53,7 +50,7 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 	}
 
 	var entries []eventEntry
-	for i, item := range list {
+	for index, item := range list {
 		m, ok := item.(map[string]any)
 		if !ok {
 			continue
@@ -64,7 +61,9 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		}
 
 		format, _ := m[eventFormatKey].(string)
-		raw := format == "xml"
+		if format != "xml" {
+			format = ""
+		}
 
 		resource := map[string]string{
 			"aws.log.source":  common.WindowsEventsKey,
@@ -95,12 +94,13 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 			}
 		}
 
-		sanitized := sanitizeName(channel)
+		slices.Sort(levels)
+		slices.Sort(ids)
+
 		entries = append(entries, eventEntry{
-			name:          fmt.Sprintf("%s_%d", sanitized, i),
-			receiverName:  fmt.Sprintf("%s_%s", sanitized, receiverHash(channel, format)),
+			index:         index,
 			channel:       channel,
-			raw:           raw,
+			format:        format,
 			resource:      resource,
 			logGroupName:  logGroupName,
 			logStreamName: logStreamName,
@@ -109,10 +109,6 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		})
 	}
 	return entries
-}
-
-func receiverHash(channel, format string) string {
-	return hash.HashName(channel + "\x00" + format)
 }
 
 func sanitizeName(channel string) string {
