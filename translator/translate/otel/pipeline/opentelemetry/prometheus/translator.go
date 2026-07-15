@@ -104,7 +104,7 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	}
 
 	// Prevent OTel expandconverter from misinterpreting Prometheus regex backreferences.
-	escaped := escapeDollarDigit(string(content))
+	escaped := common.EscapeDollarDigit(string(content))
 	var stringMap map[string]interface{}
 	if err := yaml.Unmarshal([]byte(escaped), &stringMap); err != nil {
 		return nil, fmt.Errorf("unable to parse prometheus config from %s: %w", configPath, err)
@@ -120,19 +120,4 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 	cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
 
 	return cfg, nil
-}
-
-// escapeDollarDigit escapes bare $ followed by a digit with $$$$ so the value
-// survives both the confmap resolver's escapeDollarSigns pass ($$$$ → $$) and
-// the expandconverter pass ($$ → $), preserving regex backreferences like $1.
-func escapeDollarDigit(s string) string {
-	var out []byte
-	for i := 0; i < len(s); i++ {
-		if s[i] == '$' && i+1 < len(s) && s[i+1] >= '0' && s[i+1] <= '9' {
-			out = append(out, '$', '$', '$', '$')
-		} else {
-			out = append(out, s[i])
-		}
-	}
-	return string(out)
 }

@@ -2089,6 +2089,13 @@ receivers:
                       source_labels:
                         - __meta_kubernetes_pod_name
                       target_label: pod
+                    - action: replace
+                      regex: (.*)
+                      replacement: $$$${1}
+                      separator: ;
+                      source_labels:
+                        - __address__
+                      target_label: host
                   scheme: http
                   scrape_interval: 30s
                   scrape_protocols:
@@ -2426,13 +2433,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_procstat/1917393364
+                - telegraf_netstat
                 - telegraf_disk
                 - telegraf_swap
                 - telegraf_processes
-                - telegraf_cpu
                 - telegraf_mem
-                - telegraf_netstat
-                - telegraf_procstat/1917393364
+                - telegraf_cpu
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -2447,8 +2454,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -2457,8 +2464,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

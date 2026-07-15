@@ -10,3 +10,7 @@ scrape_configs:
         regex: (.*)
         target_label: pod
         replacement: $1
+      - source_labels: [__address__]
+        regex: (.*)
+        target_label: host
+        replacement: ${1}
