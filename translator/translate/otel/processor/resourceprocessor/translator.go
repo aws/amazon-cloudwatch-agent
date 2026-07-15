@@ -19,15 +19,22 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+func WithAttributes(attrs map[string]string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.attributes = attrs
+		}
+	}
+}
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	factory processor.Factory
+	factory    processor.Factory
+	attributes map[string]string
 }
 
-var (
-	_ common.ComponentTranslator = (*translator)(nil)
-)
+var _ common.ComponentTranslator = (*translator)(nil)
 
 func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	t := &translator{factory: resourceprocessor.NewFactory()}
@@ -41,15 +48,35 @@ func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 	return t
 }
 
-var _ common.ComponentTranslator = (*translator)(nil)
-
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
 
-// Translate creates a processor config based on the fields in the
-// Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if len(t.attributes) > 0 {
+		return t.translateStaticAttributes()
+	}
+	return t.translateJMX(conf)
+}
+
+func (t *translator) translateStaticAttributes() (component.Config, error) {
+	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
+	attrs := make([]any, 0, len(t.attributes))
+	for k, v := range t.attributes {
+		attrs = append(attrs, map[string]any{
+			"action": "upsert",
+			"key":    k,
+			"value":  v,
+		})
+	}
+	c := confmap.NewFromStringMap(map[string]any{"attributes": attrs})
+	if err := c.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal resource processor: %w", err)
+	}
+	return cfg, nil
+}
+
+func (t *translator) translateJMX(conf *confmap.Conf) (component.Config, error) {
 	if conf == nil || (!conf.IsSet(common.JmxConfigKey) && t.Name() != common.PipelineNameContainerInsightsJmx) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.JmxConfigKey}
 	}

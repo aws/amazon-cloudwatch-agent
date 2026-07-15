@@ -40,6 +40,7 @@ func TestComponents(t *testing.T) {
 		"systemmetrics",
 		"tcplog",
 		"udplog",
+		"windowseventlog",
 		"zipkin",
 	}
 	gotReceivers := collections.MapSlice(maps.Keys(factories.Receivers), component.Type.String)
@@ -126,6 +127,7 @@ func TestComponents(t *testing.T) {
 		"health_check",
 		"k8smetadata",
 		"nodemetadatacache",
+		"oidctoken",
 		"pprof",
 		"server",
 		"sigv4auth",

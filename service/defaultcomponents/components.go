@@ -17,6 +17,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/oidctokenextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
@@ -59,6 +60,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
 	"go.opentelemetry.io/collector/connector"
 	"go.opentelemetry.io/collector/connector/forwardconnector"
@@ -122,6 +124,7 @@ func Factories() (otelcol.Factories, error) {
 		systemmetricsreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
+		windowseventlogreceiver.NewFactory(),
 		zipkinreceiver.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
@@ -187,6 +190,7 @@ func Factories() (otelcol.Factories, error) {
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),
 		healthcheckextension.NewFactory(),
+		oidctokenextension.NewFactory(),
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
