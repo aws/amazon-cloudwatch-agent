@@ -32,6 +32,7 @@ const (
 	TracesCollectedKey                             = "traces_collected"
 	OpenTelemetryKey                               = "opentelemetry"
 	CollectKey                                     = "collect"
+	ResourceAttributesKey                          = "resource_attributes"
 	HostMetricsKey                                 = "host_metrics"
 	OtelContainerInsightsKey                       = "container_insights"
 	MetricsDestinationsKey                         = "metrics_destinations"
@@ -169,6 +170,8 @@ var (
 	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
 	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
 	FilesConfigKey              = ConfigKey(OpenTelemetryKey, CollectKey, FilesKey)
+	// OtelResourceAttributesKey holds customer-supplied resource attributes added to every opentelemetry export pipeline.
+	OtelResourceAttributesKey = ConfigKey(OpenTelemetryKey, ResourceAttributesKey)
 )
 
 const (
@@ -373,6 +376,26 @@ func GetString(conf *confmap.Conf, key string) (string, bool) {
 		return got, ok
 	}
 	return "", false
+}
+
+// GetStringMap gets the key/value pairs for the key as a map[string]string,
+// coercing non-string values to their string form. Returns nil if the key is
+// missing or is not a map.
+func GetStringMap(conf *confmap.Conf, key string) map[string]string {
+	value := conf.Get(key)
+	raw, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	result := make(map[string]string, len(raw))
+	for k, v := range raw {
+		if s, ok := v.(string); ok {
+			result[k] = s
+		} else {
+			result[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	return result
 }
 
 // GetArray gets the array value for the key. If the key is missing,

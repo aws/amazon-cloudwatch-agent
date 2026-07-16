@@ -108,7 +108,11 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)
 	logsRouting := transformprocessor.NewTranslatorWithName(common.LogsRouting)
 
-	processors := common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if resourceAttrs := resourceAttributesProcessor(conf); resourceAttrs != nil {
+		processors.Set(resourceAttrs)
+	}
+	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
 	}

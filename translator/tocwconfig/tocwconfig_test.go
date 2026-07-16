@@ -434,6 +434,12 @@ func TestOtlpOtelEKSConfig(t *testing.T) {
 	checkTranslation(t, "opentelemetry/otlp_otel_eks_config", "linux", nil, "")
 }
 
+func TestOtlpOtelResourceAttributesConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/otlp_otel_resource_attributes_config", "linux", nil, "")
+}
+
 func TestProcstatMemorySwapConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)

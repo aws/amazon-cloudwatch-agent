@@ -49,6 +49,18 @@ func TestGetString(t *testing.T) {
 	require.Equal(t, "", got)
 }
 
+func TestGetStringMap(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"attrs":   map[string]any{"team": "cloudwatch", "count": 3},
+		"notAMap": "value",
+	})
+	got := GetStringMap(conf, "attrs")
+	require.Equal(t, map[string]string{"team": "cloudwatch", "count": "3"}, got)
+
+	require.Nil(t, GetStringMap(conf, "notAMap"))
+	require.Nil(t, GetStringMap(conf, "missing"))
+}
+
 func TestGetArray(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]any{
 		"int":    []any{5, 8, 10},
