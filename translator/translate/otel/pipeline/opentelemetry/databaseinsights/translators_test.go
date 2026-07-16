@@ -108,6 +108,7 @@ func TestNewTranslators_MultiInstance(t *testing.T) {
 func TestIsLocalhostEndpoint(t *testing.T) {
 	assert.True(t, isLocalhostEndpoint("localhost:5432"))
 	assert.True(t, isLocalhostEndpoint("127.0.0.1:5432"))
+	assert.True(t, isLocalhostEndpoint("[::1]:5432"))
 	assert.False(t, isLocalhostEndpoint("db.example.com:5432"))
 	assert.False(t, isLocalhostEndpoint(""))
 }
