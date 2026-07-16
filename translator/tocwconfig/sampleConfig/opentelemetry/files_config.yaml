@@ -481,8 +481,8 @@ receivers:
         operators:
             - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2})
               timestamp:
-                layout: '%Y-%m-%d %H:%M:%S'
-                layout_type: strptime
+                layout: 2006-1-_2 15:04:05
+                layout_type: gotime
                 location: UTC
                 parse_from: attributes.timestamp
               type: regex_parser

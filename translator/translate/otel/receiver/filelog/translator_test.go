@@ -149,8 +149,8 @@ func TestTranslator_WithTimestampFormat_ReturnsRawMapConfig(t *testing.T) {
 	assert.Contains(t, op["regex"], "(?P<timestamp>")
 
 	ts := op["timestamp"].(map[string]any)
-	assert.Equal(t, "%Y-%m-%d %H:%M:%S", ts["layout"])
-	assert.Equal(t, "strptime", ts["layout_type"])
+	assert.Equal(t, "2006-1-_2 15:04:05", ts["layout"])
+	assert.Equal(t, "gotime", ts["layout_type"])
 	assert.Equal(t, "UTC", ts["location"])
 }
 

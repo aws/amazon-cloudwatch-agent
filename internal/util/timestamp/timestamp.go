@@ -122,6 +122,20 @@ func BuildRegex(format string) string {
 	return res
 }
 
+// BuildLayout converts a strftime format string to a Go time layout string.
+func BuildLayout(format string) string {
+	res := format
+	// %f needs variable-width fractional seconds (".999999999") instead of FormatLayoutMap's
+	// fixed ".000". Handle both ".%f" and "%f" since %f includes the dot separator.
+	res = strings.ReplaceAll(res, ".%f", ".999999999")
+	res = strings.ReplaceAll(res, "%f", ".999999999")
+	// Use lenient layout "1" for month (accepts both "1" and "01"), avoiding v1's
+	// two-layout approach where both %m ("01") and %-m ("1") variants were emitted.
+	// %-m already maps to "1" in FormatLayoutMap so only %m needs overriding.
+	res = strings.ReplaceAll(res, "%m", "%-m")
+	return ReplaceAll(res, FormatLayoutMap)
+}
+
 // ReplaceAll replaces all occurrences of keys in the replacements map with their values.
 func ReplaceAll(input string, replacements map[string]string) string {
 	res := input

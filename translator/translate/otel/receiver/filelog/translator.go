@@ -189,8 +189,8 @@ func buildTimestampOperatorMap(format, timezone string) map[string]any {
 		"regex": timestamp.BuildRegexWithNamedCaptureGroup(format),
 		"timestamp": map[string]any{
 			"parse_from":  "attributes.timestamp",
-			"layout":      format,
-			"layout_type": "strptime",
+			"layout":      timestamp.BuildLayout(format),
+			"layout_type": "gotime",
 			"location":    location,
 		},
 	}
