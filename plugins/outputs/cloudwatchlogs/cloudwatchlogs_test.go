@@ -6,6 +6,7 @@ package cloudwatchlogs
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -99,4 +100,47 @@ func TestDuplicateDestination(t *testing.T) {
 
 	// Then the destination for cloudwatchlogs endpoint would be the same
 	require.Equal(t, d1, d2)
+}
+
+// TestSharedRetryerLifecycle verifies that stopping one destination does not affect
+// the shared TargetManager's ability to create new targets, and that the shared
+// retryer is separate from any destination's retryer.
+func TestSharedRetryerLifecycle(t *testing.T) {
+	c := &CloudWatchLogs{
+		Log:       testutil.Logger{Name: "test"},
+		AccessKey: "access_key",
+		SecretKey: "secret_key",
+		cwDests:   sync.Map{},
+	}
+
+	// Create the first destination - this initializes the shared TargetManager
+	d1 := c.CreateDest("group1", "stream1", -1, "", nil).(*cwDest)
+
+	// Verify that the shared retryer was created and is separate from d1's retryer
+	require.NotNil(t, c.sharedRetryer, "shared retryer should be initialized")
+	require.NotNil(t, c.sharedClient, "shared client should be initialized")
+	require.NotSame(t, c.sharedRetryer, d1.retryer, "shared retryer should be separate from destination retryer")
+
+	// Stop the first destination (simulates log rotation with auto_removal)
+	d1.Stop()
+
+	// Create a second destination - this should not block or fail
+	done := make(chan *cwDest, 1)
+	go func() {
+		d2 := c.CreateDest("group2", "stream2", -1, "", nil).(*cwDest)
+		done <- d2
+	}()
+
+	select {
+	case d2 := <-done:
+		require.NotNil(t, d2, "second destination should be created successfully")
+		require.NotSame(t, d1, d2, "second destination should be different from first")
+		// Clean up
+		d2.Stop()
+	case <-time.After(5 * time.Second):
+		t.Fatal("creating second destination blocked after first destination was stopped - potential deadlock")
+	}
+
+	// Clean up
+	c.Close()
 }
