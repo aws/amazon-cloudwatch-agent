@@ -79,10 +79,10 @@ func WithLogScopeStatements(statements []string) Option {
 	}
 }
 
-// WithLogLogStatements sets OTTL statements to execute in the "log" context for logs.
-func WithLogLogStatements(statements []string) Option {
+// WithLogContextStatements sets OTTL statements to execute in the "log" context for logs.
+func WithLogContextStatements(statements []string) Option {
 	return func(t *translator) {
-		t.logLogStatements = statements
+		t.logContextStatements = statements
 	}
 }
 
@@ -97,7 +97,7 @@ type translator struct {
 	name                  string
 	factory               processor.Factory
 	logStatements         []string
-	logLogStatements      []string
+	logContextStatements  []string
 	metricStatements      []string
 	scopeStatements       []string
 	logScopeStatements    []string
@@ -121,7 +121,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) hasDynamicStatements() bool {
 	return len(t.logStatements) > 0 ||
-		len(t.logLogStatements) > 0 ||
+		len(t.logContextStatements) > 0 ||
 		len(t.metricStatements) > 0 ||
 		len(t.scopeStatements) > 0 ||
 		len(t.logScopeStatements) > 0 ||
@@ -157,8 +157,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if len(t.logScopeStatements) > 0 {
 			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildScopeStatements(t.logScopeStatements, errorMode))
 		}
-		if len(t.logLogStatements) > 0 {
-			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildLogStatements(t.logLogStatements, errorMode))
+		if len(t.logContextStatements) > 0 {
+			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildLogStatements(t.logContextStatements, errorMode))
 		}
 		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("failed to configure transform processor: %w", err)

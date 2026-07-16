@@ -89,6 +89,9 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
+    groupbyattrs/files:
+        keys:
+            - log.file.name
     resource/files__var_log_app___log_0:
         attributes:
             - action: upsert
@@ -97,7 +100,7 @@ processors:
               from_context: ""
               key: aws.log.stream.name
               pattern: ""
-              value: '{hostname}'
+              value: i-0123456789abcdef0
             - action: upsert
               converted_type: ""
               from_attribute: ""
@@ -394,7 +397,7 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
-    transform/files_scope:
+    transform/files:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -527,7 +530,8 @@ service:
                 - forward/opentelemetry
             processors:
                 - resource/files__var_log_app___log_0
-                - transform/files_scope
+                - groupbyattrs/files
+                - transform/files
             receivers:
                 - filelog/_var_log_app___log_3674872097
         logs/files__var_log_syslog_1:
@@ -535,7 +539,8 @@ service:
                 - forward/opentelemetry
             processors:
                 - resource/files__var_log_syslog_1
-                - transform/files_scope
+                - groupbyattrs/files
+                - transform/files
             receivers:
                 - filelog/_var_log_syslog_3269802138
         logs/opentelemetry:

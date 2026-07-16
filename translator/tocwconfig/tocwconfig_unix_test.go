@@ -28,6 +28,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/totomlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 )
 
@@ -250,5 +251,25 @@ func TestAKSHostMetricsConfig(t *testing.T) {
 func TestFilesOtelConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
-	checkTranslation(t, "opentelemetry/files_config", "linux", nil, "")
+
+	agent.Global_Config = *new(agent.Agent)
+	translator.SetTargetPlatform("linux")
+	var input any
+	blob, err := os.ReadFile("./sampleConfig/opentelemetry/files_config.json")
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(blob, &input))
+
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/files_config.conf")
+
+	// Set MetadataInfo to a deterministic value before the YAML translation so
+	// placeholder resolution produces stable output regardless of the machine.
+	globallogs.GlobalLogConfig.MetadataInfo = map[string]string{
+		"{hostname}":       "ip-172-31-0-1",
+		"{instance_id}":    "i-0123456789abcdef0",
+		"{ip_address}":     "172.31.0.1",
+		"{local_hostname}": "ip-172-31-0-1",
+		"{aws_region}":     "us-east-1",
+		"{account_id}":     "123456789012",
+	}
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/files_config.yaml")
 }

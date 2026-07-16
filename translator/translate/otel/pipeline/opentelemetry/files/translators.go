@@ -7,8 +7,9 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/util/timestamp"
+	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
 const (
@@ -20,6 +21,10 @@ const (
 	timestampFormatKey    = "timestamp_format"
 	timezoneKey           = "timezone"
 	encodingKey           = "encoding"
+
+	// timestampFormatMagicValue in multi_line_start_pattern means "use the regex
+	// generated from timestamp_format as the multiline pattern".
+	timestampFormatMagicValue = "{timestamp_format}"
 )
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
@@ -42,7 +47,7 @@ func parseEntries(conf *confmap.Conf) []fileEntry {
 	}
 
 	var entries []fileEntry
-	for index, item := range list {
+	for _, item := range list {
 		m, ok := item.(map[string]any)
 		if !ok {
 			continue
@@ -61,20 +66,21 @@ func parseEntries(conf *confmap.Conf) []fileEntry {
 		timestampFormat, _ := m[timestampFormatKey].(string)
 		timezone, _ := m[timezoneKey].(string)
 
-		// Support {timestamp_format} magic value: use the generated timestamp regex as the multiline pattern.
-		if multiline == "{timestamp_format}" && timestampFormat != "" {
-			multiline = timestamp.BuildRegex(timestampFormat)
-		}
-
 		logGroupName, _ := m[logGroupNameKey].(string)
+		if logGroupName != "" {
+			logGroupName = logsutil.ResolvePlaceholder(logGroupName, globallogs.GlobalLogConfig.MetadataInfo)
+		}
 		logStreamName, _ := m[logStreamNameKey].(string)
+		if logStreamName != "" {
+			logStreamName = logsutil.ResolvePlaceholder(logStreamName, globallogs.GlobalLogConfig.MetadataInfo)
+		}
 
 		resource := map[string]string{
 			"aws.log.source": common.FilesKey,
 		}
 
 		entries = append(entries, fileEntry{
-			index:            index,
+			index:            len(entries),
 			filePath:         filePath,
 			encoding:         encoding,
 			multilinePattern: multiline,

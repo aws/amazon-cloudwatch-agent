@@ -156,9 +156,9 @@ func TestLogScopeStatements(t *testing.T) {
 	assert.Empty(t, actualCfg.TraceStatements)
 }
 
-func TestLogLogStatements(t *testing.T) {
-	transl := NewTranslatorWithName("test_log_log",
-		WithLogLogStatements([]string{
+func TestLogContextStatements(t *testing.T) {
+	transl := NewTranslatorWithName("test_log_context",
+		WithLogContextStatements([]string{
 			`set(resource.attributes["aws.log.file.name"], attributes["log.file.name"]) where attributes["log.file.name"] != nil`,
 			`delete_key(attributes, "log.file.name")`,
 		}),
@@ -177,10 +177,10 @@ func TestLogLogStatements(t *testing.T) {
 	assert.Empty(t, actualCfg.TraceStatements)
 }
 
-func TestLogScopeAndLogLogStatements(t *testing.T) {
+func TestLogScopeAndLogContextStatements(t *testing.T) {
 	transl := NewTranslatorWithName("test_combined",
 		WithLogScopeStatements(common.ScopeStatementsForSolution("otel-test")),
-		WithLogLogStatements([]string{`delete_key(attributes, "timestamp")`}),
+		WithLogContextStatements([]string{`delete_key(attributes, "timestamp")`}),
 	)
 	cfg, err := transl.Translate(nil)
 	require.NoError(t, err)

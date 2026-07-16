@@ -171,6 +171,40 @@ func TestTranslator_WithTimestampFormat_LocalTimezone(t *testing.T) {
 	assert.Equal(t, "Local", ts["location"])
 }
 
+func TestTranslator_WithTimestampFormat_UppercaseLOCAL(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "LOCAL"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw := cfg.(*rawMapConfig)
+	operators := raw.data["operators"].([]any)
+	op := operators[0].(map[string]any)
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "Local", ts["location"])
+}
+
+func TestTranslator_WithTimestampFormat_UppercaseUTC(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "utc"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw := cfg.(*rawMapConfig)
+	operators := raw.data["operators"].([]any)
+	op := operators[0].(map[string]any)
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "UTC", ts["location"])
+}
+
 func TestRawMapConfig_Marshal(t *testing.T) {
 	raw := &rawMapConfig{data: map[string]any{
 		"include":  []string{"/var/log/test.log"},

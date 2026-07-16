@@ -5,6 +5,7 @@ package filelog
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/helper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
@@ -180,7 +181,7 @@ func (t *translator) translateAsRawMap() (component.Config, error) {
 // Using a raw map avoids the operator.Config marshaling bug when round-tripping through confmap.
 func buildTimestampOperatorMap(format, timezone string) map[string]any {
 	location := "Local"
-	if timezone == "UTC" {
+	if strings.EqualFold(timezone, "UTC") {
 		location = "UTC"
 	}
 
