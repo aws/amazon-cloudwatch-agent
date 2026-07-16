@@ -177,6 +177,7 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	yamlConfig, err := mapstructure.Marshal(cfg)
 	require.NoError(t, err)
 	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+	// assert.NoError(t, os.WriteFile("./sampleConfig/opentelemetry/combined_v1_v2_eks_config.yaml", []byte(yamlStr), 0644)) // useful for regenerating YAML
 	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
 
 	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
