@@ -9,7 +9,7 @@ on:
   workflow_call:
 
 jobs:
-  record:
+  Record:
     runs-on: ubuntu-latest
     permissions:
       id-token: write

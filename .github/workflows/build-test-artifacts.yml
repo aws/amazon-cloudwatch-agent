@@ -49,6 +49,7 @@ jobs:
 
   RecordBinarySizes:
     needs: [BuildAndUpload]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     uses: ./.github/workflows/record-binary-sizes.yml
     secrets: inherit
     permissions:
