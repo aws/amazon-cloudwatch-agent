@@ -4,6 +4,8 @@
 package filelog
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -147,6 +149,11 @@ func (t *translator) translateTyped() (component.Config, error) {
 // translateAsRawMap builds the receiver config as a raw map to work around the
 // operator.Config marshaling bug that breaks confmap round-tripping when operators are present.
 func (t *translator) translateAsRawMap() (component.Config, error) {
+	timestampRegex := timestamp.BuildRegexWithNamedCaptureGroup(t.timestampFormat)
+	if _, err := regexp.Compile(timestampRegex); err != nil {
+		return nil, fmt.Errorf("timestamp_format %q produces invalid regex for %s: %w", t.timestampFormat, t.filePath, err)
+	}
+
 	encoding := t.encoding
 	if encoding == "" {
 		encoding = "utf-8"

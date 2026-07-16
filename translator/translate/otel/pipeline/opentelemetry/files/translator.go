@@ -128,8 +128,6 @@ func (t *filesPipelineTranslator) Translate(_ *confmap.Conf) (*common.ComponentT
 		transformprocessor.WithErrorMode(common.OTTLErrorModeIgnore),
 		transformprocessor.WithLogScopeStatements(common.ScopeStatementsForSolution("otel-files")),
 		transformprocessor.WithLogContextStatements([]string{
-			`set(resource.attributes["aws.log.file.name"], attributes["log.file.name"]) where attributes["log.file.name"] != nil`,
-			`delete_key(attributes, "log.file.name")`,
 			`delete_key(attributes, "timestamp")`,
 		}),
 	))

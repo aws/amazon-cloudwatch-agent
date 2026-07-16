@@ -159,7 +159,7 @@ func TestLogScopeStatements(t *testing.T) {
 func TestLogContextStatements(t *testing.T) {
 	transl := NewTranslatorWithName("test_log_context",
 		WithLogContextStatements([]string{
-			`set(resource.attributes["aws.log.file.name"], attributes["log.file.name"]) where attributes["log.file.name"] != nil`,
+			`delete_key(attributes, "timestamp")`,
 			`delete_key(attributes, "log.file.name")`,
 		}),
 	)
@@ -171,7 +171,7 @@ func TestLogContextStatements(t *testing.T) {
 	assert.Equal(t, "log", string(actualCfg.LogStatements[0].Context))
 	assert.Equal(t, "ignore", string(actualCfg.LogStatements[0].ErrorMode))
 	require.Len(t, actualCfg.LogStatements[0].Statements, 2)
-	assert.Equal(t, `set(resource.attributes["aws.log.file.name"], attributes["log.file.name"]) where attributes["log.file.name"] != nil`, actualCfg.LogStatements[0].Statements[0])
+	assert.Equal(t, `delete_key(attributes, "timestamp")`, actualCfg.LogStatements[0].Statements[0])
 	assert.Equal(t, `delete_key(attributes, "log.file.name")`, actualCfg.LogStatements[0].Statements[1])
 	assert.Empty(t, actualCfg.MetricStatements)
 	assert.Empty(t, actualCfg.TraceStatements)

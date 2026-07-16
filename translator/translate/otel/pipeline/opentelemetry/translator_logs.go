@@ -94,9 +94,6 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	if runtime.GOOS == "windows" && conf != nil && conf.IsSet(common.WindowsEventsConfigKey) {
 		cleanupStmts = append(cleanupStmts, `delete_key(resource.attributes, "aws.log.channel")`)
 	}
-	if conf != nil && conf.IsSet(common.FilesConfigKey) {
-		cleanupStmts = append(cleanupStmts, `delete_key(resource.attributes, "aws.log.file.name")`)
-	}
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
 		transformprocessor.WithLogResourceStatements(cleanupStmts),
 	)
