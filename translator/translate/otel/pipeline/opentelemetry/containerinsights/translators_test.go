@@ -22,10 +22,10 @@ func TestNewTranslators_MissingKey(t *testing.T) {
 func TestNewTranslators_RoleNode(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"role":         "node",
+					"role": "node",
 				},
 			},
 		},
@@ -38,10 +38,10 @@ func TestNewTranslators_RoleNode(t *testing.T) {
 func TestNewTranslators_RoleNodeWithLogs(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"role":         "node",
+					"role": "node",
 					"logs": map[string]interface{}{
 						"enabled": true,
 					},
@@ -57,10 +57,10 @@ func TestNewTranslators_RoleNodeWithLogs(t *testing.T) {
 func TestNewTranslators_RoleCluster(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"role":         "cluster",
+					"role": "cluster",
 				},
 			},
 		},
@@ -74,10 +74,9 @@ func TestNewTranslators_DefaultRole(t *testing.T) {
 	// No role specified, no env var - should default to node
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-				},
+				"container_insights": map[string]interface{}{},
 			},
 		},
 	})
@@ -91,10 +90,9 @@ func TestNewTranslators_EnvVarFallback_Node(t *testing.T) {
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-				},
+				"container_insights": map[string]interface{}{},
 			},
 		},
 	})
@@ -108,10 +106,9 @@ func TestNewTranslators_EnvVarFallback_Leader(t *testing.T) {
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.LEADER)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-				},
+				"container_insights": map[string]interface{}{},
 			},
 		},
 	})
@@ -125,10 +122,10 @@ func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"role":         "cluster",
+					"role": "cluster",
 				},
 			},
 		},
