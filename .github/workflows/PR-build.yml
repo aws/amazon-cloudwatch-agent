@@ -163,7 +163,7 @@ jobs:
   binary-size-report:
     name: Binary Size Report
     needs: [build, changes]
-    if: needs.changes.outputs.build == 'true' && github.event_name == 'pull_request'
+    if: needs.changes.outputs.build == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork != true
     runs-on: ubuntu-latest
     permissions:
       id-token: write
