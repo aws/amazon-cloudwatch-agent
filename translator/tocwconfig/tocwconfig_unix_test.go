@@ -30,6 +30,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -191,7 +192,11 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeAzureVM)
-	agent.Global_Config.Region = "us-west-2"
+	// No AWS region source exists on Azure at translation time, so region
+	// detection returns empty and the translator falls back to ${AWS_REGION}.
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "", ""
+	}
 
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)
@@ -229,7 +234,11 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeAzureVM)
 	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
 	context.CurrentContext().SetRunInContainer(true)
-	agent.Global_Config.Region = "us-west-2"
+	// No AWS region source exists on Azure at translation time, so region
+	// detection returns empty and the translator falls back to ${AWS_REGION}.
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "", ""
+	}
 
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)

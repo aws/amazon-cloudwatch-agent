@@ -32,9 +32,16 @@ func (r *Region) ApplyRule(input interface{}) (returnKey string, returnVal inter
 	}
 	region, regionType := util.DetectRegion(ctx.Mode(), ctx.Credentials())
 
-	if region == "" {
+	if region == "" && ctx.Mode() != config.ModeAzureVM {
 		translator.AddErrorMessages(GetCurPath()+"ruleRegion/", fmt.Sprintf("Region info is missing for mode: %s",
 			ctx.Mode()))
+	}
+
+	// Azure has no AWS region source at translation time, so defer to the
+	// AWS_REGION environment variable, which is resolved at runtime.
+	if region == "" && ctx.Mode() == config.ModeAzureVM {
+		region = "${AWS_REGION}"
+		regionType = config.RegionTypeNotFound
 	}
 
 	Global_Config.Region = region
