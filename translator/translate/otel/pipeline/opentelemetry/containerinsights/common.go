@@ -63,20 +63,6 @@ func (r rawMapConfig) Marshal(conf *confmap.Conf) error {
 	return conf.Merge(confmap.NewFromStringMap(r.data))
 }
 
-// escapeDollarDigit escapes bare $ followed by a digit so the expandconverter
-// does not interpret regex backreferences (e.g., k8sattributes $1) as env vars.
-func escapeDollarDigit(s string) string {
-	var out []byte
-	for i := 0; i < len(s); i++ {
-		if s[i] == '$' && i+1 < len(s) && s[i+1] >= '0' && s[i+1] <= '9' {
-			out = append(out, '$', '$')
-		} else {
-			out = append(out, s[i])
-		}
-	}
-	return string(out)
-}
-
 // yamlComponentTranslator wraps a pre-built component config.
 type yamlComponentTranslator struct {
 	id  component.ID

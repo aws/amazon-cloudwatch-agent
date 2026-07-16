@@ -554,3 +554,29 @@ func GetClusterName(conf *confmap.Conf) string {
 
 	return util.GetClusterNameFromEc2Tagger()
 }
+
+// EscapeDollarDigit escapes dollar-digit patterns so they survive both the
+// confmap resolver's escapeDollarSigns pass and the expandconverter pass.
+//
+// Handles two syntaxes:
+//   - $1  → $$$$1  (bare dollar — used by both CI and Prometheus)
+//   - ${1} → $$$${1} (brace notation — used in Prometheus customer configs)
+func EscapeDollarDigit(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] == '$' && i+1 < len(s) {
+			// Handle ${N} brace notation (e.g., ${1}, ${2})
+			if s[i+1] == '{' && i+2 < len(s) && s[i+2] >= '0' && s[i+2] <= '9' {
+				out = append(out, '$', '$', '$', '$')
+				continue
+			}
+			// Handle bare $N notation (e.g., $1, $2)
+			if s[i+1] >= '0' && s[i+1] <= '9' {
+				out = append(out, '$', '$', '$', '$')
+				continue
+			}
+		}
+		out = append(out, s[i])
+	}
+	return string(out)
+}

@@ -173,7 +173,7 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	// Parse YAML
 	// Escape $N patterns so the expandconverter doesn't misinterpret regex
 	// backreferences (e.g., k8sattributes tag_name: $$$1) as env var refs.
-	escaped := escapeDollarDigit(buf.String())
+	escaped := common.EscapeDollarDigit(buf.String())
 	var parsed map[string]interface{}
 	if err := yaml.Unmarshal([]byte(escaped), &parsed); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML for %s: %w", t.name, err)
