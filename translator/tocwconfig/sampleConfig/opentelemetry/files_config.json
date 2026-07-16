@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "collect": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/app/*.log",
+            "log_group_name": "/aws/app/logs",
+            "log_stream_name": "{hostname}",
+            "multi_line_start_pattern": "^\\d{4}-\\d{2}-\\d{2}",
+            "timestamp_format": "%Y-%m-%d %H:%M:%S",
+            "timezone": "UTC"
+          },
+          {
+            "file_path": "/var/log/syslog",
+            "log_group_name": "/aws/system/syslog"
+          }
+        ]
+      }
+    }
+  }
+}

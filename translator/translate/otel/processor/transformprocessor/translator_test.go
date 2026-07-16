@@ -156,6 +156,43 @@ func TestLogScopeStatements(t *testing.T) {
 	assert.Empty(t, actualCfg.TraceStatements)
 }
 
+func TestLogLogStatements(t *testing.T) {
+	transl := NewTranslatorWithName("test_log_log",
+		WithLogLogStatements([]string{
+			`set(resource.attributes["aws.log.file.name"], attributes["log.file.name"]) where attributes["log.file.name"] != nil`,
+			`delete_key(attributes, "log.file.name")`,
+		}),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.LogStatements, 1)
+	assert.Equal(t, "log", string(actualCfg.LogStatements[0].Context))
+	assert.Equal(t, "ignore", string(actualCfg.LogStatements[0].ErrorMode))
+	require.Len(t, actualCfg.LogStatements[0].Statements, 2)
+	assert.Equal(t, `set(resource.attributes["aws.log.file.name"], attributes["log.file.name"]) where attributes["log.file.name"] != nil`, actualCfg.LogStatements[0].Statements[0])
+	assert.Equal(t, `delete_key(attributes, "log.file.name")`, actualCfg.LogStatements[0].Statements[1])
+	assert.Empty(t, actualCfg.MetricStatements)
+	assert.Empty(t, actualCfg.TraceStatements)
+}
+
+func TestLogScopeAndLogLogStatements(t *testing.T) {
+	transl := NewTranslatorWithName("test_combined",
+		WithLogScopeStatements(common.ScopeStatementsForSolution("otel-test")),
+		WithLogLogStatements([]string{`delete_key(attributes, "timestamp")`}),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.LogStatements, 2)
+	assert.Equal(t, "scope", string(actualCfg.LogStatements[0].Context))
+	assert.Equal(t, "log", string(actualCfg.LogStatements[1].Context))
+	require.Len(t, actualCfg.LogStatements[1].Statements, 1)
+	assert.Equal(t, `delete_key(attributes, "timestamp")`, actualCfg.LogStatements[1].Statements[0])
+}
+
 func TestMetricScopeStatements(t *testing.T) {
 	transl := NewTranslatorWithName("test_metric_scope",
 		WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-test")),

@@ -246,3 +246,9 @@ func TestAKSHostMetricsConfig(t *testing.T) {
 
 	checkTranslation(t, "opentelemetry/host_metrics_aks_config", "linux", nil, "")
 }
+
+func TestFilesOtelConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/files_config", "linux", nil, "")
+}
