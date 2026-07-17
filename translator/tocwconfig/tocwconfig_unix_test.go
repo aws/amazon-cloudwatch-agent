@@ -192,7 +192,6 @@ func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeAzureVM)
 	agent.Global_Config.Region = "us-west-2"
-	agent.Global_Config.RegionType = config.RegionTypeCredsMap
 
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)
@@ -212,7 +211,6 @@ func TestDefaultOtelConfigECSTranslation(t *testing.T) {
 	context.CurrentContext().SetRunInContainer(true)
 	ecsutil.GetECSUtilSingleton().Region = "us-west-2"
 	agent.Global_Config.Region = "us-west-2"
-	agent.Global_Config.RegionType = config.RegionTypeCredsMap
 
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)
@@ -221,15 +219,17 @@ func TestDefaultOtelConfigECSTranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.yaml")
 }
 
 func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	resetContext(t)
 	t.Cleanup(func() { resetContext(t) })
+	context.CurrentContext().SetMode(config.ModeAzureVM)
 	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
+	context.CurrentContext().SetRunInContainer(true)
 	agent.Global_Config.Region = "us-west-2"
-	agent.Global_Config.RegionType = config.RegionTypeCredsMap
 
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)
@@ -238,6 +238,7 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.yaml")
 }
 
@@ -245,7 +246,6 @@ func TestDefaultOtelConfigTranslation(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	agent.Global_Config.Region = "us-west-2"
-	agent.Global_Config.RegionType = config.RegionTypeCredsMap
 
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)
