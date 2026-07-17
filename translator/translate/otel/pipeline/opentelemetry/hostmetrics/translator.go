@@ -4,8 +4,6 @@
 package hostmetrics
 
 import (
-	"fmt"
-
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -19,7 +17,6 @@ import (
 const pipelineNameHostMetrics = "host_metrics"
 
 var hostMetricsKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.HostMetricsKey)
-var otelClusterNameKey = common.ConfigKey(common.OpenTelemetryKey, common.ClusterNameKey)
 
 type hostMetricsTranslator struct{}
 
@@ -60,26 +57,12 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
-	processors := common.NewTranslatorMap[component.Config, component.ID]()
-	processors.Set(transformprocessor.NewTranslatorWithName("host_metrics_scope",
-		transformprocessor.WithErrorMode("ignore"),
-		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-host-metrics")),
-	))
-	// Apply root-level cluster name if set
-	if clusterName, ok := common.GetString(conf, otelClusterNameKey); ok && clusterName != "" {
-		if !common.ClusterNameRegex.MatchString(clusterName) {
-			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
-		}
-		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-			transformprocessor.WithMetricResourceStatements([]string{
-				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
-			}),
-		))
-	}
-
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator(opts...)),
-		Processors: processors,
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator(opts...)),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](transformprocessor.NewTranslatorWithName("host_metrics_scope",
+			transformprocessor.WithErrorMode("ignore"),
+			transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-host-metrics")),
+		)),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -597,6 +596,5 @@ func EscapeDollarDigit(s string) string {
 	return string(out)
 }
 
-// ClusterNameRegex restricts cluster_name to safe characters, preventing
-// OTTL injection and template metacharacter issues.
-var ClusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
+// OtelClusterNameKey is the config key for the root-level cluster name under opentelemetry.
+var OtelClusterNameKey = ConfigKey(OpenTelemetryKey, ClusterNameKey)

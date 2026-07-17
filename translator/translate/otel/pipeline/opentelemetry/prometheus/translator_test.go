@@ -59,19 +59,6 @@ func TestPrometheusTranslator(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		"WithInvalidClusterName": {
-			input: map[string]interface{}{
-				"opentelemetry": map[string]interface{}{
-					"cluster_name": `bad"name`,
-					"collect": map[string]interface{}{
-						"prometheus": map[string]interface{}{
-							"config_path": createTempPromConfig(t),
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
 		"WithMissingConfigFile": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
@@ -124,9 +111,8 @@ func TestPrometheusTranslatorClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 2, got.Processors.Len())
+	assert.Equal(t, 1, got.Processors.Len())
 	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
-	assert.Equal(t, "transform/set_cluster_name", got.Processors.Keys()[1].String())
 }
 
 func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
@@ -290,11 +276,10 @@ func TestPrometheusTranslatorK8sMode(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 2, got.Processors.Len()) // scope + set_cluster_name
+	assert.Equal(t, 1, got.Processors.Len()) // scope only, cluster_name in export pipeline
 	keys := make([]string, 0, got.Processors.Len())
 	for _, k := range got.Processors.Keys() {
 		keys = append(keys, k.String())
 	}
 	assert.Contains(t, keys, "transform/prometheus_scope")
-	assert.Contains(t, keys, "transform/set_cluster_name")
 }

@@ -25,7 +25,6 @@ const (
 
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
 var configPathKey = common.ConfigKey(prometheusKey, "config_path")
-var otelClusterNameKey = common.ConfigKey(common.OpenTelemetryKey, common.ClusterNameKey)
 
 type translator struct{}
 
@@ -52,18 +51,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-prometheus")),
 	))
-	// Apply root-level cluster name if set (opentelemetry::cluster_name)
-	if clusterName, ok := common.GetString(conf, otelClusterNameKey); ok && clusterName != "" {
-		if !common.ClusterNameRegex.MatchString(clusterName) {
-			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
-		}
-		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-			transformprocessor.WithMetricResourceStatements([]string{
-				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
-			}),
-		))
-	}
-
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](receiver),
 		Processors: processors,

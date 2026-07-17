@@ -63,6 +63,15 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
 	}
+	// Apply root-level cluster name if set
+	if clusterName, ok := common.GetString(conf, common.OtelClusterNameKey); ok && clusterName != "" {
+		stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			transformprocessor.WithMetricResourceStatements([]string{stmt}),
+			transformprocessor.WithLogResourceStatements([]string{stmt}),
+			transformprocessor.WithTraceResourceStatements([]string{stmt}),
+		))
+	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
 

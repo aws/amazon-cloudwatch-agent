@@ -74,15 +74,10 @@ func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, 
 	return t.cfg, nil
 }
 
-var otelClusterNameKey = common.ConfigKey(common.OpenTelemetryKey, common.ClusterNameKey)
-
 func getClusterName(conf *confmap.Conf) (string, error) {
-	name, _ := common.GetString(conf, otelClusterNameKey)
+	name, _ := common.GetString(conf, common.OtelClusterNameKey)
 	if name == "" {
 		return "", fmt.Errorf("cluster_name is required for container_insights: set opentelemetry::cluster_name in config")
-	}
-	if !common.ClusterNameRegex.MatchString(name) {
-		return "", fmt.Errorf("cluster_name contains invalid characters: %q (must match %s)", name, common.ClusterNameRegex.String())
 	}
 	return name, nil
 }

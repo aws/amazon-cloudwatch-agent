@@ -1807,8 +1807,9 @@
       "type": "object",
       "properties": {
         "cluster_name": {
-          "description": "The name of the EKS cluster. Applied to all components under opentelemetry.",
-          "type": "string"
+          "description": "The name of the K8s cluster. Applied to all telemetry collected under opentelemetry.",
+          "type": "string",
+          "pattern": "^[0-9A-Za-z][A-Za-z0-9\\-_]*$"
         },
         "collect": {
           "type": "object",

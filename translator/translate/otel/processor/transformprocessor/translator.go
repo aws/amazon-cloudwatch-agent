@@ -66,6 +66,13 @@ func WithMetricResourceStatements(statements []string) Option {
 	}
 }
 
+// WithTraceResourceStatements sets OTTL statements to execute in the "resource" context for traces.
+func WithTraceResourceStatements(statements []string) Option {
+	return func(t *translator) {
+		t.traceStatements = statements
+	}
+}
+
 // WithErrorMode sets the error mode for dynamic statements. Defaults to "propagate".
 func WithErrorMode(mode string) Option {
 	return func(t *translator) {
@@ -107,6 +114,7 @@ type translator struct {
 	logStatements         []string
 	logContextStatements  []string
 	metricStatements      []string
+	traceStatements       []string
 	scopeStatements       []string
 	logScopeStatements    []string
 	metricScopeStatements []string
@@ -131,6 +139,7 @@ func (t *translator) hasDynamicStatements() bool {
 	return len(t.logStatements) > 0 ||
 		len(t.logContextStatements) > 0 ||
 		len(t.metricStatements) > 0 ||
+		len(t.traceStatements) > 0 ||
 		len(t.scopeStatements) > 0 ||
 		len(t.logScopeStatements) > 0 ||
 		len(t.metricScopeStatements) > 0
@@ -152,6 +161,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 		if len(t.logStatements) > 0 {
 			cfgMap["log_statements"] = []any{buildResourceStatements(t.logStatements, errorMode)}
+		}
+		if len(t.traceStatements) > 0 {
+			cfgMap["trace_statements"] = []any{buildResourceStatements(t.traceStatements, errorMode)}
 		}
 		if len(t.scopeStatements) > 0 {
 			scopeBlock := buildScopeStatements(t.scopeStatements, errorMode)
