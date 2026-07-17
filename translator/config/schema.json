@@ -1812,7 +1812,7 @@
         },
         "resource_attributes": {
           "type": "object",
-          "description": "Additional resource attributes to add to every metric, log, and trace exported by the opentelemetry section. Applied via a resource processor at the front of each export pipeline.",
+          "description": "Additional resource attributes to add to every metric, log, and trace exported by the opentelemetry section. Applied via a resource processor at the front of each export pipeline. Attributes are added before resource detection, so for keys the agent auto-detects (e.g. cloud.region, host.id, cloud.provider) the detected value takes precedence over the configured one; use this for attributes the agent does not detect. Keys managed internally for log routing (aws.log.group.name, aws.log.stream.name, aws.log.source) are reserved and rejected.",
           "maxProperties": 30,
           "additionalProperties": {
             "type": "string",

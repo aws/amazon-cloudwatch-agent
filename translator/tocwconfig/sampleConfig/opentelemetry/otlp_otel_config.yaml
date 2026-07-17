@@ -176,6 +176,22 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
+    resource/opentelemetry:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: deployment.environment
+              pattern: ""
+              value: prod
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: team
+              pattern: ""
+              value: cloudwatch
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -582,6 +598,7 @@ service:
             exporters:
                 - otlphttp/logs
             processors:
+                - resource/opentelemetry
                 - resourcedetection/opentelemetry
                 - transform/identity
                 - transform/logs_routing
@@ -603,6 +620,7 @@ service:
             exporters:
                 - otlphttp/metrics
             processors:
+                - resource/opentelemetry
                 - resourcedetection/opentelemetry
                 - transform/identity
                 - batch/opentelemetry_metrics
@@ -620,6 +638,7 @@ service:
             exporters:
                 - otlphttp/traces
             processors:
+                - resource/opentelemetry
                 - resourcedetection/opentelemetry
                 - transform/identity
                 - batch/opentelemetry_traces
