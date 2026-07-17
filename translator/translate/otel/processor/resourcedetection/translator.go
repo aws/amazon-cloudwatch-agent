@@ -22,8 +22,11 @@ import (
 //go:embed configs/config.yaml
 var appSignalsDefaultResourceDetectionConfig string
 
-//go:embed configs/ecs_config.yaml
+//go:embed configs/appsignals_ecs_config.yaml
 var appSignalsECSResourceDetectionConfig string
+
+//go:embed configs/ecs_config.yaml
+var ecsResourceDetectionConfig string
 
 //go:embed configs/azure_config.yaml
 var azureVMResourceDetectionConfig string
@@ -93,6 +96,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	switch mode {
 	case config.ModeECS:
+		if t.name == common.OpenTelemetryKey {
+			return common.GetYamlFileToYamlConfig(cfg, ecsResourceDetectionConfig)
+		}
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsECSResourceDetectionConfig)
 	case config.ModeAKS:
 		return common.GetYamlFileToYamlConfig(cfg, aksResourceDetectionConfig)
@@ -101,5 +107,4 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}
-
 }

@@ -8,7 +8,7 @@ ecs:
     aws.ecs.launchtype:
       enabled: true
     aws.ecs.task.arn:
-      enabled: true
+      enabled: false
     aws.ecs.task.family:
       enabled: false
     aws.ecs.task.id:

@@ -14,8 +14,10 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 //go:embed transform_jmx_config.yaml
@@ -30,8 +32,14 @@ var transformEfaConfig string
 //go:embed transform_dbi_fix_start_time.yaml
 var transformDbiFixStartTimeConfig string
 
-//go:embed transform_identity_host.yaml
-var transformIdentityHostConfig string
+//go:embed transform_identity_ec2.yaml
+var transformIdentityEC2Config string
+
+//go:embed transform_identity_azure_vm.yaml
+var transformIdentityAzureVMConfig string
+
+//go:embed transform_identity_ecs.yaml
+var transformIdentityECSConfig string
 
 //go:embed transform_identity_k8s.yaml
 var transformIdentityK8sConfig string
@@ -183,7 +191,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if context.CurrentContext().KubernetesMode() != "" {
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityK8sConfig)
 		}
-		return common.GetYamlFileToYamlConfig(cfg, transformIdentityHostConfig)
+		if ecsutil.GetECSUtilSingleton().IsECS() {
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityECSConfig)
+		}
+		switch context.CurrentContext().Mode() {
+		case config.ModeAzureVM:
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityAzureVMConfig)
+		default:
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityEC2Config)
+		}
 	}
 	if t.name == common.LogsRouting {
 		if context.CurrentContext().KubernetesMode() != "" {
