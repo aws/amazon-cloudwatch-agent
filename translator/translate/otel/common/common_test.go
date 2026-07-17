@@ -445,3 +445,10 @@ func TestEscapeDollarDigit(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeName(t *testing.T) {
+	assert.Equal(t, "_var_log_app_log", SanitizeName("/var/log/app.log"))
+	assert.Equal(t, "_var_log___log", SanitizeName("/var/log/*.log"))
+	assert.Equal(t, "application", SanitizeName("Application"))
+	assert.Equal(t, "my-channel", SanitizeName("My-Channel"))
+}

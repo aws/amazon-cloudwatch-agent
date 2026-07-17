@@ -87,6 +87,13 @@ func WithLogScopeStatements(statements []string) Option {
 	}
 }
 
+// WithLogContextStatements sets OTTL statements to execute in the "log" context for logs.
+func WithLogContextStatements(statements []string) Option {
+	return func(t *translator) {
+		t.logContextStatements = statements
+	}
+}
+
 // WithMetricScopeStatements sets OTTL statements to execute in the "scope" context for metrics only.
 func WithMetricScopeStatements(statements []string) Option {
 	return func(t *translator) {
@@ -98,6 +105,7 @@ type translator struct {
 	name                  string
 	factory               processor.Factory
 	logStatements         []string
+	logContextStatements  []string
 	metricStatements      []string
 	scopeStatements       []string
 	logScopeStatements    []string
@@ -121,6 +129,7 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) hasDynamicStatements() bool {
 	return len(t.logStatements) > 0 ||
+		len(t.logContextStatements) > 0 ||
 		len(t.metricStatements) > 0 ||
 		len(t.scopeStatements) > 0 ||
 		len(t.logScopeStatements) > 0 ||
@@ -155,6 +164,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 		if len(t.logScopeStatements) > 0 {
 			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildScopeStatements(t.logScopeStatements, errorMode))
+		}
+		if len(t.logContextStatements) > 0 {
+			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildLogStatements(t.logContextStatements, errorMode))
 		}
 		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("failed to configure transform processor: %w", err)
@@ -209,6 +221,18 @@ func buildResourceStatements(statements []string, errorMode string) map[string]a
 	}
 	return map[string]any{
 		"context":    "resource",
+		"error_mode": errorMode,
+		"statements": stmts,
+	}
+}
+
+func buildLogStatements(statements []string, errorMode string) map[string]any {
+	stmts := make([]any, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	return map[string]any{
+		"context":    "log",
 		"error_mode": errorMode,
 		"statements": stmts,
 	}

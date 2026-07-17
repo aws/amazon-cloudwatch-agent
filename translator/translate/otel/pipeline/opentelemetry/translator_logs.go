@@ -45,6 +45,7 @@ var otelLogsKeys = []string{
 	common.OtelCollectLogsConfigKey,
 	common.DatabaseInsightsConfigKey,
 	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+	common.FilesConfigKey,
 }
 
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {

@@ -137,6 +137,7 @@ const (
 )
 
 const WindowsEventsKey = "windows_events"
+const FilesKey = "files"
 
 // DBI (Database Insights) constants
 const (
@@ -164,6 +165,7 @@ var (
 	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
 	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
+	FilesConfigKey              = ConfigKey(OpenTelemetryKey, CollectKey, FilesKey)
 )
 
 const (
@@ -539,6 +541,17 @@ func ValidateAnySet(conf *confmap.Conf, id ID, keys []string) error {
 
 func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
 	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
+}
+
+// SanitizeName converts a string to a safe component name by lowercasing and
+// replacing any character that isn't a-z, 0-9, or '-' with '_'.
+func SanitizeName(input string) string {
+	return strings.Map(func(r rune) rune {
+		if 'a' <= r && r <= 'z' || '0' <= r && r <= '9' || r == '-' {
+			return r
+		}
+		return '_'
+	}, strings.ToLower(input))
 }
 
 func GetClusterName(conf *confmap.Conf) string {

@@ -1,28 +1,5 @@
 connectors:
     forward/opentelemetry: {}
-    spanmetrics/opentelemetry:
-        aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
-        dimensions:
-            - name: http.response.status_code
-            - name: http.request.method
-            - name: http.route
-            - name: http.status_code
-            - name: http.method
-            - name: rpc.grpc.status_code
-            - name: rpc.response.status_code
-            - name: error.type
-        dimensions_cache_size: 1000
-        events:
-            enabled: false
-        exemplars:
-            enabled: false
-        histogram:
-            disable: false
-            unit: ms
-        metrics_expiration: 0s
-        metrics_flush_interval: 30s
-        namespace: traces.span.metrics
-        resource_metrics_cache_size: 1000
 exporters:
     otlphttp/logs:
         auth:
@@ -30,7 +7,7 @@ exporters:
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
-        logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
+        logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
         max_idle_conns: 100
         metrics_endpoint: ""
         retry_on_failure:
@@ -50,82 +27,10 @@ exporters:
             wait_for_result: false
         timeout: 30s
         traces_endpoint: ""
-        write_buffer_size: 524288
-    otlphttp/metrics:
-        auth:
-            authenticator: agenthealth/opentelemetry_metrics
-        compression: gzip
-        encoding: proto
-        idle_conn_timeout: 1m30s
-        logs_endpoint: ""
-        max_idle_conns: 100
-        metrics_endpoint: https://monitoring.us-west-2.amazonaws.com/v1/metrics
-        retry_on_failure:
-            enabled: true
-            initial_interval: 5s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 10
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
-        timeout: 30s
-        traces_endpoint: ""
-        write_buffer_size: 524288
-    otlphttp/traces:
-        auth:
-            authenticator: agenthealth/opentelemetry_traces
-        compression: gzip
-        encoding: proto
-        idle_conn_timeout: 1m30s
-        logs_endpoint: ""
-        max_idle_conns: 100
-        metrics_endpoint: ""
-        retry_on_failure:
-            enabled: true
-            initial_interval: 5s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
-            multiplier: 1.5
-            randomization_factor: 0.5
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 10
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
-        timeout: 30s
-        traces_endpoint: https://xray.us-west-2.amazonaws.com/v1/traces
         write_buffer_size: 524288
 extensions:
     agenthealth/opentelemetry_logs:
         additional_auth: headers_setter/logs
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - '*'
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    agenthealth/opentelemetry_metrics:
-        additional_auth: sigv4auth/monitoring
-        is_usage_data_enabled: true
-        stats:
-            operations:
-                - '*'
-            usage_flags:
-                mode: EC2
-                region_type: ACJ
-    agenthealth/opentelemetry_traces:
-        additional_auth: sigv4auth/xray
         is_usage_data_enabled: true
         stats:
             operations:
@@ -139,9 +44,19 @@ extensions:
         logs_provision_failure_backoff: 30s
         max_retries: 2
         num_workers: 8
-        region: us-west-2
+        region: us-east-1
         request_timeout_seconds: 10
-        role_arn: ${CWAGENT_ROLE_ARN}
+    file_storage/opentelemetry:
+        compaction:
+            check_interval: 5s
+            directory: /opt/aws/amazon-cloudwatch-agent/logs/state/otel
+            max_transaction_size: 65536
+            rebound_needed_threshold_mib: 100
+            rebound_trigger_threshold_mib: 10
+        create_directory: true
+        directory: /opt/aws/amazon-cloudwatch-agent/logs/state/otel
+        directory_permissions: "0750"
+        timeout: 1s
     headers_setter/logs:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
@@ -156,28 +71,9 @@ extensions:
         imds_retries: 1
         max_retries: 2
         num_workers: 8
-        region: us-west-2
+        region: us-east-1
         request_timeout_seconds: 30
-        role_arn: ${CWAGENT_ROLE_ARN}
         service: logs
-    sigv4auth/monitoring:
-        assume_role: {}
-        imds_retries: 1
-        max_retries: 2
-        num_workers: 8
-        region: us-west-2
-        request_timeout_seconds: 30
-        role_arn: ${CWAGENT_ROLE_ARN}
-        service: monitoring
-    sigv4auth/xray:
-        assume_role: {}
-        imds_retries: 1
-        max_retries: 2
-        num_workers: 8
-        region: us-west-2
-        request_timeout_seconds: 30
-        role_arn: ${CWAGENT_ROLE_ARN}
-        service: xray
 processors:
     attributestocontext/opentelemetry:
         actions:
@@ -193,16 +89,34 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
-    batch/opentelemetry_metrics:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 1000
-        send_batch_size: 1000
-        timeout: 30s
-    batch/opentelemetry_traces:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 10000
-        send_batch_size: 10000
-        timeout: 30s
+    groupbyattrs/files:
+        keys:
+            - log.file.name
+    resource/files__var_log_app___log_0:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: aws.log.stream.name
+              pattern: ""
+              value: i-0123456789abcdef0
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: aws.log.group.name
+              pattern: ""
+              value: /aws/app/logs
+    resource/files__var_log_syslog_1:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: aws.log.group.name
+              pattern: ""
+              value: /aws/system/syslog
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -248,8 +162,8 @@ processors:
                     enabled: true
             token_file: ""
         detectors:
+            - eks
             - env
-            - ecs
             - ec2
         docker:
             resource_attributes:
@@ -281,6 +195,7 @@ processors:
                 host.type:
                     enabled: true
             tags:
+                - ^kubernetes.io/cluster/.*$
                 - ^aws:autoscaling:groupName
         ecs:
             resource_attributes:
@@ -291,19 +206,19 @@ processors:
                 aws.ecs.task.arn:
                     enabled: true
                 aws.ecs.task.family:
-                    enabled: false
+                    enabled: true
                 aws.ecs.task.id:
-                    enabled: false
+                    enabled: true
                 aws.ecs.task.revision:
-                    enabled: false
+                    enabled: true
                 aws.log.group.arns:
-                    enabled: false
+                    enabled: true
                 aws.log.group.names:
-                    enabled: false
+                    enabled: true
                 aws.log.stream.arns:
-                    enabled: false
+                    enabled: true
                 aws.log.stream.names:
-                    enabled: false
+                    enabled: true
                 cloud.account.id:
                     enabled: true
                 cloud.availability_zone:
@@ -482,6 +397,21 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/files:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-files")
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+        metric_statements: []
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -490,30 +420,24 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
-                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
-                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         metric_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
-                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
-                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         trace_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
-                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
-                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
         error_mode: ignore
@@ -547,69 +471,75 @@ processors:
                 - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
         metric_statements: []
         trace_statements: []
-    transform/otlp_log_source:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: resource
-              error_mode: ignore
-              statements:
-                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
-        metric_statements: []
-        trace_statements: []
-    transform/otlp_scope:
-        error_mode: ignore
-        flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
-        metric_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
-    otlp/grpc_127_0_0_1_4317:
-        protocols:
-            grpc:
-                endpoint: 127.0.0.1:4317
-                keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
-                read_buffer_size: 524288
-                transport: tcp
-    otlp/http_127_0_0_1_4318:
-        protocols:
-            http:
-                cors: {}
-                endpoint: 127.0.0.1:4318
-                idle_timeout: 0s
-                logs_url_path: /v1/logs
-                metrics_url_path: /v1/metrics
-                read_header_timeout: 0s
-                traces_url_path: /v1/traces
-                write_timeout: 0s
+    filelog/_var_log_app___log_3674872097:
+        encoding: utf-8
+        include:
+            - /var/log/app/*.log
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2})
+              timestamp:
+                layout: 2006-1-_2 15:04:05
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+        resource:
+            aws.log.source: files
+        start_at: beginning
+        storage: file_storage/opentelemetry
+    filelog/_var_log_syslog_3269802138:
+        encoding: utf-8
+        exclude_older_than: 0s
+        fingerprint_size: 1000
+        force_flush_period: 500ms
+        id: file_input
+        include:
+            - /var/log/syslog
+        include_file_name: true
+        initial_buffer_size: 16384
+        max_concurrent_files: 1024
+        max_log_size: 1048576
+        operators: []
+        poll_interval: 200ms
+        resource:
+            aws.log.source: files
+        retry_on_failure:
+            enabled: false
+            initial_interval: 1s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+        start_at: beginning
+        storage: file_storage/opentelemetry
+        type: file_input
 service:
     extensions:
-        - sigv4auth/monitoring
-        - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
         - headers_setter/logs
         - agenthealth/opentelemetry_logs
-        - sigv4auth/xray
-        - agenthealth/opentelemetry_traces
+        - file_storage/opentelemetry
     pipelines:
+        logs/files__var_log_app___log_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - resource/files__var_log_app___log_0
+                - groupbyattrs/files
+                - transform/files
+            receivers:
+                - filelog/_var_log_app___log_3674872097
+        logs/files__var_log_syslog_1:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - resource/files__var_log_syslog_1
+                - groupbyattrs/files
+                - transform/files
+            receivers:
+                - filelog/_var_log_syslog_3269802138
         logs/opentelemetry:
             exporters:
                 - otlphttp/logs
@@ -622,55 +552,12 @@ service:
                 - batch/opentelemetry_logs
             receivers:
                 - forward/opentelemetry
-        logs/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-                - transform/otlp_log_source
-            receivers:
-                - otlp/grpc_127_0_0_1_4317
-                - otlp/http_127_0_0_1_4318
-        metrics/opentelemetry:
-            exporters:
-                - otlphttp/metrics
-            processors:
-                - resourcedetection/opentelemetry
-                - transform/identity
-                - batch/opentelemetry_metrics
-            receivers:
-                - forward/opentelemetry
-                - spanmetrics/opentelemetry
-        metrics/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-            receivers:
-                - otlp/grpc_127_0_0_1_4317
-                - otlp/http_127_0_0_1_4318
-        traces/opentelemetry:
-            exporters:
-                - otlphttp/traces
-                - spanmetrics/opentelemetry
-            processors:
-                - resourcedetection/opentelemetry
-                - transform/identity
-                - batch/opentelemetry_traces
-            receivers:
-                - forward/opentelemetry
-        traces/otlp:
-            exporters:
-                - forward/opentelemetry
-            processors:
-                - transform/otlp_scope
-            receivers:
-                - otlp/grpc_127_0_0_1_4317
-                - otlp/http_127_0_0_1_4318
     telemetry:
         logs:
             encoding: console
             level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2

@@ -6,7 +6,6 @@ package windowsevents
 import (
 	"log"
 	"slices"
-	"strings"
 
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
@@ -109,13 +108,4 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		})
 	}
 	return entries
-}
-
-func sanitizeName(channel string) string {
-	return strings.Map(func(r rune) rune {
-		if 'a' <= r && r <= 'z' || '0' <= r && r <= '9' || r == '-' {
-			return r
-		}
-		return '_'
-	}, strings.ToLower(channel))
 }
