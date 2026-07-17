@@ -139,7 +139,10 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 	return &common.ComponentTranslators{
 		Receivers: common.NewTranslatorMap[component.Config, component.ID](
 			filelog.NewTranslator(filelog.WithNamePrefix("postgresql"),
-				filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath)),
+				filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath),
+				filelog.WithMultilinePattern(`^\d{4}-\d{2}-\d{2}`),
+				filelog.WithTimestampFormat("%Y-%m-%d %H:%M:%S.%f %Z", "UTC"),
+				filelog.WithSeverityPattern(`\[\d+\](?P<severity>LOG|ERROR|WARNING|FATAL|PANIC|DEBUG\d?|INFO|NOTICE|STATEMENT):`)),
 		),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.scopeTransform(),

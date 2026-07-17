@@ -217,3 +217,36 @@ func TestRawMapConfig_Marshal(t *testing.T) {
 
 	assert.Equal(t, "end", conf.Get("start_at"))
 }
+
+func TestTranslator_WithTimestampAndSeverity(t *testing.T) {
+	translator := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "UTC"),
+		WithSeverityPattern(`(?P<severity>ERROR|WARNING)`),
+	)
+
+	result, err := translator.Translate(nil)
+	require.NoError(t, err)
+
+	rawCfg, ok := result.(*rawMapConfig)
+	require.True(t, ok)
+
+	operators, ok := rawCfg.data["operators"].([]any)
+	require.True(t, ok)
+	require.Len(t, operators, 2, "expected two operators: timestamp and severity")
+
+	// First operator is timestamp
+	op1, ok := operators[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", op1["type"])
+	_, hasTimestamp := op1["timestamp"]
+	assert.True(t, hasTimestamp)
+
+	// Second operator is severity
+	op2, ok := operators[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", op2["type"])
+	_, hasSeverity := op2["severity"]
+	assert.True(t, hasSeverity)
+}

@@ -32,6 +32,7 @@ type translator struct {
 	multilinePattern string
 	timestampFormat  string
 	timezone         string
+	severity         string
 	resource         map[string]string
 	useStorage       bool
 	startAtBeginning bool
@@ -77,6 +78,10 @@ func WithTimestampFormat(format, timezone string) Option {
 	}
 }
 
+func WithSeverityPattern(pattern string) Option {
+	return func(t *translator) { t.severity = pattern }
+}
+
 func WithResource(resource map[string]string) Option {
 	return func(t *translator) { t.resource = resource }
 }
@@ -106,7 +111,7 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
-	// Timestamp parsing requires a regex_parser operator. operator.Config has no Marshal
+	// Timestamp/severity parsing requires regex_parser operators. operator.Config has no Marshal
 	// method, so confmap serializes it as a raw Go struct (wrapped in "builder:", with
 	// field types like parse_from rendered as {fieldinterface: {keys: []}}) instead of
 	// the string format the receiver expects. Use a raw map to bypass this.
@@ -179,7 +184,16 @@ func (t *translator) translateAsRawMap() (component.Config, error) {
 		cfgMap["resource"] = t.resource
 	}
 
-	cfgMap["operators"] = []any{buildTimestampOperatorMap(t.timestampFormat, t.timezone)}
+	var operators []any
+	if t.timestampFormat != "" {
+		operators = append(operators, buildTimestampOperatorMap(t.timestampFormat, t.timezone))
+	}
+	if t.severity != "" {
+		operators = append(operators, buildSeverityOperatorMap(t.severity))
+	}
+	if len(operators) > 0 {
+		cfgMap["operators"] = operators
+	}
 
 	return &rawMapConfig{data: cfgMap}, nil
 }
@@ -200,6 +214,23 @@ func buildTimestampOperatorMap(format, timezone string) map[string]any {
 			"layout":      timestamp.BuildLayout(format),
 			"layout_type": "gotime",
 			"location":    location,
+		},
+	}
+}
+
+func buildSeverityOperatorMap(severity string) map[string]any {
+	return map[string]any{
+		"type":  "regex_parser",
+		"regex": severity,
+		"severity": map[string]any{
+			"parse_from": "attributes.severity",
+			"mapping": map[string]any{
+				"debug": []string{"DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4", "DEBUG5"},
+				"info":  []string{"LOG", "INFO", "NOTICE", "STATEMENT"},
+				"warn":  "WARNING",
+				"error": "ERROR",
+				"fatal": []string{"FATAL", "PANIC"},
+			},
 		},
 	}
 }

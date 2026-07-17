@@ -103,3 +103,36 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
 }
+
+func TestDbiTranslateServerLogs_FilelogConfig(t *testing.T) {
+	cfg := dbiInstanceConfig{ //nolint:gosec
+		endpoint:     "localhost:5432",
+		username:     "cw_monitor",
+		passfile:     "/etc/.pgpass",
+		instanceName: "my-db",
+		logFilePath:  "/var/log/postgresql/postgresql.log",
+		isLocalhost:  true,
+	}
+	tr := &dbiTranslator{
+		pipelineType:  dbiServerLogs,
+		instanceIndex: 0,
+		cfg:           cfg,
+	}
+	result, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	// Verify the filelog receiver is created
+	var filelogTranslator common.Translator[component.Config, component.ID]
+	result.Receivers.Range(func(c common.Translator[component.Config, component.ID]) {
+		if c.ID().Type().String() == "filelog" {
+			filelogTranslator = c
+		}
+	})
+	require.NotNil(t, filelogTranslator, "expected filelog receiver")
+	assert.Equal(t, "filelog/postgresql_0", filelogTranslator.ID().String())
+
+	// Translate the filelog receiver to verify its config
+	filelogCfg, err := filelogTranslator.Translate(nil)
+	require.NoError(t, err)
+	require.NotNil(t, filelogCfg)
+}
