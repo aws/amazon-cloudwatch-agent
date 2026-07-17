@@ -30,6 +30,11 @@ const betaEksEndpoint = "https://api.beta.us-west-2.wesley.amazonaws.com"
 // were already deleted, instead of skipping it as "age cannot be determined".
 const reapingTagKey = "cleaner:reaping"
 
+// firstSeenTagKey records when the reaper first observed a VPC that has no NAT
+// gateway / endpoint age signal (e.g. a prior partial terraform destroy stripped
+// them). It lets such shells age in and be reaped instead of being stranded.
+const firstSeenTagKey = "cleaner:first-seen"
+
 var (
 	// clustersToClean is the allowlist of EKS cluster name prefixes the cleaner
 	// is permitted to delete.
@@ -53,7 +58,7 @@ var (
 
 	// Poll budgets for resources that delete asynchronously and whose ENIs must
 	// clear before dependents (subnets, security groups, VPC) can be removed.
-	endpointDeleteTimeout = 3 * time.Minute
+	endpointDeleteTimeout = 5 * time.Minute
 	natDeleteTimeout      = 6 * time.Minute
 	pollInterval          = 15 * time.Second
 )
@@ -282,14 +287,29 @@ func cleanOrphanedVpcResources(ctx context.Context) error {
 			}
 		}
 		if !reaping {
-			eligible, err := vpcReapEligibleByAge(ctx, ec2Client, vpcID)
+			eligible, hasSignal, err := vpcReapEligibleByAge(ctx, ec2Client, vpcID)
 			if err != nil {
 				log.Printf("could not determine age for VPC %s: %v", vpcID, err)
 				continue
 			}
 			if !eligible {
-				log.Printf("Ignoring VPC %s (%s): too new or age cannot be determined", vpcID, name)
-				continue
+				if hasSignal {
+					log.Printf("Ignoring VPC %s (%s): too new", vpcID, name)
+					continue
+				}
+				// No NAT/endpoint age signal (e.g. a prior partial terraform
+				// destroy stripped them). Fall back to a first-seen marker so a
+				// genuinely-old shell is not stranded forever: tag on first sight,
+				// reap once the marker is older than the keep-duration.
+				old, ferr := vpcFirstSeenEligible(ctx, ec2Client, vpc)
+				if ferr != nil {
+					log.Printf("could not evaluate first-seen marker for VPC %s: %v", vpcID, ferr)
+					continue
+				}
+				if !old {
+					log.Printf("Ignoring VPC %s (%s): no age signal yet; recorded first-seen marker", vpcID, name)
+					continue
+				}
 			}
 		}
 
@@ -550,29 +570,18 @@ func deleteSecurityGroups(ctx context.Context, ec2Client *ec2.Client, vpcID stri
 	// then delete them. A single pass fails with DependencyViolation when SGs
 	// reference each other — an SG cannot be deleted while another SG's rule
 	// still references it — which would leave the VPC un-reapable.
+	//
+	// Revoke by SecurityGroupRuleId, NOT by the IpPermissions returned from
+	// DescribeSecurityGroups: those carry Description fields (and peer-SG
+	// UserIdGroupPairs) that Revoke* rejects with InvalidRequest, so replaying
+	// them verbatim silently revokes nothing and the mutual references persist.
 	var deletable []ec2types.SecurityGroup
 	for _, sg := range out.SecurityGroups {
 		// The default security group cannot be deleted; it goes with the VPC.
 		if aws.ToString(sg.GroupName) == "default" {
 			continue
 		}
-		id := aws.ToString(sg.GroupId)
-		if len(sg.IpPermissions) > 0 {
-			if _, err := ec2Client.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
-				GroupId:       aws.String(id),
-				IpPermissions: sg.IpPermissions,
-			}); err != nil {
-				log.Printf("could not revoke ingress on security group %s: %v", id, err)
-			}
-		}
-		if len(sg.IpPermissionsEgress) > 0 {
-			if _, err := ec2Client.RevokeSecurityGroupEgress(ctx, &ec2.RevokeSecurityGroupEgressInput{
-				GroupId:       aws.String(id),
-				IpPermissions: sg.IpPermissionsEgress,
-			}); err != nil {
-				log.Printf("could not revoke egress on security group %s: %v", id, err)
-			}
-		}
+		revokeSecurityGroupRules(ctx, ec2Client, aws.ToString(sg.GroupId))
 		deletable = append(deletable, sg)
 	}
 	for _, sg := range deletable {
@@ -580,6 +589,43 @@ func deleteSecurityGroups(ctx context.Context, ec2Client *ec2.Client, vpcID stri
 		log.Printf("Deleting security group %s (%s)", id, aws.ToString(sg.GroupName))
 		if _, err := ec2Client.DeleteSecurityGroup(ctx, &ec2.DeleteSecurityGroupInput{GroupId: aws.String(id)}); err != nil {
 			log.Printf("could not delete security group %s: %v", id, err)
+		}
+	}
+}
+
+// revokeSecurityGroupRules removes every ingress and egress rule from a security
+// group by rule ID. Revoking by ID sidesteps the InvalidRequest that Revoke*
+// returns when handed the Description-bearing IpPermissions from a Describe call.
+func revokeSecurityGroupRules(ctx context.Context, ec2Client *ec2.Client, groupID string) {
+	out, err := ec2Client.DescribeSecurityGroupRules(ctx, &ec2.DescribeSecurityGroupRulesInput{
+		Filters: []ec2types.Filter{{Name: aws.String("group-id"), Values: []string{groupID}}},
+	})
+	if err != nil {
+		log.Printf("could not describe rules for security group %s: %v", groupID, err)
+		return
+	}
+	var ingress, egress []string
+	for _, rule := range out.SecurityGroupRules {
+		if aws.ToBool(rule.IsEgress) {
+			egress = append(egress, aws.ToString(rule.SecurityGroupRuleId))
+		} else {
+			ingress = append(ingress, aws.ToString(rule.SecurityGroupRuleId))
+		}
+	}
+	if len(ingress) > 0 {
+		if _, err := ec2Client.RevokeSecurityGroupIngress(ctx, &ec2.RevokeSecurityGroupIngressInput{
+			GroupId:              aws.String(groupID),
+			SecurityGroupRuleIds: ingress,
+		}); err != nil {
+			log.Printf("could not revoke ingress on security group %s: %v", groupID, err)
+		}
+	}
+	if len(egress) > 0 {
+		if _, err := ec2Client.RevokeSecurityGroupEgress(ctx, &ec2.RevokeSecurityGroupEgressInput{
+			GroupId:              aws.String(groupID),
+			SecurityGroupRuleIds: egress,
+		}); err != nil {
+			log.Printf("could not revoke egress on security group %s: %v", groupID, err)
 		}
 	}
 }
@@ -791,7 +837,7 @@ func vpcHasActiveInstances(ctx context.Context, client *ec2.Client, vpcID string
 // function returns false (fail safe): a VPC we cannot age — e.g. one still
 // mid-`terraform apply` before its NAT gateway/endpoints exist — is never
 // reaped.
-func vpcReapEligibleByAge(ctx context.Context, client *ec2.Client, vpcID string) (bool, error) {
+func vpcReapEligibleByAge(ctx context.Context, client *ec2.Client, vpcID string) (eligible bool, hasSignal bool, err error) {
 	// KeepDurationOneDay is negative, so expiration is "now minus one day".
 	expiration := time.Now().UTC().Add(clean.KeepDurationOneDay)
 	var newest *time.Time
@@ -808,7 +854,7 @@ func vpcReapEligibleByAge(ctx context.Context, client *ec2.Client, vpcID string)
 		Filter: []ec2types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
 	})
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 	for _, gw := range natOut.NatGateways {
 		if gw.State == ec2types.NatGatewayStateDeleted {
@@ -821,7 +867,7 @@ func vpcReapEligibleByAge(ctx context.Context, client *ec2.Client, vpcID string)
 		Filters: []ec2types.Filter{{Name: aws.String("vpc-id"), Values: []string{vpcID}}},
 	})
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 	for _, ep := range epOut.VpcEndpoints {
 		if ep.State == ec2types.StateDeleted {
@@ -831,9 +877,33 @@ func vpcReapEligibleByAge(ctx context.Context, client *ec2.Client, vpcID string)
 	}
 
 	if newest == nil {
-		return false, nil // no age signal — fail safe
+		return false, false, nil // no age signal
 	}
-	return !newest.After(expiration), nil
+	return !newest.After(expiration), true, nil
+}
+
+// vpcFirstSeenEligible handles VPCs with no NAT/endpoint age signal. It reports
+// whether the VPC has carried a first-seen marker longer than the keep-duration.
+// On first sight (or a malformed marker) it records the marker and reports false;
+// in dry-run the write is skipped (logged) and it reports false.
+func vpcFirstSeenEligible(ctx context.Context, ec2Client *ec2.Client, vpc ec2types.Vpc) (bool, error) {
+	vpcID := aws.ToString(vpc.VpcId)
+	// KeepDurationOneDay is negative, so expiration is "now minus one day".
+	expiration := time.Now().UTC().Add(clean.KeepDurationOneDay)
+	if ts := vpcTag(vpc, firstSeenTagKey); ts != "" {
+		if seen, perr := time.Parse(time.RFC3339, ts); perr == nil {
+			return seen.Before(expiration), nil
+		}
+		log.Printf("VPC %s has malformed %s tag %q; re-recording it", vpcID, firstSeenTagKey, ts)
+	}
+	if clean.Skip("tag VPC %s with a %s marker", vpcID, firstSeenTagKey) {
+		return false, nil
+	}
+	_, err := ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{
+		Resources: []string{vpcID},
+		Tags:      []ec2types.Tag{{Key: aws.String(firstSeenTagKey), Value: aws.String(time.Now().UTC().Format(time.RFC3339))}},
+	})
+	return false, err
 }
 
 func vpcTag(vpc ec2types.Vpc, key string) string {
