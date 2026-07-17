@@ -29,6 +29,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 func TestCompleteConfigUnix(t *testing.T) {
@@ -201,6 +202,42 @@ func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 	translator.SetTargetPlatform("linux")
 	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_azurevm.yaml")
+}
+
+func TestDefaultOtelConfigECSTranslation(t *testing.T) {
+	resetContext(t)
+	t.Cleanup(func() { resetContext(t) })
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetRunInContainer(true)
+	ecsutil.GetECSUtilSingleton().Region = "us-west-2"
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.RegionType = config.RegionTypeCredsMap
+
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.yaml")
+}
+
+func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
+	resetContext(t)
+	t.Cleanup(func() { resetContext(t) })
+	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
+	agent.Global_Config.Region = "us-west-2"
+	agent.Global_Config.RegionType = config.RegionTypeCredsMap
+
+	cfg, ok := config.DefaultJSONConfigFor("otel")
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.yaml")
 }
 
 func TestDefaultOtelConfigTranslation(t *testing.T) {
