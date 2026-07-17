@@ -1,5 +1,28 @@
 connectors:
     forward/opentelemetry: {}
+    spanmetrics/opentelemetry:
+        aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
+        dimensions:
+            - name: http.response.status_code
+            - name: http.request.method
+            - name: http.route
+            - name: http.status_code
+            - name: http.method
+            - name: rpc.grpc.status_code
+            - name: rpc.response.status_code
+            - name: error.type
+        dimensions_cache_size: 1000
+        events:
+            enabled: false
+        exemplars:
+            enabled: false
+        histogram:
+            disable: false
+            unit: ms
+        metrics_expiration: 0s
+        metrics_flush_interval: 30s
+        namespace: traces.span.metrics
+        resource_metrics_cache_size: 1000
 exporters:
     otlphttp/logs:
         auth:
@@ -90,8 +113,8 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EKS
-                region_type: ACJ
+                mode: AKS
+                region_type: CM
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
@@ -99,8 +122,8 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EKS
-                region_type: ACJ
+                mode: AKS
+                region_type: CM
     agenthealth/opentelemetry_traces:
         additional_auth: sigv4auth/xray
         is_usage_data_enabled: true
@@ -108,8 +131,8 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EKS
-                region_type: ACJ
+                mode: AKS
+                region_type: CM
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
@@ -118,6 +141,7 @@ extensions:
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 10
+        role_arn: ${CWAGENT_ROLE_ARN}
     headers_setter/logs:
         additional_auth: awscloudwatchlogsprovisioner
         headers:
@@ -139,6 +163,7 @@ extensions:
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 30
+        role_arn: ${CWAGENT_ROLE_ARN}
         service: logs
     sigv4auth/monitoring:
         assume_role: {}
@@ -147,6 +172,7 @@ extensions:
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 30
+        role_arn: ${CWAGENT_ROLE_ARN}
         service: monitoring
     sigv4auth/xray:
         assume_role: {}
@@ -155,6 +181,7 @@ extensions:
         num_workers: 8
         region: us-west-2
         request_timeout_seconds: 30
+        role_arn: ${CWAGENT_ROLE_ARN}
         service: xray
 processors:
     attributestocontext/opentelemetry:
@@ -284,9 +311,9 @@ processors:
                     enabled: true
             token_file: ""
         detectors:
-            - eks
             - env
-            - ec2
+            - aks
+            - azure
         docker:
             resource_attributes:
                 host.name:
@@ -316,9 +343,7 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-            tags:
-                - ^kubernetes.io/cluster/.*$
-                - ^aws:autoscaling:groupName
+            tags: []
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
@@ -772,6 +797,7 @@ service:
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
+                - spanmetrics/opentelemetry
         metrics/otlp:
             exporters:
                 - forward/opentelemetry
@@ -783,6 +809,7 @@ service:
         traces/opentelemetry:
             exporters:
                 - otlphttp/traces
+                - spanmetrics/opentelemetry
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
@@ -802,8 +829,6 @@ service:
         logs:
             encoding: console
             level: info
-            output_paths:
-                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2
