@@ -29,6 +29,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/cpu"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
+	_ "github.com/influxdata/telegraf/plugins/inputs/dpdk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ethtool"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"

@@ -510,6 +510,14 @@ func TestCollectDAppendDimensionsConfig(t *testing.T) {
 	checkTranslation(t, "collectd_append_dimensions_linux", "darwin", nil, "")
 }
 
+// dpdk (ENA network performance metrics for DPDK-bound interfaces)
+func TestDpdkConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "dpdk_config_linux", "linux", expectedEnvVars, "")
+}
+
 // diskio
 func TestDiskIOTelegrafConfig(t *testing.T) {
 	resetContext(t)
