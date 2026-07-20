@@ -828,15 +828,15 @@ EOF
           print_windows_install
           echo ""
           echo "  # Configure credentials and region, then start with the default OpenTelemetry config:"
-          echo "  & \"\$Env:ProgramFiles\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.exe\" -setenv CWAGENT_ROLE_ARN=${ROLE_ARN} -envconfig \"\$Env:ProgramData\\Amazon\\AmazonCloudWatchAgent\\env-config.json\""
-          echo "  & \"\$Env:ProgramFiles\\Amazon\\AmazonCloudWatchAgent\\amazon-cloudwatch-agent.exe\" -setenv AWS_REGION=${REGION} -envconfig \"\$Env:ProgramData\\Amazon\\AmazonCloudWatchAgent\\env-config.json\""
+          echo "  ${CTL_PS1} -Action set-env -EnvVar CWAGENT_ROLE_ARN=${ROLE_ARN}"
+          echo "  ${CTL_PS1} -Action set-env -EnvVar AWS_REGION=${REGION}"
           echo "  ${CTL_PS1} -Action fetch-config -Mode onPremise -ConfigLocation default:otel -Start"
      else
           print_linux_install
           echo ""
           echo "  # Configure credentials and region, then start with the default OpenTelemetry config:"
-          echo "  sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv CWAGENT_ROLE_ARN=${ROLE_ARN} -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json"
-          echo "  sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent -setenv AWS_REGION=${REGION} -envconfig /opt/aws/amazon-cloudwatch-agent/etc/env-config.json"
+          echo "  sudo ${CTL} -a set-env -e CWAGENT_ROLE_ARN=${ROLE_ARN}"
+          echo "  sudo ${CTL} -a set-env -e AWS_REGION=${REGION}"
           echo "  sudo ${CTL} -a fetch-config -m onPremise -c default:otel -s"
      fi
 }
