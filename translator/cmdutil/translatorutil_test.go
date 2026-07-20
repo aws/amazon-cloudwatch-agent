@@ -451,12 +451,6 @@ func TestOpenTelemetryWindowsEventsInvalidSchemaValidation(t *testing.T) {
 	})
 }
 
-func TestOpenTelemetryInvalidClusterNameSchemaValidation(t *testing.T) {
-	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidClusterName.json", false, map[string]int{
-		"pattern": 1,
-	})
-}
-
 func TestCombinedV1V2SchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validCombinedV1V2Config.json", true, map[string]int{})
 }

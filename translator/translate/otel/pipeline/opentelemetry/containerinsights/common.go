@@ -75,9 +75,12 @@ func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, 
 }
 
 func getClusterName(conf *confmap.Conf) (string, error) {
-	name, _ := common.GetString(conf, common.OtelClusterNameKey)
+	name := common.GetClusterName(conf, common.OtelClusterNameKey)
 	if name == "" {
-		return "", fmt.Errorf("cluster_name is required for container_insights: set opentelemetry::cluster_name in config")
+		return "", fmt.Errorf("cluster_name is required for container_insights: set opentelemetry::cluster_name in config or K8S_CLUSTER_NAME environment variable")
+	}
+	if err := common.ValidateClusterName(name); err != nil {
+		return "", err
 	}
 	return name, nil
 }

@@ -137,7 +137,7 @@ func (t *translator) getJMXAttributes(conf *confmap.Conf) []any {
 }
 
 func (t *translator) getContainerInsightsJMXAttributes(conf *confmap.Conf) []any {
-	clusterName := common.GetClusterName(conf)
+	clusterName := common.GetClusterName(conf, common.LegacyClusterNameKey)
 	nodeName := os.Getenv(config.HOST_NAME)
 	return []any{
 		map[string]any{

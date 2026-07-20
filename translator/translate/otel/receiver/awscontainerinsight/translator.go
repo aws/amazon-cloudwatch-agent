@@ -130,7 +130,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) setClusterName(conf *confmap.Conf, cfg *awscontainerinsightreceiver.Config) error {
-	cfg.ClusterName = common.GetClusterName(conf)
+	cfg.ClusterName = common.GetClusterName(conf, common.LegacyClusterNameKey)
 
 	if cfg.ClusterName == "" {
 		return errors.New("cluster name is not provided and was not auto-detected from EC2 tags")
