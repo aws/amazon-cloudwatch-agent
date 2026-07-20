@@ -15,6 +15,8 @@ Param (
     [Parameter(Mandatory = $false)]
     [string]$LogLevel = '',
     [Parameter(Mandatory = $false)]
+    [string]$EnvVar = '',
+    [Parameter(Mandatory = $false)]
     [switch]$d = $false,
     [parameter(ValueFromRemainingArguments=$true)]
     $unsupportedVars
@@ -27,12 +29,13 @@ $UsageString = @"
 
 
         usage:  amazon-cloudwatch-agent-ctl.ps1 -a
-                stop|start|status|status-with-workloads|fetch-config|append-config|remove-config|set-log-level
+                stop|start|status|status-with-workloads|fetch-config|append-config|remove-config|set-log-level|set-env
                 [-m ec2|onPremise|onPrem|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
                 [-d]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
+                [-e KEY=VALUE]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -53,6 +56,7 @@ $UsageString = @"
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
             remove-config:                          remove config for agent, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
             set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
+            set-env:                                sets an environment variable for the agent process, followed by -e to provide KEY=VALUE.
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
@@ -73,6 +77,9 @@ $UsageString = @"
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
+
+        -e: environment variable to set for the agent process, in KEY=VALUE format
+            this parameter is used for 'set-env' only.
 
 "@
 
@@ -442,6 +449,16 @@ Function SetLogLevelAll() {
     CheckCMDResult "" "Set CWAGENT_LOG_LEVEL to ${LogLevel}"
 }
 
+Function SetEnv() {
+    if ($EnvVar -notmatch '^[^=]+=') {
+        Write-Output "Invalid environment variable: '${EnvVar}' (expected KEY=VALUE)`n${UsageString}"
+        Exit 1
+    }
+
+    & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --setenv ${EnvVar} --envconfig ${ENV_CONFIG} 2>&1"
+    CheckCMDResult "" "Set $(${EnvVar}.Split('=')[0])"
+}
+
 Function main() {
     if (Get-Command 'Get-CimInstance' -CommandType Cmdlet -ErrorAction SilentlyContinue) {
         $CIM = $true
@@ -479,6 +496,7 @@ Function main() {
         cond-restart { CondRestartAll }
         preun { PreunAll }
         set-log-level { SetLogLevelAll }
+        set-env { SetEnv }
         default {
            Write-Output "Invalid action: ${Action}`n${UsageString}"
            Exit 1
