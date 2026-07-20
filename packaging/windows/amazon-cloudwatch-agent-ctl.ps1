@@ -80,6 +80,9 @@ $UsageString = @"
 
         -e: environment variable to set for the agent process, in KEY=VALUE format
             this parameter is used for 'set-env' only.
+            note: values that are also produced by agent config translation (such as
+            proxy, CA bundle, and log level settings) are overwritten from the agent
+            configuration on each fetch-config/append-config or agent restart.
 
 "@
 
@@ -455,7 +458,9 @@ Function SetEnv() {
         Exit 1
     }
 
-    & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --setenv ${EnvVar} --envconfig ${ENV_CONFIG} 2>&1"
+    # Invoke directly (not via cmd /c) so the value is passed as a single
+    # argument and shell metacharacters or spaces in it are not interpreted.
+    & "${CWAProgramFiles}\amazon-cloudwatch-agent.exe" --setenv $EnvVar --envconfig $ENV_CONFIG
     CheckCMDResult "" "Set $(${EnvVar}.Split('=')[0])"
 }
 

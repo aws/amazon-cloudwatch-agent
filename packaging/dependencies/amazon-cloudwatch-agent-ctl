@@ -82,6 +82,9 @@ UsageString="
 
         -e: environment variable to set for the agent process, in KEY=VALUE format
             this parameter is used for 'set-env' only.
+            note: values that are also produced by agent config translation (such as
+            proxy, CA bundle, and log level settings) are overwritten from the agent
+            configuration on each fetch-config/append-config or agent restart.
 
 "
 
@@ -393,8 +396,12 @@ set_env() {
           ;;
      esac
 
-     runEnvConfigCommand=$("${CMDDIR}/amazon-cloudwatch-agent" -setenv "${env_kv}" -envconfig "${ENV_CONFIG}")
-     echo "${runEnvConfigCommand}" || return
+     if ! runEnvConfigCommand=$("${CMDDIR}/amazon-cloudwatch-agent" -setenv "${env_kv}" -envconfig "${ENV_CONFIG}" 2>&1); then
+          echo "${runEnvConfigCommand}" >&2
+          echo "Failed to set environment variable ${env_kv%%=*}" >&2
+          exit 1
+     fi
+     echo "${runEnvConfigCommand}"
      echo "Set ${env_kv%%=*}"
 }
 
