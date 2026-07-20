@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -24,11 +23,8 @@ const (
 	pipelineName = "otel_prometheus"
 )
 
-var clusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
-
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
 var configPathKey = common.ConfigKey(prometheusKey, "config_path")
-var clusterNameKey = common.ConfigKey(prometheusKey, "cluster_name")
 
 type translator struct{}
 
@@ -55,17 +51,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		transformprocessor.WithErrorMode("ignore"),
 		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-prometheus")),
 	))
-	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {
-		if !clusterNameRegex.MatchString(clusterName) {
-			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
-		}
-		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-			transformprocessor.WithMetricResourceStatements([]string{
-				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
-			}),
-		))
-	}
-
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](receiver),
 		Processors: processors,

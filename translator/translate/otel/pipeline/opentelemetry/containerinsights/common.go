@@ -6,7 +6,6 @@ package containerinsights
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -20,9 +19,8 @@ import (
 const (
 	ciPrefix                  = "cw_k8s_ci_v0"
 	defaultCollectionInterval = 30 * time.Second
-
-	modeNode    = "node"
-	modeCluster = "cluster"
+	roleNode                  = "node"
+	roleCluster               = "cluster"
 )
 
 var ciConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)
@@ -76,28 +74,21 @@ func (t *yamlComponentTranslator) Translate(_ *confmap.Conf) (component.Config, 
 	return t.cfg, nil
 }
 
-// clusterNameRegex restricts cluster_name to safe characters, preventing
-// OTTL injection and template metacharacter issues in YAML templates.
-var clusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
-
 func getClusterName(conf *confmap.Conf) (string, error) {
-	key := common.ConfigKey(ciConfigKey, "cluster_name")
-	name, ok := common.GetString(conf, key)
-	if !ok || name == "" {
-		return "", fmt.Errorf("cluster_name is required for container_insights")
+	name := common.GetClusterName(conf, common.OtelClusterNameKey)
+	if name == "" {
+		return "", fmt.Errorf("cluster_name is required for container_insights: set opentelemetry::cluster_name in config or K8S_CLUSTER_NAME environment variable")
 	}
-	if !clusterNameRegex.MatchString(name) {
-		return "", fmt.Errorf("cluster_name contains invalid characters: %q (must match %s)", name, clusterNameRegex.String())
+	if err := common.ValidateClusterName(name); err != nil {
+		return "", err
 	}
 	return name, nil
 }
 
 func getCollectionInterval(conf *confmap.Conf) time.Duration {
-	key := common.ConfigKey(ciConfigKey, "collection_interval")
-	if v, ok := common.GetNumber(conf, key); ok && v > 0 {
-		return time.Duration(v) * time.Second
-	}
-	return defaultCollectionInterval
+	return common.GetOrDefaultDuration(conf, []string{
+		common.ConfigKey(ciConfigKey, common.CollectionIntervalKey),
+	}, defaultCollectionInterval)
 }
 
 // logsEnabled returns true if container_insights.logs.enabled is set to true.
@@ -109,14 +100,14 @@ func logsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, key, false)
 }
 
-// getMode resolves the container insights pipeline mode using the following
+// getRole resolves the container insights pipeline role using the following
 // priority order:
 //  1. JSON config field
 //  2. Environment variable
 //  3. Default: "node" (DaemonSet)
-func getMode(conf *confmap.Conf) string {
+func getRole(conf *confmap.Conf) string {
 	if conf != nil {
-		key := common.ConfigKey(ciConfigKey, "mode")
+		key := common.ConfigKey(ciConfigKey, "role")
 		if v, ok := common.GetString(conf, key); ok && v != "" {
 			return v
 		}
@@ -124,12 +115,12 @@ func getMode(conf *confmap.Conf) string {
 	if role := strings.ToUpper(os.Getenv(envconfig.CWAGENT_ROLE)); role != "" {
 		switch role {
 		case envconfig.NODE:
-			return modeNode
+			return roleNode
 		case envconfig.LEADER:
-			return modeCluster
+			return roleCluster
 		}
 	}
-	return modeNode
+	return roleNode
 }
 
 type pipelineSpec struct {

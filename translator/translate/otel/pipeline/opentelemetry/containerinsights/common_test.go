@@ -12,20 +12,20 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-func TestGetMode_JSONConfig(t *testing.T) {
+func TestGetRole_JSONConfig(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"mode": "cluster",
+					"role": "cluster",
 				},
 			},
 		},
 	})
-	assert.Equal(t, modeCluster, getMode(cfg))
+	assert.Equal(t, roleCluster, getRole(cfg))
 }
 
-func TestGetMode_EnvVarFallback(t *testing.T) {
+func TestGetRole_EnvVarFallback(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
@@ -35,13 +35,13 @@ func TestGetMode_EnvVarFallback(t *testing.T) {
 	})
 
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.LEADER)
-	assert.Equal(t, modeCluster, getMode(cfg))
+	assert.Equal(t, roleCluster, getRole(cfg))
 
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
-	assert.Equal(t, modeNode, getMode(cfg))
+	assert.Equal(t, roleNode, getRole(cfg))
 }
 
-func TestGetMode_DefaultsToNode(t *testing.T) {
+func TestGetRole_DefaultsToNode(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
@@ -49,10 +49,10 @@ func TestGetMode_DefaultsToNode(t *testing.T) {
 			},
 		},
 	})
-	assert.Equal(t, modeNode, getMode(cfg))
+	assert.Equal(t, roleNode, getRole(cfg))
 }
 
-func TestGetMode_EnvVarCaseInsensitive(t *testing.T) {
+func TestGetRole_EnvVarCaseInsensitive(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
@@ -62,27 +62,27 @@ func TestGetMode_EnvVarCaseInsensitive(t *testing.T) {
 	})
 
 	t.Setenv(envconfig.CWAGENT_ROLE, "leader") // lowercase
-	assert.Equal(t, modeCluster, getMode(cfg))
+	assert.Equal(t, roleCluster, getRole(cfg))
 
 	t.Setenv(envconfig.CWAGENT_ROLE, "node") // lowercase
-	assert.Equal(t, modeNode, getMode(cfg))
+	assert.Equal(t, roleNode, getRole(cfg))
 
 	t.Setenv(envconfig.CWAGENT_ROLE, "Leader") // mixed case
-	assert.Equal(t, modeCluster, getMode(cfg))
+	assert.Equal(t, roleCluster, getRole(cfg))
 }
 
-func TestGetMode_JSONOverridesEnv(t *testing.T) {
+func TestGetRole_JSONOverridesEnv(t *testing.T) {
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"mode": "cluster",
+					"role": "cluster",
 				},
 			},
 		},
 	})
-	assert.Equal(t, modeCluster, getMode(cfg))
+	assert.Equal(t, roleCluster, getRole(cfg))
 }
 
 func TestLogsEnabled(t *testing.T) {

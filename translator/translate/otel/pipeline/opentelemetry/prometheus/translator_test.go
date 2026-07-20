@@ -36,6 +36,7 @@ func TestPrometheusTranslator(t *testing.T) {
 		"WithValidConfig": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
+					"cluster_name": "test-cluster",
 					"collect": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"config_path": createTempPromConfig(t),
@@ -48,32 +49,20 @@ func TestPrometheusTranslator(t *testing.T) {
 		"WithClusterName": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
+					"cluster_name": "my-cluster",
 					"collect": map[string]interface{}{
 						"prometheus": map[string]interface{}{
-							"config_path":  createTempPromConfig(t),
-							"cluster_name": "my-cluster",
+							"config_path": createTempPromConfig(t),
 						},
 					},
 				},
 			},
 			wantErr: false,
 		},
-		"WithInvalidClusterName": {
-			input: map[string]interface{}{
-				"opentelemetry": map[string]interface{}{
-					"collect": map[string]interface{}{
-						"prometheus": map[string]interface{}{
-							"config_path":  createTempPromConfig(t),
-							"cluster_name": `bad"name`,
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
 		"WithMissingConfigFile": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
+					"cluster_name": "test-cluster",
 					"collect": map[string]interface{}{
 						"prometheus": map[string]interface{}{
 							"config_path": "/nonexistent/path.yml",
@@ -110,10 +99,10 @@ func TestPrometheusTranslator(t *testing.T) {
 func TestPrometheusTranslatorClusterNameProcessor(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"prometheus": map[string]interface{}{
-					"config_path":  createTempPromConfig(t),
-					"cluster_name": "test-cluster",
+					"config_path": createTempPromConfig(t),
 				},
 			},
 		},
@@ -122,9 +111,8 @@ func TestPrometheusTranslatorClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 2, got.Processors.Len())
+	assert.Equal(t, 1, got.Processors.Len())
 	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
-	assert.Equal(t, "transform/set_cluster_name", got.Processors.Keys()[1].String())
 }
 
 func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
@@ -276,10 +264,10 @@ func TestPrometheusTranslatorK8sMode(t *testing.T) {
 
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"prometheus": map[string]interface{}{
-					"config_path":  createTempPromConfig(t),
-					"cluster_name": "test-cluster",
+					"config_path": createTempPromConfig(t),
 				},
 			},
 		},
@@ -288,11 +276,10 @@ func TestPrometheusTranslatorK8sMode(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 2, got.Processors.Len()) // scope + set_cluster_name
+	assert.Equal(t, 1, got.Processors.Len()) // scope only, cluster_name in export pipeline
 	keys := make([]string, 0, got.Processors.Len())
 	for _, k := range got.Processors.Keys() {
 		keys = append(keys, k.String())
 	}
 	assert.Contains(t, keys, "transform/prometheus_scope")
-	assert.Contains(t, keys, "transform/set_cluster_name")
 }

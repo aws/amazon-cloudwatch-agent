@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,8 @@ const (
 	RoleARNKey                                     = "role_arn"
 	SigV4Auth                                      = "sigv4auth"
 	MetricsCollectionIntervalKey                   = "metrics_collection_interval"
+	CollectionIntervalKey                          = "collection_interval"
+	ClusterNameKey                                 = "cluster_name"
 	AggregationDimensionsKey                       = "aggregation_dimensions"
 	MeasurementKey                                 = "measurement"
 	DropOriginalMetricsKey                         = "drop_original_metrics"
@@ -554,9 +557,9 @@ func SanitizeName(input string) string {
 	}, strings.ToLower(input))
 }
 
-func GetClusterName(conf *confmap.Conf) string {
-	val, ok := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
-	if ok && val != "" {
+func GetClusterName(conf *confmap.Conf, key string) string {
+	// Check any config keys passed
+	if val, ok := GetString(conf, key); ok && val != "" {
 		return val
 	}
 
@@ -592,4 +595,21 @@ func EscapeDollarDigit(s string) string {
 		out = append(out, s[i])
 	}
 	return string(out)
+}
+
+// OtelClusterNameKey is the config key for the root-level cluster name under opentelemetry.
+var OtelClusterNameKey = ConfigKey(OpenTelemetryKey, ClusterNameKey)
+
+// LegacyClusterNameKey is the config key for the cluster name in the V1 config path.
+var LegacyClusterNameKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, ClusterNameKey)
+
+// ClusterNameRegex validates cluster names.
+var ClusterNameRegex = regexp.MustCompile(`^[0-9A-Za-z][A-Za-z0-9\-_]*$`)
+
+// ValidateClusterName returns an error if the cluster name does not match the expected pattern.
+func ValidateClusterName(name string) error {
+	if !ClusterNameRegex.MatchString(name) {
+		return fmt.Errorf("cluster_name %q is invalid: must match pattern %s", name, ClusterNameRegex.String())
+	}
+	return nil
 }

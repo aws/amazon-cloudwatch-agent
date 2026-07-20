@@ -1806,6 +1806,10 @@
     "opentelemetryDefinition": {
       "type": "object",
       "properties": {
+        "cluster_name": {
+          "description": "The name of the K8s cluster. Applied to all telemetry collected under opentelemetry.",
+          "type": "string"
+        },
         "collect": {
           "type": "object",
           "properties": {
@@ -1840,7 +1844,7 @@
             "host_metrics": {
               "type": "object",
               "properties": {
-                "metrics_collection_interval": {
+                "collection_interval": {
                   "description": "How often the metrics defined will be collected",
                   "$ref": "#/definitions/timeIntervalDefinition"
                 }
@@ -1850,16 +1854,12 @@
             "container_insights": {
               "type": "object",
               "properties": {
-                "cluster_name": {
-                  "description": "The name of the EKS cluster",
-                  "type": "string"
-                },
                 "collection_interval": {
                   "description": "How often metrics are collected",
                   "$ref": "#/definitions/timeIntervalDefinition"
                 },
-                "mode": {
-                  "description": "Pipeline mode: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
+                "role": {
+                  "description": "Pipeline role: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
                   "type": "string",
                   "enum": ["node", "cluster"]
                 },
@@ -1874,7 +1874,6 @@
                   "additionalProperties": false
                 }
               },
-              "required": ["cluster_name"],
               "additionalProperties": false
             },
             "prometheus": {
@@ -1882,10 +1881,6 @@
               "properties": {
                 "config_path": {
                   "description": "Path to the Prometheus scrape configuration file",
-                  "type": "string"
-                },
-                "cluster_name": {
-                  "description": "The name of the EKS cluster",
                   "type": "string"
                 }
               },

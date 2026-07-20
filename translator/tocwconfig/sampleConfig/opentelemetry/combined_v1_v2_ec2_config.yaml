@@ -542,9 +542,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -1027,6 +1027,24 @@ processors:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-prometheus")
         trace_statements: []
+    transform/set_cluster_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
 receivers:
     awsxray:
         endpoint: 0.0.0.0:2000
@@ -1562,6 +1580,7 @@ service:
                 - otlphttp/logs
             processors:
                 - resourcedetection/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - transform/logs_routing
                 - attributestocontext/opentelemetry
@@ -1596,13 +1615,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
-                - telegraf_netstat
-                - telegraf_mem
                 - telegraf_procstat/1917393364
-                - telegraf_swap
-                - telegraf_processes
                 - telegraf_disk
+                - telegraf_processes
+                - telegraf_mem
+                - telegraf_swap
+                - telegraf_netstat
+                - telegraf_cpu
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -1617,8 +1636,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -1627,13 +1646,14 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_diskio
                 - telegraf_net
+                - telegraf_diskio
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
             processors:
                 - resourcedetection/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - batch/opentelemetry_metrics
             receivers:
@@ -1658,6 +1678,7 @@ service:
                 - otlphttp/traces
             processors:
                 - resourcedetection/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - batch/opentelemetry_traces
             receivers:
