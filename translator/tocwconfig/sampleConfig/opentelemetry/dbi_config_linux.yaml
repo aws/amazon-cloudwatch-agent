@@ -302,7 +302,7 @@ extensions:
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         region: us-west-2
@@ -360,6 +360,9 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
+    groupbyattrs/files:
+        keys:
+            - log.file.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -676,6 +679,11 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_0:
@@ -783,25 +791,42 @@ processors:
 receivers:
     filelog/postgresql_0:
         encoding: utf-8
-        exclude_older_than: 0s
-        fingerprint_size: 1000
-        force_flush_period: 500ms
-        id: file_input
         include:
             - /var/lib/pgsql/data/log/postgresql-*.log
-        include_file_name: true
-        initial_buffer_size: 16384
-        max_concurrent_files: 1024
-        max_log_size: 1048576
-        operators: []
-        poll_interval: 200ms
-        retry_on_failure:
-            enabled: false
-            initial_interval: 1s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2}\.(\d{1,9}) \w{3})
+              timestamp:
+                layout: 2006-1-_2 15:04:05.999999999 MST
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+            - on_error: send_quiet
+              regex: '\[\d+\]\s*(?P<severity>LOG|ERROR|WARNING|FATAL|PANIC|DEBUG\d?|INFO|NOTICE|STATEMENT):'
+              severity:
+                mapping:
+                    debug:
+                        - DEBUG
+                        - DEBUG1
+                        - DEBUG2
+                        - DEBUG3
+                        - DEBUG4
+                        - DEBUG5
+                    error: ERROR
+                    fatal:
+                        - FATAL
+                        - PANIC
+                    info:
+                        - LOG
+                        - INFO
+                        - NOTICE
+                        - STATEMENT
+                    warn: WARNING
+                parse_from: attributes.severity
+              type: regex_parser
         start_at: end
-        type: file_input
     hostmetrics/opentelemetry:
         collection_interval: 30s
         initial_delay: 1s
@@ -1108,6 +1133,7 @@ service:
             processors:
                 - transform/dbi_scope
                 - resourcedetection/opentelemetry
+                - groupbyattrs/files
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
             receivers:

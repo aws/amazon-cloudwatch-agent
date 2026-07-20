@@ -6,6 +6,7 @@ package filelog
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -32,6 +33,8 @@ type translator struct {
 	multilinePattern string
 	timestampFormat  string
 	timezone         string
+	severityPattern  string
+	severityMapping  map[string]any
 	resource         map[string]string
 	useStorage       bool
 	startAtBeginning bool
@@ -77,6 +80,21 @@ func WithTimestampFormat(format, timezone string) Option {
 	}
 }
 
+// WithSeverityPattern sets the regex used to extract a log severity. The pattern
+// must contain a named capture group (?P<severity>...); this is validated at
+// translation time.
+func WithSeverityPattern(pattern string) Option {
+	return func(t *translator) { t.severityPattern = pattern }
+}
+
+// WithSeverityMapping sets the severity level mapping applied by the severity
+// regex_parser operator. The mapping is caller-supplied so this generic filelog
+// translator stays agnostic of any particular log source's severity vocabulary
+// (e.g. PostgreSQL's LOG/NOTICE/PANIC levels live with the DBI caller).
+func WithSeverityMapping(mapping map[string]any) Option {
+	return func(t *translator) { t.severityMapping = mapping }
+}
+
 func WithResource(resource map[string]string) Option {
 	return func(t *translator) { t.resource = resource }
 }
@@ -106,11 +124,11 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
-	// Timestamp parsing requires a regex_parser operator. operator.Config has no Marshal
+	// Timestamp/severity parsing requires regex_parser operators. operator.Config has no Marshal
 	// method, so confmap serializes it as a raw Go struct (wrapped in "builder:", with
 	// field types like parse_from rendered as {fieldinterface: {keys: []}}) instead of
 	// the string format the receiver expects. Use a raw map to bypass this.
-	if t.timestampFormat != "" {
+	if t.timestampFormat != "" || t.severityPattern != "" {
 		return t.translateAsRawMap()
 	}
 	return t.translateTyped()
@@ -149,11 +167,6 @@ func (t *translator) translateTyped() (component.Config, error) {
 // translateAsRawMap builds the receiver config as a raw map to work around the
 // operator.Config marshaling bug that breaks confmap round-tripping when operators are present.
 func (t *translator) translateAsRawMap() (component.Config, error) {
-	timestampRegex := timestamp.BuildRegexWithNamedCaptureGroup(t.timestampFormat)
-	if _, err := regexp.Compile(timestampRegex); err != nil {
-		return nil, fmt.Errorf("timestamp_format %q produces invalid regex for %s: %w", t.timestampFormat, t.filePath, err)
-	}
-
 	encoding := t.encoding
 	if encoding == "" {
 		encoding = "utf-8"
@@ -179,7 +192,27 @@ func (t *translator) translateAsRawMap() (component.Config, error) {
 		cfgMap["resource"] = t.resource
 	}
 
-	cfgMap["operators"] = []any{buildTimestampOperatorMap(t.timestampFormat, t.timezone)}
+	var operators []any
+	if t.timestampFormat != "" {
+		timestampRegex := timestamp.BuildRegexWithNamedCaptureGroup(t.timestampFormat)
+		if _, err := regexp.Compile(timestampRegex); err != nil {
+			return nil, fmt.Errorf("timestamp_format %q produces invalid regex for %s: %w", t.timestampFormat, t.filePath, err)
+		}
+		operators = append(operators, buildTimestampOperatorMap(t.timestampFormat, t.timezone))
+	}
+	if t.severityPattern != "" {
+		re, err := regexp.Compile(t.severityPattern)
+		if err != nil {
+			return nil, fmt.Errorf("severity pattern %q produces invalid regex for %s: %w", t.severityPattern, t.filePath, err)
+		}
+		if !slices.Contains(re.SubexpNames(), "severity") {
+			return nil, fmt.Errorf("severity pattern %q for %s must contain a named capture group (?P<severity>...)", t.severityPattern, t.filePath)
+		}
+		operators = append(operators, buildSeverityOperatorMap(t.severityPattern, t.severityMapping))
+	}
+	if len(operators) > 0 {
+		cfgMap["operators"] = operators
+	}
 
 	return &rawMapConfig{data: cfgMap}, nil
 }
@@ -201,6 +234,25 @@ func buildTimestampOperatorMap(format, timezone string) map[string]any {
 			"layout_type": "gotime",
 			"location":    location,
 		},
+	}
+}
+
+// buildSeverityOperatorMap returns a severity regex_parser operator config as a raw map.
+// The severity mapping is caller-supplied to keep this translator source-agnostic.
+// on_error is send_quiet so log lines whose prefix does not match the severity pattern
+// pass through without emitting a per-entry error.
+func buildSeverityOperatorMap(pattern string, mapping map[string]any) map[string]any {
+	severity := map[string]any{
+		"parse_from": "attributes.severity",
+	}
+	if len(mapping) > 0 {
+		severity["mapping"] = mapping
+	}
+	return map[string]any{
+		"type":     "regex_parser",
+		"regex":    pattern,
+		"on_error": "send_quiet",
+		"severity": severity,
 	}
 }
 

@@ -205,6 +205,43 @@ func TestTranslator_WithTimestampFormat_UppercaseUTC(t *testing.T) {
 	assert.Equal(t, "UTC", ts["location"])
 }
 
+func TestTranslator_WithSeverityOnly(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithSeverityPattern(`(?P<severity>ERROR|WARNING)`),
+		WithSeverityMapping(map[string]any{"error": "ERROR", "warn": "WARNING"}),
+	)
+
+	result, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	rawCfg, ok := result.(*rawMapConfig)
+	require.True(t, ok, "expected rawMapConfig when only a severity pattern is set")
+
+	operators, ok := rawCfg.data["operators"].([]any)
+	require.True(t, ok, "severity-only config must still emit operators")
+	require.Len(t, operators, 1)
+
+	op := operators[0].(map[string]any)
+	assert.Equal(t, "regex_parser", op["type"])
+	_, hasSeverity := op["severity"]
+	assert.True(t, hasSeverity)
+}
+
+func TestTranslator_WithInvalidSeverityPattern(t *testing.T) {
+	// Missing the required (?P<severity>...) named capture group.
+	tr := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithSeverityPattern(`ERROR|WARNING`),
+	)
+
+	_, err := tr.Translate(nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "named capture group")
+}
+
 func TestRawMapConfig_Marshal(t *testing.T) {
 	raw := &rawMapConfig{data: map[string]any{
 		"include":  []string{"/var/log/test.log"},
@@ -216,4 +253,37 @@ func TestRawMapConfig_Marshal(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "end", conf.Get("start_at"))
+}
+
+func TestTranslator_WithTimestampAndSeverity(t *testing.T) {
+	translator := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "UTC"),
+		WithSeverityPattern(`(?P<severity>ERROR|WARNING)`),
+	)
+
+	result, err := translator.Translate(nil)
+	require.NoError(t, err)
+
+	rawCfg, ok := result.(*rawMapConfig)
+	require.True(t, ok)
+
+	operators, ok := rawCfg.data["operators"].([]any)
+	require.True(t, ok)
+	require.Len(t, operators, 2, "expected two operators: timestamp and severity")
+
+	// First operator is timestamp
+	op1, ok := operators[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", op1["type"])
+	_, hasTimestamp := op1["timestamp"]
+	assert.True(t, hasTimestamp)
+
+	// Second operator is severity
+	op2, ok := operators[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", op2["type"])
+	_, hasSeverity := op2["severity"]
+	assert.True(t, hasSeverity)
 }
