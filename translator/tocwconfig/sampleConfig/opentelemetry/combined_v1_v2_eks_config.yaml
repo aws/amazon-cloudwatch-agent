@@ -443,7 +443,7 @@ extensions:
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         region: us-west-2
@@ -1306,6 +1306,11 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_0:
@@ -1593,7 +1598,8 @@ receivers:
                 location: UTC
                 parse_from: attributes.timestamp
               type: regex_parser
-            - regex: '\[\d+\](?P<severity>LOG|ERROR|WARNING|FATAL|PANIC|DEBUG\d?|INFO|NOTICE|STATEMENT):'
+            - on_error: send_quiet
+              regex: '\[\d+\]\s*(?P<severity>LOG|ERROR|WARNING|FATAL|PANIC|DEBUG\d?|INFO|NOTICE|STATEMENT):'
               severity:
                 mapping:
                     debug:

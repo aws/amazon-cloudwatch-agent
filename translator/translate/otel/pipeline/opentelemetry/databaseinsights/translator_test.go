@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -131,8 +132,46 @@ func TestDbiTranslateServerLogs_FilelogConfig(t *testing.T) {
 	require.NotNil(t, filelogTranslator, "expected filelog receiver")
 	assert.Equal(t, "filelog/postgresql_0", filelogTranslator.ID().String())
 
-	// Translate the filelog receiver to verify its config
+	// Translate the filelog receiver and inspect its raw config. The concrete type is
+	// unexported by the filelog package, but it implements confmap.Marshaler, so marshal
+	// it into a conf and assert on the resulting map.
 	filelogCfg, err := filelogTranslator.Translate(nil)
 	require.NoError(t, err)
 	require.NotNil(t, filelogCfg)
+
+	marshaler, ok := filelogCfg.(confmap.Marshaler)
+	require.True(t, ok, "expected filelog config to implement confmap.Marshaler")
+	conf := confmap.New()
+	require.NoError(t, marshaler.Marshal(conf))
+	raw := conf.ToStringMap()
+
+	// Multiline grouping is configured.
+	multiline, ok := raw["multiline"].(map[string]any)
+	require.True(t, ok, "expected multiline config")
+	assert.Equal(t, `^\d{4}-\d{2}-\d{2}`, multiline["line_start_pattern"])
+
+	// Two operators: timestamp then severity (order matters for stanza semantics).
+	operators, ok := raw["operators"].([]any)
+	require.True(t, ok, "expected operators")
+	require.Len(t, operators, 2)
+
+	tsOp, ok := operators[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", tsOp["type"])
+	tsBlock, ok := tsOp["timestamp"].(map[string]any)
+	require.True(t, ok, "first operator must parse a timestamp")
+	assert.Equal(t, "attributes.timestamp", tsBlock["parse_from"])
+
+	sevOp, ok := operators[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", sevOp["type"])
+	assert.Contains(t, sevOp["regex"], "(?P<severity>")
+	sevBlock, ok := sevOp["severity"].(map[string]any)
+	require.True(t, ok, "second operator must parse severity")
+	assert.Equal(t, "attributes.severity", sevBlock["parse_from"])
+	mapping, ok := sevBlock["mapping"].(map[string]any)
+	require.True(t, ok, "severity mapping must be present")
+	assert.Contains(t, mapping, "error")
+	assert.Contains(t, mapping, "fatal")
+	assert.Contains(t, mapping, "warn")
 }
