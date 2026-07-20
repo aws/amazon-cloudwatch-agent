@@ -37,8 +37,6 @@ if ($Env:ProgramData) {
     $CWAProgramData = "${Env:ALLUSERSPROFILE}\Application Data\${CWADirectory}"
 }
 $Ctl = "${CWAProgramFiles}\amazon-cloudwatch-agent-ctl.ps1"
-$AgentExe = "${CWAProgramFiles}\amazon-cloudwatch-agent.exe"
-$EnvConfig = "${CWAProgramData}\env-config.json"
 
 # --- validate ---
 if ($Cloud -notin @('aws', 'azure')) {
@@ -78,8 +76,8 @@ Remove-Item $MsiPath -Force -ErrorAction SilentlyContinue
 
 # --- configure + start ---
 if ($Cloud -eq 'azure') {
-    & $AgentExe -setenv "CWAGENT_ROLE_ARN=${RoleArn}" -envconfig $EnvConfig
-    & $AgentExe -setenv "AWS_REGION=${Region}" -envconfig $EnvConfig
+    & $Ctl -Action set-env -EnvVar "CWAGENT_ROLE_ARN=${RoleArn}"
+    & $Ctl -Action set-env -EnvVar "AWS_REGION=${Region}"
     & $Ctl -Action fetch-config -Mode onPremise -ConfigLocation default:otel -Start
 } else {
     & $Ctl -Action fetch-config -Mode ec2 -ConfigLocation default:otel -Start

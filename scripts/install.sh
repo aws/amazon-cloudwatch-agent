@@ -31,7 +31,6 @@ main() {
      REGION="${CWAGENT_AWS_REGION:-}"
      INSTALL_ROOT="/opt/aws/amazon-cloudwatch-agent"
      CTL="${INSTALL_ROOT}/bin/amazon-cloudwatch-agent-ctl"
-     ENV_CONFIG="${INSTALL_ROOT}/etc/env-config.json"
 
      # --- validate ---
      case "${CLOUD}" in
@@ -61,8 +60,8 @@ main() {
 
      # --- configure + start ---
      if [ "${CLOUD}" = "azure" ]; then
-          "${INSTALL_ROOT}/bin/amazon-cloudwatch-agent" -setenv "CWAGENT_ROLE_ARN=${ROLE_ARN}" -envconfig "${ENV_CONFIG}"
-          "${INSTALL_ROOT}/bin/amazon-cloudwatch-agent" -setenv "AWS_REGION=${REGION}" -envconfig "${ENV_CONFIG}"
+          "${CTL}" -a set-env -e "CWAGENT_ROLE_ARN=${ROLE_ARN}"
+          "${CTL}" -a set-env -e "AWS_REGION=${REGION}"
           "${CTL}" -a fetch-config -m onPremise -c default:otel -s
      else
           "${CTL}" -a fetch-config -m ec2 -c default:otel -s
