@@ -58,7 +58,7 @@ func TestDbiTranslate(t *testing.T) {
 		{"metrics", dbiMetrics, "metrics/dbi_postgresql_0", 3, 3, 1, 3},
 		{"log_to_metrics", dbiLogToMetrics, "logs/dbi_postgresql_0", 1, 1, 2, 2},
 		{"raw_events", dbiRawEvents, "logs/dbi_postgresql_rawevents_0", 1, 5, 1, 1},
-		{"server_logs", dbiServerLogs, "logs/dbi_postgresql_serverlogs_0", 1, 4, 1, 1},
+		{"server_logs", dbiServerLogs, "logs/dbi_postgresql_serverlogs_0", 1, 5, 1, 1},
 	}
 
 	for _, tc := range tests {

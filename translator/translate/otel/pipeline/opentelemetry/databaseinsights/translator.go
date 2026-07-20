@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/signaltometrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/groupbyattrsprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/filelog"
@@ -178,6 +179,10 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.scopeTransform(),
 			resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)),
+			// Promote log.file.name to a resource attribute, reusing the files pipeline's
+			// shared groupbyattrs instance so server-log parsing/grouping is consistent
+			// with regular file logs.
+			groupbyattrsprocessor.NewTranslatorWithName(common.FilesKey, "log.file.name"),
 			transformprocessor.NewTranslatorWithName(
 				common.DbiTransformResource+"_"+idx,
 				transformprocessor.WithMetricResourceStatements(t.resourceStatements()),

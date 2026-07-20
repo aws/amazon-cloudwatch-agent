@@ -557,6 +557,9 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
+    groupbyattrs/files:
+        keys:
+            - log.file.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -1542,6 +1545,7 @@ service:
             processors:
                 - transform/dbi_scope
                 - resourcedetection/opentelemetry
+                - groupbyattrs/files
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
             receivers:
