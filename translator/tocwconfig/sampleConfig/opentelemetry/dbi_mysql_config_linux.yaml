@@ -309,6 +309,74 @@ connectors:
               sum:
                 value: Int(attributes["mysql.events_statements_summary_by_digest.sum_select_scan"])
               unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"] != nil
+              description: Rows affected
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_rows_affected
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"] != nil
+              description: Joins checking key usage per row
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_select_range_check
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"] != nil
+              description: Sort merge passes
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_sort_merge_passes
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_sort_range"] != nil
+              description: Sorts using ranges
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_sort_range
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_range"])
+              unit: ""
 exporters:
     otlphttp/logs:
         auth:

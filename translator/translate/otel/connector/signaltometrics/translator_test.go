@@ -52,7 +52,7 @@ func TestTranslateTopsqlMysql(t *testing.T) {
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	stmCfg := cfg.(*signaltometricsconfig.Config)
-	assert.Len(t, stmCfg.Logs, 14)
+	assert.Len(t, stmCfg.Logs, 18)
 	assert.Equal(t, "mysql.count_star", stmCfg.Logs[0].Name)
 	assert.Equal(t, "mysql.sum_timer_wait", stmCfg.Logs[1].Name)
 	assert.Equal(t, "mysql.sum_lock_time", stmCfg.Logs[2].Name)
@@ -67,4 +67,8 @@ func TestTranslateTopsqlMysql(t *testing.T) {
 	assert.Equal(t, "mysql.sum_sort_scan", stmCfg.Logs[11].Name)
 	assert.Equal(t, "mysql.sum_no_good_index_used", stmCfg.Logs[12].Name)
 	assert.Equal(t, "mysql.sum_select_scan", stmCfg.Logs[13].Name)
+	assert.Equal(t, "mysql.sum_rows_affected", stmCfg.Logs[14].Name)
+	assert.Equal(t, "mysql.sum_select_range_check", stmCfg.Logs[15].Name)
+	assert.Equal(t, "mysql.sum_sort_merge_passes", stmCfg.Logs[16].Name)
+	assert.Equal(t, "mysql.sum_sort_range", stmCfg.Logs[17].Name)
 }
