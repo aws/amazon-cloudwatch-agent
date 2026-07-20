@@ -88,7 +88,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 		return fmt.Errorf("downloadLocation %s is malformed", downloadLocation)
 	}
 
-	if region == "" && locationArray[0] != locationDefault {
+	if region == "" && locationArray[0] != locationDefault && mode != translatorconfig.ModeAzureVM {
 		if mode == translatorconfig.ModeEC2 {
 			return fmt.Errorf("please check if you can access the metadata service. For example, on linux, run 'wget -q -O - http://169.254.169.254/latest/meta-data/instance-id && echo'")
 		}
