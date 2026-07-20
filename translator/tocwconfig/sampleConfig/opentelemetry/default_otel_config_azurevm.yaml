@@ -487,6 +487,17 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -578,6 +589,41 @@ processors:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
+    hostmetrics/opentelemetry:
+        collection_interval: 30s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            processes: null
+        timeout: 0s
     otlp/grpc_127_0_0_1_4317:
         protocols:
             grpc:
@@ -631,6 +677,13 @@ service:
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318
+        metrics/host_metrics:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/host_metrics_scope
+            receivers:
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
