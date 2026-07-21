@@ -1756,7 +1756,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-west-2
+          aws-region: us-east-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Download pre-built agent .deb
@@ -1791,7 +1791,7 @@ jobs:
         run: |
           terraform init
           terraform apply --auto-approve \
-            -var="region=us-west-2" \
+            -var="region=us-east-2" \
             -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" \
             -var="cwa_github_sha=${{ inputs.build_id }}" \
             -var="agent_deb_path=${{ github.workspace }}/amazon-cloudwatch-agent.deb" \
@@ -1816,7 +1816,7 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
           terraform destroy --auto-approve \
-            -var="region=us-west-2" \
+            -var="region=us-east-2" \
             -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" \
             -var="cwa_github_sha=${{ inputs.build_id }}" \
             -var="agent_deb_path=${{ github.workspace }}/amazon-cloudwatch-agent.deb" \
