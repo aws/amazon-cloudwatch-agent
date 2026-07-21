@@ -431,6 +431,13 @@ func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
 }
 
+func TestOpenTelemetryResourceAttributesSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryResourceAttributes.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryResourceAttributes.json", false, map[string]int{
+		"invalid_type": 1,
+	})
+}
+
 func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
 	cfg, ok := config.DefaultJSONConfigFor("otel")
 	require.True(t, ok)

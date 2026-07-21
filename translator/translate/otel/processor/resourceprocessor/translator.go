@@ -4,8 +4,10 @@
 package resourceprocessor
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -27,11 +30,23 @@ func WithAttributes(attrs map[string]string) common.TranslatorOption {
 	}
 }
 
+// WithReservedKeys rejects the given attribute keys in the static-attributes
+// path so customer-supplied resource_attributes cannot clobber attributes the
+// agent manages internally (e.g. log routing keys).
+func WithReservedKeys(keys ...string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.reservedKeys = collections.NewSet(keys...)
+		}
+	}
+}
+
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	factory    processor.Factory
-	attributes map[string]string
+	factory      processor.Factory
+	attributes   map[string]string
+	reservedKeys collections.Set[string]
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -60,13 +75,33 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) translateStaticAttributes() (component.Config, error) {
+	// Emit in sorted key order so the generated config is deterministic, and
+	// collect all validation errors so a misconfiguration surfaces every bad key.
+	keys := make([]string, 0, len(t.attributes))
+	var errs error
+	for k := range t.attributes {
+		if strings.TrimSpace(k) == "" {
+			errs = errors.Join(errs, fmt.Errorf("%s: resource attribute keys must not be empty", t.ID()))
+			continue
+		}
+		if t.reservedKeys.Contains(k) {
+			errs = errors.Join(errs, fmt.Errorf("%s: resource attribute key %q is reserved and cannot be overridden", t.ID(), k))
+			continue
+		}
+		keys = append(keys, k)
+	}
+	if errs != nil {
+		return nil, errs
+	}
+	sort.Strings(keys)
+
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
-	attrs := make([]any, 0, len(t.attributes))
-	for k, v := range t.attributes {
+	attrs := make([]any, 0, len(keys))
+	for _, k := range keys {
 		attrs = append(attrs, map[string]any{
 			"action": "upsert",
 			"key":    k,
-			"value":  v,
+			"value":  t.attributes[k],
 		})
 	}
 	c := confmap.NewFromStringMap(map[string]any{"attributes": attrs})
