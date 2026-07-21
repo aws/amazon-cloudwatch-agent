@@ -105,7 +105,7 @@ func RunDownloader(mode, downloadLocation, outputDir, inputConfig, multiConfig s
 	case locationDefault:
 		if len(locationArray) == 2 {
 			name := locationArray[1]
-			cfg, ok := translatorconfig.DefaultJSONConfigFor(name)
+			cfg, ok := translatorconfig.DefaultJSONConfigFor(name, util.DetectKubernetesMode(mode) != "", util.DetectECS())
 			if !ok {
 				return fmt.Errorf("unknown default config %q", name)
 			}

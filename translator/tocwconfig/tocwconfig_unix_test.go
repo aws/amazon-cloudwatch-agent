@@ -197,7 +197,7 @@ func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 		return "", ""
 	}
 
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
 
 	var input any
@@ -216,7 +216,7 @@ func TestDefaultOtelConfigECSTranslation(t *testing.T) {
 	ecsutil.GetECSUtilSingleton().Region = "us-west-2"
 	agent.Global_Config.Region = "us-west-2"
 
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, true)
 	require.True(t, ok)
 
 	var input any
@@ -233,13 +233,16 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeAzureVM)
 	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
 	context.CurrentContext().SetRunInContainer(true)
+	// container_insights has no cluster_name in the default config, so it falls
+	// back to the K8S_CLUSTER_NAME env var (there is no EC2 tagger on Azure).
+	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
 	// No AWS region source exists on Azure at translation time, so region
 	// detection returns empty and the translator falls back to ${AWS_REGION}.
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "", ""
 	}
 
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", true, false)
 	require.True(t, ok)
 
 	var input any
@@ -255,7 +258,7 @@ func TestDefaultOtelConfigTranslation(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	agent.Global_Config.Region = "us-west-2"
 
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
 
 	var input any

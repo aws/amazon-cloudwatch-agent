@@ -23,7 +23,7 @@ func TestRunDownloader_DefaultOtel(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(outputDir, "default_otel.tmp"))
 	require.NoError(t, err)
 
-	expected, ok := config.DefaultJSONConfigFor("otel")
+	expected, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
 	assert.JSONEq(t, expected, string(content))
 }

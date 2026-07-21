@@ -439,7 +439,7 @@ func TestOpenTelemetryResourceAttributesSchemaValidation(t *testing.T) {
 }
 
 func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
 	jsonMap, err := util.GetJsonMapFromJsonBytes([]byte(cfg))
 	require.NoError(t, err)

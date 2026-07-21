@@ -471,6 +471,17 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -576,6 +587,34 @@ processors:
         metric_statements: []
         trace_statements: []
 receivers:
+    hostmetrics/opentelemetry:
+        collection_interval: 30s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+        timeout: 0s
     otlp/grpc_127_0_0_1_4317:
         protocols:
             grpc:
@@ -679,6 +718,13 @@ service:
                 - transform/windows_events_scope
             receivers:
                 - windowseventlog/system_396641996
+        metrics/host_metrics:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/host_metrics_scope
+            receivers:
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics
