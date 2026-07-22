@@ -15,6 +15,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/azuredetector"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
@@ -29,6 +30,10 @@ var DetectCredentialsPath = detectCredentialsPath
 var DefaultEC2Region = defaultEC2Region
 var DefaultECSRegion = defaultECSRegion
 var IsEKS = isEKS
+
+// IsAKS/IsAzureVM are overridable detection hooks; tests override these vars.
+var IsAKS = azuredetector.IsAKS
+var IsAzureVM = azuredetector.IsAzureVM
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -57,19 +62,42 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeEC2
 	}
 
+	// Azure is checked only after all AWS signals; RUN_IN_AKS is checked before the IMDS probe since an AKS pod may not reach IMDS.
+	if IsAKS() {
+		fmt.Println("I! Detected from ENV instance is Azure (AKS)")
+		return config.ModeAzureVM
+	}
+
+	// Last resort: IMDS probe (~2s worst-case one-time cost on a black-holed host).
+	if IsAzureVM() {
+		fmt.Println("I! Detected the instance is Azure VM")
+		return config.ModeAzureVM
+	}
+
 	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
 }
 
+// DetectECS reports whether the agent is running on ECS. It indirects the
+// ecsutil singleton so callers don't depend on it directly, mirroring
+// DetectKubernetesMode.
+func DetectECS() bool {
+	return ecsutil.GetECSUtilSingleton().IsECS()
+}
+
 func DetectKubernetesMode(configuredMode string) string {
+	// RUN_IN_AKS is an explicit env signal (no I/O), so short-circuit before the EKS in-cluster probe.
+	if IsAKS() {
+		return config.ModeAKS
+	}
+
 	isEKS := IsEKS()
+	if isEKS.Err == nil && isEKS.Value {
+		return config.ModeEKS
+	}
 
 	if isEKS.Err != nil {
 		return "" // not kubernetes
-	}
-
-	if isEKS.Value {
-		return config.ModeEKS
 	}
 
 	if configuredMode == config.ModeEC2 {

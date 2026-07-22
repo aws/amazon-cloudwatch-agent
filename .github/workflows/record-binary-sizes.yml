@@ -1,0 +1,37 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Record Binary Sizes
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_call:
+
+jobs:
+  Record:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+
+      - name: Record binary sizes
+        env:
+          S3_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
+          COMMIT_HASH: ${{ github.sha }}
+        run: |
+          export COMMIT_DATE=$(git log -1 --format=%ct)
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            export TAG="${{ github.ref_name }}"
+          else
+            export TAG=""
+          fi
+          .github/scripts/record-binary-sizes.sh

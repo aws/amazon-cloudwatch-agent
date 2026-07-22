@@ -167,3 +167,51 @@ logs:
       - attributes["mysql.events_statements_summary_by_digest.sum_select_scan"] != nil
     sum:
       value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_select_scan"])'
+  - name: mysql.sum_rows_affected
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Rows affected"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"])'
+  - name: mysql.sum_select_range_check
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Joins checking key usage per row"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"])'
+  - name: mysql.sum_sort_merge_passes
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Sort merge passes"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"])'
+  - name: mysql.sum_sort_range
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Sorts using ranges"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_sort_range"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_range"])'

@@ -755,7 +755,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			sender:          mockSender,
 			eventsCh:        make(chan logs.LogEvent, 100),
 			flushCh:         make(chan struct{}),
-			resetTimerCh:    make(chan struct{}),
+			resetTimerCh:    make(chan struct{}, 1),
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
@@ -797,7 +797,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 			sender:          mockSender,
 			eventsCh:        make(chan logs.LogEvent, 100),
 			flushCh:         make(chan struct{}),
-			resetTimerCh:    make(chan struct{}),
+			resetTimerCh:    make(chan struct{}, 1),
 			flushTimer:      time.NewTimer(10 * time.Millisecond),
 			startNonBlockCh: make(chan struct{}),
 			wg:              &wg,
@@ -813,4 +813,102 @@ func TestQueueCallbackRegistration(t *testing.T) {
 
 		mockSender.AssertExpectations(t)
 	})
+}
+
+func TestResetTimerChIsBuffered(t *testing.T) {
+	var wg sync.WaitGroup
+	var s stubLogsService
+	q, sender := testPreparation(t, -1, &s, time.Second, 2*time.Hour, nil, &wg)
+	t.Cleanup(func() { q.Stop(); sender.Stop(); wg.Wait() })
+
+	require.Equalf(t, 1, cap(q.resetTimerCh),
+		"resetTimerCh must be buffered (cap 1) so a force-flush-timer rearm issued while "+
+			"manageFlushTimer is outside its select is parked, not dropped; cap=0 reintroduces "+
+			"the lost-wakeup bug")
+}
+
+func TestForceFlushTimerRearmsAfterHeldSend(t *testing.T) {
+	const flushTimeout = 300 * time.Millisecond
+	const flushBound = 3 * flushTimeout
+
+	var (
+		sendCount    atomic.Int32
+		secondSendAt atomic.Value
+		firstEntered = make(chan struct{})
+		release      = make(chan struct{})
+		releaseOnce  sync.Once
+	)
+	releaseSend := func() { releaseOnce.Do(func() { close(release) }) }
+
+	var s stubLogsService
+	s.ple = func(_ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		switch sendCount.Load() {
+		case 0:
+			sendCount.Add(1)
+			close(firstEntered)
+			<-release
+		case 1:
+			secondSendAt.Store(time.Now())
+			sendCount.Add(1)
+		}
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	}
+
+	var wg sync.WaitGroup
+	q, sender := testPreparation(t, -1, &s, flushTimeout, 2*time.Hour, nil, &wg)
+	t.Cleanup(func() { releaseSend(); q.Stop(); sender.Stop(); wg.Wait() })
+
+	q.AddEvent(newStubLogEvent("small", time.Now()))
+	time.Sleep(100 * time.Millisecond)
+
+	q.AddEvent(newStubLogEvent(strings.Repeat("X", 1024*1024), time.Now()))
+
+	select {
+	case <-firstEntered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("size-based send never started; test setup wrong")
+	}
+
+	time.Sleep(flushTimeout + 100*time.Millisecond)
+	tRelease := time.Now()
+	releaseSend()
+
+	deadline := time.Now().Add(flushBound)
+	for time.Now().Before(deadline) && sendCount.Load() < 2 {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	require.GreaterOrEqual(t, sendCount.Load(), int32(2),
+		"trailing event must be sent via force-flush timer within %v after the held send completes", flushBound)
+
+	raw := secondSendAt.Load()
+	require.NotNil(t, raw, "secondSendAt never recorded")
+	delay := raw.(time.Time).Sub(tRelease)
+	require.Less(t, delay, flushBound,
+		"trailing event took %v after release; if the flush timer was dead it would never arrive", delay)
+}
+
+func TestForceFlushTimer_SingleLowVolumeEventFlushes(t *testing.T) {
+	const flushTimeout = 200 * time.Millisecond
+
+	var sendCount atomic.Int32
+	var s stubLogsService
+	s.ple = func(_ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		sendCount.Add(1)
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	}
+
+	var wg sync.WaitGroup
+	q, sender := testPreparation(t, -1, &s, flushTimeout, 2*time.Hour, nil, &wg)
+	t.Cleanup(func() { q.Stop(); sender.Stop(); wg.Wait() })
+
+	q.AddEvent(newStubLogEvent("single event", time.Now()))
+
+	deadline := time.Now().Add(3 * flushTimeout)
+	for time.Now().Before(deadline) && sendCount.Load() < 1 {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	require.GreaterOrEqual(t, sendCount.Load(), int32(1),
+		"a single low-volume event must be flushed by the timer within %v", 3*flushTimeout)
 }

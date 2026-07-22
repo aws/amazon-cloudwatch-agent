@@ -16,7 +16,7 @@ const (
 	MaxMetricsPerRequest = 1000
 	MaxLogsPerRequest    = 10000
 	MaxSpansPerRequest   = 10000
-	BatchTimeout         = 15 * time.Second
+	BatchTimeout         = 30 * time.Second
 )
 
 func ServiceEndpoint(service, region, path string) string {

@@ -1427,7 +1427,10 @@
         "role_arn": {
           "description": "The target IAM role with which agent can access aws resources",
           "type": "string",
-          "minLength": 20,
+          "anyOf": [
+            { "minLength": 20 },
+            { "pattern": "^\\$\\{.+\\}$" }
+          ],
           "maxLength": 2048
         }
       },
@@ -1803,6 +1806,20 @@
     "opentelemetryDefinition": {
       "type": "object",
       "properties": {
+        "cluster_name": {
+          "description": "The name of the K8s cluster. Applied to all telemetry collected under opentelemetry.",
+          "type": "string"
+        },
+        "resource_attributes": {
+          "type": "object",
+          "description": "Additional resource attributes to add to every metric, log, and trace exported by the opentelemetry section. Applied via a resource processor at the front of each export pipeline. Attributes are added before resource detection, so for keys the agent auto-detects (e.g. cloud.region, host.id, cloud.provider) the detected value takes precedence over the configured one; use this for attributes the agent does not detect. Keys managed internally for log routing (aws.log.group.name, aws.log.stream.name, aws.log.source) are reserved and rejected.",
+          "maxProperties": 30,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
         "collect": {
           "type": "object",
           "properties": {
@@ -1858,7 +1875,7 @@
             "host_metrics": {
               "type": "object",
               "properties": {
-                "metrics_collection_interval": {
+                "collection_interval": {
                   "description": "How often the metrics defined will be collected",
                   "$ref": "#/definitions/timeIntervalDefinition"
                 }
@@ -1868,16 +1885,12 @@
             "container_insights": {
               "type": "object",
               "properties": {
-                "cluster_name": {
-                  "description": "The name of the EKS cluster",
-                  "type": "string"
-                },
                 "collection_interval": {
                   "description": "How often metrics are collected",
                   "$ref": "#/definitions/timeIntervalDefinition"
                 },
-                "mode": {
-                  "description": "Pipeline mode: node (daemonset), cluster (deployment), or omit for all",
+                "role": {
+                  "description": "Pipeline role: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
                   "type": "string",
                   "enum": ["node", "cluster"]
                 },
@@ -1892,7 +1905,6 @@
                   "additionalProperties": false
                 }
               },
-              "required": ["cluster_name"],
               "additionalProperties": false
             },
             "prometheus": {
@@ -1900,10 +1912,6 @@
               "properties": {
                 "config_path": {
                   "description": "Path to the Prometheus scrape configuration file",
-                  "type": "string"
-                },
-                "cluster_name": {
-                  "description": "The name of the EKS cluster",
                   "type": "string"
                 }
               },
@@ -1920,8 +1928,127 @@
                 "http_endpoint": {
                   "description": "OTLP HTTP receiver endpoint",
                   "type": "string"
+                },
+                "span_metrics_enabled": {
+                  "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
+                  "type": "boolean"
                 }
               },
+              "additionalProperties": false
+            },
+            "windows_events": {
+              "type": "object",
+              "properties": {
+                "collect_list": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "event_name": {
+                        "description": "The Windows Event Log channel to collect from",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "event_levels": {
+                        "description": "Event severity levels to collect",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": ["CRITICAL", "ERROR", "WARNING", "INFORMATION", "VERBOSE"]
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "event_ids": {
+                        "description": "Specific event IDs to collect",
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 65535
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "event_format": {
+                        "description": "Output format: xml (raw XML) or text (structured)",
+                        "type": "string",
+                        "enum": ["text", "xml"]
+                      },
+                      "log_group_name": {
+                        "description": "CloudWatch Logs group name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "log_stream_name": {
+                        "description": "CloudWatch Logs stream name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      }
+                    },
+                    "required": ["event_name"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["collect_list"],
+              "additionalProperties": false
+            },
+            "files": {
+              "type": "object",
+              "properties": {
+                "collect_list": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "file_path": {
+                        "description": "File path or glob pattern to tail",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      },
+                      "log_group_name": {
+                        "description": "CloudWatch Logs group name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "log_stream_name": {
+                        "description": "CloudWatch Logs stream name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "multi_line_start_pattern": {
+                        "description": "Regex pattern that marks the start of a new log entry. Use {timestamp_format} to derive from timestamp_format.",
+                        "type": "string"
+                      },
+                      "timestamp_format": {
+                        "description": "Strftime format for parsing timestamps from log lines (e.g. %Y-%m-%d %H:%M:%S)",
+                        "type": "string"
+                      },
+                      "timezone": {
+                        "description": "Timezone for timestamp parsing",
+                        "type": "string",
+                        "enum": ["UTC", "Local", "LOCAL"]
+                      },
+                      "encoding": {
+                        "description": "File encoding (default: utf-8)",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["file_path"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["collect_list"],
               "additionalProperties": false
             }
           },

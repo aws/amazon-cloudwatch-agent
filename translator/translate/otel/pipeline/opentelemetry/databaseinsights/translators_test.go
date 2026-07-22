@@ -120,7 +120,7 @@ func TestNewTranslators_MySQL_WithLogs(t *testing.T) {
 			"collect": map[string]interface{}{
 				"database_insights": map[string]interface{}{
 					"mysql": []interface{}{
-						map[string]interface{}{
+						map[string]interface{}{ //nolint:gosec
 							"endpoint": "localhost:3306", "username": "cw_monitor",
 							"password_file": "/etc/.mysql_credentials", "instance_name": "my-db",
 							"logs": map[string]interface{}{"file_path": "/var/log/mysql/mysql.log"},
@@ -139,7 +139,7 @@ func TestNewTranslators_MySQL_NoLogs(t *testing.T) {
 			"collect": map[string]interface{}{
 				"database_insights": map[string]interface{}{
 					"mysql": []interface{}{
-						map[string]interface{}{
+						map[string]interface{}{ //nolint:gosec
 							"endpoint": "localhost:3306", "username": "cw_monitor",
 							"password_file": "/etc/.mysql_credentials", "instance_name": "my-db",
 						},
