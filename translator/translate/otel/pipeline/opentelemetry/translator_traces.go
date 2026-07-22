@@ -14,6 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/spanmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
@@ -53,18 +54,44 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
-	processors := common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if resourceAttrs := resourceAttributesProcessor(conf); resourceAttrs != nil {
+		processors.Set(resourceAttrs)
+	}
+	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
+	}
+	// Apply root-level cluster name if set
+	clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
+	if clusterName != "" {
+		if err := common.ValidateClusterName(clusterName); err != nil {
+			return nil, err
+		}
+		stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			transformprocessor.WithMetricResourceStatements([]string{stmt}),
+			transformprocessor.WithLogResourceStatements([]string{stmt}),
+			transformprocessor.WithTraceResourceStatements([]string{stmt}),
+		))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_traces"), batchprocessor.WithSendBatchSize(common.MaxSpansPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxSpansPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
 
+	exporters := common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID())))
+	connectors := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
+
+	if common.GetOrDefaultBool(conf, common.OtelSpanMetricsEnabledKey, false) {
+		sm := spanmetrics.NewTranslator(common.OpenTelemetryKey)
+		exporters.Set(sm)
+		connectors.Set(sm)
+	}
+
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Processors: processors,
-		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("traces", otlphttp.EndpointConfig{TracesEndpoint: tracesEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
+		Exporters:  exporters,
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, agentHealthExt),
-		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
+		Connectors: connectors,
 	}, nil
 }

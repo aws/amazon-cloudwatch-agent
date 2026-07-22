@@ -302,7 +302,7 @@ extensions:
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         region: us-west-2
@@ -339,11 +339,6 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
-    batch/opentelemetry_metrics:
-        metadata_cardinality_limit: 1000
-        send_batch_max_size: 1000
-        send_batch_size: 1000
-        timeout: 15s
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -351,7 +346,12 @@ processors:
             - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
-        timeout: 15s
+        timeout: 30s
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 30s
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
         logs:
@@ -360,6 +360,9 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
+    groupbyattrs/files:
+        keys:
+            - log.file.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -657,85 +660,75 @@ processors:
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
         trace_statements: []
     transform/dbi_logs_raw-events_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_logs_server-logs_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-postgres"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "pentest-postgres")
         metric_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "pentest-postgres")
         trace_statements: []
-    transform/dbi_scope_0:
+    transform/dbi_scope:
         error_mode: ignore
         flatten_data: false
         log_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        trace_statements: []
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -744,7 +737,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         metric_statements:
@@ -752,7 +745,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         trace_statements:
@@ -760,15 +753,15 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
@@ -784,6 +777,8 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
                 - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.id"] != nil and resource.attributes["log.file.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.name"] != nil and resource.attributes["log.file.name"] != nil
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
@@ -796,25 +791,42 @@ processors:
 receivers:
     filelog/postgresql_0:
         encoding: utf-8
-        exclude_older_than: 0s
-        fingerprint_size: 1000
-        force_flush_period: 500ms
-        id: file_input
         include:
             - /var/lib/pgsql/data/log/postgresql-*.log
-        include_file_name: true
-        initial_buffer_size: 16384
-        max_concurrent_files: 1024
-        max_log_size: 1048576
-        operators: []
-        poll_interval: 200ms
-        retry_on_failure:
-            enabled: false
-            initial_interval: 1s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2}\.(\d{1,9}) \w{3})
+              timestamp:
+                layout: 2006-1-_2 15:04:05.999999999 MST
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+            - on_error: send_quiet
+              regex: '\[\d+\]\s*(?P<severity>LOG|ERROR|WARNING|FATAL|PANIC|DEBUG\d?|INFO|NOTICE|STATEMENT):'
+              severity:
+                mapping:
+                    debug:
+                        - DEBUG
+                        - DEBUG1
+                        - DEBUG2
+                        - DEBUG3
+                        - DEBUG4
+                        - DEBUG5
+                    error: ERROR
+                    fatal:
+                        - FATAL
+                        - PANIC
+                    info:
+                        - LOG
+                        - INFO
+                        - NOTICE
+                        - STATEMENT
+                    warn: WARNING
+                parse_from: attributes.severity
+              type: regex_parser
         start_at: end
-        type: file_input
     hostmetrics/opentelemetry:
         collection_interval: 30s
         initial_delay: 1s
@@ -1109,7 +1121,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - filter/dbi_exclude_monitor_0
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
@@ -1119,8 +1131,9 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - resourcedetection/opentelemetry
+                - groupbyattrs/files
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
             receivers:
@@ -1141,7 +1154,7 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - transform/dbi_resource_0
                 - transform/dbi_fix_start_time
             receivers:

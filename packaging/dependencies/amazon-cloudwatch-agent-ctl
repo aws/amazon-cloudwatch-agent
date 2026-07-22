@@ -31,12 +31,13 @@ UsageString="
 
 
         usage:  amazon-cloudwatch-agent-ctl -a
-                stop|start|status|status-with-workloads|fetch-config|append-config|remove-config|set-log-level
+                stop|start|status|status-with-workloads|fetch-config|append-config|remove-config|set-log-level|set-env
                 [-m ec2|onPremise|onPrem|auto]
                 [-c default|all|ssm:<parameter-store-name>|file:<file-path>]
                 [-s]
                 [-d]
                 [-l INFO|DEBUG|WARN|ERROR|OFF]
+                [-e KEY=VALUE]
 
         e.g.
         1. apply a SSM parameter store config on EC2 instance and restart the agent afterwards:
@@ -57,6 +58,7 @@ UsageString="
             append-config:                          append json config with the existing json configs if any, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'default'.
             remove-config:                          remove config for agent, followed by -c. Target config can be based on the location (ssm parameter store name, file name), or 'all'.
             set-log-level:                          sets the log level, followed by -l to provide the level in all caps.
+            set-env:                                sets an environment variable for the agent process, followed by -e to provide KEY=VALUE.
 
         -m: mode
             ec2:                                    indicate this is on ec2 host.
@@ -77,6 +79,12 @@ UsageString="
 
         -l: log level to set the agent to INFO, DEBUG, WARN, ERROR, or OFF
             this parameter is used for 'set-log-level' only.
+
+        -e: environment variable to set for the agent process, in KEY=VALUE format
+            this parameter is used for 'set-env' only.
+            note: values that are also produced by agent config translation (such as
+            proxy, CA bundle, and log level settings) are overwritten from the agent
+            configuration on each fetch-config/append-config or agent restart.
 
 "
 
@@ -378,12 +386,32 @@ set_log_level_all() {
      echo "Set CWAGENT_LOG_LEVEL to ${log_level}"
 }
 
+set_env() {
+     env_kv="${1:-}"
+     case "${env_kv}" in
+     ?*=*) ;;
+     *)
+          echo "Invalid environment variable: '${env_kv}' (expected KEY=VALUE) ${UsageString}" >&2
+          exit 1
+          ;;
+     esac
+
+     if ! runEnvConfigCommand=$("${CMDDIR}/amazon-cloudwatch-agent" -setenv "${env_kv}" -envconfig "${ENV_CONFIG}" 2>&1); then
+          echo "${runEnvConfigCommand}" >&2
+          echo "Failed to set environment variable ${env_kv%%=*}" >&2
+          exit 1
+     fi
+     echo "${runEnvConfigCommand}"
+     echo "Set ${env_kv%%=*}"
+}
+
 main() {
      action=''
      cwa_config_location=''
      restart='false'
      mode='ec2'
      use_dualstack='false'
+     env_kv=''
 
      # detect which init system is in use
      if [ "$(/sbin/init --version 2>/dev/null | grep -c upstart)" = 1 ]; then
@@ -399,7 +427,7 @@ main() {
      fi
 
      OPTIND=1
-     while getopts ":hsa:c:m:l:d" opt; do
+     while getopts ":hsa:c:m:l:de:" opt; do
           case "${opt}" in
           h)
                echo "${UsageString}"
@@ -411,6 +439,7 @@ main() {
           m) mode="${OPTARG}" ;;
           l) log_level="${OPTARG}" ;;
           d) use_dualstack='true' ;;
+          e) env_kv="${OPTARG}" ;;
           \?)
                echo "Invalid option: -${OPTARG} ${UsageString}" >&2
                ;;
@@ -448,6 +477,7 @@ main() {
           # helper for rpm+deb uninstallation hooks, not expected to be called manually
      preun) preun_all ;;
      set-log-level) set_log_level_all "${log_level}" ;;
+     set-env) set_env "${env_kv}" ;;
      *)
           echo "Invalid action: ${action} ${UsageString}" >&2
           exit 1

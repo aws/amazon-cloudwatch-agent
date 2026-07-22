@@ -77,7 +77,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.22.2
+          go-version: ~1.26.4
 
       - name: Generate matrix
         id: set-matrix
@@ -117,8 +117,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -219,8 +217,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -314,8 +310,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -416,8 +410,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version

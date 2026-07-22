@@ -67,7 +67,7 @@ on:
         required: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.build_id }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ inputs.build_id }}
   cancel-in-progress: true
 
 jobs:
@@ -153,7 +153,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -191,10 +191,13 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
 
       - name: Generate matrix
         id: set-matrix
+        env:
+          TEST_OS_FILTER: ${{ inputs.test_os_filter }}
+          TEST_DIR_FILTER: ${{ inputs.test_dir_filter }}
         run: |
           go run --tags=generator generator/test_case_generator.go
           
@@ -204,13 +207,13 @@ jobs:
             local matrix_content=$(cat "$matrix_file")
             
             # Apply OS filter if provided
-            if [ -n "${{ inputs.test_os_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.os == "${{ inputs.test_os_filter }}")]')
+            if [ -n "$TEST_OS_FILTER" ]; then
+              matrix_content=$(echo "$matrix_content" | jq -c --arg f "$TEST_OS_FILTER" '[.[] | select(.os == $f)]')
             fi
             
             # Apply test directory filter if provided
-            if [ -n "${{ inputs.test_dir_filter }}" ]; then
-              matrix_content=$(echo "$matrix_content" | jq -c '[.[] | select(.test_dir == "${{ inputs.test_dir_filter }}")]')
+            if [ -n "$TEST_DIR_FILTER" ]; then
+              matrix_content=$(echo "$matrix_content" | jq -c --arg f "$TEST_DIR_FILTER" '[.[] | select(.test_dir == $f)]')
             fi
             
             # Output compact JSON (single line) for GITHUB_OUTPUT compatibility
@@ -311,7 +314,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
@@ -344,7 +347,8 @@ jobs:
 
   StartLocalStackITAR:
     name: 'StartLocalStackITAR'
-    needs: [OutputEnvVariables]
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_itar_matrix != '[]' }}
     uses: ./.github/workflows/start-localstack.yml
     secrets:
       AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_ITAR }}
@@ -363,7 +367,8 @@ jobs:
 
   StartLocalStackCN:
     name: 'StartLocalStackCN'
-    needs: [ OutputEnvVariables, UploadDependenciesCN ]
+    needs: [ OutputEnvVariables, UploadDependenciesCN, GenerateTestMatrix ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix != '[]' }}
     uses: ./.github/workflows/start-localstack.yml
     secrets:
       AWS_PRIVATE_KEY: ${{ secrets.AWS_PRIVATE_KEY_CN }}
@@ -382,7 +387,8 @@ jobs:
 
   UploadDependenciesCN:
     name: 'UploadDependenciesCN'
-    needs: [ OutputEnvVariables ]
+    needs: [ OutputEnvVariables, GenerateTestMatrix ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_china_matrix != '[]' }}
     uses: ./.github/workflows/upload-dependencies.yml
     secrets: inherit
     permissions:
@@ -429,8 +435,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -758,8 +762,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -786,6 +788,7 @@ jobs:
             -var="ami=${{ matrix.arrays.ami }}" \
             -var="use_ssm=${{ matrix.arrays.useSSM }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
+            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
             -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then
             terraform destroy -auto-approve
           else
@@ -849,8 +852,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -996,8 +997,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1085,8 +1084,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1171,8 +1168,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1281,8 +1276,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1367,8 +1360,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1449,8 +1440,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1531,8 +1520,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1614,8 +1601,6 @@ jobs:
         run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
@@ -1698,8 +1683,6 @@ jobs:
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
 
       - name: Verify Terraform version
         run: terraform --version
