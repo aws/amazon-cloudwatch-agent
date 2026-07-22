@@ -74,16 +74,21 @@ var apiserverYAML string
 var kubeStateMetricsYAML string
 
 // NewTranslators returns all container insights pipeline translators.
-// The pipelines generated depend on the "mode" config field:
+// The pipelines generated depend on the resolved role (see getRole for priority):
 //   - "node": daemonset pipelines (per-node metrics + logs)
 //   - "cluster": deployment pipelines (cluster-wide metrics)
-//   - omitted: all pipelines
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
-	mode := getMode(conf)
+
+	// Guard: no container_insights config key means no pipelines to build.
+	if conf == nil || !conf.IsSet(ciConfigKey) {
+		return translators
+	}
+
+	role := getRole(conf)
 
 	// Daemonset metrics pipelines
-	if mode == "" || mode == "node" {
+	if role == roleNode {
 		translators.Set(newYAMLPipeline("kubeletstats", pipeline.SignalMetrics, kubeletstatsYAML))
 		translators.Set(newYAMLPipeline("cadvisor", pipeline.SignalMetrics, cadvisorYAML))
 		translators.Set(newYAMLPipeline("node_exporter", pipeline.SignalMetrics, nodeExporterYAML))
@@ -101,7 +106,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	}
 
 	// Deployment metrics pipelines
-	if mode == "" || mode == "cluster" {
+	if role == roleCluster {
 		translators.Set(newYAMLPipeline("apiserver", pipeline.SignalMetrics, apiserverYAML))
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
 	}
@@ -168,7 +173,7 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	// Parse YAML
 	// Escape $N patterns so the expandconverter doesn't misinterpret regex
 	// backreferences (e.g., k8sattributes tag_name: $$$1) as env var refs.
-	escaped := escapeDollarDigit(buf.String())
+	escaped := common.EscapeDollarDigit(buf.String())
 	var parsed map[string]interface{}
 	if err := yaml.Unmarshal([]byte(escaped), &parsed); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML for %s: %w", t.name, err)

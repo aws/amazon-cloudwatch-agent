@@ -72,7 +72,7 @@ processors:
       labels:
       - from: node
         key_regex: (.*)
-        tag_name: k8s.node.label.$$$1
+        tag_name: k8s.node.label.$1
       metadata:
       - k8s.node.name
     filter:
@@ -90,7 +90,7 @@ processors:
       labels:
       - from: pod
         key_regex: (.*)
-        tag_name: k8s.pod.label.$$$1
+        tag_name: k8s.pod.label.$1
       annotations:
       - from: pod
         key: resource.opentelemetry.io/service.name

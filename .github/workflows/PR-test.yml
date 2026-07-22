@@ -42,7 +42,13 @@ jobs:
     steps:
       - id: check
         run: |
-          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
+          # Fork PRs never receive secrets or id-token permissions, so the
+          # integration tests cannot run even if the label is added. Maintainers
+          # must push the branch to this repo to run them.
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            echo "Fork PR - integration tests cannot run (no access to secrets)."
+            echo "has_label=false" >> $GITHUB_OUTPUT
+          elif [[ "${{ contains(github.event.pull_request.labels.*.name, 'ready for testing') }}" == "true" ]]; then
             echo "has_label=true" >> $GITHUB_OUTPUT
           else
             echo "has_label=false" >> $GITHUB_OUTPUT
@@ -96,7 +102,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -139,7 +145,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.25.8
+          go-version: ~1.26.4
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -350,6 +356,11 @@ jobs:
     steps:
       - name: Check for ready for testing label
         run: |
+          if [[ "${{ github.event.pull_request.head.repo.fork }}" == "true" ]]; then
+            echo "Fork PR - integration tests skipped (no access to secrets). Push branch to this repo to run them."
+            exit 0
+          fi
+
           if [[ "${{ github.event.pull_request.draft }}" == "true" ]]; then
             echo "Draft PR - skipping label check."
             exit 0

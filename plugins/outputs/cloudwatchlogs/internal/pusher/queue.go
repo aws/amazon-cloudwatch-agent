@@ -62,7 +62,7 @@ func newQueue(
 		sender:          sender,
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushCh:         make(chan struct{}),
-		resetTimerCh:    make(chan struct{}),
+		resetTimerCh:    make(chan struct{}, 1),
 		flushTimer:      time.NewTimer(flushTimeout),
 		stopCh:          make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),

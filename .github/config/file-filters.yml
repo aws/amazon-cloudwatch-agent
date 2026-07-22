@@ -2,6 +2,7 @@ lint:
   - '**/*.go'
   - '**/*.sh'
   - '.golangci.yml'
+  - '.github/workflows/PR-build.yml'
   - 'packaging/**'
   - 'go.mod'
   - 'Makefile'

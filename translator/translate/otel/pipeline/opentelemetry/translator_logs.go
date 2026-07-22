@@ -5,6 +5,7 @@ package opentelemetry
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -39,10 +40,21 @@ func (t *baseLogsTranslator) ID() pipeline.ID {
 	return pipeline.NewIDWithName(pipeline.SignalLogs, common.OpenTelemetryKey)
 }
 
+// otelLogsKeys are the config keys that activate the base opentelemetry logs pipeline.
+var otelLogsKeys = []string{
+	common.OtelCollectLogsConfigKey,
+	common.DatabaseInsightsConfigKey,
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+	common.FilesConfigKey,
+}
+
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	otlpKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)
-	if conf == nil || (!conf.IsSet(common.OtelCollectLogsConfigKey) && !conf.IsSet(common.DatabaseInsightsConfigKey) && !conf.IsSet(otlpKey)) {
-		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: common.OtelCollectLogsConfigKey + " or " + common.DatabaseInsightsConfigKey + " or " + otlpKey}
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil {
+		return nil, err
 	}
 
 	region := agent.Global_Config.Region
@@ -74,12 +86,16 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		{Key: "aws.log.group.name", FromResourceAttribute: "aws.log.group.name"},
 		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
 	})
+	cleanupStmts := []string{
+		`delete_key(resource.attributes, "aws.log.group.name")`,
+		`delete_key(resource.attributes, "aws.log.stream.name")`,
+		`delete_key(resource.attributes, "aws.log.source")`,
+	}
+	if runtime.GOOS == "windows" && conf != nil && conf.IsSet(common.WindowsEventsConfigKey) {
+		cleanupStmts = append(cleanupStmts, `delete_key(resource.attributes, "aws.log.channel")`)
+	}
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
-		transformprocessor.WithLogStatements([]string{
-			`delete_key(resource.attributes, "aws.log.group.name")`,
-			`delete_key(resource.attributes, "aws.log.stream.name")`,
-			`delete_key(resource.attributes, "aws.log.source")`,
-		}),
+		transformprocessor.WithLogResourceStatements(cleanupStmts),
 	)
 	batch := batchprocessor.NewTranslator(
 		common.WithName("opentelemetry_logs"),
@@ -92,9 +108,26 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)
 	logsRouting := transformprocessor.NewTranslatorWithName(common.LogsRouting)
 
-	processors := common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if resourceAttrs := resourceAttributesProcessor(conf); resourceAttrs != nil {
+		processors.Set(resourceAttrs)
+	}
+	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
+	}
+	// Apply root-level cluster name if set
+	clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
+	if clusterName != "" {
+		if err := common.ValidateClusterName(clusterName); err != nil {
+			return nil, err
+		}
+		stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			transformprocessor.WithMetricResourceStatements([]string{stmt}),
+			transformprocessor.WithLogResourceStatements([]string{stmt}),
+			transformprocessor.WithTraceResourceStatements([]string{stmt}),
+		))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(logsRouting)

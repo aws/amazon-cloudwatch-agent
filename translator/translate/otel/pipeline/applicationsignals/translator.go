@@ -306,7 +306,7 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 	}
 
 	if dynamic {
-		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName, transformproc.WithLogStatements(statements)))
+		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName, transformproc.WithLogResourceStatements(statements)))
 		translators.Processors.Set(attributestocontext.NewTranslator(attrActions))
 
 		var cleanupStatements []string
@@ -323,7 +323,7 @@ func (t *translator) translateLogsReceiveToRoute(conf *confmap.Conf) (*common.Co
 				cleanupStatements = append(cleanupStatements, fmt.Sprintf(`delete_key(resource.attributes, "%s")`, key))
 			}
 		}
-		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName+"_cleanup", transformproc.WithLogStatements(cleanupStatements)))
+		translators.Processors.Set(transformproc.NewTranslatorWithName(logsComponentName+"_cleanup", transformproc.WithLogResourceStatements(cleanupStatements)))
 	}
 
 	translators.Exporters.Set(connectorTranslator)
