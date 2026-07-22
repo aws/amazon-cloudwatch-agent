@@ -1,4 +1,23 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300071.0 (2026-07-22)
+========================================================================
+New Features:
+* [OpenTelemetry] Add file tailing and Windows Events support
+* [OpenTelemetry] Add resource_attributes support
+* [Agent] Add set-env ctl action to persist agent environment variables
+* [Agent] Add platform-aware default configs for OpenTelemetry (host, Kubernetes, ECS)
+* [Agent] Add Microsoft Azure support for VMs and AKS
+
+Enhancements:
+* [OpenTelemetry] Add root-level cluster_name and standardize collection_interval
+* [Agent] Retain custom environment variables in env-config.json between translation
+
+Bug Fixes:
+* [DatabaseInsights] Add severity parsing and fix multiline/timestamp for PostgreSQL server logs
+* [Logs] Fix throttling deadlock in cloudwatchlogs output plugin when destinations are removed
+* [Logs] Fix force-flush timer permanently stalling on low-volume log streams
+
+========================================================================
 Amazon CloudWatch Agent 1.300070.0 (2026-06-19)
 ========================================================================
 New Features:
