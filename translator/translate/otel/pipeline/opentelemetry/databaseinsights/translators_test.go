@@ -157,12 +157,12 @@ func TestNewTranslators_MySQL_MultiInstance(t *testing.T) {
 			"collect": map[string]interface{}{
 				"database_insights": map[string]interface{}{
 					"mysql": []interface{}{
-						map[string]interface{}{
+						map[string]interface{}{ //nolint:gosec
 							"endpoint": "localhost:3306", "username": "cw_monitor",
 							"password_file": "/etc/.mysql_credentials", "instance_name": "db1",
 							"logs": map[string]interface{}{"file_path": "/var/log/mysql/mysql1.log"},
 						},
-						map[string]interface{}{
+						map[string]interface{}{ //nolint:gosec
 							"endpoint": "db2.example.com:3306", "username": "monitor",
 							"password_file": "/etc/.mysql_credentials2", "instance_name": "db2",
 						},

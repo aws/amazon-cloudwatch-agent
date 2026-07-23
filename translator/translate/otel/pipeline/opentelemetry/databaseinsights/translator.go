@@ -238,8 +238,6 @@ func (t *dbiTranslator) serverLogReceiver() common.ComponentTranslator {
 		filelog.WithNamePrefix(t.cfg.engine),
 		filelog.WithIndex(t.instanceIndex),
 		filelog.WithFilePath(t.cfg.logFilePath),
-		// Both PostgreSQL and MySQL start each log entry with an ISO date, so a shared
-		// line-start anchor groups multiline entries (e.g. statements, stack traces).
 		filelog.WithMultilinePattern(`^\d{4}-\d{2}-\d{2}`),
 	}
 	switch t.cfg.engine {
