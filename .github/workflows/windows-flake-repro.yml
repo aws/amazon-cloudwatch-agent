@@ -1,24 +1,36 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 #
-# Windows Flake Repro (TimedDeleter) — make test variant
-# =======================================================
+# Windows Flake Repro — make test variant
+# =======================================
 #
 # Runs the full `make test` (matching the failing PR-build job) N times per
 # variant on windows-latest, then greps each run's output for the target
-# TimedDeleterWithIDCheck failure signature. Isolated single-test loops
-# don't reproduce this flake (measured: 0/20 baseline hits) because the
-# fault requires the CPU contention `make test` produces by running ~50
-# package test binaries in parallel across the runner's vCPUs.
+# failure signatures we want to A/B. Isolated single-test loops don't
+# reproduce these flakes because the faults require the CPU contention
+# `make test` produces by running ~50 package test binaries in parallel
+# across the runner's vCPUs (Windows default timer resolution is ~15.6ms
+# and scheduling jitter under load routinely blows past narrow assertion
+# windows).
+#
+# Target tests A/B'd on this branch:
+#   - TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate (k8sclient)
+#   - TestConvertOtelMetrics_Dimensions (cloudwatch output plugin)
+#   - TestTailerSrc (logfile input plugin)
+#   - TestMiddleware (cloudwatch output plugin)
+#   - TestBackoffRetries (cloudwatch output plugin)
 #
 # Matrix legs:
-#   - baseline: kubernetes_utils_test.go restored from origin/main
-#   - fixed:    this branch's rewritten test
+#   - baseline: all target-test files + affected production files restored
+#               from origin/main (i.e., the pre-fix code path)
+#   - fixed:    this branch's rewritten tests + instrumentation
 #
 # Reported per matrix leg:
 #   - pass:          make test succeeded end-to-end
-#   - target_flake:  make test failed AND our target test was among the failures
-#   - other_failure: make test failed but our target test was not the cause
+#   - target_flake:  make test failed AND at least one target test was among
+#                    the failures (counted per target so we can see which
+#                    fix actually landed)
+#   - other_failure: make test failed but no target test was the cause
 #
 # Each `make test` on windows-latest takes ~10–13 min. With iterations=5
 # per leg (default), one push takes ~65 min per leg (legs run in parallel).
@@ -57,21 +69,36 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore baseline test file (variant=baseline)
+      - name: Restore baseline files (variant=baseline)
         if: matrix.variant == 'baseline'
         shell: bash
         run: |
           git fetch origin main --quiet
-          git checkout origin/main -- internal/k8sCommon/k8sclient/kubernetes_utils_test.go
-          echo "Restored kubernetes_utils_test.go from origin/main"
+          # Restore every file that this branch changed so 'baseline' truly
+          # reflects origin/main behavior for the target tests. Order doesn't
+          # matter (each path is independent), but list explicitly so the set
+          # is auditable in one place.
+          git checkout origin/main -- \
+            internal/k8sCommon/k8sclient/kubernetes_utils_test.go \
+            plugins/outputs/cloudwatch/convert_otel_test.go \
+            plugins/outputs/cloudwatch/cloudwatch_test.go \
+            plugins/inputs/logfile/tailersrc_test.go \
+            plugins/inputs/logfile/tail/tail.go
+          echo "Restored the following files from origin/main:"
+          git status --short
 
-      - name: Show target test source
+      - name: Show target test sources
         shell: bash
         run: |
           echo "=== Variant: ${{ matrix.variant }} ==="
-          echo "=== File sha: $(git hash-object internal/k8sCommon/k8sclient/kubernetes_utils_test.go) ==="
-          awk '/^func TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate/,/^}$/' \
-            internal/k8sCommon/k8sclient/kubernetes_utils_test.go
+          for f in \
+            internal/k8sCommon/k8sclient/kubernetes_utils_test.go \
+            plugins/outputs/cloudwatch/convert_otel_test.go \
+            plugins/outputs/cloudwatch/cloudwatch_test.go \
+            plugins/inputs/logfile/tailersrc_test.go
+          do
+            echo "--- $f sha=$(git hash-object "$f") ---"
+          done
 
       - name: Install make
         run: choco install make
@@ -98,7 +125,14 @@ jobs:
           GOFLAGS: "-count=1"
           ITERATIONS: ${{ inputs.iterations || '5' }}
           VARIANT: ${{ matrix.variant }}
-          TARGET_TEST: TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate
+          TARGET_TESTS: |
+            TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate
+            TestTimedDeleterWithIDCheck_DeleteWithDelay_WithUpdate
+            TestTimedDeleterWithIDCheck_DeleteWithDelay_InvalidType
+            TestConvertOtelMetrics_Dimensions
+            TestTailerSrc
+            TestMiddleware
+            TestBackoffRetries
         run: |
           set +e
           pass=0
@@ -106,6 +140,12 @@ jobs:
           other_failure=0
           target_indices=""
           other_indices=""
+          # Per-target hit counters (initialized to 0 for each name).
+          declare -A per_target_hits
+          while IFS= read -r t; do
+            [ -z "$t" ] && continue
+            per_target_hits["$t"]=0
+          done <<< "$TARGET_TESTS"
           mkdir -p repro-logs
           for i in $(seq 1 "$ITERATIONS"); do
             log="repro-logs/make-test-$(printf '%02d' "$i").log"
@@ -116,17 +156,29 @@ jobs:
             rc=$?
             date -u +"end:   %Y-%m-%dT%H:%M:%SZ  (rc=$rc)"
 
-            # Classify the outcome. `make test` returns 0 only if every package
-            # passed. On failure, look for `--- FAIL: <target>` — Go prints one
-            # per failing test, so our target is present iff it flaked in this
-            # run. Multiple tests may fail; we only count target vs non-target.
+            # Classify. On success everything passed. On failure, check every
+            # target test in parallel — any hit is a target flake and we record
+            # which ones fired; if none of the targets fired, it's an
+            # unrelated failure (which we still want to see in the log tail).
             if [ "$rc" -eq 0 ]; then
               pass=$((pass + 1))
               echo "result: PASS"
-            elif grep -qE "^--- FAIL: ${TARGET_TEST}(\$|[[:space:]])" "$log"; then
+              continue
+            fi
+            hit_any=0
+            hits_this_iter=""
+            while IFS= read -r t; do
+              [ -z "$t" ] && continue
+              if grep -qE "^--- FAIL: ${t}(\$|[[:space:]])" "$log"; then
+                per_target_hits["$t"]=$((per_target_hits["$t"] + 1))
+                hits_this_iter="$hits_this_iter $t"
+                hit_any=1
+              fi
+            done <<< "$TARGET_TESTS"
+            if [ "$hit_any" -eq 1 ]; then
               target_flake=$((target_flake + 1))
               target_indices="$target_indices $i"
-              echo "result: TARGET FLAKE"
+              echo "result: TARGET FLAKE ($hits_this_iter)"
               grep -E "^--- FAIL:" "$log" | sed 's/^/  /'
             else
               other_failure=$((other_failure + 1))
@@ -141,14 +193,20 @@ jobs:
           echo "OS:             windows-latest"
           echo "Iterations:     $ITERATIONS"
           echo "Passed:         $pass"
-          echo "Target flake:   $target_flake (our TimedDeleter test failed)"
-          echo "Other failure:  $other_failure (make test failed, our test did not)"
+          echo "Target flake:   $target_flake iterations (any target test failed)"
+          echo "Other failure:  $other_failure iterations (unrelated test failed)"
           if [ "$target_flake" -gt 0 ]; then
             echo "Target flake iterations:$target_indices"
           fi
           if [ "$other_failure" -gt 0 ]; then
             echo "Other-failure iterations:$other_indices"
           fi
+          echo ""
+          echo "Per-target hit counts:"
+          while IFS= read -r t; do
+            [ -z "$t" ] && continue
+            printf "  %-70s %d\n" "$t" "${per_target_hits[$t]}"
+          done <<< "$TARGET_TESTS"
           echo "============================================="
           {
             echo "## Windows Flake Repro (make test) — \`$VARIANT\`"
@@ -158,7 +216,7 @@ jobs:
             echo "| OS | windows-latest |"
             echo "| Iterations | $ITERATIONS |"
             echo "| Passed (make test rc=0) | $pass |"
-            echo "| Target flake (${TARGET_TEST}) | $target_flake |"
+            echo "| Target flake (any target failed) | $target_flake |"
             echo "| Other failure (unrelated test) | $other_failure |"
             if [ "$target_flake" -gt 0 ]; then
               echo "| Target flake iterations |$target_indices |"
@@ -166,6 +224,15 @@ jobs:
             if [ "$other_failure" -gt 0 ]; then
               echo "| Other-failure iterations |$other_indices |"
             fi
+            echo ""
+            echo "### Per-target hit counts"
+            echo ""
+            echo "| Test | Hits |"
+            echo "| --- | --- |"
+            while IFS= read -r t; do
+              [ -z "$t" ] && continue
+              echo "| \`$t\` | ${per_target_hits[$t]} |"
+            done <<< "$TARGET_TESTS"
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
