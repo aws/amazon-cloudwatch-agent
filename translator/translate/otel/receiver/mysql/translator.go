@@ -73,6 +73,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.MetricsBuilderConfig.Metrics.MysqlTableSize.Enabled = true
 	cfg.MetricsBuilderConfig.Metrics.MysqlReplicaSQLDelay.Enabled = true
 	cfg.MetricsBuilderConfig.Metrics.MysqlReplicaTimeBehindSource.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlDeadlocks.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlConnectionCount.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlConnectionErrors.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlMaxUsedConnections.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlCommands.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlQueryCount.Enabled = true
 
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
 	cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true

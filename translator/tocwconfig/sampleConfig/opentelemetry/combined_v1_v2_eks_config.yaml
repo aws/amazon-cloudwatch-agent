@@ -1676,6 +1676,8 @@ receivers:
                         enabled: true
                     process.memory.utilization:
                         enabled: true
+                    process.threads:
+                        enabled: true
                 mute_process_all_errors: true
             processes: null
         timeout: 0s
