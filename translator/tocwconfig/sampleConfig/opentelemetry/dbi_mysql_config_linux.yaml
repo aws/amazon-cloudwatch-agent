@@ -1008,6 +1008,8 @@ receivers:
                         enabled: true
                     process.memory.utilization:
                         enabled: true
+                    process.threads:
+                        enabled: true
                 mute_process_all_errors: true
             processes: null
         timeout: 0s
@@ -1022,6 +1024,8 @@ receivers:
                 enabled: true
         initial_delay: 1s
         metrics:
+            mysql.active_transactions:
+                enabled: true
             mysql.buffer_pool.data_pages:
                 aggregation_strategy: sum
                 attributes:
@@ -1055,14 +1059,16 @@ receivers:
                 aggregation_strategy: sum
                 attributes:
                     - command
-                enabled: false
+                enabled: true
             mysql.connection.count:
-                enabled: false
+                enabled: true
             mysql.connection.errors:
                 aggregation_strategy: sum
                 attributes:
                     - error
-                enabled: false
+                enabled: true
+            mysql.deadlocks:
+                enabled: true
             mysql.double_writes:
                 aggregation_strategy: sum
                 attributes:
@@ -1072,6 +1078,8 @@ receivers:
                 aggregation_strategy: sum
                 attributes:
                     - kind
+                enabled: true
+            mysql.history_list_length:
                 enabled: true
             mysql.index.io.wait.count:
                 aggregation_strategy: sum
@@ -1105,7 +1113,7 @@ receivers:
                     - operation
                 enabled: true
             mysql.max_used_connections:
-                enabled: false
+                enabled: true
             mysql.mysqlx_connections:
                 aggregation_strategy: sum
                 attributes:
@@ -1141,7 +1149,7 @@ receivers:
             mysql.query.client.count:
                 enabled: false
             mysql.query.count:
-                enabled: false
+                enabled: true
             mysql.query.slow.count:
                 enabled: false
             mysql.replica.sql_delay:
@@ -1294,6 +1302,8 @@ receivers:
                 enabled: true
         initial_delay: 1s
         metrics:
+            mysql.active_transactions:
+                enabled: true
             mysql.buffer_pool.data_pages:
                 aggregation_strategy: sum
                 attributes:
@@ -1327,14 +1337,16 @@ receivers:
                 aggregation_strategy: sum
                 attributes:
                     - command
-                enabled: false
+                enabled: true
             mysql.connection.count:
-                enabled: false
+                enabled: true
             mysql.connection.errors:
                 aggregation_strategy: sum
                 attributes:
                     - error
-                enabled: false
+                enabled: true
+            mysql.deadlocks:
+                enabled: true
             mysql.double_writes:
                 aggregation_strategy: sum
                 attributes:
@@ -1344,6 +1356,8 @@ receivers:
                 aggregation_strategy: sum
                 attributes:
                     - kind
+                enabled: true
+            mysql.history_list_length:
                 enabled: true
             mysql.index.io.wait.count:
                 aggregation_strategy: sum
@@ -1377,7 +1391,7 @@ receivers:
                     - operation
                 enabled: true
             mysql.max_used_connections:
-                enabled: false
+                enabled: true
             mysql.mysqlx_connections:
                 aggregation_strategy: sum
                 attributes:
@@ -1413,7 +1427,7 @@ receivers:
             mysql.query.client.count:
                 enabled: false
             mysql.query.count:
-                enabled: false
+                enabled: true
             mysql.query.slow.count:
                 enabled: false
             mysql.replica.sql_delay:
