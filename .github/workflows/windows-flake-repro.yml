@@ -1,24 +1,27 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 #
-# Windows Flake Repro (TimedDeleter)
-# ==================================
+# Windows Flake Repro (TimedDeleter) — make test variant
+# =======================================================
 #
-# Runs `TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate` N times on
-# windows-latest and reports pass/fail counts. Runs the test twice per
-# invocation via a matrix: once against the file at `origin/main` (baseline)
-# and once against this branch (fixed), so before/after numbers land in the
-# same run.
+# Runs the full `make test` (matching the failing PR-build job) N times per
+# variant on windows-latest, then greps each run's output for the target
+# TimedDeleterWithIDCheck failure signature. Isolated single-test loops
+# don't reproduce this flake (measured: 0/20 baseline hits) because the
+# fault requires the CPU contention `make test` produces by running ~50
+# package test binaries in parallel across the runner's vCPUs.
 #
-# Triggers:
-#   - push to this branch (fires automatically on any commit, including
-#     `git commit --allow-empty` to re-run). This trigger is required because
-#     `workflow_dispatch` on a workflow that isn't yet on the default branch
-#     is invisible to GitHub Actions.
-#   - workflow_dispatch (useful once/if this file lands on `main`).
+# Matrix legs:
+#   - baseline: kubernetes_utils_test.go restored from origin/main
+#   - fixed:    this branch's rewritten test
 #
-# Matches the failing CI job's env: runs-on windows-latest, Go ~1.26.4,
-# CGO_ENABLED=0, no -race, no coverage.
+# Reported per matrix leg:
+#   - pass:          make test succeeded end-to-end
+#   - target_flake:  make test failed AND our target test was among the failures
+#   - other_failure: make test failed but our target test was not the cause
+#
+# Each `make test` on windows-latest takes ~10–13 min. With iterations=5
+# per leg (default), one push takes ~65 min per leg (legs run in parallel).
 
 name: Windows Flake Repro (TimedDeleter)
 
@@ -29,14 +32,15 @@ on:
   workflow_dispatch:
     inputs:
       iterations:
-        description: "How many times to run the target test"
+        description: "How many `make test` runs per variant"
         required: true
-        default: "20"
+        default: "5"
 
 jobs:
   repro:
     name: Repro (${{ matrix.variant }})
     runs-on: windows-latest
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -69,56 +73,94 @@ jobs:
           awk '/^func TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate/,/^}$/' \
             internal/k8sCommon/k8sclient/kubernetes_utils_test.go
 
-      - name: Run target test N times
+      - name: Install make
+        run: choco install make
+
+      - name: Warm the Go module cache
         shell: bash
         env:
           CGO_ENABLED: "0"
-          ITERATIONS: ${{ inputs.iterations || '20' }}
+        run: |
+          # Pre-download modules once so per-iteration timing reflects test
+          # execution, not go.sum churn. Also fails fast if the module tree
+          # is broken before we spend an hour looping.
+          go mod download
+
+      - name: Run make test N times
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+          ITERATIONS: ${{ inputs.iterations || '5' }}
           VARIANT: ${{ matrix.variant }}
+          TARGET_TEST: TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate
         run: |
           set +e
           pass=0
-          fail=0
-          fails=""
+          target_flake=0
+          other_failure=0
+          target_indices=""
+          other_indices=""
           mkdir -p repro-logs
           for i in $(seq 1 "$ITERATIONS"); do
-            log="repro-logs/run-$(printf '%02d' "$i").log"
+            log="repro-logs/make-test-$(printf '%02d' "$i").log"
             echo ""
-            echo "===================== Run $i / $ITERATIONS ====================="
-            if go test -v -count=1 -timeout 60s \
-                -run '^TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate$' \
-                ./internal/k8sCommon/k8sclient/ 2>&1 | tee "$log"; then
+            echo "===================== make test run $i / $ITERATIONS ====================="
+            date -u +"start: %Y-%m-%dT%H:%M:%SZ"
+            make test > "$log" 2>&1
+            rc=$?
+            date -u +"end:   %Y-%m-%dT%H:%M:%SZ  (rc=$rc)"
+
+            # Classify the outcome. `make test` returns 0 only if every package
+            # passed. On failure, look for `--- FAIL: <target>` — Go prints one
+            # per failing test, so our target is present iff it flaked in this
+            # run. Multiple tests may fail; we only count target vs non-target.
+            if [ "$rc" -eq 0 ]; then
               pass=$((pass + 1))
+              echo "result: PASS"
+            elif grep -qE "^--- FAIL: ${TARGET_TEST}(\$|[[:space:]])" "$log"; then
+              target_flake=$((target_flake + 1))
+              target_indices="$target_indices $i"
+              echo "result: TARGET FLAKE"
+              grep -E "^--- FAIL:" "$log" | sed 's/^/  /'
             else
-              fail=$((fail + 1))
-              fails="$fails $i"
+              other_failure=$((other_failure + 1))
+              other_indices="$other_indices $i"
+              echo "result: OTHER FAILURE"
+              grep -E "^--- FAIL:" "$log" | sed 's/^/  /' | head -20
             fi
           done
           echo ""
           echo "================== SUMMARY =================="
-          echo "Variant:    $VARIANT"
-          echo "OS:         windows-latest"
-          echo "Iterations: $ITERATIONS"
-          echo "Passed:     $pass"
-          echo "Failed:     $fail"
-          if [ "$fail" -gt 0 ]; then
-            echo "Failed run indices:$fails"
+          echo "Variant:        $VARIANT"
+          echo "OS:             windows-latest"
+          echo "Iterations:     $ITERATIONS"
+          echo "Passed:         $pass"
+          echo "Target flake:   $target_flake (our TimedDeleter test failed)"
+          echo "Other failure:  $other_failure (make test failed, our test did not)"
+          if [ "$target_flake" -gt 0 ]; then
+            echo "Target flake iterations:$target_indices"
+          fi
+          if [ "$other_failure" -gt 0 ]; then
+            echo "Other-failure iterations:$other_indices"
           fi
           echo "============================================="
           {
-            echo "## Windows Flake Repro — \`$VARIANT\`"
+            echo "## Windows Flake Repro (make test) — \`$VARIANT\`"
             echo ""
             echo "| Metric | Value |"
             echo "| --- | --- |"
             echo "| OS | windows-latest |"
             echo "| Iterations | $ITERATIONS |"
-            echo "| Passed | $pass |"
-            echo "| Failed | $fail |"
-            if [ "$fail" -gt 0 ]; then
-              echo "| Failed run indices |$fails |"
+            echo "| Passed (make test rc=0) | $pass |"
+            echo "| Target flake (${TARGET_TEST}) | $target_flake |"
+            echo "| Other failure (unrelated test) | $other_failure |"
+            if [ "$target_flake" -gt 0 ]; then
+              echo "| Target flake iterations |$target_indices |"
+            fi
+            if [ "$other_failure" -gt 0 ]; then
+              echo "| Other-failure iterations |$other_indices |"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
-          # Always succeed; we want the data either way.
           exit 0
 
       - name: Upload per-run logs
