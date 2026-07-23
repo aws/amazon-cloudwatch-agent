@@ -128,6 +128,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 			return nil, err
 		}
 		OpenFileCount.Add(1)
+		t.Logger.Debugf("tail: OpenFileCount incremented to %d after opening %s", OpenFileCount.Load(), t.Filename)
 	}
 
 	if !config.ReOpen {
@@ -193,6 +194,9 @@ func (tail *Tail) CloseFile() {
 		tail.file.Close()
 		tail.file = nil
 		OpenFileCount.Add(-1)
+		if tail.Logger != nil {
+			tail.Logger.Debugf("tail: OpenFileCount decremented to %d after closing %s", OpenFileCount.Load(), tail.Filename)
+		}
 	}
 }
 
@@ -220,6 +224,7 @@ func (tail *Tail) Reopen(resetOffset bool) error {
 		break
 	}
 	OpenFileCount.Add(1)
+	tail.Logger.Debugf("tail: OpenFileCount incremented to %d after reopening %s", OpenFileCount.Load(), tail.Filename)
 
 	tail.openReader()
 	if !resetOffset && tail.curOffset > 0 {
