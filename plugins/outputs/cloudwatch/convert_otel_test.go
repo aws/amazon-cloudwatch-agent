@@ -181,6 +181,7 @@ func checkDatum(
 	unit string,
 	numMetrics int,
 ) {
+	t.Helper()
 	assert.True(t, strings.HasPrefix(*d.MetricName, namePrefix))
 	assert.Equal(t, unit, *d.Unit)
 	if d.distribution != nil {
@@ -201,8 +202,19 @@ func checkDatum(
 		assert.Equal(t, metricValue, *d.Value)
 	}
 
-	// Assuming unit test does not take more than 1 s.
-	assert.Less(t, time.Since(*d.Timestamp), time.Second)
+	// Datums are created from pmetric datapoints whose timestamps were set inside
+	// createTestMetrics/createTestHistogram just before this loop. The intent of this
+	// check is "the timestamp survived unmodified through ConvertOtelMetrics", not a
+	// wall-clock performance budget on the surrounding loop. A 1-minute window is
+	// generous enough to survive scheduling jitter on slow CI runners (notably Windows,
+	// where the default timer resolution is ~15.6ms and a 100x-nested loop can take
+	// well over a second under contention) while still catching any real timestamp
+	// bug -- those produce hours/years of drift, not seconds.
+	elapsed := time.Since(*d.Timestamp)
+	if !assert.Less(t, elapsed, time.Minute,
+		"datum timestamp is unexpectedly stale: elapsed=%s", elapsed) {
+		t.Logf("checkDatum: numMetrics=%d unit=%s elapsed=%s", numMetrics, unit, elapsed)
+	}
 	for _, dim := range d.Dimensions {
 		assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
 		assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))
