@@ -512,6 +512,9 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
+    groupbyattrs/files:
+        keys:
+            - log.file.name
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -826,6 +829,11 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/mysql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-mysql"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_mysql_0:
@@ -933,25 +941,30 @@ processors:
 receivers:
     filelog/mysql_0:
         encoding: utf-8
-        exclude_older_than: 0s
-        fingerprint_size: 1000
-        force_flush_period: 500ms
-        id: file_input
         include:
             - /var/log/mysql/mysql.log
-        include_file_name: true
-        initial_buffer_size: 16384
-        max_concurrent_files: 1024
-        max_log_size: 1048576
-        operators: []
-        poll_interval: 200ms
-        retry_on_failure:
-            enabled: false
-            initial_interval: 1s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2}T\d{2}:\d{2}:\d{2}\.(\d{1,9})Z)
+              timestamp:
+                layout: 2006-1-_2T15:04:05.999999999Z
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+            - on_error: send_quiet
+              regex: \s\d+\s+\[(?P<severity>System|Warning|Note|ERROR)\]
+              severity:
+                mapping:
+                    error: ERROR
+                    info:
+                        - System
+                        - Note
+                    warn: Warning
+                parse_from: attributes.severity
+              type: regex_parser
         start_at: end
-        type: file_input
     hostmetrics/opentelemetry:
         collection_interval: 30s
         initial_delay: 1s
@@ -1132,9 +1145,9 @@ receivers:
             mysql.query.slow.count:
                 enabled: false
             mysql.replica.sql_delay:
-                enabled: false
+                enabled: true
             mysql.replica.time_behind_source:
-                enabled: false
+                enabled: true
             mysql.row_locks:
                 aggregation_strategy: sum
                 attributes:
@@ -1227,7 +1240,7 @@ receivers:
                     - table
                     - schema
                     - kind
-                enabled: false
+                enabled: true
             mysql.table_open_cache:
                 aggregation_strategy: sum
                 attributes:
@@ -1404,9 +1417,9 @@ receivers:
             mysql.query.slow.count:
                 enabled: false
             mysql.replica.sql_delay:
-                enabled: false
+                enabled: true
             mysql.replica.time_behind_source:
-                enabled: false
+                enabled: true
             mysql.row_locks:
                 aggregation_strategy: sum
                 attributes:
@@ -1499,7 +1512,7 @@ receivers:
                     - table
                     - schema
                     - kind
-                enabled: false
+                enabled: true
             mysql.table_open_cache:
                 aggregation_strategy: sum
                 attributes:
@@ -1576,6 +1589,7 @@ service:
             processors:
                 - transform/dbi_scope_mysql_0
                 - resourcedetection/opentelemetry
+                - groupbyattrs/files
                 - transform/dbi_resource_mysql_0
                 - transform/dbi_logs_mysql_server-logs_0
             receivers:
