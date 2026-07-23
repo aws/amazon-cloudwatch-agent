@@ -58,6 +58,9 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 				"process.memory.utilization": map[string]any{
 					"enabled": true,
 				},
+				"process.threads": map[string]any{
+					"enabled": true,
+				},
 			},
 		}))
 	}
