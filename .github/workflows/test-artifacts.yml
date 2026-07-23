@@ -1850,14 +1850,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
 
-      - name: Generate ECR docker config
-        id: ecr_config
-        run: |
-          TOKEN=$(aws ecr get-login-password --region us-east-2)
-          REGISTRY="${{ steps.login-ecr.outputs.registry }}"
-          CONFIG=$(printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$(echo -n "AWS:$TOKEN" | base64 -w0)")
-          echo "json=$CONFIG" >> "$GITHUB_OUTPUT"
-
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
@@ -1887,7 +1879,6 @@ jobs:
             -var="cwa_github_sha=${{ inputs.build_id }}" \
             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="ecr_docker_config_json=${{ steps.ecr_config.outputs.json }}" \
             -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
             -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
             -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
@@ -1912,7 +1903,6 @@ jobs:
             -var="cwa_github_sha=${{ inputs.build_id }}" \
             -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="ecr_docker_config_json=${{ steps.ecr_config.outputs.json }}" \
             -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
             -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
             -var="runner_ip=$(curl -s ifconfig.me)/32" || true
