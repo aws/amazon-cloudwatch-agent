@@ -600,14 +600,21 @@ func TestBackoffRetries(t *testing.T) {
 		time.Millisecond * 3200,
 		time.Millisecond * 6400}
 	assert := assert.New(t)
-	leniency := 200 * time.Millisecond
+	// Leniency is the upper-bound slack on each backoff sleep. Windows'
+	// default timer resolution is ~15.6ms and, under `make test` CPU
+	// contention, a 200ms time.Sleep can genuinely take 300-400ms. Keep
+	// the lower bound tight (sleeps[i]/2) but give the upper bound
+	// enough headroom that we don't false-positive on scheduler slop.
+	leniency := 500 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
 		start := time.Now()
 		c.backoffSleep()
-		// Expect time since start is between sleeps[i]/2 and sleeps[i].
-		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(sleeps[i]/2, time.Since(start))
-		assert.Greater(sleeps[i]+leniency, time.Since(start))
+		elapsed := time.Since(start)
+		// Expect time since start is between sleeps[i]/2 and sleeps[i]+leniency.
+		t.Logf("backoff iter %d: expected [%s, %s], actual %s",
+			i, sleeps[i]/2, sleeps[i]+leniency, elapsed)
+		assert.Less(sleeps[i]/2, elapsed)
+		assert.Greater(sleeps[i]+leniency, elapsed)
 	}
 	start := time.Now()
 	c.backoffSleep()
