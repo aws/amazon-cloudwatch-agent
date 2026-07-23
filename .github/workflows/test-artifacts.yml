@@ -398,7 +398,7 @@ jobs:
       region: cn-north-1
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      github_sha: ${{github.sha}}
+      github_sha: ${{ inputs.build_id }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
