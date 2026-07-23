@@ -540,8 +540,26 @@ func TestMiddleware(t *testing.T) {
 	handler := new(awsmiddleware.MockHandler)
 	handler.On("ID").Return("test")
 	handler.On("Position").Return(awsmiddleware.After)
-	handler.On("HandleRequest", mock.Anything, mock.Anything)
-	handler.On("HandleResponse", mock.Anything, mock.Anything)
+	// Signal on channels the moment each middleware phase fires, so we can
+	// wait for HandleResponse deterministically instead of using a fixed sleep.
+	// Under Windows CI contention the response middleware pipeline can take
+	// several seconds beyond the request phase, and a naive time.Sleep is
+	// racy against that latency (observed: run 30037333000 fixed iter 5 --
+	// TestMiddleware (4.16s) with 0 HandleResponse calls captured on the mock).
+	reqFired := make(chan struct{}, 8)
+	respFired := make(chan struct{}, 8)
+	handler.On("HandleRequest", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		select {
+		case reqFired <- struct{}{}:
+		default:
+		}
+	})
+	handler.On("HandleResponse", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		select {
+		case respFired <- struct{}{}:
+		default:
+		}
+	})
 	middleware := new(awsmiddleware.MockMiddlewareExtension)
 	middleware.On("Handlers").Return([]awsmiddleware.RequestHandler{handler}, []awsmiddleware.ResponseHandler{handler})
 	extensions := map[component.ID]component.Component{id: middleware}
@@ -551,7 +569,22 @@ func TestMiddleware(t *testing.T) {
 	// Expect 1500 metrics batched in 2 API calls.
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
-	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+
+	// Wait for at least one HandleRequest and one HandleResponse to fire.
+	// Fixed budget: original code slept 2s + 2*ForceFlushInterval = 4s. Keep the
+	// same nominal happy-path timing but give up to 30s of headroom for slow CI.
+	waitFor := func(t *testing.T, label string, ch <-chan struct{}) {
+		t.Helper()
+		start := time.Now()
+		select {
+		case <-ch:
+			t.Logf("%s fired after %s", label, time.Since(start))
+		case <-time.After(30 * time.Second):
+			t.Fatalf("%s was not called within 30s (elapsed %s)", label, time.Since(start))
+		}
+	}
+	waitFor(t, "HandleRequest", reqFired)
+	waitFor(t, "HandleResponse", respFired)
 	handler.AssertCalled(t, "HandleRequest", mock.Anything, mock.Anything)
 	handler.AssertCalled(t, "HandleResponse", mock.Anything, mock.Anything)
 	require.NoError(t, cw.Shutdown(ctx))
