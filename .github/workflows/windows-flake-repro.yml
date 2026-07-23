@@ -1,0 +1,130 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+#
+# Windows Flake Repro (TimedDeleter)
+# ==================================
+#
+# Runs `TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate` N times on
+# windows-latest and reports pass/fail counts. Runs the test twice per
+# invocation via a matrix: once against the file at `origin/main` (baseline)
+# and once against this branch (fixed), so before/after numbers land in the
+# same run.
+#
+# Triggers:
+#   - push to this branch (fires automatically on any commit, including
+#     `git commit --allow-empty` to re-run). This trigger is required because
+#     `workflow_dispatch` on a workflow that isn't yet on the default branch
+#     is invisible to GitHub Actions.
+#   - workflow_dispatch (useful once/if this file lands on `main`).
+#
+# Matches the failing CI job's env: runs-on windows-latest, Go ~1.26.4,
+# CGO_ENABLED=0, no -race, no coverage.
+
+name: Windows Flake Repro (TimedDeleter)
+
+on:
+  push:
+    branches:
+      - fix/flaky-timed-deleter-test
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "How many times to run the target test"
+        required: true
+        default: "20"
+
+jobs:
+  repro:
+    name: Repro (${{ matrix.variant }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, fixed]
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        with:
+          go-version: ~1.26.4
+          cache: false
+
+      - name: Check out branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Restore baseline test file (variant=baseline)
+        if: matrix.variant == 'baseline'
+        shell: bash
+        run: |
+          git fetch origin main --quiet
+          git checkout origin/main -- internal/k8sCommon/k8sclient/kubernetes_utils_test.go
+          echo "Restored kubernetes_utils_test.go from origin/main"
+
+      - name: Show target test source
+        shell: bash
+        run: |
+          echo "=== Variant: ${{ matrix.variant }} ==="
+          echo "=== File sha: $(git hash-object internal/k8sCommon/k8sclient/kubernetes_utils_test.go) ==="
+          awk '/^func TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate/,/^}$/' \
+            internal/k8sCommon/k8sclient/kubernetes_utils_test.go
+
+      - name: Run target test N times
+        shell: bash
+        env:
+          CGO_ENABLED: "0"
+          ITERATIONS: ${{ inputs.iterations || '20' }}
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          set +e
+          pass=0
+          fail=0
+          fails=""
+          mkdir -p repro-logs
+          for i in $(seq 1 "$ITERATIONS"); do
+            log="repro-logs/run-$(printf '%02d' "$i").log"
+            echo ""
+            echo "===================== Run $i / $ITERATIONS ====================="
+            if go test -v -count=1 -timeout 60s \
+                -run '^TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate$' \
+                ./internal/k8sCommon/k8sclient/ 2>&1 | tee "$log"; then
+              pass=$((pass + 1))
+            else
+              fail=$((fail + 1))
+              fails="$fails $i"
+            fi
+          done
+          echo ""
+          echo "================== SUMMARY =================="
+          echo "Variant:    $VARIANT"
+          echo "OS:         windows-latest"
+          echo "Iterations: $ITERATIONS"
+          echo "Passed:     $pass"
+          echo "Failed:     $fail"
+          if [ "$fail" -gt 0 ]; then
+            echo "Failed run indices:$fails"
+          fi
+          echo "============================================="
+          {
+            echo "## Windows Flake Repro — \`$VARIANT\`"
+            echo ""
+            echo "| Metric | Value |"
+            echo "| --- | --- |"
+            echo "| OS | windows-latest |"
+            echo "| Iterations | $ITERATIONS |"
+            echo "| Passed | $pass |"
+            echo "| Failed | $fail |"
+            if [ "$fail" -gt 0 ]; then
+              echo "| Failed run indices |$fails |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          # Always succeed; we want the data either way.
+          exit 0
+
+      - name: Upload per-run logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: repro-logs-${{ matrix.variant }}-${{ github.run_id }}
+          path: repro-logs/
+          if-no-files-found: warn
