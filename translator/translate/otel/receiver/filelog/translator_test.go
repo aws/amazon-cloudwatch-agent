@@ -10,11 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/filestorage"
 )
 
 func TestTranslator_ID(t *testing.T) {
 	tr := NewTranslator(WithNamePrefix("postgresql"), WithIndex(0))
 	assert.Equal(t, component.MustNewIDWithName("filelog", "postgresql_0"), tr.ID())
+}
+
+func TestTranslator_ID_WithName(t *testing.T) {
+	tr := NewTranslator(WithName("my_custom_name"))
+	assert.Equal(t, component.MustNewIDWithName("filelog", "my_custom_name"), tr.ID())
 }
 
 func TestTranslator_Translate(t *testing.T) {
@@ -30,4 +38,252 @@ func TestTranslator_Translate(t *testing.T) {
 	assert.Equal(t, []string{"/var/log/postgresql/postgresql.log"}, flCfg.InputConfig.Include)
 	assert.Equal(t, "end", flCfg.InputConfig.StartAt)
 	assert.Equal(t, "utf-8", flCfg.InputConfig.Encoding)
+}
+
+func TestTranslator_WithEncoding(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithIndex(0),
+		WithEncoding("utf-16"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	flCfg := cfg.(*filelogreceiver.FileLogConfig)
+	assert.Equal(t, "utf-16", flCfg.InputConfig.Encoding)
+}
+
+func TestTranslator_WithMultilinePattern(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithIndex(0),
+		WithMultilinePattern(`^\d{4}-\d{2}-\d{2}`),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	flCfg := cfg.(*filelogreceiver.FileLogConfig)
+	assert.Equal(t, `^\d{4}-\d{2}-\d{2}`, flCfg.InputConfig.SplitConfig.LineStartPattern)
+}
+
+func TestTranslator_WithStorage(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithIndex(0),
+		WithStorage(),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	flCfg := cfg.(*filelogreceiver.FileLogConfig)
+	require.NotNil(t, flCfg.StorageID)
+	assert.Equal(t, filestorage.ComponentID(), *flCfg.StorageID)
+}
+
+func TestTranslator_WithResource(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithIndex(0),
+		WithResource(map[string]string{
+			"aws.log.source": "files",
+		}),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	flCfg := cfg.(*filelogreceiver.FileLogConfig)
+	assert.True(t, flCfg.InputConfig.IncludeFileName)
+	assert.Contains(t, flCfg.InputConfig.Resource, "aws.log.source")
+}
+
+func TestTranslator_WithStartAtBeginning(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithIndex(0),
+		WithStartAtBeginning(),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	flCfg := cfg.(*filelogreceiver.FileLogConfig)
+	assert.Equal(t, "beginning", flCfg.InputConfig.StartAt)
+}
+
+func TestTranslator_WithTimestampFormat_ReturnsRawMapConfig(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "UTC"),
+		WithStorage(),
+		WithResource(map[string]string{
+			"aws.log.source": "files",
+		}),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw, ok := cfg.(*rawMapConfig)
+	require.True(t, ok, "expected rawMapConfig when timestamp format is set")
+
+	assert.Equal(t, []string{"/var/log/app.log"}, raw.data["include"])
+	assert.Equal(t, "end", raw.data["start_at"])
+	assert.Equal(t, "utf-8", raw.data["encoding"])
+	assert.Equal(t, filestorage.ComponentID().String(), raw.data["storage"])
+
+	resource, ok := raw.data["resource"].(map[string]string)
+	require.True(t, ok)
+	assert.Equal(t, "files", resource["aws.log.source"])
+
+	operators, ok := raw.data["operators"].([]any)
+	require.True(t, ok)
+	require.Len(t, operators, 1)
+
+	op := operators[0].(map[string]any)
+	assert.Equal(t, "regex_parser", op["type"])
+	assert.Contains(t, op["regex"], "(?P<timestamp>")
+
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "2006-1-_2 15:04:05", ts["layout"])
+	assert.Equal(t, "gotime", ts["layout_type"])
+	assert.Equal(t, "UTC", ts["location"])
+}
+
+func TestTranslator_WithTimestampFormat_LocalTimezone(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "Local"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw := cfg.(*rawMapConfig)
+	operators := raw.data["operators"].([]any)
+	op := operators[0].(map[string]any)
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "Local", ts["location"])
+}
+
+func TestTranslator_WithTimestampFormat_UppercaseLOCAL(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "LOCAL"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw := cfg.(*rawMapConfig)
+	operators := raw.data["operators"].([]any)
+	op := operators[0].(map[string]any)
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "Local", ts["location"])
+}
+
+func TestTranslator_WithTimestampFormat_UppercaseUTC(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "utc"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw := cfg.(*rawMapConfig)
+	operators := raw.data["operators"].([]any)
+	op := operators[0].(map[string]any)
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "UTC", ts["location"])
+}
+
+func TestTranslator_WithSeverityOnly(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithSeverityPattern(`(?P<severity>ERROR|WARNING)`),
+		WithSeverityMapping(map[string]any{"error": "ERROR", "warn": "WARNING"}),
+	)
+
+	result, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	rawCfg, ok := result.(*rawMapConfig)
+	require.True(t, ok, "expected rawMapConfig when only a severity pattern is set")
+
+	operators, ok := rawCfg.data["operators"].([]any)
+	require.True(t, ok, "severity-only config must still emit operators")
+	require.Len(t, operators, 1)
+
+	op := operators[0].(map[string]any)
+	assert.Equal(t, "regex_parser", op["type"])
+	_, hasSeverity := op["severity"]
+	assert.True(t, hasSeverity)
+}
+
+func TestTranslator_WithInvalidSeverityPattern(t *testing.T) {
+	// Missing the required (?P<severity>...) named capture group.
+	tr := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithSeverityPattern(`ERROR|WARNING`),
+	)
+
+	_, err := tr.Translate(nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "named capture group")
+}
+
+func TestRawMapConfig_Marshal(t *testing.T) {
+	raw := &rawMapConfig{data: map[string]any{
+		"include":  []string{"/var/log/test.log"},
+		"start_at": "end",
+	}}
+
+	conf := confmap.New()
+	err := raw.Marshal(conf)
+	require.NoError(t, err)
+
+	assert.Equal(t, "end", conf.Get("start_at"))
+}
+
+func TestTranslator_WithTimestampAndSeverity(t *testing.T) {
+	translator := NewTranslator(
+		WithFilePath("/var/log/test.log"),
+		WithName("test"),
+		WithTimestampFormat("%Y-%m-%d %H:%M:%S", "UTC"),
+		WithSeverityPattern(`(?P<severity>ERROR|WARNING)`),
+	)
+
+	result, err := translator.Translate(nil)
+	require.NoError(t, err)
+
+	rawCfg, ok := result.(*rawMapConfig)
+	require.True(t, ok)
+
+	operators, ok := rawCfg.data["operators"].([]any)
+	require.True(t, ok)
+	require.Len(t, operators, 2, "expected two operators: timestamp and severity")
+
+	// First operator is timestamp
+	op1, ok := operators[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", op1["type"])
+	_, hasTimestamp := op1["timestamp"]
+	assert.True(t, hasTimestamp)
+
+	// Second operator is severity
+	op2, ok := operators[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", op2["type"])
+	_, hasSeverity := op2["severity"]
+	assert.True(t, hasSeverity)
 }

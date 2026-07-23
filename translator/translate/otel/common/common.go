@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +32,7 @@ const (
 	TracesCollectedKey                             = "traces_collected"
 	OpenTelemetryKey                               = "opentelemetry"
 	CollectKey                                     = "collect"
+	ResourceAttributesKey                          = "resource_attributes"
 	HostMetricsKey                                 = "host_metrics"
 	OtelContainerInsightsKey                       = "container_insights"
 	MetricsDestinationsKey                         = "metrics_destinations"
@@ -58,6 +60,8 @@ const (
 	RoleARNKey                                     = "role_arn"
 	SigV4Auth                                      = "sigv4auth"
 	MetricsCollectionIntervalKey                   = "metrics_collection_interval"
+	CollectionIntervalKey                          = "collection_interval"
+	ClusterNameKey                                 = "cluster_name"
 	AggregationDimensionsKey                       = "aggregation_dimensions"
 	MeasurementKey                                 = "measurement"
 	DropOriginalMetricsKey                         = "drop_original_metrics"
@@ -137,6 +141,7 @@ const (
 )
 
 const WindowsEventsKey = "windows_events"
+const FilesKey = "files"
 
 // DBI (Database Insights) constants
 const (
@@ -164,6 +169,9 @@ var (
 	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
 	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
+	FilesConfigKey              = ConfigKey(OpenTelemetryKey, CollectKey, FilesKey)
+	// OtelResourceAttributesKey holds customer-supplied resource attributes added to every opentelemetry export pipeline.
+	OtelResourceAttributesKey = ConfigKey(OpenTelemetryKey, ResourceAttributesKey)
 )
 
 const (
@@ -370,6 +378,26 @@ func GetString(conf *confmap.Conf, key string) (string, bool) {
 	return "", false
 }
 
+// GetStringMap gets the key/value pairs for the key as a map[string]string,
+// coercing non-string values to their string form. Returns nil if the key is
+// missing or is not a map.
+func GetStringMap(conf *confmap.Conf, key string) map[string]string {
+	value := conf.Get(key)
+	raw, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	result := make(map[string]string, len(raw))
+	for k, v := range raw {
+		if s, ok := v.(string); ok {
+			result[k] = s
+		} else {
+			result[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	return result
+}
+
 // GetArray gets the array value for the key. If the key is missing,
 // the return value will be nil
 func GetArray[C any](conf *confmap.Conf, key string) []C {
@@ -541,9 +569,20 @@ func KueueContainerInsightsEnabled(conf *confmap.Conf) bool {
 	return GetOrDefaultBool(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, EnableKueueContainerInsights), false)
 }
 
-func GetClusterName(conf *confmap.Conf) string {
-	val, ok := GetString(conf, ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, "cluster_name"))
-	if ok && val != "" {
+// SanitizeName converts a string to a safe component name by lowercasing and
+// replacing any character that isn't a-z, 0-9, or '-' with '_'.
+func SanitizeName(input string) string {
+	return strings.Map(func(r rune) rune {
+		if 'a' <= r && r <= 'z' || '0' <= r && r <= '9' || r == '-' {
+			return r
+		}
+		return '_'
+	}, strings.ToLower(input))
+}
+
+func GetClusterName(conf *confmap.Conf, key string) string {
+	// Check any config keys passed
+	if val, ok := GetString(conf, key); ok && val != "" {
 		return val
 	}
 
@@ -553,4 +592,47 @@ func GetClusterName(conf *confmap.Conf) string {
 	}
 
 	return util.GetClusterNameFromEc2Tagger()
+}
+
+// EscapeDollarDigit escapes dollar-digit patterns so they survive both the
+// confmap resolver's escapeDollarSigns pass and the expandconverter pass.
+//
+// Handles two syntaxes:
+//   - $1  → $$$$1  (bare dollar — used by both CI and Prometheus)
+//   - ${1} → $$$${1} (brace notation — used in Prometheus customer configs)
+func EscapeDollarDigit(s string) string {
+	var out []byte
+	for i := 0; i < len(s); i++ {
+		if s[i] == '$' && i+1 < len(s) {
+			// Handle ${N} brace notation (e.g., ${1}, ${2})
+			if s[i+1] == '{' && i+2 < len(s) && s[i+2] >= '0' && s[i+2] <= '9' {
+				out = append(out, '$', '$', '$', '$')
+				continue
+			}
+			// Handle bare $N notation (e.g., $1, $2)
+			if s[i+1] >= '0' && s[i+1] <= '9' {
+				out = append(out, '$', '$', '$', '$')
+				continue
+			}
+		}
+		out = append(out, s[i])
+	}
+	return string(out)
+}
+
+// OtelClusterNameKey is the config key for the root-level cluster name under opentelemetry.
+var OtelClusterNameKey = ConfigKey(OpenTelemetryKey, ClusterNameKey)
+
+// LegacyClusterNameKey is the config key for the cluster name in the V1 config path.
+var LegacyClusterNameKey = ConfigKey(LogsKey, MetricsCollectedKey, KubernetesKey, ClusterNameKey)
+
+// ClusterNameRegex validates cluster names.
+var ClusterNameRegex = regexp.MustCompile(`^[0-9A-Za-z][A-Za-z0-9\-_]*$`)
+
+// ValidateClusterName returns an error if the cluster name does not match the expected pattern.
+func ValidateClusterName(name string) error {
+	if !ClusterNameRegex.MatchString(name) {
+		return fmt.Errorf("cluster_name %q is invalid: must match pattern %s", name, ClusterNameRegex.String())
+	}
+	return nil
 }

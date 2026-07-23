@@ -228,6 +228,75 @@ func TestTranslateStaticAttributes_MultipleKeys(t *testing.T) {
 	assert.Len(t, gotCfg.AttributesActions, 2)
 }
 
+func TestTranslateStaticAttributes_SortedDeterministic(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_sorted"),
+		WithAttributes(map[string]string{
+			"zeta":  "1",
+			"alpha": "2",
+			"mu":    "3",
+		}),
+	)
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+	gotCfg := got.(*resourceprocessor.Config)
+	require.Len(t, gotCfg.AttributesActions, 3)
+	// keys are emitted in sorted order regardless of map iteration order
+	assert.Equal(t, "alpha", gotCfg.AttributesActions[0].Key)
+	assert.Equal(t, "mu", gotCfg.AttributesActions[1].Key)
+	assert.Equal(t, "zeta", gotCfg.AttributesActions[2].Key)
+}
+
+func TestTranslateStaticAttributes_EmptyKeyRejected(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_empty_key"),
+		WithAttributes(map[string]string{"": "value"}),
+	)
+	got, err := tt.Translate(nil)
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "must not be empty")
+}
+
+func TestTranslateStaticAttributes_ReservedKeyRejected(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_reserved"),
+		WithAttributes(map[string]string{"aws.log.group.name": "/hijack"}),
+		WithReservedKeys("aws.log.group.name", "aws.log.stream.name", "aws.log.source"),
+	)
+	got, err := tt.Translate(nil)
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "reserved")
+}
+
+func TestTranslateStaticAttributes_NonReservedKeyAllowed(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_non_reserved"),
+		WithAttributes(map[string]string{"team": "cloudwatch"}),
+		WithReservedKeys("aws.log.group.name"),
+	)
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+	gotCfg := got.(*resourceprocessor.Config)
+	require.Len(t, gotCfg.AttributesActions, 1)
+	assert.Equal(t, "team", gotCfg.AttributesActions[0].Key)
+}
+
+func TestTranslateStaticAttributes_AllErrorsReported(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_all_errors"),
+		WithAttributes(map[string]string{"": "v1", "aws.log.source": "v2"}),
+		WithReservedKeys("aws.log.group.name", "aws.log.stream.name", "aws.log.source"),
+	)
+	got, err := tt.Translate(nil)
+	require.Error(t, err)
+	assert.Nil(t, got)
+	// both the empty-key and reserved-key violations surface at once
+	assert.Contains(t, err.Error(), "must not be empty")
+	assert.Contains(t, err.Error(), "reserved")
+}
+
 func TestContainerInsightsJmx(t *testing.T) {
 	transl := NewTranslator(common.WithName(common.PipelineNameContainerInsightsJmx)).(*translator)
 	expectedCfg := transl.factory.CreateDefaultConfig().(*resourceprocessor.Config)

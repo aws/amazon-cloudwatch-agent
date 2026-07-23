@@ -45,6 +45,7 @@ var otelLogsKeys = []string{
 	common.OtelCollectLogsConfigKey,
 	common.DatabaseInsightsConfigKey,
 	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+	common.FilesConfigKey,
 }
 
 func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
@@ -107,9 +108,26 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)
 	logsRouting := transformprocessor.NewTranslatorWithName(common.LogsRouting)
 
-	processors := common.NewTranslatorMap[component.Config, component.ID](resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if resourceAttrs := resourceAttributesProcessor(conf); resourceAttrs != nil {
+		processors.Set(resourceAttrs)
+	}
+	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
+	}
+	// Apply root-level cluster name if set
+	clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
+	if clusterName != "" {
+		if err := common.ValidateClusterName(clusterName); err != nil {
+			return nil, err
+		}
+		stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+			transformprocessor.WithMetricResourceStatements([]string{stmt}),
+			transformprocessor.WithLogResourceStatements([]string{stmt}),
+			transformprocessor.WithTraceResourceStatements([]string{stmt}),
+		))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(logsRouting)

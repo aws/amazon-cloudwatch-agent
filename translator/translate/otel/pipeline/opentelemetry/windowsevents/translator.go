@@ -46,11 +46,11 @@ func (e eventEntry) raw() bool {
 }
 
 func (e eventEntry) name() string {
-	return fmt.Sprintf("%s_%d", sanitizeName(e.channel), e.index)
+	return fmt.Sprintf("%s_%d", common.SanitizeName(e.channel), e.index)
 }
 
 func (e eventEntry) receiverName() string {
-	return fmt.Sprintf("%s_%s", sanitizeName(e.channel), e.receiverHash())
+	return fmt.Sprintf("%s_%s", common.SanitizeName(e.channel), e.receiverHash())
 }
 
 func (e eventEntry) receiverHash() string {

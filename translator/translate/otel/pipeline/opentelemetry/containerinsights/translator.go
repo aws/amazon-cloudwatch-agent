@@ -74,7 +74,7 @@ var apiserverYAML string
 var kubeStateMetricsYAML string
 
 // NewTranslators returns all container insights pipeline translators.
-// The pipelines generated depend on the resolved mode (see getMode for priority):
+// The pipelines generated depend on the resolved role (see getRole for priority):
 //   - "node": daemonset pipelines (per-node metrics + logs)
 //   - "cluster": deployment pipelines (cluster-wide metrics)
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
@@ -85,10 +85,10 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 		return translators
 	}
 
-	mode := getMode(conf)
+	role := getRole(conf)
 
 	// Daemonset metrics pipelines
-	if mode == modeNode {
+	if role == roleNode {
 		translators.Set(newYAMLPipeline("kubeletstats", pipeline.SignalMetrics, kubeletstatsYAML))
 		translators.Set(newYAMLPipeline("cadvisor", pipeline.SignalMetrics, cadvisorYAML))
 		translators.Set(newYAMLPipeline("node_exporter", pipeline.SignalMetrics, nodeExporterYAML))
@@ -106,7 +106,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	}
 
 	// Deployment metrics pipelines
-	if mode == modeCluster {
+	if role == roleCluster {
 		translators.Set(newYAMLPipeline("apiserver", pipeline.SignalMetrics, apiserverYAML))
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
 	}
@@ -173,7 +173,7 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	// Parse YAML
 	// Escape $N patterns so the expandconverter doesn't misinterpret regex
 	// backreferences (e.g., k8sattributes tag_name: $$$1) as env var refs.
-	escaped := escapeDollarDigit(buf.String())
+	escaped := common.EscapeDollarDigit(buf.String())
 	var parsed map[string]interface{}
 	if err := yaml.Unmarshal([]byte(escaped), &parsed); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML for %s: %w", t.name, err)

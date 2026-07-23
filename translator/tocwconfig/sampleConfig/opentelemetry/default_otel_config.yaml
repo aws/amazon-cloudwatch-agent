@@ -136,7 +136,7 @@ extensions:
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         region: us-west-2
@@ -483,6 +483,17 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -531,6 +542,8 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
                 - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.id"] != nil and resource.attributes["log.file.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.name"] != nil and resource.attributes["log.file.name"] != nil
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
@@ -572,6 +585,41 @@ processors:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
+    hostmetrics/opentelemetry:
+        collection_interval: 30s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            processes: null
+        timeout: 0s
     otlp/grpc_127_0_0_1_4317:
         protocols:
             grpc:
@@ -624,6 +672,13 @@ service:
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318
+        metrics/host_metrics:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/host_metrics_scope
+            receivers:
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

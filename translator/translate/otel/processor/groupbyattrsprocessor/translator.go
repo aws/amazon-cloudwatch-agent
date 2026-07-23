@@ -14,13 +14,14 @@ import (
 
 type translator struct {
 	name    string
+	keys    []string
 	factory processor.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslatorWithName(name string) common.ComponentTranslator {
-	return &translator{name, groupbyattrsprocessor.NewFactory()}
+func NewTranslatorWithName(name string, keys ...string) common.ComponentTranslator {
+	return &translator{name: name, keys: keys, factory: groupbyattrsprocessor.NewFactory()}
 }
 
 func (t *translator) ID() component.ID {
@@ -29,5 +30,8 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*groupbyattrsprocessor.Config)
+	if len(t.keys) > 0 {
+		cfg.GroupByKeys = t.keys
+	}
 	return cfg, nil
 }

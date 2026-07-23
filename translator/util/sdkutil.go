@@ -78,6 +78,13 @@ func DetectAgentMode(configuredMode string) string {
 	return config.ModeOnPrem
 }
 
+// DetectECS reports whether the agent is running on ECS. It indirects the
+// ecsutil singleton so callers don't depend on it directly, mirroring
+// DetectKubernetesMode.
+func DetectECS() bool {
+	return ecsutil.GetECSUtilSingleton().IsECS()
+}
+
 func DetectKubernetesMode(configuredMode string) string {
 	// RUN_IN_AKS is an explicit env signal (no I/O), so short-circuit before the EKS in-cluster probe.
 	if IsAKS() {

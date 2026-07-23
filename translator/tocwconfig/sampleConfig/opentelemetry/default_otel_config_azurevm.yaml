@@ -30,7 +30,7 @@ exporters:
         compression: gzip
         encoding: proto
         idle_conn_timeout: 1m30s
-        logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
+        logs_endpoint: https://logs.${AWS_REGION}.amazonaws.com/v1/logs
         max_idle_conns: 100
         metrics_endpoint: ""
         retry_on_failure:
@@ -59,7 +59,7 @@ exporters:
         idle_conn_timeout: 1m30s
         logs_endpoint: ""
         max_idle_conns: 100
-        metrics_endpoint: https://monitoring.us-west-2.amazonaws.com/v1/metrics
+        metrics_endpoint: https://monitoring.${AWS_REGION}.amazonaws.com/v1/metrics
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -103,7 +103,7 @@ exporters:
             sizer: {}
             wait_for_result: false
         timeout: 30s
-        traces_endpoint: https://xray.us-west-2.amazonaws.com/v1/traces
+        traces_endpoint: https://xray.${AWS_REGION}.amazonaws.com/v1/traces
         write_buffer_size: 524288
 extensions:
     agenthealth/opentelemetry_logs:
@@ -114,7 +114,7 @@ extensions:
                 - '*'
             usage_flags:
                 mode: AZVM
-                region_type: ACJ
+                region_type: RNF
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
@@ -123,7 +123,7 @@ extensions:
                 - '*'
             usage_flags:
                 mode: AZVM
-                region_type: ACJ
+                region_type: RNF
     agenthealth/opentelemetry_traces:
         additional_auth: sigv4auth/xray
         is_usage_data_enabled: true
@@ -132,14 +132,14 @@ extensions:
                 - '*'
             usage_flags:
                 mode: AZVM
-                region_type: ACJ
+                region_type: RNF
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
-        region: us-west-2
+        region: ${AWS_REGION}
         request_timeout_seconds: 10
         role_arn: ${CWAGENT_ROLE_ARN}
         web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
@@ -160,7 +160,7 @@ extensions:
         imds_retries: 1
         max_retries: 2
         num_workers: 8
-        region: us-west-2
+        region: ${AWS_REGION}
         request_timeout_seconds: 30
         role_arn: ${CWAGENT_ROLE_ARN}
         service: logs
@@ -170,7 +170,7 @@ extensions:
         imds_retries: 1
         max_retries: 2
         num_workers: 8
-        region: us-west-2
+        region: ${AWS_REGION}
         request_timeout_seconds: 30
         role_arn: ${CWAGENT_ROLE_ARN}
         service: monitoring
@@ -180,7 +180,7 @@ extensions:
         imds_retries: 1
         max_retries: 2
         num_workers: 8
-        region: us-west-2
+        region: ${AWS_REGION}
         request_timeout_seconds: 30
         role_arn: ${CWAGENT_ROLE_ARN}
         service: xray
@@ -487,6 +487,17 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -495,24 +506,24 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         metric_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         trace_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["ec2.tag.aws:autoscaling:groupName"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["ec2.tag.aws:autoscaling:groupName"] != nil
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
         error_mode: ignore
@@ -535,6 +546,8 @@ processors:
               statements:
                 - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
                 - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.id"] != nil and resource.attributes["log.file.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.name"] != nil and resource.attributes["log.file.name"] != nil
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
@@ -576,6 +589,41 @@ processors:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
 receivers:
+    hostmetrics/opentelemetry:
+        collection_interval: 30s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            processes: null
+        timeout: 0s
     otlp/grpc_127_0_0_1_4317:
         protocols:
             grpc:
@@ -629,6 +677,13 @@ service:
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318
+        metrics/host_metrics:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/host_metrics_scope
+            receivers:
+                - hostmetrics/opentelemetry
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

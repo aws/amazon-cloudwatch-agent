@@ -19,29 +19,29 @@ func TestNewTranslators_MissingKey(t *testing.T) {
 	assert.Equal(t, 0, NewTranslators(confmap.NewFromStringMap(map[string]interface{}{})).Len())
 }
 
-func TestNewTranslators_ModeNode(t *testing.T) {
+func TestNewTranslators_RoleNode(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"mode":         "node",
+					"role": "node",
 				},
 			},
 		},
 	})
 	translators := NewTranslators(cfg)
-	// node mode: kubeletstats, cadvisor, node_exporter, dcgm, neuron, efa, ebs_csi, lis_csi = 8 pipelines
+	// node role: kubeletstats, cadvisor, node_exporter, dcgm, neuron, efa, ebs_csi, lis_csi = 8 pipelines
 	assert.Equal(t, 8, translators.Len())
 }
 
-func TestNewTranslators_ModeNodeWithLogs(t *testing.T) {
+func TestNewTranslators_RoleNodeWithLogs(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"mode":         "node",
+					"role": "node",
 					"logs": map[string]interface{}{
 						"enabled": true,
 					},
@@ -50,73 +50,70 @@ func TestNewTranslators_ModeNodeWithLogs(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// node mode + logs: 8 metric pipelines + 2 log pipelines = 10
+	// node role + logs: 8 metric pipelines + 2 log pipelines = 10
 	assert.Equal(t, 10, translators.Len())
 }
 
-func TestNewTranslators_ModeCluster(t *testing.T) {
+func TestNewTranslators_RoleCluster(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"mode":         "cluster",
+					"role": "cluster",
 				},
 			},
 		},
 	})
 	translators := NewTranslators(cfg)
-	// cluster mode: apiserver, kube_state_metrics = 2 pipelines
+	// cluster role: apiserver, kube_state_metrics = 2 pipelines
 	assert.Equal(t, 2, translators.Len())
 }
 
-func TestNewTranslators_DefaultMode(t *testing.T) {
-	// No mode specified, no env var - should default to node
+func TestNewTranslators_DefaultRole(t *testing.T) {
+	// No role specified, no env var - should default to node
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-				},
+				"container_insights": map[string]interface{}{},
 			},
 		},
 	})
 	translators := NewTranslators(cfg)
-	// defaults to node mode: 8 pipelines
+	// defaults to node role: 8 pipelines
 	assert.Equal(t, 8, translators.Len())
 }
 
 func TestNewTranslators_EnvVarFallback_Node(t *testing.T) {
-	// No mode in config, CWAGENT_ROLE=NODE
+	// No role in config, CWAGENT_ROLE=NODE
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-				},
+				"container_insights": map[string]interface{}{},
 			},
 		},
 	})
 	translators := NewTranslators(cfg)
-	// env var NODE -> node mode: 8 pipelines
+	// env var NODE -> node role: 8 pipelines
 	assert.Equal(t, 8, translators.Len())
 }
 
 func TestNewTranslators_EnvVarFallback_Leader(t *testing.T) {
-	// No mode in config, CWAGENT_ROLE=LEADER
+	// No role in config, CWAGENT_ROLE=LEADER
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.LEADER)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-				},
+				"container_insights": map[string]interface{}{},
 			},
 		},
 	})
 	translators := NewTranslators(cfg)
-	// env var LEADER -> cluster mode: 2 pipelines
+	// env var LEADER -> cluster role: 2 pipelines
 	assert.Equal(t, 2, translators.Len())
 }
 
@@ -125,15 +122,15 @@ func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
 	t.Setenv(envconfig.CWAGENT_ROLE, envconfig.NODE)
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{
-					"cluster_name": "test-cluster",
-					"mode":         "cluster",
+					"role": "cluster",
 				},
 			},
 		},
 	})
 	translators := NewTranslators(cfg)
-	// JSON config wins: cluster mode = 2 pipelines
+	// JSON config wins: cluster role = 2 pipelines
 	assert.Equal(t, 2, translators.Len())
 }

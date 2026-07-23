@@ -14,8 +14,10 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
 //go:embed transform_jmx_config.yaml
@@ -30,8 +32,14 @@ var transformEfaConfig string
 //go:embed transform_dbi_fix_start_time.yaml
 var transformDbiFixStartTimeConfig string
 
-//go:embed transform_identity_host.yaml
-var transformIdentityHostConfig string
+//go:embed transform_identity_ec2.yaml
+var transformIdentityEC2Config string
+
+//go:embed transform_identity_azure_vm.yaml
+var transformIdentityAzureVMConfig string
+
+//go:embed transform_identity_ecs.yaml
+var transformIdentityECSConfig string
 
 //go:embed transform_identity_k8s.yaml
 var transformIdentityK8sConfig string
@@ -58,6 +66,13 @@ func WithMetricResourceStatements(statements []string) Option {
 	}
 }
 
+// WithTraceResourceStatements sets OTTL statements to execute in the "resource" context for traces.
+func WithTraceResourceStatements(statements []string) Option {
+	return func(t *translator) {
+		t.traceStatements = statements
+	}
+}
+
 // WithErrorMode sets the error mode for dynamic statements. Defaults to "propagate".
 func WithErrorMode(mode string) Option {
 	return func(t *translator) {
@@ -79,6 +94,13 @@ func WithLogScopeStatements(statements []string) Option {
 	}
 }
 
+// WithLogContextStatements sets OTTL statements to execute in the "log" context for logs.
+func WithLogContextStatements(statements []string) Option {
+	return func(t *translator) {
+		t.logContextStatements = statements
+	}
+}
+
 // WithMetricScopeStatements sets OTTL statements to execute in the "scope" context for metrics only.
 func WithMetricScopeStatements(statements []string) Option {
 	return func(t *translator) {
@@ -90,7 +112,9 @@ type translator struct {
 	name                  string
 	factory               processor.Factory
 	logStatements         []string
+	logContextStatements  []string
 	metricStatements      []string
+	traceStatements       []string
 	scopeStatements       []string
 	logScopeStatements    []string
 	metricScopeStatements []string
@@ -113,7 +137,9 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) hasDynamicStatements() bool {
 	return len(t.logStatements) > 0 ||
+		len(t.logContextStatements) > 0 ||
 		len(t.metricStatements) > 0 ||
+		len(t.traceStatements) > 0 ||
 		len(t.scopeStatements) > 0 ||
 		len(t.logScopeStatements) > 0 ||
 		len(t.metricScopeStatements) > 0
@@ -136,6 +162,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if len(t.logStatements) > 0 {
 			cfgMap["log_statements"] = []any{buildResourceStatements(t.logStatements, errorMode)}
 		}
+		if len(t.traceStatements) > 0 {
+			cfgMap["trace_statements"] = []any{buildResourceStatements(t.traceStatements, errorMode)}
+		}
 		if len(t.scopeStatements) > 0 {
 			scopeBlock := buildScopeStatements(t.scopeStatements, errorMode)
 			cfgMap["metric_statements"] = appendStatements(cfgMap["metric_statements"], scopeBlock)
@@ -147,6 +176,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 		if len(t.logScopeStatements) > 0 {
 			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildScopeStatements(t.logScopeStatements, errorMode))
+		}
+		if len(t.logContextStatements) > 0 {
+			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], buildLogStatements(t.logContextStatements, errorMode))
 		}
 		if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 			return nil, fmt.Errorf("failed to configure transform processor: %w", err)
@@ -171,7 +203,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if context.CurrentContext().KubernetesMode() != "" {
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityK8sConfig)
 		}
-		return common.GetYamlFileToYamlConfig(cfg, transformIdentityHostConfig)
+		if ecsutil.GetECSUtilSingleton().IsECS() {
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityECSConfig)
+		}
+		switch context.CurrentContext().Mode() {
+		case config.ModeAzureVM:
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityAzureVMConfig)
+		default:
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityEC2Config)
+		}
 	}
 	if t.name == common.LogsRouting {
 		if context.CurrentContext().KubernetesMode() != "" {
@@ -193,6 +233,18 @@ func buildResourceStatements(statements []string, errorMode string) map[string]a
 	}
 	return map[string]any{
 		"context":    "resource",
+		"error_mode": errorMode,
+		"statements": stmts,
+	}
+}
+
+func buildLogStatements(statements []string, errorMode string) map[string]any {
+	stmts := make([]any, len(statements))
+	for i, s := range statements {
+		stmts[i] = s
+	}
+	return map[string]any{
+		"context":    "log",
 		"error_mode": errorMode,
 		"statements": stmts,
 	}

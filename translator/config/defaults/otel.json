@@ -6,6 +6,7 @@
   },
   "opentelemetry": {
     "collect": {
+      "host_metrics": {},
       "otlp": {
         "span_metrics_enabled": true
       }

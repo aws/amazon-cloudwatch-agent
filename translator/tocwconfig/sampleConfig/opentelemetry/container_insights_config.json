@@ -3,9 +3,9 @@
     "region": "us-east-1"
   },
   "opentelemetry": {
+    "cluster_name": "TestCluster",
     "collect": {
       "container_insights": {
-        "cluster_name": "TestCluster",
         "collection_interval": 30
       }
     }
