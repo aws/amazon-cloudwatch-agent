@@ -1024,6 +1024,8 @@ receivers:
                 enabled: true
         initial_delay: 1s
         metrics:
+            mysql.active_transactions:
+                enabled: true
             mysql.buffer_pool.data_pages:
                 aggregation_strategy: sum
                 attributes:
@@ -1076,6 +1078,8 @@ receivers:
                 aggregation_strategy: sum
                 attributes:
                     - kind
+                enabled: true
+            mysql.history_list_length:
                 enabled: true
             mysql.index.io.wait.count:
                 aggregation_strategy: sum
@@ -1298,6 +1302,8 @@ receivers:
                 enabled: true
         initial_delay: 1s
         metrics:
+            mysql.active_transactions:
+                enabled: true
             mysql.buffer_pool.data_pages:
                 aggregation_strategy: sum
                 attributes:
@@ -1350,6 +1356,8 @@ receivers:
                 aggregation_strategy: sum
                 attributes:
                     - kind
+                enabled: true
+            mysql.history_list_length:
                 enabled: true
             mysql.index.io.wait.count:
                 aggregation_strategy: sum
