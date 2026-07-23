@@ -147,8 +147,9 @@ const FilesKey = "files"
 const (
 	DatabaseInsightsKey = "database_insights"
 	PostgreSQLKey       = "postgresql"
+	MySQLKey            = "mysql"
 
-	// DBI component names
+	// DBI component name prefixes (shared across engines; index-suffixed per instance)
 	DbiTransformFixStartTime = "dbi_fix_start_time"
 	DbiTransformResource     = "dbi_resource"
 	DbiTransformLogs         = "dbi_logs"
@@ -166,6 +167,7 @@ const (
 var (
 	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+	DatabaseInsightsMysqlKey    = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, MySQLKey)
 	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
 	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)

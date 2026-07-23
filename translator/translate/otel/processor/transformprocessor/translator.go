@@ -29,8 +29,11 @@ var transformJmxDropConfig string
 //go:embed transform_efa_config.yaml
 var transformEfaConfig string
 
-//go:embed transform_dbi_fix_start_time.yaml
+//go:embed transform_dbi_fix_start_time_postgresql.yaml
 var transformDbiFixStartTimeConfig string
+
+//go:embed transform_dbi_fix_start_time_mysql.yaml
+var transformDbiFixStartTimeMysqlConfig string
 
 //go:embed transform_identity_ec2.yaml
 var transformIdentityEC2Config string
@@ -108,6 +111,14 @@ func WithMetricScopeStatements(statements []string) Option {
 	}
 }
 
+// WithDbiFixStartTime selects the DBI fix-start-time config for the given engine
+// ("postgresql" or "mysql"). The component is named by the caller (index-based).
+func WithDbiFixStartTime(engine string) Option {
+	return func(t *translator) {
+		t.dbiFixStartTimeEngine = engine
+	}
+}
+
 type translator struct {
 	name                  string
 	factory               processor.Factory
@@ -119,6 +130,7 @@ type translator struct {
 	logScopeStatements    []string
 	metricScopeStatements []string
 	errorMode             string
+	dbiFixStartTimeEngine string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -196,8 +208,15 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
 		return common.GetYamlFileToYamlConfig(cfg, transformEfaConfig)
 	}
-	if t.name == common.DbiTransformFixStartTime {
-		return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeConfig)
+	// DBI fix-start-time: content is engine-specific, component name is index-based.
+	if t.dbiFixStartTimeEngine != "" {
+		switch t.dbiFixStartTimeEngine {
+		case common.PostgreSQLKey:
+			return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeConfig)
+		case common.MySQLKey:
+			return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeMysqlConfig)
+		}
+		return nil, fmt.Errorf("unsupported dbi fix-start-time engine: %s", t.dbiFixStartTimeEngine)
 	}
 	if t.name == common.Identity {
 		if context.CurrentContext().KubernetesMode() != "" {

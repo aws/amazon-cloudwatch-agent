@@ -32,3 +32,46 @@ func TestMergeRule(t *testing.T) {
 	assert.Contains(t, otel, "collect")
 	assert.Contains(t, otel["collect"].(map[string]interface{}), "host_metrics")
 }
+
+func TestMergeRule_DatabaseInsights(t *testing.T) {
+	// Verify that postgresql and mysql from separate configs merge correctly
+	// under database_insights (simulates separate SSM parameters)
+	source1 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"postgresql": []interface{}{
+						map[string]interface{}{
+							"endpoint":      "localhost:5432",
+							"instance_name": "pg-test",
+						},
+					},
+				},
+			},
+		},
+	}
+	source2 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"mysql": []interface{}{
+						map[string]interface{}{
+							"endpoint":      "localhost:3306",
+							"instance_name": "mysql-test",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Merge source1 into source2 (source2 acts as result)
+	mergeJsonUtil.MergeRuleMap["opentelemetry"].Merge(source1, source2)
+
+	otel := source2["opentelemetry"].(map[string]interface{})
+	collect := otel["collect"].(map[string]interface{})
+	dbi := collect["database_insights"].(map[string]interface{})
+
+	assert.Contains(t, dbi, "postgresql", "postgresql should be preserved after merge")
+	assert.Contains(t, dbi, "mysql", "mysql should be preserved after merge")
+}

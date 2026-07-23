@@ -1,0 +1,217 @@
+logs:
+  - name: mysql.count_star
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "SQL execution count"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.count_star"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.count_star"])'
+  - name: mysql.sum_timer_wait
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total execution time in picoseconds"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"] != nil
+    sum:
+      value: 'Double(attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"])'
+  - name: mysql.sum_lock_time
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total lock time in seconds"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_lock_time"] != nil
+    sum:
+      value: 'Double(attributes["mysql.events_statements_summary_by_digest.sum_lock_time"])'
+  - name: mysql.sum_rows_sent
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Rows sent to client"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_rows_sent"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_sent"])'
+  - name: mysql.sum_rows_examined
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Rows examined"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_rows_examined"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_examined"])'
+  - name: mysql.sum_errors
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total errors"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_errors"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_errors"])'
+  - name: mysql.sum_sort_rows
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Rows sorted"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_sort_rows"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_rows"])'
+  - name: mysql.sum_created_tmp_tables
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Temporary tables created"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_tables"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_tables"])'
+  - name: mysql.sum_created_tmp_disk_tables
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Temporary disk tables created"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_disk_tables"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_disk_tables"])'
+  - name: mysql.sum_no_index_used
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Queries using no index"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_no_index_used"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_no_index_used"])'
+  - name: mysql.sum_select_full_join
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Full joins without index"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_select_full_join"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_select_full_join"])'
+  - name: mysql.sum_sort_scan
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Sorts done via full scan"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_sort_scan"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_scan"])'
+  - name: mysql.sum_no_good_index_used
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Queries using no good index"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_no_good_index_used"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_no_good_index_used"])'
+  - name: mysql.sum_select_scan
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Full table scans"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_select_scan"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_select_scan"])'
+  - name: mysql.sum_rows_affected
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Rows affected"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"])'
+  - name: mysql.sum_select_range_check
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Joins checking key usage per row"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"])'
+  - name: mysql.sum_sort_merge_passes
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Sort merge passes"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"])'
+  - name: mysql.sum_sort_range
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Sorts using ranges"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_summary_by_digest.digest
+      - key: db.namespace
+    conditions:
+      - attributes["mysql.events_statements_summary_by_digest.sum_sort_range"] != nil
+    sum:
+      value: 'Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_range"])'
