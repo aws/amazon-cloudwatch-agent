@@ -90,6 +90,12 @@ jobs:
         shell: bash
         env:
           CGO_ENABLED: "0"
+          # -count=1 disables Go's test cache. Without it, only the first
+          # iteration actually runs tests; runs 2..N return cached PASS
+          # results in ~20s and produce no data. Observed in run 30035934152:
+          # iter 1 = 13 min, iters 2-5 = 22-57 s each. With this flag every
+          # iteration is a real ~13 min test execution.
+          GOFLAGS: "-count=1"
           ITERATIONS: ${{ inputs.iterations || '5' }}
           VARIANT: ${{ matrix.variant }}
           TARGET_TEST: TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate
