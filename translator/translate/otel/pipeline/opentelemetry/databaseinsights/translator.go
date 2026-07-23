@@ -60,6 +60,30 @@ func buildPostgresSeverityPattern() string {
 	return `\[\d+\]\s*(?P<severity>` + strings.Join(postgresLogSeverityLevels, "|") + `):`
 }
 
+// mysqlLogSeverityLevels are the severity labels MySQL emits in the classic error log
+// (per MySQL worklog #10942): Note/Warning/ERROR, plus System for force-printed events.
+// Kept alongside the mapping below so the regex and mapping stay together.
+var mysqlLogSeverityLevels = []string{"System", "Warning", "Note", "ERROR"}
+
+// mysqlLogSeverityMapping maps MySQL error-log labels to OTEL severity levels for the
+// filelog severity operator. Kept here (not in the generic filelog translator) because
+// these labels are MySQL-specific. System and Note are informational; there is no
+// MySQL debug/fatal label in the classic error log.
+var mysqlLogSeverityMapping = map[string]any{
+	"info":  []string{"System", "Note"},
+	"warn":  "Warning",
+	"error": "ERROR",
+}
+
+// buildMysqlSeverityPattern builds the regex that extracts the severity from a MySQL
+// error-log line of the form "<timestamp> <thread_id> [<severity>] [MY-######] ...".
+// Anchoring on the numeric thread id before the bracket avoids matching the later
+// error-code bracket (e.g. "[MY-010116]"). The required (?P<severity>...) named capture
+// group is assembled from mysqlLogSeverityLevels.
+func buildMysqlSeverityPattern() string {
+	return `\s\d+\s+\[(?P<severity>` + strings.Join(mysqlLogSeverityLevels, "|") + `)\]`
+}
+
 // dbiTranslator generates DBI pipelines for a single database instance. The
 // engine (carried on cfg) selects engine-specific receivers, connector configs,
 // resource attributes, and log group paths. Component IDs are index-based so
@@ -168,46 +192,37 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 	idx := strconv.Itoa(t.instanceIndex)
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
-	processors := common.NewTranslatorMap[component.Config, component.ID](
-		t.scopeTransform(),
-		resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)),
-	)
-
-	logsTransformOpts := []transformprocessor.Option{
-		transformprocessor.WithLogResourceStatements(t.logStatements("server-logs")),
-	}
-
-	if t.cfg.engine == common.PostgreSQLKey {
-		// Promote log.file.name to a resource attribute, reusing the files pipeline's
-		// shared groupbyattrs instance so server-log parsing/grouping is consistent
-		// with regular file logs.
-		processors.Set(groupbyattrsprocessor.NewTranslatorWithName(common.FilesKey, "log.file.name"))
-		// Drop the parsed attributes once promoted to the record's timestamp and
-		// severity fields, mirroring the files pipeline's timestamp cleanup, so they
-		// are not duplicated in the emitted log attributes.
-		logsTransformOpts = append(logsTransformOpts, transformprocessor.WithLogContextStatements([]string{
-			`delete_key(attributes, "timestamp")`,
-			`delete_key(attributes, "severity")`,
-		}))
-	}
-
-	processors.Set(transformprocessor.NewTranslatorWithName(
-		common.DbiTransformResource+"_"+t.cfg.engine+"_"+idx,
-		transformprocessor.WithMetricResourceStatements(t.resourceStatements()),
-		transformprocessor.WithLogResourceStatements(t.resourceStatements()),
-	))
-	processors.Set(transformprocessor.NewTranslatorWithName(
-		common.DbiTransformLogs+"_"+t.cfg.engine+"_server-logs_"+idx,
-		logsTransformOpts...,
-	))
-
-	// NOTE: timestamp parsing assumes the instance logs in UTC. The %Z token only matches
-	// 3-letter zone abbreviations and the gotime layout parses them against a UTC location,
-	// so timestamps from a non-UTC instance would be silently offset. DBI therefore requires
-	// the instance to be configured to emit UTC timestamps in its logs.
+	// NOTE: timestamp parsing assumes the instance logs in UTC. Both engines' timestamp
+	// layouts parse against a UTC location, so timestamps from a non-UTC instance would be
+	// silently offset. DBI therefore requires the instance to emit UTC timestamps in its
+	// logs (PostgreSQL: log_timezone = 'UTC'; MySQL: log_timestamps = UTC, which is the
+	// default).
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.serverLogReceiver()),
-		Processors: processors,
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.serverLogReceiver()),
+		Processors: common.NewTranslatorMap[component.Config, component.ID](
+			t.scopeTransform(),
+			resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)),
+			// Promote log.file.name to a resource attribute, reusing the files pipeline's
+			// shared groupbyattrs instance so server-log parsing/grouping is consistent
+			// with regular file logs.
+			groupbyattrsprocessor.NewTranslatorWithName(common.FilesKey, "log.file.name"),
+			transformprocessor.NewTranslatorWithName(
+				common.DbiTransformResource+"_"+t.cfg.engine+"_"+idx,
+				transformprocessor.WithMetricResourceStatements(t.resourceStatements()),
+				transformprocessor.WithLogResourceStatements(t.resourceStatements()),
+			),
+			transformprocessor.NewTranslatorWithName(
+				common.DbiTransformLogs+"_"+t.cfg.engine+"_server-logs_"+idx,
+				transformprocessor.WithLogResourceStatements(t.logStatements("server-logs")),
+				// Drop the parsed attributes once promoted to the record's timestamp and
+				// severity fields, mirroring the files pipeline's timestamp cleanup, so they
+				// are not duplicated in the emitted log attributes.
+				transformprocessor.WithLogContextStatements([]string{
+					`delete_key(attributes, "timestamp")`,
+					`delete_key(attributes, "severity")`,
+				}),
+			),
+		),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwd),
@@ -215,20 +230,30 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 }
 
 // serverLogReceiver builds the engine-specific filelog receiver for server logs.
-// PostgreSQL logs get multiline/timestamp/severity parsing; other engines use a
-// plain filelog receiver.
+// Both engines get multiline grouping plus timestamp and severity parsing, but the
+// timestamp layout and severity vocabulary differ by engine (PostgreSQL stderr format
+// vs MySQL classic error-log format).
 func (t *dbiTranslator) serverLogReceiver() common.ComponentTranslator {
 	opts := []filelog.Option{
 		filelog.WithNamePrefix(t.cfg.engine),
 		filelog.WithIndex(t.instanceIndex),
 		filelog.WithFilePath(t.cfg.logFilePath),
+		filelog.WithMultilinePattern(`^\d{4}-\d{2}-\d{2}`),
 	}
-	if t.cfg.engine == common.PostgreSQLKey {
+	switch t.cfg.engine {
+	case common.PostgreSQLKey:
 		opts = append(opts,
-			filelog.WithMultilinePattern(`^\d{4}-\d{2}-\d{2}`),
 			filelog.WithTimestampFormat("%Y-%m-%d %H:%M:%S.%f %Z", "UTC"),
 			filelog.WithSeverityPattern(buildPostgresSeverityPattern()),
 			filelog.WithSeverityMapping(postgresLogSeverityMapping),
+		)
+	case common.MySQLKey:
+		// MySQL 8.0+ error log timestamps are ISO 8601 UTC, e.g.
+		// "2026-07-20T15:27:47.123456Z" (T separator, trailing literal Z).
+		opts = append(opts,
+			filelog.WithTimestampFormat("%Y-%m-%dT%H:%M:%S.%fZ", "UTC"),
+			filelog.WithSeverityPattern(buildMysqlSeverityPattern()),
+			filelog.WithSeverityMapping(mysqlLogSeverityMapping),
 		)
 	}
 	return filelog.NewTranslator(opts...)

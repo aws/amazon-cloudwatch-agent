@@ -69,8 +69,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	// Enable metrics that are disabled by default in the receiver but required
-	// by Database Insights. mysql.replica.* metrics only emit when the monitored
-	// instance is a replica; they are inert on standalone/primary instances.
+	// by Database Insights.
 	cfg.MetricsBuilderConfig.Metrics.MysqlTableSize.Enabled = true
 	cfg.MetricsBuilderConfig.Metrics.MysqlReplicaSQLDelay.Enabled = true
 	cfg.MetricsBuilderConfig.Metrics.MysqlReplicaTimeBehindSource.Enabled = true
