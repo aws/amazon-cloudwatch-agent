@@ -270,8 +270,17 @@ func newTopKMetrics(sizeLimit int) *topKMetrics {
 // Push adds a key-value pair to the priority queue. If the value already exists, it updates the frequency.
 func (t *topKMetrics) Push(oldMetric, newMetric *MetricData) {
 	hashValue := oldMetric.hashKey
+	// Note: initialize minMetric from newMetric, NOT oldMetric. oldMetric is the caller's
+	// as-constructed *MetricData whose `frequency` field is the zero value (never populated;
+	// it comes straight from newMetricData). Using oldMetric here would leave minMetric.frequency
+	// pinned at 0 forever, and the (`newMetric.frequency > t.minMetric.frequency`) eviction check
+	// below would then fire for ANY subsequent unique push, causing an entry to be evicted from a
+	// full top-K even though every entry has an equal or higher frequency than the newcomer.
+	// Concretely, that let TestAdmitAndRollup admit a 3rd distinct key from a random stream of 10
+	// draws with Threshold=2 at ~1% on Linux and ~7% on Windows (larger scheduler jitter -> more
+	// draws hit the boundary case). See WORKLOG section 9b.
 	if t.minMetric == nil {
-		t.minMetric = oldMetric
+		t.minMetric = newMetric
 	}
 
 	_, found := t.metricMap[hashValue]
