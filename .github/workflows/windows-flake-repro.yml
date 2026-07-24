@@ -24,6 +24,11 @@
 #   - TestAdmitAndRollup (awsapplicationsignals cardinalitycontrol; the ONE production
 #     code fix in this branch -- topKMetrics.Push initialized minMetric with a stale
 #     freq=0 metric, causing a 3rd distinct random key to evict a full top-K entry)
+#   - TestLogsFileRemove (logfile input plugin; 1 s post-deletion grace too short
+#     for the polling watcher under Windows contention -- fix bumps to 10 s)
+#   - TestLogThrottleRetryerLogging (retryer; second production fix -- throttleChan
+#     buffer of 1 dropped events under contention, and Stop() didn't drain remaining
+#     events -- fix bumps buffer to 1024, drains on shutdown, makes Stop() sync)
 #
 # Matrix legs:
 #   - baseline: instrumented pre-fix versions of every test file this branch
@@ -176,6 +181,8 @@ jobs:
             TestBackoffRetries
             TestPublish
             TestAdmitAndRollup
+            TestLogsFileRemove
+            TestLogThrottleRetryerLogging
         run: |
           set +e
           pass=0
