@@ -14,11 +14,16 @@
 # windows).
 #
 # Target tests A/B'd on this branch:
-#   - TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate (k8sclient)
-#   - TestConvertOtelMetrics_Dimensions (cloudwatch output plugin)
+#   - TestTimedDeleterWithIDCheck_DeleteWithDelay_* (k8sclient, 3 variants)
+#   - TestConvertOtelMetrics_{Dimensions,NoDimensions,Histogram} (cloudwatch output plugin,
+#     3 siblings sharing the same checkDatum wall-clock budget)
 #   - TestTailerSrc (logfile input plugin)
 #   - TestMiddleware (cloudwatch output plugin)
 #   - TestBackoffRetries (cloudwatch output plugin)
+#   - TestPublish (cloudwatch output plugin, discovered on run 30058956003 fixed iter 9)
+#   - TestAdmitAndRollup (awsapplicationsignals cardinalitycontrol; the ONE production
+#     code fix in this branch -- topKMetrics.Push initialized minMetric with a stale
+#     freq=0 metric, causing a 3rd distinct random key to evict a full top-K entry)
 #
 # Matrix legs:
 #   - baseline: instrumented pre-fix versions of every test file this branch
@@ -164,9 +169,13 @@ jobs:
             TestTimedDeleterWithIDCheck_DeleteWithDelay_WithUpdate
             TestTimedDeleterWithIDCheck_DeleteWithDelay_InvalidType
             TestConvertOtelMetrics_Dimensions
+            TestConvertOtelMetrics_NoDimensions
+            TestConvertOtelMetrics_Histogram
             TestTailerSrc
             TestMiddleware
             TestBackoffRetries
+            TestPublish
+            TestAdmitAndRollup
         run: |
           set +e
           pass=0

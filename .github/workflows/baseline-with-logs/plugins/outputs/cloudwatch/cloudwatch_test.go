@@ -506,14 +506,28 @@ func TestPublish(t *testing.T) {
 	metrics := createTestMetrics(numMetrics, 1, 1, "")
 	ctx := context.Background()
 	// Use goroutine since it could block if len(metrics) >metricChanBufferSize.
+	consumeStart := time.Now()
 	go cw.ConsumeMetrics(ctx, metrics)
 	// Expect some, but not all API calls after half the original interval.
 	time.Sleep(interval/2 + 2*time.Second)
+	callsHalfInterval := len(svc.Calls)
 	assert.Less(t, 0, len(svc.Calls))
 	assert.Less(t, len(svc.Calls), expectedCalls)
 	// Expect all API calls after 1.5x the interval.
 	// 10K metrics in batches of 20...
 	time.Sleep(interval)
+	callsFullInterval := len(svc.Calls)
+	// baseline-instrument: capture the actual publisher throughput. The next
+	// assertion demands `callsFullInterval == expectedCalls`; on a slow runner
+	// callsFullInterval can be well under expectedCalls (observed 187/250 in
+	// run 30058956003 fixed iter 9 -- ~2 calls/s under Windows CI contention).
+	rate := float64(callsFullInterval) / time.Since(consumeStart).Seconds()
+	t.Logf("baseline-instrument: TestPublish expected=%d "+
+		"calls_at_half_interval(%s)=%d calls_at_full_interval(%s)=%d "+
+		"rate=%.2f/s elapsed=%s goroutines=%d GOMAXPROCS=%d",
+		expectedCalls, interval/2+2*time.Second, callsHalfInterval,
+		interval*3/2+2*time.Second, callsFullInterval,
+		rate, time.Since(consumeStart), runtime.NumGoroutine(), runtime.GOMAXPROCS(0))
 	assert.Equal(t, expectedCalls, len(svc.Calls))
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	cw.Shutdown(ctx)
