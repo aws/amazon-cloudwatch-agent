@@ -1738,3 +1738,176 @@ jobs:
               cd terraform/eks/addon/gpu
             fi
             terraform destroy -auto-approve
+
+  AzureVMIntegrationTest:
+    needs: [OutputEnvVariables]
+    if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    name: 'AzureVM-default-otel'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Download pre-built agent .deb
+        env:
+          DEB_S3_URI: "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb"
+        run: |
+          if ! aws s3 ls "$DEB_S3_URI" >/dev/null 2>&1; then
+            echo "::error::No agent .deb at $DEB_S3_URI"
+            exit 1
+          fi
+          aws s3 cp "$DEB_S3_URI" "${{ github.workspace }}/amazon-cloudwatch-agent.deb" --no-progress
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.0
+
+      - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
+        timeout-minutes: 45
+        working-directory: terraform/azure/vm
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          terraform init
+          terraform apply --auto-approve \
+            -var="region=us-east-2" \
+            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" \
+            -var="cwa_github_sha=${{ inputs.build_id }}" \
+            -var="agent_deb_path=${{ github.workspace }}/amazon-cloudwatch-agent.deb" \
+            -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
+            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
+            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
+            -var="azure_oidc_provider_arn=${{ vars.AZURE_OIDC_PROVIDER_ARN }}" \
+            -var="azure_token_audience=${{ vars.AZURE_TOKEN_AUDIENCE }}"
+
+      - name: Fail if apply failed
+        if: steps.terraform_apply.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform destroy
+        if: ${{ always() }}
+        working-directory: terraform/azure/vm
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          terraform destroy --auto-approve \
+            -var="region=us-east-2" \
+            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" \
+            -var="cwa_github_sha=${{ inputs.build_id }}" \
+            -var="agent_deb_path=${{ github.workspace }}/amazon-cloudwatch-agent.deb" \
+            -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
+            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
+            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
+            -var="azure_oidc_provider_arn=${{ vars.AZURE_OIDC_PROVIDER_ARN }}" \
+            -var="azure_token_audience=${{ vars.AZURE_TOKEN_AUDIENCE }}" || true
+
+  AKS-default-otel:
+    needs: [OutputEnvVariables]
+    if: contains(inputs.test_dir_filter, './test/azure/aks') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    name: 'AKS-default-otel'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.0
+          terraform_wrapper: false
+
+      - name: Setup Go
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        with:
+          go-version: '~1.22'
+          cache: false
+
+      - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
+        timeout-minutes: 60
+        working-directory: terraform/azure/aks
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          terraform init
+          terraform apply --auto-approve \
+            -var="region=us-east-2" \
+            -var="cwa_github_sha=${{ inputs.build_id }}" \
+            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=${{ inputs.build_id }}" \
+            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
+            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
+            -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
+            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+            -var="runner_ip=$(curl -s ifconfig.me)/32"
+
+      - name: Fail if apply failed
+        if: steps.terraform_apply.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform destroy
+        if: ${{ always() }}
+        working-directory: terraform/azure/aks
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          terraform destroy --auto-approve \
+            -var="region=us-east-2" \
+            -var="cwa_github_sha=${{ inputs.build_id }}" \
+            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=${{ inputs.build_id }}" \
+            -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
+            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
+            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
+            -var="runner_ip=$(curl -s ifconfig.me)/32" || true
