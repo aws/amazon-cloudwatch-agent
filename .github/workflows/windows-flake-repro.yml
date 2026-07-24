@@ -21,8 +21,11 @@
 #   - TestBackoffRetries (cloudwatch output plugin)
 #
 # Matrix legs:
-#   - baseline: all target-test files + affected production files restored
-#               from origin/main (i.e., the pre-fix code path)
+#   - baseline: instrumented pre-fix versions of every test file this branch
+#               touches are overlaid on origin/main so the flakes fire AND emit
+#               diagnostic logs (baseline-instrument: ...). The overlay files
+#               live under .github/workflows/baseline-with-logs/ with paths
+#               mirrored to their real source-tree location.
 #   - fixed:    this branch's rewritten tests + instrumentation
 #
 # Reported per matrix leg:
@@ -32,8 +35,9 @@
 #                    fix actually landed)
 #   - other_failure: make test failed but no target test was the cause
 #
-# Each `make test` on windows-latest takes ~10–13 min. With iterations=5
-# per leg (default), one push takes ~65 min per leg (legs run in parallel).
+# Each `make test` on windows-latest takes ~5-13 min (iter 1 slower due to
+# module cache warmup). With iterations=30 per leg (default), each matrix
+# leg needs ~3 hours. Both legs run in parallel, so wall time is ~3 hours.
 
 name: Windows Flake Repro (TimedDeleter)
 
@@ -46,7 +50,7 @@ on:
       iterations:
         description: "How many `make test` runs per variant"
         required: true
-        default: "5"
+        default: "30"
 
 jobs:
   repro:
@@ -69,23 +73,53 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore baseline files (variant=baseline)
+      - name: Overlay instrumented baseline files (variant=baseline)
         if: matrix.variant == 'baseline'
         shell: bash
         run: |
-          git fetch origin main --quiet
-          # Restore every file that this branch changed so 'baseline' truly
-          # reflects origin/main behavior for the target tests. Order doesn't
-          # matter (each path is independent), but list explicitly so the set
-          # is auditable in one place.
-          git checkout origin/main -- \
-            internal/k8sCommon/k8sclient/kubernetes_utils_test.go \
-            plugins/outputs/cloudwatch/convert_otel_test.go \
-            plugins/outputs/cloudwatch/cloudwatch_test.go \
-            plugins/inputs/logfile/tailersrc_test.go \
-            plugins/inputs/logfile/tail/tail.go
-          echo "Restored the following files from origin/main:"
+          # For each file under .github/workflows/baseline-with-logs/, the path
+          # relative to that directory is the destination in the source tree.
+          # These files are the origin/main versions with baseline-instrument:
+          # t.Logf calls inserted before every flaky assertion (see the
+          # commit that introduced them for the diff). The overlay both:
+          #   1. Reverts the assertion-side fixes back to origin/main behavior
+          #      so the flakes fire on baseline.
+          #   2. Adds t.Logf lines that print elapsed timings, goroutine counts,
+          #      and observed counter values -- these lines are always visible
+          #      in `make test` output whenever the enclosing test fails,
+          #      giving us live diagnostic data on every flake.
+          # tail.go is intentionally NOT restored: its changes on this branch
+          # are Logger.Debugf calls (filtered at INFO by default) that don't
+          # affect any test behavior, so keeping the branch version means we
+          # can enable debug logging in the future to trace tailer lifecycle
+          # if the flake reappears.
+          overlay_root=".github/workflows/baseline-with-logs"
+          count=0
+          while IFS= read -r src; do
+            rel="${src#${overlay_root}/}"
+            cp "$src" "$rel"
+            echo "overlaid: $rel"
+            count=$((count + 1))
+          done < <(find "$overlay_root" -type f -name '*.go')
+          echo "overlaid $count file(s)"
+          echo ""
+          echo "Post-overlay git status:"
           git status --short
+          # Verify overlay files match their baseline-with-logs source.
+          # A drift check would happen at PR review; here we just confirm the
+          # copies landed.
+          echo ""
+          echo "Overlay file SHAs (source vs destination):"
+          while IFS= read -r src; do
+            rel="${src#${overlay_root}/}"
+            src_sha=$(git hash-object "$src")
+            dst_sha=$(git hash-object "$rel")
+            match="MATCH"
+            if [ "$src_sha" != "$dst_sha" ]; then
+              match="MISMATCH"
+            fi
+            echo "  $match src=$src_sha dst=$dst_sha $rel"
+          done < <(find "$overlay_root" -type f -name '*.go')
 
       - name: Show target test sources
         shell: bash
@@ -123,7 +157,7 @@ jobs:
           # iter 1 = 13 min, iters 2-5 = 22-57 s each. With this flag every
           # iteration is a real ~13 min test execution.
           GOFLAGS: "-count=1"
-          ITERATIONS: ${{ inputs.iterations || '5' }}
+          ITERATIONS: ${{ inputs.iterations || '30' }}
           VARIANT: ${{ matrix.variant }}
           TARGET_TESTS: |
             TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate
