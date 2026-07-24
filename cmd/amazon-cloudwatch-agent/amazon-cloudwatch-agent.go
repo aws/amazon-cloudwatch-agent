@@ -126,6 +126,10 @@ func reloadLoop(
 					log.Println("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
+				} else {
+					// Route non-SIGHUP terminating signal through the SCM;
+					// see shutdown_signal_windows.go.
+					handleTerminatingSignalDispatch(stop, stopWaitTimeout)
 				}
 				cancel()
 			case <-stop:
@@ -439,6 +443,8 @@ func (p *program) run() {
 		p.aggregatorFilters,
 		p.processorFilters,
 	)
+	// Windows-only fallback: exit if SCM STOP was not taken.
+	handleTerminatingSignal()
 }
 func (p *program) Stop(_ service.Service) error {
 	close(stop)
