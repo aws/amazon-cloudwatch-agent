@@ -160,8 +160,9 @@ jobs:
         id: pull-image
         env:
           ARTIFACTS_REGISTRY: ${{ steps.login-artifacts-ecr.outputs.registry }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
-          docker pull ${{ env.ARTIFACTS_REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
+          docker pull "$ARTIFACTS_REGISTRY/cloudwatch-agent:$INPUT_BUILD_ID"
 
       - name: Login to Integ Test Amazon ECR
         id: login-integ-test-ecr
@@ -172,5 +173,6 @@ jobs:
         env:
           ARTIFACTS_REGISTRY: ${{ steps.login-artifacts-ecr.outputs.registry }}
           INTEG_TEST_REGISTRY: ${{ steps.login-integ-test-ecr.outputs.registry }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
-          docker buildx imagetools create -t ${{ env.INTEG_TEST_REGISTRY }}/cwagent-integration-test:${{ inputs.build_id }} ${{ env.ARTIFACTS_REGISTRY }}/cloudwatch-agent:${{ inputs.build_id }}
+          docker buildx imagetools create -t "$INTEG_TEST_REGISTRY/cwagent-integration-test:$INPUT_BUILD_ID" "$ARTIFACTS_REGISTRY/cloudwatch-agent:$INPUT_BUILD_ID"

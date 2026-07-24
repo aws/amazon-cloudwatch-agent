@@ -56,7 +56,10 @@ jobs:
           aws-region: ${{ inputs.region }}
 
       - name: Copy state
-        run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
+        env:
+          INPUT_S3_BUCKET: ${{ inputs.s3_integration_bucket }}
+          INPUT_GITHUB_SHA: ${{ inputs.github_sha }}
+        run: aws s3 cp "s3://$INPUT_S3_BUCKET/integration-test/local-stack-terraform-state/$INPUT_GITHUB_SHA/terraform.tfstate" .
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -68,4 +71,6 @@ jobs:
         run: terraform init
 
       - name: Terraform destroy
-        run: terraform destroy -var="region=${{ inputs.region }}" --auto-approve
+        env:
+          INPUT_REGION: ${{ inputs.region }}
+        run: terraform destroy -var="region=$INPUT_REGION" --auto-approve
