@@ -509,10 +509,17 @@ func TestPublish(t *testing.T) {
 	time.Sleep(interval/2 + 2*time.Second)
 	assert.Less(t, 0, len(svc.Calls))
 	assert.Less(t, len(svc.Calls), expectedCalls)
-	// Expect all API calls after 1.5x the interval.
-	// 10K metrics in batches of 20...
-	time.Sleep(interval)
-	assert.Equal(t, expectedCalls, len(svc.Calls))
+	// Expect all API calls to complete. Original code slept `interval` (60s)
+	// then hard-asserted the exact count. Under Windows CI contention the
+	// publisher can dispatch as slowly as ~2 calls/s -- observed run
+	// 30058956003 fixed iter 9 completed 187/250 calls before the assertion
+	// fired, causing TestPublish (97.35s) to fail. Poll with a generous cap
+	// so the assertion succeeds as soon as the publisher is done regardless
+	// of scheduling latency.
+	require.Eventually(t, func() bool {
+		return len(svc.Calls) == expectedCalls
+	}, 3*time.Minute, 250*time.Millisecond,
+		"expected exactly %d PutMetricData calls; got %d", expectedCalls, len(svc.Calls))
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	cw.Shutdown(ctx)
 }
