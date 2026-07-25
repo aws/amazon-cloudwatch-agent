@@ -30,7 +30,19 @@ func TestNewFileManagerSink(t *testing.T) {
 	assert.Equal(t, "sink", sink.ID())
 	sink.Enqueue(state.NewRange(0, 5))
 	sink.Enqueue(state.NewRange(5, 10))
-	time.Sleep(time.Millisecond)
+	// Give the Run goroutine time to drain both queued ranges before we
+	// signal shutdown. The original code slept exactly time.Millisecond
+	// (1 ms) -- smaller than Windows' ~15.6 ms timer tick, so under
+	// `make test` CPU contention the goroutine sometimes hadn't been
+	// scheduled at all when close(done) fired, and the underlying
+	// rangeManager.Run's select non-deterministically picked <-Done
+	// while queue items were still pending, saving an empty state to
+	// disk. Observed run 30124545948 baseline iter 25 as
+	//   expected: state.RangeList{{start:0, end:10, seq:0}}
+	//   actual:   state.RangeList{{start:0, end:0,  seq:0}}
+	// 200 ms is ~13 Windows ticks, plenty for two channel-send items
+	// to be consumed. The happy-path runtime overhead is negligible.
+	time.Sleep(200 * time.Millisecond)
 	close(done)
 	wg.Wait()
 
