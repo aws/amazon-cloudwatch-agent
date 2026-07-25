@@ -29,6 +29,12 @@
 #   - TestLogThrottleRetryerLogging (retryer; second production fix -- throttleChan
 #     buffer of 1 dropped events under contention, and Stop() didn't drain remaining
 #     events -- fix bumps buffer to 1024, drains on shutdown, makes Stop() sync)
+#   - TestExistingAttributesNotOverwritten (ec2tagger; 1 s fixed sleep before
+#     async EC2 tag/metadata/volume fetches complete -- fix polls with
+#     require.Eventually until all three attribute sources are populated)
+#   - TestNewFileManagerSink (state manager; 1 ms drain sleep under Windows'
+#     15.6 ms tick -- fix bumps to 200 ms so Run consumes both enqueued
+#     ranges before close(done))
 #
 # Matrix legs:
 #   - baseline: instrumented pre-fix versions of every test file this branch
@@ -183,6 +189,8 @@ jobs:
             TestAdmitAndRollup
             TestLogsFileRemove
             TestLogThrottleRetryerLogging
+            TestExistingAttributesNotOverwritten
+            TestNewFileManagerSink
         run: |
           set +e
           pass=0
