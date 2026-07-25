@@ -674,8 +674,41 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
 
-	// Wait for tags and volumes to be retrieved
-	time.Sleep(time.Second)
+	// Wait for tags and volumes to be retrieved. The tagger fetches EC2 tags,
+	// volumes, and metadata asynchronously from goroutines started by Start().
+	// Under Windows CI make-test contention the original 1 s fixed sleep
+	// occasionally wasn't enough and the fetches hadn't completed when
+	// processMetrics ran (observed in run 30124545948 baseline iter 8 as
+	// TestExistingAttributesNotOverwritten failing with "Should be true"
+	// on missing attribute lookups). Poll instead: dispatch a probe metric
+	// that carries the same InstanceId the tagger keys off, and wait until
+	// the output picks up the async-loaded attributes we care about
+	// (ImageId, tagKey2, VolumeId). Cap at 15 s to still fail fast if truly
+	// stuck. Uses the *real* test attributes so processMetrics doesn't drop
+	// the probe -- an earlier revision of this fix called processMetrics
+	// with just {"device": device1} which the tagger dropped entirely
+	// because there was no InstanceId to look up, causing a nil-deref
+	// panic on .ResourceMetrics().At(0).
+	require.Eventually(t, func() bool {
+		probe := createTestMetrics([]map[string]string{{
+			"InstanceId": "i-100000",
+			"device":     device1,
+		}})
+		out, perr := tagger.processMetrics(context.Background(), probe)
+		if perr != nil || out.ResourceMetrics().Len() == 0 {
+			return false
+		}
+		sms := out.ResourceMetrics().At(0).ScopeMetrics()
+		if sms.Len() == 0 || sms.At(0).Metrics().Len() == 0 {
+			return false
+		}
+		attrs := sms.At(0).Metrics().At(0).Gauge().DataPoints().At(0).Attributes()
+		_, hasImg := attrs.Get("ImageId")
+		_, hasTag := attrs.Get(tagKey2)
+		_, hasVol := attrs.Get("VolumeId")
+		return hasImg && hasTag && hasVol
+	}, 15*time.Second, 50*time.Millisecond,
+		"tagger async metadata/tag/volume fetches did not complete within 15s")
 
 	// Create metrics with existing attributes that should not be overwritten
 	md := createTestMetrics([]map[string]string{
