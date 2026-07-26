@@ -75,3 +75,62 @@ func TestMergeRule_DatabaseInsights(t *testing.T) {
 	assert.Contains(t, dbi, "postgresql", "postgresql should be preserved after merge")
 	assert.Contains(t, dbi, "mysql", "mysql should be preserved after merge")
 }
+
+func TestMergeRule_DatabaseInsights_AllThreeEngines(t *testing.T) {
+	// Verify that postgresql, mysql, and sqlserver from separate configs merge correctly
+	// under database_insights (simulates separate SSM parameters)
+	source1 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"postgresql": []interface{}{
+						map[string]interface{}{
+							"endpoint":      "localhost:5432",
+							"instance_name": "pg-test",
+						},
+					},
+				},
+			},
+		},
+	}
+	source2 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"mysql": []interface{}{
+						map[string]interface{}{
+							"endpoint":      "localhost:3306",
+							"instance_name": "mysql-test",
+						},
+					},
+				},
+			},
+		},
+	}
+	source3 := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"sqlserver": []interface{}{
+						map[string]interface{}{
+							"endpoint":      "localhost:1433",
+							"instance_name": "sqlserver-test",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Merge source1 into source2, then source3 into source2 (source2 acts as result)
+	mergeJsonUtil.MergeRuleMap["opentelemetry"].Merge(source1, source2)
+	mergeJsonUtil.MergeRuleMap["opentelemetry"].Merge(source3, source2)
+
+	otel := source2["opentelemetry"].(map[string]interface{})
+	collect := otel["collect"].(map[string]interface{})
+	dbi := collect["database_insights"].(map[string]interface{})
+
+	assert.Contains(t, dbi, "postgresql", "postgresql should be preserved after merge")
+	assert.Contains(t, dbi, "mysql", "mysql should be preserved after merge")
+	assert.Contains(t, dbi, "sqlserver", "sqlserver should be preserved after merge")
+}

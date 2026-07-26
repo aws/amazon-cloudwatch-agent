@@ -75,6 +75,21 @@ func TestHostMetricsTranslator(t *testing.T) {
 			expectProcess:    true,
 			wantProcessNames: []string{"mysqld.*"},
 		},
+		"WithSqlServerDatabaseInsightsKey": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"sqlserver": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:1433", "username": "cwagent"},
+							},
+						},
+					},
+				},
+			},
+			expectProcess:    true,
+			wantProcessNames: []string{"sqlservr.*"},
+		},
 		"WithBothEngines": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
@@ -92,6 +107,27 @@ func TestHostMetricsTranslator(t *testing.T) {
 			},
 			expectProcess:    true,
 			wantProcessNames: []string{"post(gres|master).*", "mysqld.*"},
+		},
+		"WithAllThreeEngines": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"postgresql": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:5432", "username": "cwagent"},
+							},
+							"mysql": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:3306", "username": "cwagent"},
+							},
+							"sqlserver": []interface{}{
+								map[string]interface{}{"endpoint": "localhost:1433", "username": "cwagent"},
+							},
+						},
+					},
+				},
+			},
+			expectProcess:    true,
+			wantProcessNames: []string{"post(gres|master).*", "mysqld.*", "sqlservr.*"},
 		},
 		"WithBothKeys": {
 			input: map[string]interface{}{
