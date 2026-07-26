@@ -37,6 +37,7 @@ func TestComponents(t *testing.T) {
 		"prometheus",
 		"mysql",
 		"postgresql",
+		"sqlserver",
 		"statsd",
 		"systemmetrics",
 		"tcplog",

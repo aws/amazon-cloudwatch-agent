@@ -196,6 +196,14 @@ func TestDBIMySQLConfigLinux(t *testing.T) {
 	checkTranslation(t, "opentelemetry/dbi_mysql_config_linux", "linux", expectedEnvVars, "")
 }
 
+func TestDBISqlServerConfigLinux(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	require.NoError(t, os.Chmod("sampleConfig/opentelemetry/testdata/.sqlserver_credentials", 0600))
+	expectedEnvVars := map[string]string{}
+	checkTranslation(t, "opentelemetry/dbi_sqlserver_config_linux", "linux", expectedEnvVars, "")
+}
+
 func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeAzureVM)
