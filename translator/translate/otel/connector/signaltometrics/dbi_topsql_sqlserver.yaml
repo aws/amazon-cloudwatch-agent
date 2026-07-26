@@ -1,0 +1,105 @@
+logs:
+  - name: sqlserver.execution_count
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Number of executions"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.execution_count"] != nil
+    sum:
+      value: 'Int(attributes["sqlserver.execution_count"])'
+  - name: sqlserver.total_elapsed_time
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total elapsed time (seconds)"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_elapsed_time"] != nil
+    sum:
+      value: 'Double(attributes["sqlserver.total_elapsed_time"])'
+  - name: sqlserver.total_worker_time
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total CPU (worker) time (seconds)"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_worker_time"] != nil
+    sum:
+      value: 'Double(attributes["sqlserver.total_worker_time"])'
+  - name: sqlserver.total_logical_reads
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total logical reads (pages)"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_logical_reads"] != nil
+    sum:
+      value: 'Int(attributes["sqlserver.total_logical_reads"])'
+  - name: sqlserver.total_logical_writes
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total logical writes (pages)"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_logical_writes"] != nil
+    sum:
+      value: 'Int(attributes["sqlserver.total_logical_writes"])'
+  - name: sqlserver.total_physical_reads
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total physical reads (pages)"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_physical_reads"] != nil
+    sum:
+      value: 'Int(attributes["sqlserver.total_physical_reads"])'
+  - name: sqlserver.total_rows
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total rows returned"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_rows"] != nil
+    sum:
+      value: 'Int(attributes["sqlserver.total_rows"])'
+  - name: sqlserver.total_grant_kb
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total memory grant (KB)"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.query_hash
+      - key: sqlserver.query_plan_hash
+      - key: db.namespace
+    conditions:
+      - attributes["sqlserver.total_grant_kb"] != nil
+    sum:
+      value: 'Int(attributes["sqlserver.total_grant_kb"])'

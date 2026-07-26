@@ -72,3 +72,24 @@ func TestTranslateTopsqlMysql(t *testing.T) {
 	assert.Equal(t, "mysql.sum_sort_merge_passes", stmCfg.Logs[16].Name)
 	assert.Equal(t, "mysql.sum_sort_range", stmCfg.Logs[17].Name)
 }
+
+func TestTranslatorID_SqlServer(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsql+"_"+common.SQLServerKey, common.SQLServerKey)
+	assert.Equal(t, "signaltometrics/dbi_topsql_sqlserver", tr.ID().String())
+}
+
+func TestTranslateTopsqlSqlServer(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorTopsql+"_"+common.SQLServerKey, common.SQLServerKey)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	stmCfg := cfg.(*signaltometricsconfig.Config)
+	assert.Len(t, stmCfg.Logs, 8)
+	assert.Equal(t, "sqlserver.execution_count", stmCfg.Logs[0].Name)
+	assert.Equal(t, "sqlserver.total_elapsed_time", stmCfg.Logs[1].Name)
+	assert.Equal(t, "sqlserver.total_worker_time", stmCfg.Logs[2].Name)
+	assert.Equal(t, "sqlserver.total_logical_reads", stmCfg.Logs[3].Name)
+	assert.Equal(t, "sqlserver.total_logical_writes", stmCfg.Logs[4].Name)
+	assert.Equal(t, "sqlserver.total_physical_reads", stmCfg.Logs[5].Name)
+	assert.Equal(t, "sqlserver.total_rows", stmCfg.Logs[6].Name)
+	assert.Equal(t, "sqlserver.total_grant_kb", stmCfg.Logs[7].Name)
+}

@@ -51,6 +51,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 
 	addInstances(parseDbiPostgresqlInstances(conf))
 	addInstances(parseDbiMysqlInstances(conf))
+	addInstances(parseDbiSqlServerInstances(conf))
 
 	return translators
 }
@@ -118,6 +119,37 @@ func parseDbiMysqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	for _, r := range raw {
 		instances = append(instances, dbiInstanceConfig{
 			engine:       common.MySQLKey,
+			endpoint:     r.Endpoint,
+			username:     r.Username,
+			passfile:     r.PasswordFile,
+			instanceName: r.InstanceName,
+			logFilePath:  r.Logs.FilePath,
+			isLocalhost:  isLocalhostEndpoint(r.Endpoint),
+		})
+	}
+	return instances
+}
+
+type sqlServerRawInstance struct {
+	Endpoint     string `mapstructure:"endpoint"`
+	Username     string `mapstructure:"username"`
+	PasswordFile string `mapstructure:"password_file"`
+	InstanceName string `mapstructure:"instance_name"`
+	Logs         struct {
+		FilePath string `mapstructure:"file_path"`
+	} `mapstructure:"logs"`
+}
+
+func parseDbiSqlServerInstances(conf *confmap.Conf) []dbiInstanceConfig {
+	arr, _ := conf.Get(common.DatabaseInsightsSqlServerKey).([]any)
+	var raw []sqlServerRawInstance
+	if err := mapstructure.Decode(arr, &raw); err != nil {
+		return nil
+	}
+	instances := make([]dbiInstanceConfig, 0, len(raw))
+	for _, r := range raw {
+		instances = append(instances, dbiInstanceConfig{
+			engine:       common.SQLServerKey,
 			endpoint:     r.Endpoint,
 			username:     r.Username,
 			passfile:     r.PasswordFile,

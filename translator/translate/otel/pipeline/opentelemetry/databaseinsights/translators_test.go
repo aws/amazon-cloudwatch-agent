@@ -189,3 +189,79 @@ func TestNewTranslators_MySQL_MultiInstance(t *testing.T) {
 	}
 	assert.ElementsMatch(t, expected, ids)
 }
+
+func TestNewTranslators_SqlServer_WithLogs(t *testing.T) {
+	cfg := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"sqlserver": []interface{}{
+						map[string]interface{}{ //nolint:gosec
+							"endpoint": "localhost:1433", "username": "cw_monitor",
+							"password_file": "/opt/databaseinsights/.sqlserver_credentials", "instance_name": "my-db",
+							"logs": map[string]interface{}{"file_path": "/var/opt/mssql/log/errorlog"},
+						},
+					},
+				},
+			},
+		},
+	})
+	assert.Equal(t, 4, NewTranslators(cfg).Len())
+}
+
+func TestNewTranslators_SqlServer_NoLogs(t *testing.T) {
+	cfg := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"sqlserver": []interface{}{
+						map[string]interface{}{ //nolint:gosec
+							"endpoint": "localhost:1433", "username": "cw_monitor",
+							"password_file": "/opt/databaseinsights/.sqlserver_credentials", "instance_name": "my-db",
+						},
+					},
+				},
+			},
+		},
+	})
+	assert.Equal(t, 3, NewTranslators(cfg).Len())
+}
+
+func TestNewTranslators_SqlServer_MultiInstance(t *testing.T) {
+	cfg := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"database_insights": map[string]interface{}{
+					"sqlserver": []interface{}{
+						map[string]interface{}{ //nolint:gosec
+							"endpoint": "localhost:1433", "username": "cw_monitor",
+							"password_file": "/opt/databaseinsights/.sqlserver_credentials", "instance_name": "db1",
+							"logs": map[string]interface{}{"file_path": "/var/opt/mssql/log/errorlog1"},
+						},
+						map[string]interface{}{ //nolint:gosec
+							"endpoint": "db2.example.com:1433", "username": "monitor",
+							"password_file": "/opt/databaseinsights/.sqlserver_credentials2", "instance_name": "db2",
+						},
+					},
+				},
+			},
+		},
+	})
+	translators := NewTranslators(cfg)
+	assert.Equal(t, 7, translators.Len()) // 4 + 3
+
+	var ids []string
+	for _, k := range translators.Keys() {
+		ids = append(ids, k.String())
+	}
+	expected := []string{
+		"metrics/dbi_sqlserver_0",
+		"logs/dbi_sqlserver_0",
+		"logs/dbi_sqlserver_rawevents_0",
+		"logs/dbi_sqlserver_serverlogs_0",
+		"metrics/dbi_sqlserver_1",
+		"logs/dbi_sqlserver_1",
+		"logs/dbi_sqlserver_rawevents_1",
+	}
+	assert.ElementsMatch(t, expected, ids)
+}

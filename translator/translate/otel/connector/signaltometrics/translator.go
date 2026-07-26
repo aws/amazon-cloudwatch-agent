@@ -22,6 +22,9 @@ var dbiTopsqlConfig string
 //go:embed dbi_topsql_mysql.yaml
 var dbiTopsqlMysqlConfig string
 
+//go:embed dbi_topsql_sqlserver.yaml
+var dbiTopsqlSqlServerConfig string
+
 type translator struct {
 	name    string
 	engine  string
@@ -52,6 +55,8 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		return common.GetYamlFileToYamlConfig(cfg, dbiTopsqlConfig)
 	case common.MySQLKey:
 		return common.GetYamlFileToYamlConfig(cfg, dbiTopsqlMysqlConfig)
+	case common.SQLServerKey:
+		return common.GetYamlFileToYamlConfig(cfg, dbiTopsqlSqlServerConfig)
 	}
 
 	return nil, fmt.Errorf("unsupported signaltometrics connector engine: %s", t.engine)

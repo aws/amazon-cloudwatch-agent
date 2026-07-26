@@ -32,6 +32,11 @@ func TestDbiTranslatorID(t *testing.T) {
 		{"Mysql_LogToMetrics_0", common.MySQLKey, dbiLogToMetrics, 0, "logs/dbi_mysql_0"},
 		{"Mysql_RawEvents_0", common.MySQLKey, dbiRawEvents, 0, "logs/dbi_mysql_rawevents_0"},
 		{"Mysql_ServerLogs_0", common.MySQLKey, dbiServerLogs, 0, "logs/dbi_mysql_serverlogs_0"},
+		{"SqlServer_Metrics_0", common.SQLServerKey, dbiMetrics, 0, "metrics/dbi_sqlserver_0"},
+		{"SqlServer_Metrics_1", common.SQLServerKey, dbiMetrics, 1, "metrics/dbi_sqlserver_1"},
+		{"SqlServer_LogToMetrics_0", common.SQLServerKey, dbiLogToMetrics, 0, "logs/dbi_sqlserver_0"},
+		{"SqlServer_RawEvents_0", common.SQLServerKey, dbiRawEvents, 0, "logs/dbi_sqlserver_rawevents_0"},
+		{"SqlServer_ServerLogs_0", common.SQLServerKey, dbiServerLogs, 0, "logs/dbi_sqlserver_serverlogs_0"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -179,6 +184,76 @@ func TestDbiMysqlTranslateMetrics_ComponentIDs(t *testing.T) {
 	assert.Equal(t, []string{"transform/dbi_scope_mysql_0", "transform/dbi_resource_mysql_0", "transform/dbi_fix_start_time_mysql"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_mysql", "signaltometrics/dbi_topsql_mysql"}, connectors)
+}
+
+func TestDbiSqlServerTranslate(t *testing.T) {
+	cfg := dbiInstanceConfig{ //nolint:gosec
+		engine:       common.SQLServerKey,
+		endpoint:     "localhost:1433",
+		username:     "cw_monitor",
+		passfile:     "/etc/.sqlserver_credentials",
+		instanceName: "my-db",
+		logFilePath:  "/var/opt/mssql/log/errorlog",
+		isLocalhost:  true,
+	}
+
+	tests := []struct {
+		name       string
+		pipeline   dbiPipelineType
+		expectedID string
+		nRecv      int
+		nProc      int
+		nExp       int
+		nConn      int
+	}{
+		{"metrics", dbiMetrics, "metrics/dbi_sqlserver_0", 3, 3, 1, 3},
+		{"log_to_metrics", dbiLogToMetrics, "logs/dbi_sqlserver_0", 1, 1, 2, 2},
+		{"raw_events", dbiRawEvents, "logs/dbi_sqlserver_rawevents_0", 1, 5, 1, 1},
+		{"server_logs", dbiServerLogs, "logs/dbi_sqlserver_serverlogs_0", 1, 5, 1, 1},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &dbiTranslator{pipelineType: tc.pipeline, instanceIndex: 0, cfg: cfg}
+			assert.Equal(t, tc.expectedID, tr.ID().String())
+
+			result, err := tr.Translate(nil)
+			require.NoError(t, err)
+			assert.Equal(t, tc.nRecv, result.Receivers.Len())
+			assert.Equal(t, tc.nProc, result.Processors.Len())
+			assert.Equal(t, tc.nExp, result.Exporters.Len())
+			assert.Equal(t, tc.nConn, result.Connectors.Len())
+		})
+	}
+}
+
+func TestDbiSqlServerTranslateMetrics_ComponentIDs(t *testing.T) {
+	tr := &dbiTranslator{
+		pipelineType:  dbiMetrics,
+		instanceIndex: 0,
+		cfg:           dbiInstanceConfig{engine: common.SQLServerKey, instanceName: "mydb"},
+	}
+	result, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	var receivers, processors, exporters, connectors []string
+	result.Receivers.Range(func(c common.Translator[component.Config, component.ID]) {
+		receivers = append(receivers, c.ID().String())
+	})
+	result.Processors.Range(func(c common.Translator[component.Config, component.ID]) {
+		processors = append(processors, c.ID().String())
+	})
+	result.Exporters.Range(func(c common.Translator[component.Config, component.ID]) {
+		exporters = append(exporters, c.ID().String())
+	})
+	result.Connectors.Range(func(c common.Translator[component.Config, component.ID]) {
+		connectors = append(connectors, c.ID().String())
+	})
+
+	assert.ElementsMatch(t, []string{"sqlserver/metrics_0", "count/dbi_dbload_sqlserver", "signaltometrics/dbi_topsql_sqlserver"}, receivers)
+	assert.Equal(t, []string{"transform/dbi_scope_sqlserver_0", "transform/dbi_resource_sqlserver_0", "transform/dbi_fix_start_time_sqlserver"}, processors)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_sqlserver", "signaltometrics/dbi_topsql_sqlserver"}, connectors)
 }
 
 func TestDbiTranslateServerLogs_FilelogConfig(t *testing.T) {

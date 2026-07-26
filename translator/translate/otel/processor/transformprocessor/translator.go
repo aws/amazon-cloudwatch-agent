@@ -35,6 +35,9 @@ var transformDbiFixStartTimeConfig string
 //go:embed transform_dbi_fix_start_time_mysql.yaml
 var transformDbiFixStartTimeMysqlConfig string
 
+//go:embed transform_dbi_fix_start_time_sqlserver.yaml
+var transformDbiFixStartTimeSqlServerConfig string
+
 //go:embed transform_identity_ec2.yaml
 var transformIdentityEC2Config string
 
@@ -215,6 +218,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeConfig)
 		case common.MySQLKey:
 			return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeMysqlConfig)
+		case common.SQLServerKey:
+			return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeSqlServerConfig)
 		}
 		return nil, fmt.Errorf("unsupported dbi fix-start-time engine: %s", t.dbiFixStartTimeEngine)
 	}

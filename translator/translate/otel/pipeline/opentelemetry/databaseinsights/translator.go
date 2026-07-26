@@ -24,6 +24,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/filelog"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/mysql"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/postgresql"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/sqlserver"
 )
 
 type dbiPipelineType int
@@ -82,6 +83,25 @@ var mysqlLogSeverityMapping = map[string]any{
 // group is assembled from mysqlLogSeverityLevels.
 func buildMysqlSeverityPattern() string {
 	return `\s\d+\s+\[(?P<severity>` + strings.Join(mysqlLogSeverityLevels, "|") + `)\]`
+}
+
+// sqlserverLogSeverityMapping maps SQL Server error-log severity numbers to OTEL
+// severity levels. SQL Server severities run 0-25: 0-10 informational, 11-16 user
+// errors, 17-19 resource/software errors, 20-25 fatal. Ranges are used so every
+// numeric severity maps without enumerating all 26 values. Lines without an
+// "Error: ..., Severity: ..." prefix (most startup/informational messages) simply
+// do not match and pass through with the default severity.
+var sqlserverLogSeverityMapping = map[string]any{
+	"info":  []any{map[string]any{"min": 0, "max": 10}},
+	"warn":  []any{map[string]any{"min": 11, "max": 16}},
+	"error": []any{map[string]any{"min": 17, "max": 19}},
+	"fatal": []any{map[string]any{"min": 20, "max": 25}},
+}
+
+// buildSqlServerSeverityPattern builds the regex that extracts the severity number from
+// a SQL Server error-log line of the form "Error: <n>, Severity: <n>, State: <n>".
+func buildSqlServerSeverityPattern() string {
+	return `Error: \d+, Severity: (?P<severity>\d+), State: \d+`
 }
 
 // dbiTranslator generates DBI pipelines for a single database instance. The
@@ -255,6 +275,14 @@ func (t *dbiTranslator) serverLogReceiver() common.ComponentTranslator {
 			filelog.WithSeverityPattern(buildMysqlSeverityPattern()),
 			filelog.WithSeverityMapping(mysqlLogSeverityMapping),
 		)
+	case common.SQLServerKey:
+		// SQL Server error log timestamps are "2026-07-20 15:27:47.12" (UTC when the
+		// instance is configured with -T or an ADO connection in UTC).
+		opts = append(opts,
+			filelog.WithTimestampFormat("%Y-%m-%d %H:%M:%S.%f", "UTC"),
+			filelog.WithSeverityPattern(buildSqlServerSeverityPattern()),
+			filelog.WithSeverityMapping(sqlserverLogSeverityMapping),
+		)
 	}
 	return filelog.NewTranslator(opts...)
 }
@@ -269,6 +297,16 @@ func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 			mysql.WithEndpoint(t.cfg.endpoint),
 			mysql.WithUsername(t.cfg.username),
 			mysql.WithPassfile(t.cfg.passfile),
+		)
+	}
+
+	if t.cfg.engine == common.SQLServerKey {
+		return sqlserver.NewTranslator(
+			sqlserver.WithName(name),
+			sqlserver.WithIndex(t.instanceIndex),
+			sqlserver.WithEndpoint(t.cfg.endpoint),
+			sqlserver.WithUsername(t.cfg.username),
+			sqlserver.WithPassfile(t.cfg.passfile),
 		)
 	}
 
@@ -289,10 +327,16 @@ func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 
 func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
-	condition := fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
+	
+	// SQL Server already filters out the monitoring session in the query itself
 	if t.cfg.engine == common.PostgreSQLKey {
-		condition = fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
+		condition := fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
+		return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+t.cfg.engine+"_"+idx, condition, common.OTTLErrorModePropagate)
 	}
+	
+	// For MySQL and SQL Server, use a filter that always passes (matches nothing)
+	// This allows all query samples through since the receivers already filter correctly
+	condition := `false`  // Never matches, so nothing gets filtered
 	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+t.cfg.engine+"_"+idx, condition, common.OTTLErrorModePropagate)
 }
 
