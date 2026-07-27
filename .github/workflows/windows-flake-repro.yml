@@ -35,6 +35,10 @@
 #   - TestNewFileManagerSink (state manager; 1 ms drain sleep under Windows'
 #     15.6 ms tick -- fix bumps to 200 ms so Run consumes both enqueued
 #     ranges before close(done))
+#   - TestReadGaps (windows_event_log; assertStateFileRange did a single fixed
+#     200 ms sleep then one read of the state file, which the run loop flushes
+#     asynchronously on a 100 ms ticker -- under contention the read saw an
+#     empty file. Fix polls with assert.Eventually until the range is present)
 #
 # Matrix legs:
 #   - baseline: instrumented pre-fix versions of every test file this branch
@@ -191,6 +195,7 @@ jobs:
             TestLogThrottleRetryerLogging
             TestExistingAttributesNotOverwritten
             TestNewFileManagerSink
+            TestReadGaps
         run: |
           set +e
           pass=0
