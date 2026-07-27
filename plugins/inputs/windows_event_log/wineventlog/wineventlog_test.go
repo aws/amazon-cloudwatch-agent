@@ -343,9 +343,17 @@ func marshalRangeList(rl state.RangeList) string {
 }
 
 func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
-	time.Sleep(200 * time.Millisecond)
-	content, _ := os.ReadFile(fileName)
-	assert.Contains(t, string(content), marshalRangeList(rl))
+	// The state file is flushed asynchronously by the run loop on a 100ms ticker
+	// (saveStateInterval). A single fixed 200ms sleep + one read is below the reliable
+	// scheduling threshold on Windows under `make test` contention: the file is sometimes
+	// still empty when read, yielding `"" does not contain "0-8"`. Poll until the expected
+	// range is present (or a generous timeout) instead of racing a fixed deadline.
+	expected := marshalRangeList(rl)
+	assert.Eventually(t, func() bool {
+		content, _ := os.ReadFile(fileName)
+		return strings.Contains(string(content), expected)
+	}, 10*time.Second, 100*time.Millisecond,
+		"state file %s should contain range %q", fileName, expected)
 }
 
 // Start and end are both inclusive
