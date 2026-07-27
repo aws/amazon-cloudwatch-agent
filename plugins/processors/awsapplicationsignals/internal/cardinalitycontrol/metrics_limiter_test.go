@@ -34,8 +34,21 @@ func TestAdmitAndRollup(t *testing.T) {
 	limiter := NewMetricsLimiter(config, logger)
 
 	admittedAttributes := map[string]pcommon.Map{}
+	// Use 10 DISTINCT RemoteOperation keys (/test0../test9) instead of random draws from a
+	// pool of 100. With Threshold=2 and distinct keys, only the first two are admitted and
+	// every later key is rejected: each rejected key is inserted into the Count-Min Sketch
+	// exactly once, so its estimated frequency stays at 1 and never exceeds the current
+	// min (also 1), meaning the top-K never evicts+promotes a rejected key. That makes
+	// exactly-2-admitted a deterministic invariant.
+	//
+	// The previous newLowCardinalityAttributes(100) drew keys at random, so ~7% of runs on
+	// Windows CI (and ~1% on Linux) happened to redraw a rejected key often enough that the
+	// CMS bumped its frequency above the min, the top-K promoted it, and a later draw of the
+	// same key was then admitted -- yielding 3 admitted keys and a flaky failure. That is the
+	// top-K's intended rotation behavior, not a bug; the flake was purely the random stream
+	// occasionally hitting the boundary. See WORKLOG sections 22-23.
 	for i := 0; i < 10; i++ {
-		attr := newLowCardinalityAttributes(100)
+		attr := newFixedAttributes(i)
 		if ok, _ := limiter.Admit("latency", attr, emptyResourceAttributes); ok {
 			uniqKey, _ := attr.Get("RemoteOperation")
 			admittedAttributes[uniqKey.AsString()] = attr
