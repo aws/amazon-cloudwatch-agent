@@ -91,11 +91,13 @@ jobs:
       # Build dir is ignored in our .dockerignore thus need to copy to another dir.
       - name: Copy Binary For Agent Image Build
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_container.outputs.cache-hit == false
+        env:
+          INPUT_BUCKET_KEY: ${{ inputs.BucketKey }}
         run: |
           mkdir amd64
           mkdir arm64
-          aws s3 cp s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/amd64/amazon-cloudwatch-agent.rpm amd64/amazon-cloudwatch-agent.rpm
-          aws s3 cp s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/linux/arm64/amazon-cloudwatch-agent.rpm arm64/amazon-cloudwatch-agent.rpm
+          aws s3 cp "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$INPUT_BUCKET_KEY/linux/amd64/amazon-cloudwatch-agent.rpm" amd64/amazon-cloudwatch-agent.rpm
+          aws s3 cp "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$INPUT_BUCKET_KEY/linux/arm64/amazon-cloudwatch-agent.rpm" arm64/amazon-cloudwatch-agent.rpm
 
       - name: Get ECR Repo name
         id: repo_name
@@ -160,8 +162,10 @@ jobs:
 
       - name: Copy binary
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
+        env:
+          INPUT_BUCKET_KEY: ${{ inputs.BucketKey }}
         run: |
-          aws s3 cp s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }} . --recursive
+          aws s3 cp "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$INPUT_BUCKET_KEY" . --recursive
       - name: Unzip
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
         run: |
@@ -186,7 +190,9 @@ jobs:
 
       - name: Upload zip
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_win_zip.outputs.cache-hit == false
-        run: aws s3 cp buildMSI.zip s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip
+        env:
+          INPUT_BUCKET_KEY: ${{ inputs.BucketKey }}
+        run: aws s3 cp buildMSI.zip "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$INPUT_BUCKET_KEY/buildMSI.zip"
 
   BuildMSI-2022:
     name: 'BuildMSI-2022'
@@ -214,10 +220,14 @@ jobs:
       # Using the env variable returns "" for bucket name thus use the secret
       - name: Copy msi
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
-        run: aws s3 cp s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.BucketKey }}/buildMSI.zip .
+        env:
+          INPUT_BUCKET_KEY: ${{ inputs.BucketKey }}
+        run: aws s3 cp "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$env:INPUT_BUCKET_KEY/buildMSI.zip" .
 
       - name: Create msi
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
+        env:
+          INPUT_PACKAGE_BUCKET_KEY: ${{ inputs.PackageBucketKey }}
         run: |
           curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix314rtm/wix314.exe
           .\wix314.exe /install /quiet /norestart
@@ -225,7 +235,7 @@ jobs:
           $env:PATH = $env:PATH + $wixToolsetBinPath
           Expand-Archive buildMSI.zip -Force
           cd buildMSI/msi_dep
-          .\create_msi.ps1 "nosha" ${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}
+          .\create_msi.ps1 "nosha" "${{ vars.S3_INTEGRATION_BUCKET }}/$env:INPUT_PACKAGE_BUCKET_KEY"
 
       - name: clean ecr login credential cache
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_msi.outputs.cache-hit == false
@@ -345,10 +355,12 @@ jobs:
 
       - name: Download from s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        env:
+          INPUT_PACKAGE_BUCKET_KEY: ${{ inputs.PackageBucketKey }}
         run: |
           mkdir -p packages/amd64
           mkdir packages/arm64
-          aws s3 cp s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi ./packages/amazon-cloudwatch-agent.msi
+          aws s3 cp "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$INPUT_PACKAGE_BUCKET_KEY/amazon-cloudwatch-agent.msi" ./packages/amazon-cloudwatch-agent.msi
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@d6f3f49f3345e29369fe57596a3ca8f94c4d2ca7 # v5.4.0
         with:
@@ -360,5 +372,7 @@ jobs:
 
       - name: Upload to s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        env:
+          INPUT_PACKAGE_BUCKET_KEY: ${{ inputs.PackageBucketKey }}
         run: |
-          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig s3://${{ vars.S3_INTEGRATION_BUCKET }}/${{ inputs.PackageBucketKey }}/amazon-cloudwatch-agent.msi.sig
+          aws s3 cp packages/amazon-cloudwatch-agent.msi.sig "s3://${{ vars.S3_INTEGRATION_BUCKET }}/$INPUT_PACKAGE_BUCKET_KEY/amazon-cloudwatch-agent.msi.sig"
