@@ -343,11 +343,9 @@ func marshalRangeList(rl state.RangeList) string {
 }
 
 func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
-	// The state file is flushed asynchronously by the run loop on a 100ms ticker
-	// (saveStateInterval). A single fixed 200ms sleep + one read is below the reliable
-	// scheduling threshold on Windows under `make test` contention: the file is sometimes
-	// still empty when read, yielding `"" does not contain "0-8"`. Poll until the expected
-	// range is present (or a generous timeout) instead of racing a fixed deadline.
+	// The state file flushes asynchronously on a 100ms ticker (saveStateInterval),
+	// so a fixed 200ms sleep + single read races under Windows CI (reads an empty
+	// file). Poll for the expected range instead.
 	expected := marshalRangeList(rl)
 	assert.Eventually(t, func() bool {
 		content, _ := os.ReadFile(fileName)

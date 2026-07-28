@@ -63,14 +63,10 @@ func TestTailerSrc(t *testing.T) {
 		})
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
-	// NOTE: intentionally do NOT assert OpenFileCount == beforeCount+1 here.
-	// OpenFileCount is a process-global atomic shared across all tailers. Between
-	// reading beforeCount above and TailFile completing, an earlier test's tailer
-	// cleanup goroutine (exitOnDeletion -> Kill -> close -> CloseFile) can fire
-	// and decrement the counter, so the equality can transiently fail even when
-	// this call to TailFile succeeded. require.NoError already validates that
-	// this tailer was created successfully, and the assert.Eventually at the end
-	// of this test still catches leaks on the decrement side.
+	// Deliberately no OpenFileCount == beforeCount+1 assertion: the counter is a
+	// process-global atomic and a sibling tailer's cleanup can decrement it in the
+	// race window. require.NoError above confirms this tailer opened; the
+	// assert.Eventually at the end still catches leaks.
 
 	stateFilePath := statefile.Name()
 	m := state.NewFileRangeManager(state.ManagerConfig{

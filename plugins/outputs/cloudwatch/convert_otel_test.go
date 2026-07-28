@@ -202,14 +202,9 @@ func checkDatum(
 		assert.Equal(t, metricValue, *d.Value)
 	}
 
-	// Datums are created from pmetric datapoints whose timestamps were set inside
-	// createTestMetrics/createTestHistogram just before this loop. The intent of this
-	// check is "the timestamp survived unmodified through ConvertOtelMetrics", not a
-	// wall-clock performance budget on the surrounding loop. A 1-minute window is
-	// generous enough to survive scheduling jitter on slow CI runners (notably Windows,
-	// where the default timer resolution is ~15.6ms and a 100x-nested loop can take
-	// well over a second under contention) while still catching any real timestamp
-	// bug -- those produce hours/years of drift, not seconds.
+	// 1-minute window: this checks the timestamp survived ConvertOtelMetrics unmodified,
+	// not wall-clock performance. Wide enough to absorb CI scheduling jitter while still
+	// catching real timestamp bugs (which drift by hours/years, not seconds).
 	elapsed := time.Since(*d.Timestamp)
 	if !assert.Less(t, elapsed, time.Minute,
 		"datum timestamp is unexpectedly stale: elapsed=%s", elapsed) {

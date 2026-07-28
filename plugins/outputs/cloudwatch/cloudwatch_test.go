@@ -509,13 +509,8 @@ func TestPublish(t *testing.T) {
 	time.Sleep(interval/2 + 2*time.Second)
 	assert.Less(t, 0, len(svc.Calls))
 	assert.Less(t, len(svc.Calls), expectedCalls)
-	// Expect all API calls to complete. Original code slept `interval` (60s)
-	// then hard-asserted the exact count. Under Windows CI contention the
-	// publisher can dispatch as slowly as ~2 calls/s -- observed run
-	// 30058956003 fixed iter 9 completed 187/250 calls before the assertion
-	// fired, causing TestPublish (97.35s) to fail. Poll with a generous cap
-	// so the assertion succeeds as soon as the publisher is done regardless
-	// of scheduling latency.
+	// Poll instead of sleeping a fixed interval + hard-asserting: under CI contention
+	// the publisher can dispatch as slowly as ~2 calls/s.
 	require.Eventually(t, func() bool {
 		return len(svc.Calls) == expectedCalls
 	}, 3*time.Minute, 250*time.Millisecond,
@@ -547,12 +542,9 @@ func TestMiddleware(t *testing.T) {
 	handler := new(awsmiddleware.MockHandler)
 	handler.On("ID").Return("test")
 	handler.On("Position").Return(awsmiddleware.After)
-	// Signal on channels the moment each middleware phase fires, so we can
-	// wait for HandleResponse deterministically instead of using a fixed sleep.
-	// Under Windows CI contention the response middleware pipeline can take
-	// several seconds beyond the request phase, and a naive time.Sleep is
-	// racy against that latency (observed: run 30037333000 fixed iter 5 --
-	// TestMiddleware (4.16s) with 0 HandleResponse calls captured on the mock).
+	// Signal on channels when each middleware phase fires so we can wait for
+	// HandleResponse deterministically: under CI contention the response pipeline
+	// can lag the request phase by seconds, which a fixed sleep races.
 	reqFired := make(chan struct{}, 8)
 	respFired := make(chan struct{}, 8)
 	handler.On("HandleRequest", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
@@ -577,9 +569,6 @@ func TestMiddleware(t *testing.T) {
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
 
-	// Wait for at least one HandleRequest and one HandleResponse to fire.
-	// Fixed budget: original code slept 2s + 2*ForceFlushInterval = 4s. Keep the
-	// same nominal happy-path timing but give up to 30s of headroom for slow CI.
 	waitFor := func(t *testing.T, label string, ch <-chan struct{}) {
 		t.Helper()
 		start := time.Now()
@@ -607,11 +596,8 @@ func TestBackoffRetries(t *testing.T) {
 		time.Millisecond * 3200,
 		time.Millisecond * 6400}
 	assert := assert.New(t)
-	// Leniency is the upper-bound slack on each backoff sleep. Windows'
-	// default timer resolution is ~15.6ms and, under `make test` CPU
-	// contention, a 200ms time.Sleep can genuinely take 300-400ms. Keep
-	// the lower bound tight (sleeps[i]/2) but give the upper bound
-	// enough headroom that we don't false-positive on scheduler slop.
+	// 500ms upper-bound slack: a 200ms sleep can take 300-400ms under Windows timer
+	// jitter + CI contention. Lower bound stays tight (sleeps[i]/2).
 	leniency := 500 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
 		start := time.Now()

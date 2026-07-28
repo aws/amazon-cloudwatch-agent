@@ -17,15 +17,9 @@ var (
 	throttleReportCheckPeriod = 5 * time.Second
 
 	// throttleChanBufferSize is the capacity of LogThrottleRetryer.throttleChan.
-	// Setting this to 1 (the original value) means any pair of consecutive
-	// ShouldRetry calls where the watcher goroutine has not yet been scheduled
-	// causes the second event to be silently dropped by the non-blocking send
-	// in ShouldRetry. Under Windows CI `make test` contention the watcher can
-	// be preempted for tens of ms and drops accumulate quickly (observed 6
-	// drops out of 200 in run 30110009561 baseline iter 8). Sizing the buffer
-	// well above realistic bursts eliminates the drop path in practice; if a
-	// caller ever exceeds this the non-blocking `default` still guarantees
-	// ShouldRetry never blocks the AWS SDK error path.
+	// The original value of 1 dropped events when the watcher goroutine was
+	// preempted under CI contention (6/200 lost). The non-blocking send in
+	// ShouldRetry still guarantees the AWS SDK path never blocks at any size.
 	throttleChanBufferSize = 1024
 )
 
@@ -81,10 +75,8 @@ func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
 func (r *LogThrottleRetryer) Stop() {
 	if r != nil {
 		close(r.done)
-		// Block until watchThrottleEvents has fully exited (including draining
-		// any events still queued in throttleChan). Without this synchronization
-		// callers -- most notably tests that count aggregated throttles -- can
-		// race the watcher goroutine and observe fewer events than sent.
+		// Block until the watcher has exited and drained throttleChan, so callers
+		// (notably tests counting aggregated throttles) don't race the final events.
 		<-r.stopped
 	}
 }
@@ -126,13 +118,9 @@ func (r *LogThrottleRetryer) watchThrottleEvents() {
 				lastReportTime = time.Now()
 			}
 		case <-r.done:
-			// Drain any events still queued in throttleChan before returning.
-			// The Go select is randomized when multiple cases are ready, so a
-			// naïve return here can strand events that were enqueued between
-			// the last iteration and Stop(). Draining eliminates the shutdown
-			// race that surfaced as TestLogThrottleRetryerLogging reporting
-			// "expecting 200, got N<200" under Windows CI contention
-			// (run 30110009561 baseline iter 8).
+			// Drain queued events before returning: Go's select is randomized when
+			// multiple cases are ready, so a naive return can strand events enqueued
+			// between the last iteration and Stop().
 		drainLoop:
 			for {
 				select {

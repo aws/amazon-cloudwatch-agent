@@ -335,14 +335,9 @@ func TestLogsFileRemove(t *testing.T) {
 		close(stopped)
 	}()
 
-	// After the file is removed at t=500ms the tailer must eventually detect
-	// deletion and exit runTail (via the polling watcher's read failure path,
-	// not the 1-minute exitOnDeletion ticker). On a healthy runner this fires
-	// in well under a second, but Windows CI under make-test contention can
-	// stretch the polling+cleanup path past the original 1s grace (observed in
-	// run 30110009561 baseline iter 1 as "tailerSrc should have stopped after
-	// tile is removed"). Give the exit path 10 s of headroom -- the happy path
-	// still returns as soon as `stopped` is closed.
+	// 10s budget: Windows CI contention can stretch the tailer's delete-detection
+	// (polling-watcher read-failure path) well past the original 1s grace. The happy
+	// path still returns as soon as `stopped` is closed.
 	select {
 	case <-time.After(10 * time.Second):
 		t.Errorf("tailerSrc should have stopped after file is removed")
