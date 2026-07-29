@@ -232,6 +232,21 @@ connectors:
                 value: Int(attributes["sqlserver.total_grant_kb"])
               unit: ""
 exporters:
+    awscloudwatch/systemmetrics:
+        backoff_retry_base: 1m0s
+        downgrade_errors: true
+        force_flush_interval: 1m0s
+        max_concurrent_publishers: 1
+        max_datums_per_call: 1000
+        max_retry_count: 2
+        max_values_per_datum: 150
+        middleware: agenthealth/metrics
+        namespace: CWAgent/System
+        region: us-west-2
+        resource_to_telemetry_conversion:
+            enabled: true
+        rollup_dimensions:
+            - []
     otlphttp/logs:
         auth:
             authenticator: agenthealth/opentelemetry_logs
@@ -287,6 +302,14 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
+    agenthealth/metrics:
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - PutMetricData
+            usage_flags:
+                mode: ""
+                region_type: ACJ
     agenthealth/opentelemetry_logs:
         additional_auth: headers_setter/logs
         is_usage_data_enabled: true
@@ -294,7 +317,7 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EC2
+                mode: ""
                 region_type: ACJ
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
@@ -303,7 +326,7 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EC2
+                mode: ""
                 region_type: ACJ
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
@@ -358,6 +381,11 @@ processors:
         send_batch_max_size: 1000
         send_batch_size: 1000
         timeout: 30s
+    batch/systemmetrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 0
+        send_batch_size: 8192
+        timeout: 15m0s
     filter/dbi_exclude_monitor_sqlserver_0:
         error_mode: propagate
         logs:
@@ -797,7 +825,7 @@ receivers:
     filelog/sqlserver_0:
         encoding: utf-8
         include:
-            - /var/opt/mssql/log/errorlog
+            - C:\Program Files\Microsoft SQL Server\MSSQL16.MSSQLSERVER\MSSQL\Log\ERRORLOG
         multiline:
             line_start_pattern: ^\d{4}-\d{2}-\d{2}
         operators:
@@ -833,8 +861,6 @@ receivers:
         scrapers:
             cpu:
                 metrics:
-                    system.cpu.frequency:
-                        enabled: true
                     system.cpu.logical.count:
                         enabled: true
                     system.cpu.physical.count:
@@ -849,10 +875,6 @@ receivers:
             load: null
             memory:
                 metrics:
-                    system.linux.memory.available:
-                        enabled: true
-                    system.linux.memory.dirty:
-                        enabled: true
                     system.memory.limit:
                         enabled: true
                     system.memory.page_size:
@@ -873,7 +895,6 @@ receivers:
                     process.threads:
                         enabled: true
                 mute_process_all_errors: true
-            processes: null
         timeout: 0s
     sqlserver/events_0:
         collection_interval: 10s
@@ -962,7 +983,7 @@ receivers:
             sqlserver.lock.wait.rate:
                 enabled: true
             sqlserver.lock.wait_time.avg:
-                enabled: false
+                enabled: true
             sqlserver.login.rate:
                 enabled: true
             sqlserver.logout.rate:
@@ -982,9 +1003,9 @@ receivers:
             sqlserver.page.buffer_cache.hit_ratio:
                 enabled: true
             sqlserver.page.checkpoint.flush.rate:
-                enabled: false
+                enabled: true
             sqlserver.page.lazy_write.rate:
-                enabled: false
+                enabled: true
             sqlserver.page.life_expectancy:
                 aggregation_strategy: avg
                 attributes:
@@ -996,9 +1017,9 @@ receivers:
                 aggregation_strategy: avg
                 attributes:
                     - type
-                enabled: false
+                enabled: true
             sqlserver.page.split.rate:
-                enabled: false
+                enabled: true
             sqlserver.processes.blocked:
                 enabled: true
             sqlserver.replica.data.rate:
@@ -1030,21 +1051,21 @@ receivers:
             sqlserver.transaction.mirror_write.rate:
                 enabled: false
             sqlserver.transaction.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction.write.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.flush.data.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.flush.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.flush.wait.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.growth.count:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.shrink.count:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.usage:
-                enabled: false
+                enabled: true
             sqlserver.user.connection.count:
                 enabled: true
         passfile: sampleConfig/opentelemetry/testdata/.sqlserver_credentials
@@ -1164,7 +1185,7 @@ receivers:
             sqlserver.lock.wait.rate:
                 enabled: true
             sqlserver.lock.wait_time.avg:
-                enabled: false
+                enabled: true
             sqlserver.login.rate:
                 enabled: true
             sqlserver.logout.rate:
@@ -1184,9 +1205,9 @@ receivers:
             sqlserver.page.buffer_cache.hit_ratio:
                 enabled: true
             sqlserver.page.checkpoint.flush.rate:
-                enabled: false
+                enabled: true
             sqlserver.page.lazy_write.rate:
-                enabled: false
+                enabled: true
             sqlserver.page.life_expectancy:
                 aggregation_strategy: avg
                 attributes:
@@ -1198,9 +1219,9 @@ receivers:
                 aggregation_strategy: avg
                 attributes:
                     - type
-                enabled: false
+                enabled: true
             sqlserver.page.split.rate:
-                enabled: false
+                enabled: true
             sqlserver.processes.blocked:
                 enabled: true
             sqlserver.replica.data.rate:
@@ -1232,21 +1253,21 @@ receivers:
             sqlserver.transaction.mirror_write.rate:
                 enabled: false
             sqlserver.transaction.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction.write.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.flush.data.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.flush.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.flush.wait.rate:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.growth.count:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.shrink.count:
-                enabled: false
+                enabled: true
             sqlserver.transaction_log.usage:
-                enabled: false
+                enabled: true
             sqlserver.user.connection.count:
                 enabled: true
         passfile: sampleConfig/opentelemetry/testdata/.sqlserver_credentials
@@ -1279,8 +1300,13 @@ receivers:
             query_plan_cache_ttl: 1h0m0s
             top_query_count: 200
         username: cw_monitor
+    systemmetrics:
+        collection_interval: 1m0s
+        initial_delay: 1s
+        timeout: 0s
 service:
     extensions:
+        - agenthealth/metrics
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
@@ -1357,12 +1383,19 @@ service:
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry
+        metrics/systemmetrics:
+            exporters:
+                - awscloudwatch/systemmetrics
+            processors:
+                - batch/systemmetrics
+            receivers:
+                - systemmetrics
     telemetry:
         logs:
             encoding: console
             level: info
             output_paths:
-                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+                - C:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
             sampling:
                 enabled: true
                 initial: 2

@@ -284,6 +284,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgres
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260717191209-ee093fbfffbd/go.mod h1:DdKZOg4y/ac/f/ENvYWWg6e6r+INsAkx6DqRXzps1TU=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260717191209-ee093fbfffbd h1:gguRr06gAfXYB1kxUZH7VaZobUauXRX+uNWGA0hsGx4=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260717191209-ee093fbfffbd/go.mod h1:pa2WwKwnYyS/Wviu8P/uCm7JmtrxtB+IG1f8+b+VJF0=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/sqlserverreceiver v0.0.0-20260729175257-2c50db1bb14e h1:pJMbMtc5bu9RBkxwNiURYnvwgwVmaVkGbFwe3sa2XcE=
+github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/sqlserverreceiver v0.0.0-20260729175257-2c50db1bb14e/go.mod h1:OtLoAVrHDh9R5pJoX8QJeQo1MyaNFTRz0bqH9sNfhVY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.0.0-20260717191209-ee093fbfffbd h1:VWN/rHtEICFrkNEdzv4Z0Z2Tu5gSw7HWnu+WfdRmQz0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.0.0-20260717191209-ee093fbfffbd/go.mod h1:hfCxzEKq6utMJEq/mqehk55jpp7zCoiNs1yDp7WZ+dY=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=

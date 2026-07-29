@@ -8,3 +8,4 @@ metric_statements:
       - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
       - replace_match(datapoint.attributes["sqlserver.query_hash"], "", "unknown")
       - replace_match(datapoint.attributes["user.name"], "", "unknown")
+      - replace_match(datapoint.attributes["sqlserver.application.name"], "", "unknown")

@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
+	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -75,47 +77,58 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	// Enable metrics disabled-by-default in the receiver but required by DBI.
 	// These metrics align with RDS SQL Server monitoring best practices.
 	
-	// Performance & Resource Metrics (RDS equivalents)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverProcessesBlocked.Enabled = true          // RDS: BlockedTransactions
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDeadlockRate.Enabled = true             // RDS: Deadlocks/sec
-	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryGrantsPendingCount.Enabled = true // RDS: Memory Grants Pending
-	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryUsage.Enabled = true              // RDS: FreeableMemory (inverse)
+	// Performance & Resource Metrics 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverProcessesBlocked.Enabled = true        
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDeadlockRate.Enabled = true             
+	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryGrantsPendingCount.Enabled = true 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryUsage.Enabled = true              
 	
-	// Page & Buffer Pool Metrics (RDS equivalents)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverPageLookupRate.Enabled = true          // RDS: Page Lookups/sec
-	cfg.MetricsBuilderConfig.Metrics.SqlserverForwardedRecordsRate.Enabled = true    // Performance tuning metric
-	cfg.MetricsBuilderConfig.Metrics.SqlserverPageBufferCacheFreeListStallsRate.Enabled = true // Memory pressure indicator
+	// Page & Buffer Pool Metrics 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageLookupRate.Enabled = true          
+	cfg.MetricsBuilderConfig.Metrics.SqlserverForwardedRecordsRate.Enabled = true    
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageBufferCacheFreeListStallsRate.Enabled = true 
 	
-	// Wait Statistics (RDS Performance Insights equivalents)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLatchWaitRate.Enabled = true   // Concurrency metric
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLockTimeoutRate.Enabled = true // Lock contention
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLockWaitCount.Enabled = true   // Lock contention
+	// Wait Statistics
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLatchWaitRate.Enabled = true   
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLockTimeoutRate.Enabled = true 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLockWaitCount.Enabled = true 
 	
-	// Transaction & Log Metrics (RDS equivalents)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionActiveCount.Enabled = true         // RDS: Active Transactions
-	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogFlushRate.Enabled = true        // RDS: Log Flushes/sec
-	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogFlushWaitRate.Enabled = true    // Log IO bottleneck
-	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogUsage.Enabled = true            // RDS: TransactionLogUsage
+	// Windows-only metrics: These use Windows Performance Monitor counters (via recorders.go)
+	// that are unavailable on Linux. The SQL query fetches the data from sys.dm_os_performance_counters
+	// but scraper.go does not process them on the direct-connect (Linux) path.
+	isWindows := translatorcontext.CurrentContext().Os() == translatorconfig.OS_TYPE_WINDOWS
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLockWaitTimeAvg.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageCheckpointFlushRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageLazyWriteRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageOperationRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageSplitRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionWriteRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogFlushDataRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogFlushRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogFlushWaitRate.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogGrowthCount.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogShrinkCount.Enabled = isWindows
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogUsage.Enabled = isWindows         
 	
-	// Database I/O Metrics (RDS: ReadIOPS, WriteIOPS, ReadThroughput, WriteThroughput equivalents)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIo.Enabled = true       // Per-database I/O
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseLatency.Enabled = true  // Per-database latency
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseOperations.Enabled = true // I/O operations
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIoStallQueued.Enabled = true // Resource Governor I/O queue wait time
+	// Database I/O Metrics 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIo.Enabled = true     
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseLatency.Enabled = true  
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseOperations.Enabled = true 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIoStallQueued.Enabled = true 
 	
-	// Connection & Workload Metrics (RDS equivalents)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLoginRate.Enabled = true  // RDS: LoginFailures (partial)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLogoutRate.Enabled = true // Connection churn
-	cfg.MetricsBuilderConfig.Metrics.SqlserverSessionCount.Enabled = true // Active sessions by state
-	
+	// Connection & Workload Metrics 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLoginRate.Enabled = true  
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLogoutRate.Enabled = true 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverSessionCount.Enabled = true 
 	// Index & Query Performance Metrics
-	cfg.MetricsBuilderConfig.Metrics.SqlserverIndexSearchRate.Enabled = true        // Index usage
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseFullScanRate.Enabled = true   // Table scan indicator (performance issue)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseExecutionErrors.Enabled = true // RDS: Errors/sec
+	cfg.MetricsBuilderConfig.Metrics.SqlserverIndexSearchRate.Enabled = true        
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseFullScanRate.Enabled = true  
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseExecutionErrors.Enabled = true 
 	
 	// Optional: TempDB Metrics (useful for workload analysis)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbSpace.Enabled = true            // TempDB space usage
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbVersionStoreSize.Enabled = true // Version store size
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbSpace.Enabled = true            
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbVersionStoreSize.Enabled = true 
 
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
 	cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true

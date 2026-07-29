@@ -328,15 +328,10 @@ func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
 	
-	// SQL Server already filters out the monitoring session in the query itself
+	condition := fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
 	if t.cfg.engine == common.PostgreSQLKey {
-		condition := fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
-		return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+t.cfg.engine+"_"+idx, condition, common.OTTLErrorModePropagate)
+		condition = fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
 	}
-	
-	// For MySQL and SQL Server, use a filter that always passes (matches nothing)
-	// This allows all query samples through since the receivers already filter correctly
-	condition := `false`  // Never matches, so nothing gets filtered
 	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+t.cfg.engine+"_"+idx, condition, common.OTTLErrorModePropagate)
 }
 

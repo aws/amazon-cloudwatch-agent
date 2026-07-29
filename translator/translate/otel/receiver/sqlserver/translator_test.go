@@ -13,6 +13,7 @@
 package sqlserver
 
 import (
+	"runtime"
 	"testing"
 	"time"
 
@@ -64,50 +65,74 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 	assert.Equal(t, 921600, c.TopQueryCollection.MaxQueryPlanSize) // 900KB default
 
 	// Metrics that are disabled-by-default in the receiver but required for DBI
-	// console parity with RDS Performance Insights.
 	m := c.MetricsBuilderConfig.Metrics
 	
-	// Performance & Resource Metrics (RDS equivalents)
-	assert.True(t, m.SqlserverProcessesBlocked.Enabled)          // RDS: BlockedTransactions
-	assert.True(t, m.SqlserverDeadlockRate.Enabled)             // RDS: Deadlocks/sec
-	assert.True(t, m.SqlserverMemoryGrantsPendingCount.Enabled) // RDS: Memory Grants Pending
-	assert.True(t, m.SqlserverMemoryUsage.Enabled)              // RDS: FreeableMemory (inverse)
+	// Performance & Resource Metrics 
+	assert.True(t, m.SqlserverProcessesBlocked.Enabled)         
+	assert.True(t, m.SqlserverDeadlockRate.Enabled)             
+	assert.True(t, m.SqlserverMemoryGrantsPendingCount.Enabled) 
+	assert.True(t, m.SqlserverMemoryUsage.Enabled)  
 	
-	// Page & Buffer Pool Metrics (RDS equivalents)
-	assert.True(t, m.SqlserverPageLookupRate.Enabled)                      // RDS: Page Lookups/sec
-	assert.True(t, m.SqlserverForwardedRecordsRate.Enabled)                // Performance tuning metric
-	assert.True(t, m.SqlserverPageBufferCacheFreeListStallsRate.Enabled)   // Memory pressure indicator
+	// Page & Buffer Pool Metrics 
+	assert.True(t, m.SqlserverPageLookupRate.Enabled)                     
+	assert.True(t, m.SqlserverForwardedRecordsRate.Enabled)                
+	assert.True(t, m.SqlserverPageBufferCacheFreeListStallsRate.Enabled)   
 	
 	// Wait Statistics (RDS Performance Insights equivalents)
-	assert.True(t, m.SqlserverLatchWaitRate.Enabled)   // Concurrency metric
-	assert.True(t, m.SqlserverLockTimeoutRate.Enabled) // Lock contention
-	assert.True(t, m.SqlserverLockWaitCount.Enabled)   // Lock contention
+	assert.True(t, m.SqlserverLatchWaitRate.Enabled)   
+	assert.True(t, m.SqlserverLockTimeoutRate.Enabled) 
+	assert.True(t, m.SqlserverLockWaitCount.Enabled)   
 	
-	// Transaction & Log Metrics (RDS equivalents)
-	assert.True(t, m.SqlserverTransactionActiveCount.Enabled)         // RDS: Active Transactions
-	assert.True(t, m.SqlserverTransactionLogFlushRate.Enabled)        // RDS: Log Flushes/sec
-	assert.True(t, m.SqlserverTransactionLogFlushWaitRate.Enabled)    // Log IO bottleneck
-	assert.True(t, m.SqlserverTransactionLogUsage.Enabled)            // RDS: TransactionLogUsage
+	// Windows-only metrics: use Windows Performance Monitor counters unavailable on Linux
+	if runtime.GOOS == "windows" {
+		assert.True(t, m.SqlserverLockWaitTimeAvg.Enabled)
+		assert.True(t, m.SqlserverPageCheckpointFlushRate.Enabled)
+		assert.True(t, m.SqlserverPageLazyWriteRate.Enabled)
+		assert.True(t, m.SqlserverPageOperationRate.Enabled)
+		assert.True(t, m.SqlserverPageSplitRate.Enabled)
+		assert.True(t, m.SqlserverTransactionRate.Enabled)
+		assert.True(t, m.SqlserverTransactionWriteRate.Enabled)
+		assert.True(t, m.SqlserverTransactionLogFlushDataRate.Enabled)
+		assert.True(t, m.SqlserverTransactionLogFlushRate.Enabled)
+		assert.True(t, m.SqlserverTransactionLogFlushWaitRate.Enabled)
+		assert.True(t, m.SqlserverTransactionLogGrowthCount.Enabled)
+		assert.True(t, m.SqlserverTransactionLogShrinkCount.Enabled)
+		assert.True(t, m.SqlserverTransactionLogUsage.Enabled)
+	} else {
+		assert.False(t, m.SqlserverLockWaitTimeAvg.Enabled)
+		assert.False(t, m.SqlserverPageCheckpointFlushRate.Enabled)
+		assert.False(t, m.SqlserverPageLazyWriteRate.Enabled)
+		assert.False(t, m.SqlserverPageOperationRate.Enabled)
+		assert.False(t, m.SqlserverPageSplitRate.Enabled)
+		assert.False(t, m.SqlserverTransactionRate.Enabled)
+		assert.False(t, m.SqlserverTransactionWriteRate.Enabled)
+		assert.False(t, m.SqlserverTransactionLogFlushDataRate.Enabled)
+		assert.False(t, m.SqlserverTransactionLogFlushRate.Enabled)
+		assert.False(t, m.SqlserverTransactionLogFlushWaitRate.Enabled)
+		assert.False(t, m.SqlserverTransactionLogGrowthCount.Enabled)
+		assert.False(t, m.SqlserverTransactionLogShrinkCount.Enabled)
+		assert.False(t, m.SqlserverTransactionLogUsage.Enabled)
+	}
 	
-	// Database I/O Metrics (RDS: ReadIOPS, WriteIOPS, ReadThroughput, WriteThroughput equivalents)
-	assert.True(t, m.SqlserverDatabaseIo.Enabled)       // Per-database I/O
-	assert.True(t, m.SqlserverDatabaseLatency.Enabled)  // Per-database latency
-	assert.True(t, m.SqlserverDatabaseOperations.Enabled) // I/O operations
-	assert.True(t, m.SqlserverDatabaseIoStallQueued.Enabled) // Resource Governor I/O queue wait time
+	// Database I/O Metrics 
+	assert.True(t, m.SqlserverDatabaseIo.Enabled)       
+	assert.True(t, m.SqlserverDatabaseLatency.Enabled)  
+	assert.True(t, m.SqlserverDatabaseOperations.Enabled) 
+	assert.True(t, m.SqlserverDatabaseIoStallQueued.Enabled)
 	
-	// Connection & Workload Metrics (RDS equivalents)
-	assert.True(t, m.SqlserverLoginRate.Enabled)  // RDS: LoginFailures (partial)
-	assert.True(t, m.SqlserverLogoutRate.Enabled) // Connection churn
-	assert.True(t, m.SqlserverSessionCount.Enabled) // Active sessions by state
+	// Connection & Workload Metrics
+	assert.True(t, m.SqlserverLoginRate.Enabled)  
+	assert.True(t, m.SqlserverLogoutRate.Enabled) 
+	assert.True(t, m.SqlserverSessionCount.Enabled) 
 	
 	// Index & Query Performance Metrics
-	assert.True(t, m.SqlserverIndexSearchRate.Enabled)        // Index usage
-	assert.True(t, m.SqlserverDatabaseFullScanRate.Enabled)   // Table scan indicator (performance issue)
-	assert.True(t, m.SqlserverDatabaseExecutionErrors.Enabled) // RDS: Errors/sec
+	assert.True(t, m.SqlserverIndexSearchRate.Enabled)        
+	assert.True(t, m.SqlserverDatabaseFullScanRate.Enabled)   
+	assert.True(t, m.SqlserverDatabaseExecutionErrors.Enabled) 
 	
 	// Optional: TempDB Metrics (useful for workload analysis)
-	assert.True(t, m.SqlserverDatabaseTempdbSpace.Enabled)            // TempDB space usage
-	assert.True(t, m.SqlserverDatabaseTempdbVersionStoreSize.Enabled) // Version store size
+	assert.True(t, m.SqlserverDatabaseTempdbSpace.Enabled)           
+	assert.True(t, m.SqlserverDatabaseTempdbVersionStoreSize.Enabled)
 }
 
 func TestTranslator_Translate_DefaultPort(t *testing.T) {

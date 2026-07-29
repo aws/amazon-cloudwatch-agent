@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "collect": {
+      "database_insights": {
+        "sqlserver": [
+          {
+            "endpoint": "localhost:1433",
+            "instance_name": "pentest-sqlserver",
+            "username": "cw_monitor",
+            "password_file": "sampleConfig/opentelemetry/testdata/.sqlserver_credentials",
+            "logs": {
+              "file_path": "C:\\Program Files\\Microsoft SQL Server\\MSSQL16.MSSQLSERVER\\MSSQL\\Log\\ERRORLOG"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

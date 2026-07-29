@@ -152,6 +152,14 @@ connectors:
             metric.datapoint.count:
                 description: The number of data points observed.
         logs:
+            sqlserver.active_sessions.by_app:
+                attributes:
+                    - key: db.system.name
+                    - key: sqlserver.application.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by application
             sqlserver.active_sessions.by_db:
                 attributes:
                     - key: db.system.name
@@ -680,6 +688,8 @@ connectors:
                   optional: false
                 - key: sqlserver.query_plan_hash
                   optional: false
+                - key: db.namespace
+                  optional: false
               conditions:
                 - attributes["sqlserver.execution_count"] != nil
               description: Number of executions
@@ -696,6 +706,8 @@ connectors:
                 - key: sqlserver.query_hash
                   optional: false
                 - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
                   optional: false
               conditions:
                 - attributes["sqlserver.total_elapsed_time"] != nil
@@ -714,6 +726,8 @@ connectors:
                   optional: false
                 - key: sqlserver.query_plan_hash
                   optional: false
+                - key: db.namespace
+                  optional: false
               conditions:
                 - attributes["sqlserver.total_worker_time"] != nil
               description: Total CPU (worker) time (seconds)
@@ -730,6 +744,8 @@ connectors:
                 - key: sqlserver.query_hash
                   optional: false
                 - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
                   optional: false
               conditions:
                 - attributes["sqlserver.total_logical_reads"] != nil
@@ -748,6 +764,8 @@ connectors:
                   optional: false
                 - key: sqlserver.query_plan_hash
                   optional: false
+                - key: db.namespace
+                  optional: false
               conditions:
                 - attributes["sqlserver.total_logical_writes"] != nil
               description: Total logical writes (pages)
@@ -764,6 +782,8 @@ connectors:
                 - key: sqlserver.query_hash
                   optional: false
                 - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
                   optional: false
               conditions:
                 - attributes["sqlserver.total_physical_reads"] != nil
@@ -782,6 +802,8 @@ connectors:
                   optional: false
                 - key: sqlserver.query_plan_hash
                   optional: false
+                - key: db.namespace
+                  optional: false
               conditions:
                 - attributes["sqlserver.total_rows"] != nil
               description: Total rows returned
@@ -798,6 +820,8 @@ connectors:
                 - key: sqlserver.query_hash
                   optional: false
                 - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
                   optional: false
               conditions:
                 - attributes["sqlserver.total_grant_kb"] != nil
@@ -1483,6 +1507,7 @@ processors:
                 - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
                 - replace_match(datapoint.attributes["sqlserver.query_hash"], "", "unknown")
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
+                - replace_match(datapoint.attributes["sqlserver.application.name"], "", "unknown")
         trace_statements: []
     transform/dbi_logs_mysql_raw-events_0:
         error_mode: ignore
@@ -2857,9 +2882,9 @@ receivers:
                     - database.status
                 enabled: false
             sqlserver.database.execution.errors:
-                enabled: false
+                enabled: true
             sqlserver.database.full_scan.rate:
-                enabled: false
+                enabled: true
             sqlserver.database.io:
                 aggregation_strategy: sum
                 attributes:
@@ -2867,7 +2892,15 @@ receivers:
                     - logical_filename
                     - file_type
                     - direction
-                enabled: false
+                enabled: true
+            sqlserver.database.io.stall_queued:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
             sqlserver.database.latency:
                 aggregation_strategy: sum
                 attributes:
@@ -2875,7 +2908,7 @@ receivers:
                     - logical_filename
                     - file_type
                     - direction
-                enabled: false
+                enabled: true
             sqlserver.database.operations:
                 aggregation_strategy: sum
                 attributes:
@@ -2883,38 +2916,38 @@ receivers:
                     - logical_filename
                     - file_type
                     - direction
-                enabled: false
+                enabled: true
             sqlserver.database.tempdb.space:
                 aggregation_strategy: sum
                 attributes:
                     - tempdb.state
-                enabled: false
+                enabled: true
             sqlserver.database.tempdb.version_store.size:
-                enabled: false
+                enabled: true
             sqlserver.deadlock.rate:
                 enabled: true
             sqlserver.forwarded_records.rate:
                 enabled: true
             sqlserver.index.search.rate:
-                enabled: false
+                enabled: true
             sqlserver.latch.wait.rate:
                 enabled: true
             sqlserver.lock.timeout.rate:
-                enabled: false
+                enabled: true
             sqlserver.lock.wait.count:
-                enabled: false
+                enabled: true
             sqlserver.lock.wait.rate:
                 enabled: true
             sqlserver.lock.wait_time.avg:
-                enabled: true
+                enabled: false
             sqlserver.login.rate:
-                enabled: false
+                enabled: true
             sqlserver.logout.rate:
-                enabled: false
+                enabled: true
             sqlserver.memory.grants.pending.count:
                 enabled: true
             sqlserver.memory.usage:
-                enabled: false
+                enabled: true
             sqlserver.os.wait.duration:
                 aggregation_strategy: sum
                 attributes:
@@ -2922,13 +2955,13 @@ receivers:
                     - wait.type
                 enabled: false
             sqlserver.page.buffer_cache.free_list.stalls.rate:
-                enabled: false
+                enabled: true
             sqlserver.page.buffer_cache.hit_ratio:
                 enabled: true
             sqlserver.page.checkpoint.flush.rate:
-                enabled: true
+                enabled: false
             sqlserver.page.lazy_write.rate:
-                enabled: true
+                enabled: false
             sqlserver.page.life_expectancy:
                 aggregation_strategy: avg
                 attributes:
@@ -2940,9 +2973,9 @@ receivers:
                 aggregation_strategy: avg
                 attributes:
                     - type
-                enabled: true
+                enabled: false
             sqlserver.page.split.rate:
-                enabled: true
+                enabled: false
             sqlserver.processes.blocked:
                 enabled: true
             sqlserver.replica.data.rate:
@@ -2959,6 +2992,8 @@ receivers:
                 enabled: false
             sqlserver.resource_pool.disk.throttled.write.rate:
                 enabled: false
+            sqlserver.session.count:
+                enabled: true
             sqlserver.table.count:
                 aggregation_strategy: sum
                 attributes:
@@ -2966,27 +3001,27 @@ receivers:
                     - table.status
                 enabled: false
             sqlserver.transaction.active.count:
-                enabled: true
+                enabled: false
             sqlserver.transaction.delay:
                 enabled: false
             sqlserver.transaction.mirror_write.rate:
                 enabled: false
             sqlserver.transaction.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction.write.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.flush.data.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.flush.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.flush.wait.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.growth.count:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.shrink.count:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.usage:
-                enabled: true
+                enabled: false
             sqlserver.user.connection.count:
                 enabled: true
         passfile: sampleConfig/opentelemetry/testdata/.sqlserver_credentials
@@ -3013,7 +3048,10 @@ receivers:
         top_query_collection:
             collection_interval: 1m0s
             lookback_time: 0s
+            max_query_plan_size: 921600
             max_query_sample_count: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
             top_query_count: 200
         username: cw_monitor
     sqlserver/metrics_0:
@@ -3046,9 +3084,9 @@ receivers:
                     - database.status
                 enabled: false
             sqlserver.database.execution.errors:
-                enabled: false
+                enabled: true
             sqlserver.database.full_scan.rate:
-                enabled: false
+                enabled: true
             sqlserver.database.io:
                 aggregation_strategy: sum
                 attributes:
@@ -3056,7 +3094,15 @@ receivers:
                     - logical_filename
                     - file_type
                     - direction
-                enabled: false
+                enabled: true
+            sqlserver.database.io.stall_queued:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
             sqlserver.database.latency:
                 aggregation_strategy: sum
                 attributes:
@@ -3064,7 +3110,7 @@ receivers:
                     - logical_filename
                     - file_type
                     - direction
-                enabled: false
+                enabled: true
             sqlserver.database.operations:
                 aggregation_strategy: sum
                 attributes:
@@ -3072,38 +3118,38 @@ receivers:
                     - logical_filename
                     - file_type
                     - direction
-                enabled: false
+                enabled: true
             sqlserver.database.tempdb.space:
                 aggregation_strategy: sum
                 attributes:
                     - tempdb.state
-                enabled: false
+                enabled: true
             sqlserver.database.tempdb.version_store.size:
-                enabled: false
+                enabled: true
             sqlserver.deadlock.rate:
                 enabled: true
             sqlserver.forwarded_records.rate:
                 enabled: true
             sqlserver.index.search.rate:
-                enabled: false
+                enabled: true
             sqlserver.latch.wait.rate:
                 enabled: true
             sqlserver.lock.timeout.rate:
-                enabled: false
+                enabled: true
             sqlserver.lock.wait.count:
-                enabled: false
+                enabled: true
             sqlserver.lock.wait.rate:
                 enabled: true
             sqlserver.lock.wait_time.avg:
-                enabled: true
+                enabled: false
             sqlserver.login.rate:
-                enabled: false
+                enabled: true
             sqlserver.logout.rate:
-                enabled: false
+                enabled: true
             sqlserver.memory.grants.pending.count:
                 enabled: true
             sqlserver.memory.usage:
-                enabled: false
+                enabled: true
             sqlserver.os.wait.duration:
                 aggregation_strategy: sum
                 attributes:
@@ -3111,13 +3157,13 @@ receivers:
                     - wait.type
                 enabled: false
             sqlserver.page.buffer_cache.free_list.stalls.rate:
-                enabled: false
+                enabled: true
             sqlserver.page.buffer_cache.hit_ratio:
                 enabled: true
             sqlserver.page.checkpoint.flush.rate:
-                enabled: true
+                enabled: false
             sqlserver.page.lazy_write.rate:
-                enabled: true
+                enabled: false
             sqlserver.page.life_expectancy:
                 aggregation_strategy: avg
                 attributes:
@@ -3129,9 +3175,9 @@ receivers:
                 aggregation_strategy: avg
                 attributes:
                     - type
-                enabled: true
+                enabled: false
             sqlserver.page.split.rate:
-                enabled: true
+                enabled: false
             sqlserver.processes.blocked:
                 enabled: true
             sqlserver.replica.data.rate:
@@ -3148,6 +3194,8 @@ receivers:
                 enabled: false
             sqlserver.resource_pool.disk.throttled.write.rate:
                 enabled: false
+            sqlserver.session.count:
+                enabled: true
             sqlserver.table.count:
                 aggregation_strategy: sum
                 attributes:
@@ -3155,27 +3203,27 @@ receivers:
                     - table.status
                 enabled: false
             sqlserver.transaction.active.count:
-                enabled: true
+                enabled: false
             sqlserver.transaction.delay:
                 enabled: false
             sqlserver.transaction.mirror_write.rate:
                 enabled: false
             sqlserver.transaction.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction.write.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.flush.data.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.flush.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.flush.wait.rate:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.growth.count:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.shrink.count:
-                enabled: true
+                enabled: false
             sqlserver.transaction_log.usage:
-                enabled: true
+                enabled: false
             sqlserver.user.connection.count:
                 enabled: true
         passfile: sampleConfig/opentelemetry/testdata/.sqlserver_credentials
@@ -3202,7 +3250,10 @@ receivers:
         top_query_collection:
             collection_interval: 1m0s
             lookback_time: 0s
+            max_query_plan_size: 921600
             max_query_sample_count: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
             top_query_count: 200
         username: cw_monitor
     telegraf_cpu:
@@ -3440,13 +3491,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_mem
+                - telegraf_netstat
+                - telegraf_disk
                 - telegraf_swap
                 - telegraf_processes
-                - telegraf_netstat
-                - telegraf_cpu
-                - telegraf_mem
-                - telegraf_disk
                 - telegraf_procstat/1917393364
+                - telegraf_cpu
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -3461,8 +3512,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -3471,8 +3522,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlphttp/metrics

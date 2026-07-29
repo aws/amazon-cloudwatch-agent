@@ -1,4 +1,12 @@
 logs:
+  sqlserver.active_sessions.by_app:
+    description: "Active sessions by application"
+    conditions:
+      - attributes["sqlserver.session_status"] != "sleeping"
+    attributes:
+      - key: db.system.name
+      - key: sqlserver.application.name
+      - key: db.namespace
   sqlserver.active_sessions.by_wait:
     description: "Active sessions by wait category"
     conditions:
