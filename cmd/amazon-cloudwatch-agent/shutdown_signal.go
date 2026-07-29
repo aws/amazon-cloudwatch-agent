@@ -5,6 +5,7 @@ package main
 
 import (
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -38,5 +39,34 @@ func handleTerminatingSignalDispatch(stopCh <-chan struct{}, timeout time.Durati
 		}
 	} else {
 		terminatingSignalReceived.Store(true)
+	}
+}
+
+// runCompleteChan is closed by signalRunComplete when (*program).run
+// finishes. main() waits on this via waitRunComplete so otelcol.Shutdown
+// and any pending flushes can complete before the process exits.
+// Declared as var so tests can substitute a fresh channel.
+var runCompleteChan = make(chan struct{})
+
+// runCompleteOnce guards close(runCompleteChan).
+var runCompleteOnce sync.Once
+
+// runCompleteTimeout bounds waitRunComplete so a stuck teardown cannot
+// indefinitely hold up the OS.
+var runCompleteTimeout = 30 * time.Second
+
+// signalRunComplete unblocks waitRunComplete. Safe to call multiple times.
+func signalRunComplete() {
+	runCompleteOnce.Do(func() { close(runCompleteChan) })
+}
+
+// waitRunComplete blocks until signalRunComplete or runCompleteTimeout,
+// whichever comes first. Logs a warning on timeout so the OS is not
+// held indefinitely.
+func waitRunComplete() {
+	select {
+	case <-runCompleteChan:
+	case <-time.After(runCompleteTimeout):
+		log.Printf("W! Windows service: waited %v for shutdown teardown to complete; exiting anyway", runCompleteTimeout)
 	}
 }

@@ -435,6 +435,7 @@ func (p *program) Start(_ service.Service) error {
 	return nil
 }
 func (p *program) run() {
+	defer signalRunComplete() // unblock main()'s waitRunComplete on any return
 	stop = make(chan struct{})
 	reloadLoop(
 		stop,
@@ -649,6 +650,9 @@ func main() {
 			if err != nil {
 				log.Println("E! " + err.Error())
 			}
+			// Wait for (*program).run to finish so otelcol.Shutdown can
+			// complete before the Go runtime calls ExitProcess.
+			waitRunComplete()
 		}
 	} else {
 		stop = make(chan struct{})

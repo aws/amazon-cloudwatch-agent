@@ -95,3 +95,69 @@ func TestDispatch_SCMAcceptedButTimeout_SetsFallbackFlag(t *testing.T) {
 		t.Fatal("expected fallback flag set after SCM path timeout")
 	}
 }
+
+// ---- runComplete channel + wait -------------------------------------
+
+// resetRunComplete restores a fresh channel + Once so tests can exercise
+// signalRunComplete and waitRunComplete in isolation.
+func resetRunComplete() {
+	runCompleteChan = make(chan struct{})
+	runCompleteOnce = sync.Once{}
+}
+
+// signalRunComplete must be idempotent (close of a closed channel would
+// panic without sync.Once).
+func TestSignalRunComplete_Idempotent(t *testing.T) {
+	t.Cleanup(resetRunComplete)
+	resetRunComplete()
+
+	signalRunComplete()
+	signalRunComplete() // must not panic
+
+	select {
+	case <-runCompleteChan:
+	default:
+		t.Fatal("runCompleteChan not closed after signalRunComplete()")
+	}
+}
+
+// waitRunComplete must return promptly once signalRunComplete is called.
+func TestWaitRunComplete_ReturnsWhenSignaled(t *testing.T) {
+	t.Cleanup(resetRunComplete)
+	resetRunComplete()
+	oldTimeout := runCompleteTimeout
+	runCompleteTimeout = 500 * time.Millisecond
+	t.Cleanup(func() { runCompleteTimeout = oldTimeout })
+
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		signalRunComplete()
+	}()
+
+	start := time.Now()
+	waitRunComplete()
+	elapsed := time.Since(start)
+	if elapsed > 200*time.Millisecond {
+		t.Fatalf("waitRunComplete took %v; expected quick return after signal", elapsed)
+	}
+}
+
+// waitRunComplete must fall through after runCompleteTimeout when no
+// signal arrives, so the OS is not held indefinitely.
+func TestWaitRunComplete_TimesOut(t *testing.T) {
+	t.Cleanup(resetRunComplete)
+	resetRunComplete()
+	oldTimeout := runCompleteTimeout
+	runCompleteTimeout = 20 * time.Millisecond
+	t.Cleanup(func() { runCompleteTimeout = oldTimeout })
+
+	start := time.Now()
+	waitRunComplete()
+	elapsed := time.Since(start)
+	if elapsed < 15*time.Millisecond {
+		t.Fatalf("waitRunComplete returned in %v; expected ~20ms timeout", elapsed)
+	}
+	if elapsed > 200*time.Millisecond {
+		t.Fatalf("waitRunComplete took %v; expected ~20ms timeout", elapsed)
+	}
+}
