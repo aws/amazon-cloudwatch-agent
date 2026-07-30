@@ -24,6 +24,7 @@ const (
 var (
 	// These are examples credentials pulled from:
 	// https://docs.aws.amazon.com/STS/latest/APIReference/API_GetAccessKeyInfo.html
+	//nolint:gosec // G101: AWS-documented example credentials, not real
 	testCredentials = aws.Credentials{
 		AccessKeyID:     "AKIAIOSFODNN7EXAMPLE",
 		SecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
