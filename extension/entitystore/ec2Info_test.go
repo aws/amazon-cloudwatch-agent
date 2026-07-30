@@ -25,7 +25,7 @@ var mockedInstanceIdentityDoc = &imds.InstanceIdentityDocument{
 	AvailabilityZone: "us-east-1a",
 }
 
-var mockedInstanceIdentityDocWithLargeInstanceId = &imds.InstanceIdentityDocument{
+var mockedInstanceIdentityDocWithLargeInstanceID = &imds.InstanceIdentityDocument{
 	InstanceID:       "i-01d2417c27a396e44394824728",
 	AccountID:        "874389809020",
 	Region:           "us-east-1",
@@ -66,15 +66,15 @@ func TestSetEC2Metadata(t *testing.T) {
 		{
 			name: "InstanceId too large",
 			args: args{
-				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDocWithLargeInstanceId},
+				metadataProvider: &mockMetadataProvider{InstanceIdentityDocument: mockedInstanceIdentityDocWithLargeInstanceID},
 			},
 			wantErr: false,
 			want: EC2Info{
 				InstanceID:       "",
-				AccountID:        mockedInstanceIdentityDocWithLargeInstanceId.AccountID,
-				InstanceType:     mockedInstanceIdentityDocWithLargeInstanceId.InstanceType,
-				ImageID:          mockedInstanceIdentityDocWithLargeInstanceId.ImageID,
-				AvailabilityZone: mockedInstanceIdentityDocWithLargeInstanceId.AvailabilityZone,
+				AccountID:        mockedInstanceIdentityDocWithLargeInstanceID.AccountID,
+				InstanceType:     mockedInstanceIdentityDocWithLargeInstanceID.InstanceType,
+				ImageID:          mockedInstanceIdentityDocWithLargeInstanceID.ImageID,
+				AvailabilityZone: mockedInstanceIdentityDocWithLargeInstanceID.AvailabilityZone,
 				Hostname:         "MockHostName",
 			},
 		},

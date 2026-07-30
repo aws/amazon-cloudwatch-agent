@@ -126,10 +126,15 @@ func TestTranslator(t *testing.T) {
 				wantCfg := factory.CreateDefaultConfig().(*filterprocessor.Config)
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
 				assert.Equal(t, wantCfg.ErrorMode, gotCfg.ErrorMode)
+				//nolint:staticcheck // SA1019: comparing deprecated fields is intentional for this config
 				assert.Equal(t, wantCfg.Metrics, gotCfg.Metrics)
+				//nolint:staticcheck // SA1019: comparing deprecated fields is intentional for this config
 				assert.Equal(t, wantCfg.Logs, gotCfg.Logs)
+				//nolint:staticcheck // SA1019: comparing deprecated fields is intentional for this config
 				assert.Equal(t, wantCfg.Spans, gotCfg.Spans)
+				//nolint:staticcheck // SA1019: comparing deprecated fields is intentional for this config
 				assert.Equal(t, wantCfg.Traces, gotCfg.Traces)
+				//nolint:staticcheck // SA1019: comparing deprecated fields is intentional for this config
 				assert.Equal(t, wantCfg.Profiles, gotCfg.Profiles)
 			}
 		})
