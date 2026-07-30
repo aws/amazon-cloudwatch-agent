@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awscloudwatchlogsprovisioner"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributestocontext"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
@@ -53,7 +54,9 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	if runtime.GOOS == "windows" {
 		keys = append(keys, common.WindowsEventsConfigKey)
 	}
-	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil {
+	// Activate the shared logs pipeline when Container Insights produces log
+	// source pipelines (role=node with logs.enabled).
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil && !containerinsights.HasLogPipelines(conf) {
 		return nil, err
 	}
 

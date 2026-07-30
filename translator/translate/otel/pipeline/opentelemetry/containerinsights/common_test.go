@@ -104,7 +104,48 @@ func TestLogsEnabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, logsEnabled(tt.cfg))
+			assert.Equal(t, tt.want, LogsEnabled(tt.cfg))
+		})
+	}
+}
+
+func TestHasLogPipelines(t *testing.T) {
+	// ciConf builds a config with the given container_insights role and logs.enabled.
+	// An empty role omits the JSON field so getRole falls back to its default (node).
+	ciConf := func(role string, logsEnabled bool) *confmap.Conf {
+		ci := map[string]interface{}{
+			"logs": map[string]interface{}{"enabled": logsEnabled},
+		}
+		if role != "" {
+			ci["role"] = role
+		}
+		return confmap.NewFromStringMap(map[string]interface{}{
+			"opentelemetry": map[string]interface{}{
+				"collect": map[string]interface{}{
+					"container_insights": ci,
+				},
+			},
+		})
+	}
+
+	tests := []struct {
+		name string
+		cfg  *confmap.Conf
+		want bool
+	}{
+		{"nil config", nil, false},
+		{"container_insights not set", confmap.NewFromStringMap(map[string]interface{}{
+			"opentelemetry": map[string]interface{}{"collect": map[string]interface{}{}},
+		}), false},
+		{"node role with logs enabled", ciConf(roleNode, true), true},
+		{"node role with logs disabled", ciConf(roleNode, false), false},
+		{"default role (node) with logs enabled", ciConf("", true), true},
+		{"cluster role with logs enabled", ciConf(roleCluster, true), false},
+		{"cluster role with logs disabled", ciConf(roleCluster, false), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, HasLogPipelines(tt.cfg))
 		})
 	}
 }

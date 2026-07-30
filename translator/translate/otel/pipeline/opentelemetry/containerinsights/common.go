@@ -91,13 +91,22 @@ func getCollectionInterval(conf *confmap.Conf) time.Duration {
 	}, defaultCollectionInterval)
 }
 
-// logsEnabled returns true if container_insights.logs.enabled is set to true.
-func logsEnabled(conf *confmap.Conf) bool {
+// LogsEnabled reports whether container_insights log collection is enabled.
+func LogsEnabled(conf *confmap.Conf) bool {
 	if conf == nil {
 		return false
 	}
 	key := common.ConfigKey(ciConfigKey, "logs", "enabled")
 	return common.GetOrDefaultBool(conf, key, false)
+}
+
+// HasLogPipelines reports whether container_insights produces log source pipelines
+// (role node with logs enabled) that forward into the shared logs/opentelemetry pipeline.
+func HasLogPipelines(conf *confmap.Conf) bool {
+	if conf == nil || !conf.IsSet(ciConfigKey) {
+		return false
+	}
+	return getRole(conf) == roleNode && LogsEnabled(conf)
 }
 
 // getRole resolves the container insights pipeline role using the following

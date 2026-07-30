@@ -1,6 +1,33 @@
 connectors:
     forward/opentelemetry: {}
 exporters:
+    otlphttp/logs:
+        auth:
+            authenticator: agenthealth/opentelemetry_logs
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
     otlphttp/metrics:
         auth:
             authenticator: agenthealth/opentelemetry_metrics
@@ -29,6 +56,15 @@ exporters:
         traces_endpoint: ""
         write_buffer_size: 524288
 extensions:
+    agenthealth/opentelemetry_logs:
+        additional_auth: headers_setter/logs
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EKS
+                region_type: ACJ
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
@@ -38,11 +74,36 @@ extensions:
             usage_flags:
                 mode: EKS
                 region_type: ACJ
+    awscloudwatchlogsprovisioner:
+        additional_auth: sigv4auth/logs
+        imds_retries: 1
+        logs_provision_failure_backoff: 5s
+        max_retries: 2
+        num_workers: 8
+        region: us-east-1
+        request_timeout_seconds: 10
+    headers_setter/logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              from_context: aws.log.group.name
+              key: x-aws-log-group
+            - action: upsert
+              from_context: aws.log.stream.name
+              key: x-aws-log-stream
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
         tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
         tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
+    sigv4auth/logs:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: us-east-1
+        request_timeout_seconds: 30
+        service: logs
     sigv4auth/monitoring:
         assume_role: {}
         imds_retries: 1
@@ -52,6 +113,12 @@ extensions:
         request_timeout_seconds: 30
         service: monitoring
 processors:
+    attributestocontext/opentelemetry:
+        actions:
+            - from_resource_attribute: aws.log.group.name
+              key: aws.log.group.name
+            - from_resource_attribute: aws.log.stream.name
+              key: aws.log.stream.name
     awsattributelimit/cw_k8s_ci_v0:
         max_total_attributes: 150
         unconditional_removal_keys:
@@ -89,6 +156,14 @@ processors:
               resource_names:
                 - vpc.amazonaws.com/efa
     awsneuron/cw_k8s_ci_v0: null
+    batch/opentelemetry_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 30s
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
@@ -155,6 +230,19 @@ processors:
         exclude:
             pods: null
         extract:
+            annotations:
+                - from: pod
+                  key: resource.opentelemetry.io/service.name
+                  tag_name: resource.opentelemetry.io/service.name
+                - from: pod
+                  key: resource.opentelemetry.io/service.namespace
+                  tag_name: resource.opentelemetry.io/service.namespace
+                - from: pod
+                  key: resource.opentelemetry.io/service.instance.id
+                  tag_name: resource.opentelemetry.io/service.instance.id
+                - from: pod
+                  key: resource.opentelemetry.io/service.version
+                  tag_name: resource.opentelemetry.io/service.version
             labels:
                 - from: pod
                   key_regex: (.*)
@@ -168,6 +256,8 @@ processors:
                 - k8s.replicaset.name
                 - k8s.job.name
                 - k8s.cronjob.name
+                - k8s.pod.start_time
+                - k8s.container.name
         filter:
             node_from_env_var: K8S_NODE_NAME
         passthrough: false
@@ -239,10 +329,27 @@ processors:
     resourcedetection/cw_k8s_ci_v0:
         detectors:
             - eks
-            - env
             - ec2
-        override: false
-        timeout: 2s
+        ec2:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -523,6 +630,13 @@ processors:
                 os.version:
                     enabled: false
         timeout: 2s
+    transform/cw_k8s_ci_v0_app_logs_set_log_destination:
+        error_mode: ignore
+        log_statements:
+            - context: resource
+              statements:
+                - set(attributes["aws.log.group.name"], "/aws/otel/containerinsights/TestCluster/application")
+                - set(attributes["aws.log.stream.name"], "${K8S_NODE_NAME}-application")
     transform/cw_k8s_ci_v0_cadvisor_promote:
         error_mode: ignore
         metric_statements:
@@ -586,6 +700,61 @@ processors:
                 - set(resource.attributes["volume_id"], attributes["volume_id"]) where attributes["volume_id"] != nil
                 - delete_key(attributes, "instance_id") where attributes["instance_id"] != nil
                 - delete_key(attributes, "volume_id") where attributes["volume_id"] != nil
+    transform/cw_k8s_ci_v0_logs_clear_schema_url:
+        error_mode: ignore
+        log_statements:
+            - context: resource
+              statements:
+                - set(resource.schema_url, "")
+    transform/cw_k8s_ci_v0_logs_set_cloud_resource_id:
+        error_mode: ignore
+        log_statements:
+            - context: resource
+              statements:
+                - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil
+    transform/cw_k8s_ci_v0_logs_set_cluster_and_node:
+        error_mode: ignore
+        log_statements:
+            - context: resource
+              statements:
+                - set(attributes["k8s.cluster.name"], "TestCluster")
+                - set(attributes["k8s.node.name"], "${K8S_NODE_NAME}")
+    transform/cw_k8s_ci_v0_logs_set_scope_app:
+        error_mode: ignore
+        log_statements:
+            - context: scope
+              statements:
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "application-logs")
+    transform/cw_k8s_ci_v0_logs_set_scope_host:
+        error_mode: ignore
+        log_statements:
+            - context: scope
+              statements:
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "host-logs")
+    transform/cw_k8s_ci_v0_logs_set_workload:
+        error_mode: ignore
+        log_statements:
+            - context: resource
+              statements:
+                - set(attributes["k8s.workload.name"], attributes["k8s.deployment.name"]) where attributes["k8s.deployment.name"] != nil
+                - set(attributes["k8s.workload.type"], "Deployment") where attributes["k8s.deployment.name"] != nil
+                - set(attributes["k8s.workload.name"], attributes["k8s.statefulset.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.statefulset.name"] != nil
+                - set(attributes["k8s.workload.type"], "StatefulSet") where attributes["k8s.statefulset.name"] != nil and attributes["k8s.workload.type"] == nil
+                - set(attributes["k8s.workload.name"], attributes["k8s.daemonset.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.daemonset.name"] != nil
+                - set(attributes["k8s.workload.type"], "DaemonSet") where attributes["k8s.daemonset.name"] != nil and attributes["k8s.workload.type"] == nil
+                - set(attributes["k8s.workload.name"], attributes["k8s.job.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.job.name"] != nil
+                - set(attributes["k8s.workload.type"], "Job") where attributes["k8s.job.name"] != nil and attributes["k8s.workload.type"] == nil
+                - set(attributes["k8s.workload.name"], attributes["k8s.cronjob.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.cronjob.name"] != nil
+                - set(attributes["k8s.workload.type"], "CronJob") where attributes["k8s.cronjob.name"] != nil and attributes["k8s.workload.type"] == nil
+                - set(attributes["k8s.workload.name"], attributes["k8s.replicaset.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.replicaset.name"] != nil
+                - set(attributes["k8s.workload.type"], "ReplicaSet") where attributes["k8s.replicaset.name"] != nil and attributes["k8s.workload.type"] == nil
+                - set(attributes["service.name"], attributes["k8s.workload.name"]) where attributes["service.name"] == nil and attributes["k8s.workload.name"] != nil
     transform/cw_k8s_ci_v0_neuron_hw_attrs:
         error_mode: ignore
         metric_statements:
@@ -609,6 +778,13 @@ processors:
                 - delete_key(attributes, "k8s.namespace.name") where attributes["k8s.namespace.name"] != nil
                 - delete_key(attributes, "k8s.container.name") where attributes["k8s.container.name"] != nil
                 - delete_key(attributes, "runtime_tag") where attributes["runtime_tag"] != nil
+    transform/cw_k8s_ci_v0_node_logs_set_log_destination:
+        error_mode: ignore
+        log_statements:
+            - context: resource
+              statements:
+                - set(attributes["aws.log.group.name"], "/aws/otel/containerinsights/TestCluster/host")
+                - set(attributes["aws.log.stream.name"], "${K8S_NODE_NAME}-host")
     transform/cw_k8s_ci_v0_promote_node_name:
         error_mode: ignore
         metric_statements:
@@ -891,6 +1067,34 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+    transform/logs_cleanup:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - delete_key(resource.attributes, "aws.log.group.name")
+                - delete_key(resource.attributes, "aws.log.stream.name")
+                - delete_key(resource.attributes, "aws.log.source")
+        metric_statements: []
+        trace_statements: []
+    transform/logs_routing:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["k8s.cluster.name"], resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["aws.log.source"] != nil
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["k8s.cluster.name"], "default"], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["k8s.cluster.name"] != nil
+                - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["k8s.namespace.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
+        metric_statements: []
+        trace_statements: []
     transform/set_cluster_name:
         error_mode: ignore
         flatten_data: false
@@ -912,6 +1116,44 @@ processors:
 receivers:
     awsefareceiver/cw_k8s_ci_v0:
         collection_interval: 30s
+    filelog/cw_k8s_ci_v0_app:
+        exclude:
+            - /var/log/containers/cloudwatch-agent*
+            - /var/log/containers/fluent-bit*
+            - /var/log/containers/aws-node*
+            - /var/log/containers/kube-proxy*
+        include:
+            - /var/log/containers/*.log
+        include_file_name: false
+        include_file_path: true
+        max_concurrent_files: 100
+        operators:
+            - id: extract_metadata_from_filepath
+              parse_from: attributes["log.file.path"]
+              parse_to: resource
+              regex: ^.*\/(?P<pod>[^_]+)_(?P<namespace>[^_]+)_(?P<container>.+)-[a-f0-9]{64}\.log$
+              type: regex_parser
+            - from: resource.pod
+              to: resource["k8s.pod.name"]
+              type: move
+            - from: resource.namespace
+              to: resource["k8s.namespace.name"]
+              type: move
+            - from: resource.container
+              to: resource["k8s.container.name"]
+              type: move
+            - id: parse_container_log
+              type: container_log_parser
+        start_at: end
+    filelog/cw_k8s_ci_v0_node:
+        include:
+            - /var/log/messages
+            - /var/log/dmesg
+            - /var/log/secure
+        include_file_name: false
+        include_file_path: true
+        max_concurrent_files: 100
+        start_at: end
     kubeletstats/cw_k8s_ci_v0:
         auth_type: serviceAccount
         collection_interval: 30s
@@ -1070,8 +1312,54 @@ service:
     extensions:
         - sigv4auth/monitoring
         - agenthealth/opentelemetry_metrics
+        - sigv4auth/logs
+        - awscloudwatchlogsprovisioner
+        - headers_setter/logs
+        - agenthealth/opentelemetry_logs
         - server
     pipelines:
+        logs/cw_k8s_ci_v0_app:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/cw_k8s_ci_v0_logs_set_cluster_and_node
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_logs_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - transform/cw_k8s_ci_v0_logs_set_scope_app
+                - transform/cw_k8s_ci_v0_logs_clear_schema_url
+                - transform/cw_k8s_ci_v0_logs_set_workload
+                - transform/cw_k8s_ci_v0_app_logs_set_log_destination
+            receivers:
+                - filelog/cw_k8s_ci_v0_app
+        logs/cw_k8s_ci_v0_node:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/cw_k8s_ci_v0_logs_set_cluster_and_node
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_logs_set_cloud_resource_id
+                - k8sattributes/cw_k8s_ci_v0_node
+                - transform/cw_k8s_ci_v0_logs_set_scope_host
+                - transform/cw_k8s_ci_v0_logs_clear_schema_url
+                - transform/cw_k8s_ci_v0_node_logs_set_log_destination
+            receivers:
+                - filelog/cw_k8s_ci_v0_node
+        logs/opentelemetry:
+            exporters:
+                - otlphttp/logs
+            processors:
+                - resourcedetection/opentelemetry
+                - k8sattributes/opentelemetry
+                - transform/set_cluster_name
+                - transform/identity
+                - transform/logs_routing
+                - attributestocontext/opentelemetry
+                - transform/logs_cleanup
+                - batch/opentelemetry_logs
+            receivers:
+                - forward/opentelemetry
         metrics/cw_k8s_ci_v0_cadvisor:
             exporters:
                 - forward/opentelemetry
