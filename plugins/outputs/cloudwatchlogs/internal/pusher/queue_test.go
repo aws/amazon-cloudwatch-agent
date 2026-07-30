@@ -844,7 +844,7 @@ func TestForceFlushTimerRearmsAfterHeldSend(t *testing.T) {
 	releaseSend := func() { releaseOnce.Do(func() { close(release) }) }
 
 	var s stubLogsService
-	s.ple = func(_ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, _ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		switch sendCount.Load() {
 		case 0:
 			sendCount.Add(1)
@@ -896,7 +896,7 @@ func TestForceFlushTimer_SingleLowVolumeEventFlushes(t *testing.T) {
 
 	var sendCount atomic.Int32
 	var s stubLogsService
-	s.ple = func(_ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	s.ple = func(_ context.Context, _ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		sendCount.Add(1)
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}

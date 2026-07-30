@@ -10,12 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
@@ -23,31 +22,29 @@ import (
 // at a local server that always responds with a ThrottlingException, wired with a
 // LogThrottleRetryer. The returned retryer is also handed back so the test can stop
 // its consumer goroutine to reproduce the dead-consumer condition.
-func newThrottlingClient(t *testing.T) (*cloudwatchlogs.CloudWatchLogs, *retryer.LogThrottleRetryer, func()) {
+func newThrottlingClient(t *testing.T) (*cloudwatchlogs.Client, *retryer.LogThrottleRetryer, func()) {
 	t.Helper()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// JSON 1.1 protocol: the SDK classifies the error from the error type,
 		// which it reads from this header / body. ThrottlingException is a
-		// throttling error, so the SDK will invoke ShouldRetry and retry.
+		// throttling error, so the SDK will invoke IsErrorRetryable and retry.
 		w.Header().Set("X-Amzn-Errortype", "ThrottlingException")
 		w.Header().Set("Content-Type", "application/x-amz-json-1.1")
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(`{"__type":"ThrottlingException","message":"Rate exceeded"}`))
 	}))
 
+	// The embedded retry.Standard bounds attempts (default 3, i.e. >1) so a dead
+	// consumer fills the capacity-1 throttle channel and (pre-fix) the next send blocks.
 	r := retryer.NewLogThrottleRetryer(testutil.NewNopLogger())
-	// Bound the retry count: fast, but >1 so a dead consumer fills the capacity-1
-	// throttle channel and (pre-fix) the next send blocks.
-	r.NumMaxRetries = 2
 
-	sess := session.Must(session.NewSession())
-	client := cloudwatchlogs.New(sess, &aws.Config{
-		Region:      aws.String("us-east-1"),
-		Endpoint:    aws.String(srv.URL),
-		DisableSSL:  aws.Bool(true),
-		Credentials: credentials.NewStaticCredentials("ak", "sk", ""),
-		Retryer:     r,
+	client := cloudwatchlogs.NewFromConfig(aws.Config{
+		Region:      "us-east-1",
+		Credentials: credentials.NewStaticCredentialsProvider("ak", "sk", ""),
+	}, func(o *cloudwatchlogs.Options) {
+		o.BaseEndpoint = aws.String(srv.URL)
+		o.Retryer = r
 	})
 
 	return client, r, srv.Close
