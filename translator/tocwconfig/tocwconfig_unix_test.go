@@ -144,6 +144,8 @@ func TestJournaldLogsUnitsAndPriority(t *testing.T) {
 func TestCombinedV1V2EC2Config(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
+	// Fix MySQL credentials file permissions (required by receiver validation)
+	require.NoError(t, os.Chmod("sampleConfig/opentelemetry/testdata/.mysql_credentials", 0600))
 	checkTranslation(t, "opentelemetry/combined_v1_v2_ec2_config", "linux", nil, "")
 }
 
@@ -151,6 +153,8 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	// Fix MySQL credentials file permissions (required by receiver validation)
+	require.NoError(t, os.Chmod("sampleConfig/opentelemetry/testdata/.mysql_credentials", 0600))
 
 	// Cannot use checkTranslation here because the container_insights prometheus
 	// receiver references /var/run/secrets/kubernetes.io/serviceaccount/token

@@ -69,7 +69,7 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20260717191209-ee093fbfffbd
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsxrayreceiver v0.0.0-20260717191209-ee093fbfffbd
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20260717191209-ee093fbfffbd
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260723202011-09a6da50bc48
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/mysqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/mysqlreceiver v0.0.0-20260728131824-bed4560687ee
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20260717191209-ee093fbfffbd
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20260717191209-ee093fbfffbd
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/sqlserverreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/sqlserverreceiver v0.0.0-20260729175257-2c50db1bb14e
