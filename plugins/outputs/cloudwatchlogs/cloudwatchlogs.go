@@ -79,7 +79,7 @@ type CloudWatchLogs struct {
 	// Dedicated retryer/client for the TargetManager, owned by the plugin so its
 	// lifecycle is independent of any destination stop.
 	sharedRetryer *retryer.LogThrottleRetryer
-	sharedClient  *cloudwatchlogs.CloudWatchLogs
+	sharedClient  *cloudwatchlogs.Client
 }
 
 var _ logs.LogBackend = (*CloudWatchLogs)(nil)
@@ -172,8 +172,13 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		}
 		// Dedicated retryer/client so the TargetManager isn't tied to the first dest.
 		c.sharedRetryer = retryer.NewLogThrottleRetryer(c.Log)
-		c.sharedClient = c.createClient(c.sharedRetryer)
-		c.targetManager = pusher.NewTargetManager(c.Log, c.sharedClient)
+		sharedClient, cerr := c.createClient(context.Background(), c.sharedRetryer, nil)
+		if cerr != nil {
+			c.Log.Errorf("Failed to create shared CloudWatch Logs client for target manager, falling back to per-destination client: %v", cerr)
+			sharedClient = client
+		}
+		c.sharedClient = sharedClient
+		c.targetManager = pusher.NewTargetManager(c.Log, sharedClient)
 	})
 	cwd.pusher = pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
 	c.cwDests.Store(t, cwd)
