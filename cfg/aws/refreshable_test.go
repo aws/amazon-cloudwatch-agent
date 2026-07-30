@@ -37,6 +37,7 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	// Write initial credentials
 	content, err := os.ReadFile(filepath.Join("testdata", "credential_original"))
 	require.NoError(t, err)
+	//nolint:gosec // G703: test-controlled temp file
 	err = os.WriteFile(tmpFilename, content, 0600)
 	require.NoError(t, err)
 
@@ -53,6 +54,7 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	// Rotate credentials file
 	content, err = os.ReadFile(filepath.Join("testdata", "credential_rotate"))
 	require.NoError(t, err)
+	//nolint:gosec // G703: test-controlled temp file
 	require.NoError(t, os.WriteFile(tmpFile.Name(), content, 0600))
 
 	// Wait for expiry

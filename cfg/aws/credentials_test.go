@@ -49,6 +49,7 @@ func TestCredentialsConfig_LoadConfig(t *testing.T) {
 
 		content, err := os.ReadFile(filepath.Join("testdata", "credential_original"))
 		require.NoError(t, err)
+		//nolint:gosec // G703: test-controlled temp file
 		err = os.WriteFile(tmpFilename, content, 0600)
 		require.NoError(t, err)
 
