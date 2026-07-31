@@ -1,0 +1,19 @@
+error_mode: ignore
+trace_statements:
+  - error_mode: ignore
+    context: resource
+    statements: &identity_statements
+      - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+      - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
+      - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
+      - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
+      - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
+      - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+metric_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements
+log_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements

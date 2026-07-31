@@ -92,5 +92,5 @@ func validateOttlSafe(field, value string) error {
 func isLocalhostEndpoint(endpoint string) bool {
 	return strings.HasPrefix(endpoint, "localhost") ||
 		strings.HasPrefix(endpoint, "127.0.0.1") ||
-		strings.HasPrefix(endpoint, "::1")
+		strings.HasPrefix(endpoint, "[::1]")
 }

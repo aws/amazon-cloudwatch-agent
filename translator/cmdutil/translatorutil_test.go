@@ -431,14 +431,31 @@ func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
 }
 
+func TestOpenTelemetryResourceAttributesSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryResourceAttributes.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryResourceAttributes.json", false, map[string]int{
+		"invalid_type": 1,
+	})
+}
+
 func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
 	jsonMap, err := util.GetJsonMapFromJsonBytes([]byte(cfg))
 	require.NoError(t, err)
 	result, err := RunSchemaValidation(jsonMap)
 	require.NoError(t, err)
 	assert.True(t, result.Valid(), "default otel config must pass schema validation: %v", result.Errors())
+}
+
+func TestOpenTelemetryWindowsEventsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryWindowsEvents.json", true, map[string]int{})
+}
+
+func TestOpenTelemetryWindowsEventsInvalidSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryWindowsEvents.json", false, map[string]int{
+		"enum": 1,
+	})
 }
 
 func TestCombinedV1V2SchemaValidation(t *testing.T) {

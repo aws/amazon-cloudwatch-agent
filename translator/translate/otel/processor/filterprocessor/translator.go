@@ -7,7 +7,6 @@ import (
 	_ "embed"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/filterprocessor"
 	"go.opentelemetry.io/collector/component"
@@ -32,6 +31,7 @@ type translator struct {
 	common.IndexProvider
 	factory            processor.Factory
 	logRecordCondition string
+	errorMode          string
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -49,8 +49,8 @@ func NewTranslator(opts ...common.TranslatorOption) common.ComponentTranslator {
 }
 
 // NewTranslatorWithLogCondition creates a filter translator that drops logs matching the given OTTL condition.
-func NewTranslatorWithLogCondition(name string, condition string) common.ComponentTranslator {
-	t := &translator{factory: filterprocessor.NewFactory(), logRecordCondition: condition}
+func NewTranslatorWithLogCondition(name, condition, errorMode string) common.ComponentTranslator {
+	t := &translator{factory: filterprocessor.NewFactory(), logRecordCondition: condition, errorMode: errorMode}
 	t.SetName(name)
 	return t
 }
@@ -62,11 +62,10 @@ func (t *translator) ID() component.ID {
 // Translate creates a processor config based on the fields in the
 // Metrics section of the JSON config.
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
-	// DBI: filter log records by OTTL condition
-	if strings.HasPrefix(t.Name(), common.DbiFilterExcludeMonitor) {
+	if t.logRecordCondition != "" {
 		cfg := &filterprocessor.Config{}
 		if err := confmap.NewFromStringMap(map[string]interface{}{
-			"error_mode": "propagate",
+			"error_mode": t.errorMode,
 			"logs": map[string]interface{}{
 				"log_record": []interface{}{t.logRecordCondition},
 			},

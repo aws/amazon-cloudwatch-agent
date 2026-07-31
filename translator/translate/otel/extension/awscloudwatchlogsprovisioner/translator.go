@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -36,7 +37,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), "")
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
 	region := agent.Global_Config.Region
 	if region == "" {
 		return nil, fmt.Errorf("region is required for awscloudwatchlogsprovisioner extension")
@@ -54,6 +55,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		cfg.LocalMode = true
 	}
 	cfg.RoleARN = agent.Global_Config.Role_arn
+	if cfg.RoleARN != "" && agent.IsAzureWebIdentity() {
+		cfg.WebIdentityTokenFile = paths.OIDCTokenPath
+	}
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	return cfg, nil
 }

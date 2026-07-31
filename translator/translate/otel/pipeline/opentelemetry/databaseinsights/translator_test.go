@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -57,7 +58,7 @@ func TestDbiTranslate(t *testing.T) {
 		{"metrics", dbiMetrics, "metrics/dbi_postgresql_0", 3, 3, 1, 3},
 		{"log_to_metrics", dbiLogToMetrics, "logs/dbi_postgresql_0", 1, 1, 2, 2},
 		{"raw_events", dbiRawEvents, "logs/dbi_postgresql_rawevents_0", 1, 5, 1, 1},
-		{"server_logs", dbiServerLogs, "logs/dbi_postgresql_serverlogs_0", 1, 4, 1, 1},
+		{"server_logs", dbiServerLogs, "logs/dbi_postgresql_serverlogs_0", 1, 5, 1, 1},
 	}
 
 	for _, tc := range tests {
@@ -102,4 +103,75 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 	assert.Equal(t, []string{"transform/dbi_scope", "transform/dbi_resource_0", "transform/dbi_fix_start_time"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload", "signaltometrics/dbi_topsql"}, connectors)
+}
+
+func TestDbiTranslateServerLogs_FilelogConfig(t *testing.T) {
+	cfg := dbiInstanceConfig{ //nolint:gosec
+		endpoint:     "localhost:5432",
+		username:     "cw_monitor",
+		passfile:     "/etc/.pgpass",
+		instanceName: "my-db",
+		logFilePath:  "/var/log/postgresql/postgresql.log",
+		isLocalhost:  true,
+	}
+	tr := &dbiTranslator{
+		pipelineType:  dbiServerLogs,
+		instanceIndex: 0,
+		cfg:           cfg,
+	}
+	result, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	// Verify the filelog receiver is created
+	var filelogTranslator common.Translator[component.Config, component.ID]
+	result.Receivers.Range(func(c common.Translator[component.Config, component.ID]) {
+		if c.ID().Type().String() == "filelog" {
+			filelogTranslator = c
+		}
+	})
+	require.NotNil(t, filelogTranslator, "expected filelog receiver")
+	assert.Equal(t, "filelog/postgresql_0", filelogTranslator.ID().String())
+
+	// Translate the filelog receiver and inspect its raw config. The concrete type is
+	// unexported by the filelog package, but it implements confmap.Marshaler, so marshal
+	// it into a conf and assert on the resulting map.
+	filelogCfg, err := filelogTranslator.Translate(nil)
+	require.NoError(t, err)
+	require.NotNil(t, filelogCfg)
+
+	marshaler, ok := filelogCfg.(confmap.Marshaler)
+	require.True(t, ok, "expected filelog config to implement confmap.Marshaler")
+	conf := confmap.New()
+	require.NoError(t, marshaler.Marshal(conf))
+	raw := conf.ToStringMap()
+
+	// Multiline grouping is configured.
+	multiline, ok := raw["multiline"].(map[string]any)
+	require.True(t, ok, "expected multiline config")
+	assert.Equal(t, `^\d{4}-\d{2}-\d{2}`, multiline["line_start_pattern"])
+
+	// Two operators: timestamp then severity (order matters for stanza semantics).
+	operators, ok := raw["operators"].([]any)
+	require.True(t, ok, "expected operators")
+	require.Len(t, operators, 2)
+
+	tsOp, ok := operators[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", tsOp["type"])
+	tsBlock, ok := tsOp["timestamp"].(map[string]any)
+	require.True(t, ok, "first operator must parse a timestamp")
+	assert.Equal(t, "attributes.timestamp", tsBlock["parse_from"])
+
+	sevOp, ok := operators[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "regex_parser", sevOp["type"])
+	assert.Contains(t, sevOp["regex"], "(?P<severity>")
+	sevBlock, ok := sevOp["severity"].(map[string]any)
+	require.True(t, ok, "second operator must parse severity")
+	assert.Equal(t, "attributes.severity", sevBlock["parse_from"])
+	mapping, ok := sevBlock["mapping"].(map[string]any)
+	require.True(t, ok, "severity mapping must be present")
+	assert.Contains(t, mapping, "error")
+	assert.Contains(t, mapping, "fatal")
+	assert.Contains(t, mapping, "warn")
 }

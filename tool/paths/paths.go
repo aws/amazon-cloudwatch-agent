@@ -11,6 +11,7 @@ const (
 	ENV            = "env-config.json"
 	AGENT_LOG_FILE = "amazon-cloudwatch-agent.log"
 	JMXJarName     = "opentelemetry-jmx-metrics.jar"
+	OIDCToken      = ".oidc-token"
 )
 
 var (
@@ -24,4 +25,5 @@ var (
 	TranslatorBinaryPath string
 	AgentBinaryPath      string
 	JMXJarPath           string
+	OIDCTokenPath        string
 )

@@ -200,7 +200,6 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	translators.Extensions.Set(agenthealth.NewTranslator(agenthealth.LogsName, []string{agenthealth.OperationPutLogEvents}))
 	translators.Extensions.Set(agenthealth.NewTranslatorWithStatusCode(agenthealth.StatusCodeName, nil, true))
 
-	// Add file storage extension for journald cursor persistence
 	translators.Extensions.Set(filestorage.NewTranslator())
 
 	return &translators, nil

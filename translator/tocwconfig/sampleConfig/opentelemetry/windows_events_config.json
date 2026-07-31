@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "collect": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": ["ERROR", "WARNING", "INFORMATION"],
+            "log_group_name": "/aws/cwagent/windows-events/System"
+          },
+          {
+            "event_name": "Application",
+            "event_levels": ["ERROR", "WARNING"]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -34,12 +34,12 @@
     }
   },
   "opentelemetry": {
+    "cluster_name": "TestCluster",
     "collect": {
       "host_metrics": {
-        "metrics_collection_interval": 60
+        "collection_interval": 60
       },
       "container_insights": {
-        "cluster_name": "TestCluster",
         "collection_interval": 30
       },
       "database_insights": {
