@@ -54,9 +54,9 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 	assert.True(t, c.LogsBuilderConfig.Events.DbServerTopQuery.Enabled)
 
 	// DB Load / Top SQL tuning (match the mysql translator's values).
-	assert.Equal(t, uint64(500), c.QuerySample.MaxRowsPerQuery)
+	assert.Equal(t, uint64(5000), c.QuerySample.MaxRowsPerQuery)
 	assert.Equal(t, uint(200), c.TopQueryCollection.TopQueryCount)
-	assert.Equal(t, uint(5000), c.TopQueryCollection.MaxQuerySampleCount)
+	assert.Equal(t, uint(1000), c.TopQueryCollection.MaxQuerySampleCount)
 	assert.Equal(t, 60*time.Second, c.TopQueryCollection.CollectionInterval)
 	
 	// Query Plan Caching: verify all 3 fields (compression is always-on in receiver).
