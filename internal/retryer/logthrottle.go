@@ -53,7 +53,11 @@ func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
 		if req.Operation != nil {
 			te.Operation = req.Operation.Name
 		}
-		r.throttleChan <- te
+		// Non-blocking: never block ShouldRetry if the consumer has stopped.
+		select {
+		case r.throttleChan <- te:
+		default:
+		}
 	}
 
 	// Fallback to SDK's built in retry rules

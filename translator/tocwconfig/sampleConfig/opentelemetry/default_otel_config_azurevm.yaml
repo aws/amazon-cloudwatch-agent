@@ -1,0 +1,737 @@
+connectors:
+    forward/opentelemetry: {}
+    spanmetrics/opentelemetry:
+        aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
+        dimensions:
+            - name: http.response.status_code
+            - name: http.request.method
+            - name: http.route
+            - name: http.status_code
+            - name: http.method
+            - name: rpc.grpc.status_code
+            - name: rpc.response.status_code
+            - name: error.type
+        dimensions_cache_size: 1000
+        events:
+            enabled: false
+        exemplars:
+            enabled: false
+        histogram:
+            disable: false
+            unit: ms
+        metrics_expiration: 0s
+        metrics_flush_interval: 30s
+        namespace: traces.span.metrics
+        resource_metrics_cache_size: 1000
+exporters:
+    otlphttp/logs:
+        auth:
+            authenticator: agenthealth/opentelemetry_logs
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: https://logs.${AWS_REGION}.amazonaws.com/v1/logs
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/metrics:
+        auth:
+            authenticator: agenthealth/opentelemetry_metrics
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: https://monitoring.${AWS_REGION}.amazonaws.com/v1/metrics
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+    otlphttp/traces:
+        auth:
+            authenticator: agenthealth/opentelemetry_traces
+        compression: gzip
+        encoding: proto
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            block_on_overflow: false
+            blocking: false
+            enabled: true
+            num_consumers: 10
+            queue_size: 1000
+            sizer: {}
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: https://xray.${AWS_REGION}.amazonaws.com/v1/traces
+        write_buffer_size: 524288
+extensions:
+    agenthealth/opentelemetry_logs:
+        additional_auth: headers_setter/logs
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: AZVM
+                region_type: RNF
+    agenthealth/opentelemetry_metrics:
+        additional_auth: sigv4auth/monitoring
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: AZVM
+                region_type: RNF
+    agenthealth/opentelemetry_traces:
+        additional_auth: sigv4auth/xray
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: AZVM
+                region_type: RNF
+    awscloudwatchlogsprovisioner:
+        additional_auth: sigv4auth/logs
+        imds_retries: 1
+        logs_provision_failure_backoff: 5s
+        max_retries: 2
+        num_workers: 8
+        region: ${AWS_REGION}
+        request_timeout_seconds: 10
+        role_arn: ${CWAGENT_ROLE_ARN}
+        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+    headers_setter/logs:
+        additional_auth: awscloudwatchlogsprovisioner
+        headers:
+            - action: upsert
+              from_context: aws.log.group.name
+              key: x-aws-log-group
+            - action: upsert
+              from_context: aws.log.stream.name
+              key: x-aws-log-stream
+    oidctoken:
+        output_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+        provider: azure
+    sigv4auth/logs:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: ${AWS_REGION}
+        request_timeout_seconds: 30
+        role_arn: ${CWAGENT_ROLE_ARN}
+        service: logs
+        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+    sigv4auth/monitoring:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: ${AWS_REGION}
+        request_timeout_seconds: 30
+        role_arn: ${CWAGENT_ROLE_ARN}
+        service: monitoring
+        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+    sigv4auth/xray:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: ${AWS_REGION}
+        request_timeout_seconds: 30
+        role_arn: ${CWAGENT_ROLE_ARN}
+        service: xray
+        web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
+processors:
+    attributestocontext/opentelemetry:
+        actions:
+            - from_resource_attribute: aws.log.group.name
+              key: aws.log.group.name
+            - from_resource_attribute: aws.log.stream.name
+              key: aws.log.stream.name
+    batch/opentelemetry_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 30s
+    batch/opentelemetry_metrics:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 1000
+        send_batch_size: 1000
+        timeout: 30s
+    batch/opentelemetry_traces:
+        metadata_cardinality_limit: 1000
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 30s
+    resourcedetection/opentelemetry:
+        aks:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        azure:
+            resource_attributes:
+                azure.resourcegroup.name:
+                    enabled: true
+                azure.vm.name:
+                    enabled: true
+                azure.vm.scaleset.name:
+                    enabled: true
+                azure.vm.size:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            tags: []
+        consul:
+            address: ""
+            datacenter: ""
+            namespace: ""
+            resource_attributes:
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+            token_file: ""
+        detectors:
+            - env
+            - azure
+        docker:
+            resource_attributes:
+                host.name:
+                    enabled: true
+                os.type:
+                    enabled: true
+        ec2:
+            fail_on_missing_metadata: false
+            max_attempts: 3
+            max_backoff: 20s
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+            tags: []
+        ecs:
+            resource_attributes:
+                aws.ecs.cluster.arn:
+                    enabled: true
+                aws.ecs.launchtype:
+                    enabled: true
+                aws.ecs.task.arn:
+                    enabled: true
+                aws.ecs.task.family:
+                    enabled: true
+                aws.ecs.task.id:
+                    enabled: true
+                aws.ecs.task.revision:
+                    enabled: true
+                aws.log.group.arns:
+                    enabled: true
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.arns:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+        eks:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: false
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: false
+        elasticbeanstalk:
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                deployment.environment:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.version:
+                    enabled: true
+        gcp:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.id:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+                gcp.cloud_run.job.execution:
+                    enabled: true
+                gcp.cloud_run.job.task_index:
+                    enabled: true
+                gcp.gce.instance.hostname:
+                    enabled: false
+                gcp.gce.instance.name:
+                    enabled: false
+                gcp.gce.instance_group_manager.name:
+                    enabled: true
+                gcp.gce.instance_group_manager.region:
+                    enabled: true
+                gcp.gce.instance_group_manager.zone:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+        heroku:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                heroku.app.id:
+                    enabled: true
+                heroku.dyno.id:
+                    enabled: true
+                heroku.release.commit:
+                    enabled: true
+                heroku.release.creation_timestamp:
+                    enabled: true
+                service.instance.id:
+                    enabled: true
+                service.name:
+                    enabled: true
+                service.version:
+                    enabled: true
+        idle_conn_timeout: 1m30s
+        k8snode:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
+        kubeadm:
+            auth_type: serviceAccount
+            context: ""
+            kube_config_path: ""
+            resource_attributes:
+                k8s.cluster.name:
+                    enabled: true
+                k8s.cluster.uid:
+                    enabled: true
+        lambda:
+            resource_attributes:
+                aws.log.group.names:
+                    enabled: true
+                aws.log.stream.names:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                faas.instance:
+                    enabled: true
+                faas.max_memory:
+                    enabled: true
+                faas.name:
+                    enabled: true
+                faas.version:
+                    enabled: true
+        max_idle_conns: 100
+        openshift:
+            address: ""
+            resource_attributes:
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+            tls: {}
+            token: ""
+        override: true
+        system:
+            resource_attributes:
+                host.arch:
+                    enabled: false
+                host.cpu.cache.l2.size:
+                    enabled: false
+                host.cpu.family:
+                    enabled: false
+                host.cpu.model.id:
+                    enabled: false
+                host.cpu.model.name:
+                    enabled: false
+                host.cpu.stepping:
+                    enabled: false
+                host.cpu.vendor.id:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.ip:
+                    enabled: false
+                host.mac:
+                    enabled: false
+                host.name:
+                    enabled: true
+                os.description:
+                    enabled: false
+                os.type:
+                    enabled: true
+                os.version:
+                    enabled: false
+        timeout: 2s
+    transform/host_metrics_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
+    transform/identity:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+    transform/logs_cleanup:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - delete_key(resource.attributes, "aws.log.group.name")
+                - delete_key(resource.attributes, "aws.log.stream.name")
+                - delete_key(resource.attributes, "aws.log.source")
+        metric_statements: []
+        trace_statements: []
+    transform/logs_routing:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
+                - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.id"] != nil and resource.attributes["log.file.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["log.file.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["aws.log.source"] == "files" and resource.attributes["host.name"] != nil and resource.attributes["log.file.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.id"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.id"] != nil
+                - set(resource.attributes["aws.log.stream.name"], resource.attributes["host.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["host.name"] != nil
+                - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil
+        metric_statements: []
+        trace_statements: []
+    transform/otlp_log_source:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
+        metric_statements: []
+        trace_statements: []
+    transform/otlp_scope:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
+        trace_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
+receivers:
+    hostmetrics/opentelemetry:
+        collection_interval: 30s
+        initial_delay: 1s
+        scrapers:
+            cpu:
+                metrics:
+                    system.cpu.frequency:
+                        enabled: true
+                    system.cpu.logical.count:
+                        enabled: true
+                    system.cpu.physical.count:
+                        enabled: true
+                    system.cpu.utilization:
+                        enabled: true
+            disk: null
+            filesystem:
+                metrics:
+                    system.filesystem.utilization:
+                        enabled: true
+            load: null
+            memory:
+                metrics:
+                    system.linux.memory.available:
+                        enabled: true
+                    system.linux.memory.dirty:
+                        enabled: true
+                    system.memory.limit:
+                        enabled: true
+                    system.memory.page_size:
+                        enabled: true
+                    system.memory.utilization:
+                        enabled: true
+            network: null
+            processes: null
+        timeout: 0s
+    otlp/grpc_127_0_0_1_4317:
+        protocols:
+            grpc:
+                endpoint: 127.0.0.1:4317
+                keepalive:
+                    enforcement_policy: {}
+                    server_parameters: {}
+                read_buffer_size: 524288
+                transport: tcp
+    otlp/http_127_0_0_1_4318:
+        protocols:
+            http:
+                cors: {}
+                endpoint: 127.0.0.1:4318
+                idle_timeout: 0s
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                traces_url_path: /v1/traces
+                write_timeout: 0s
+service:
+    extensions:
+        - sigv4auth/monitoring
+        - agenthealth/opentelemetry_metrics
+        - sigv4auth/logs
+        - awscloudwatchlogsprovisioner
+        - headers_setter/logs
+        - agenthealth/opentelemetry_logs
+        - sigv4auth/xray
+        - agenthealth/opentelemetry_traces
+        - oidctoken
+    pipelines:
+        logs/opentelemetry:
+            exporters:
+                - otlphttp/logs
+            processors:
+                - resourcedetection/opentelemetry
+                - transform/identity
+                - transform/logs_routing
+                - attributestocontext/opentelemetry
+                - transform/logs_cleanup
+                - batch/opentelemetry_logs
+            receivers:
+                - forward/opentelemetry
+        logs/otlp:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/otlp_scope
+                - transform/otlp_log_source
+            receivers:
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
+        metrics/host_metrics:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/host_metrics_scope
+            receivers:
+                - hostmetrics/opentelemetry
+        metrics/opentelemetry:
+            exporters:
+                - otlphttp/metrics
+            processors:
+                - resourcedetection/opentelemetry
+                - transform/identity
+                - batch/opentelemetry_metrics
+            receivers:
+                - forward/opentelemetry
+                - spanmetrics/opentelemetry
+        metrics/otlp:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/otlp_scope
+            receivers:
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
+        traces/opentelemetry:
+            exporters:
+                - otlphttp/traces
+                - spanmetrics/opentelemetry
+            processors:
+                - resourcedetection/opentelemetry
+                - transform/identity
+                - batch/opentelemetry_traces
+            receivers:
+                - forward/opentelemetry
+        traces/otlp:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/otlp_scope
+            receivers:
+                - otlp/grpc_127_0_0_1_4317
+                - otlp/http_127_0_0_1_4318
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None

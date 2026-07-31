@@ -3,6 +3,7 @@
     "region": "us-east-1"
   },
   "opentelemetry": {
+    "cluster_name": "TestCluster",
     "collect": {
       "prometheus": {
         "config_path": "./sampleConfig/opentelemetry/prometheus_otel_scrape_config.yaml"

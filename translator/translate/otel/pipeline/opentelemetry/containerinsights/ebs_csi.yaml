@@ -112,7 +112,7 @@ processors:
       labels:
       - from: node
         key_regex: (.*)
-        tag_name: k8s.node.label.$$$1
+        tag_name: k8s.node.label.$1
       metadata:
       - k8s.node.name
     filter:

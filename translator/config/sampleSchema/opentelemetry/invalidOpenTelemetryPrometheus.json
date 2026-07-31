@@ -3,9 +3,9 @@
     "region": "us-west-2"
   },
   "opentelemetry": {
+    "cluster_name": "my-cluster",
     "collect": {
       "prometheus": {
-        "cluster_name": "my-cluster"
       }
     }
   }

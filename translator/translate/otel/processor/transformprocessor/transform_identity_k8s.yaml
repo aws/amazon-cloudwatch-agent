@@ -19,6 +19,8 @@ trace_statements:
       - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
       # cloud.resource_id: EKS cluster ARN
       - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+      # cloud.resource_id: AKS managed cluster resource ID
+      - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
       # k8s.workload.name/type
       - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
       - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil

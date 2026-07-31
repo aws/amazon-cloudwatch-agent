@@ -73,6 +73,29 @@ func TestBaseTracesTranslator(t *testing.T) {
 	}
 }
 
+func TestBaseTracesTranslatorResourceAttributes(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewBaseTracesTranslator()
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"resource_attributes": map[string]interface{}{
+				"team": "cloudwatch",
+			},
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, 4, got.Processors.Len())
+	assert.Equal(t, "resource/opentelemetry", got.Processors.Keys()[0].String())
+	assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[1].String())
+	assert.Equal(t, "transform/identity", got.Processors.Keys()[2].String())
+	assert.Equal(t, "batch/opentelemetry_traces", got.Processors.Keys()[3].String())
+}
+
 func TestBaseTracesTranslatorEmptyRegion(t *testing.T) {
 	agent.Global_Config.Region = ""
 	tt := NewBaseTracesTranslator()

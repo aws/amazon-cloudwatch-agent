@@ -161,7 +161,7 @@ func TestContainerInsights(t *testing.T) {
 
 func TestDbiExcludeMonitor(t *testing.T) {
 	condition := `attributes["user.name"] == "cw_monitor" or attributes["postgresql.rolname"] == "cw_monitor"`
-	tr := NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_0", condition)
+	tr := NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_0", condition, "propagate")
 	assert.Equal(t, "filter/dbi_exclude_monitor_0", tr.ID().String())
 
 	cfg, err := tr.Translate(nil)

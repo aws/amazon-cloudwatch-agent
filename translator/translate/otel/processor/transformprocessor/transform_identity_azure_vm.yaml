@@ -1,0 +1,17 @@
+error_mode: ignore
+trace_statements:
+  - error_mode: ignore
+    context: resource
+    statements: &identity_statements
+      - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+      - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["azure.vm.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["azure.vm.name"] != nil
+      - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["azure.resourcegroup.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["azure.resourcegroup.name"] != nil
+      - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
+metric_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements
+log_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements

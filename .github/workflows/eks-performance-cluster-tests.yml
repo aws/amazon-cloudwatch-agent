@@ -70,8 +70,10 @@ jobs:
     steps:
       - name: Check trigger type
         id: check-trigger
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+          if [ "$EVENT_NAME" == "workflow_run" ]; then
             echo "Triggered by workflow_run from a scheduled event"
           else
             echo "Triggered manually via workflow_dispatch"
@@ -162,6 +164,8 @@ jobs:
 
       - name: Run Performance Test
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          PERFORMANCE_METRIC_MAP: ${{ inputs.metric_map || 'base-performance-metrics-map.json' }}
         with:
           max_attempts: 2
           timeout_minutes: 20
@@ -169,7 +173,7 @@ jobs:
             go test -timeout 30m -v $CWA_TEST_DIRECTORY \
               -computeType=EKS \
               -eksClusterName=$CLUSTER_NAME \
-              -performanceMetricMapName=${{ inputs.metric_map || 'base-performance-metrics-map.json' }} \
+              -performanceMetricMapName="$PERFORMANCE_METRIC_MAP" \
               -performanceTestName=EKSPerformanceBaseTest
 
       - name: Cleanup Sample Application

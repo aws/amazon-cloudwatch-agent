@@ -67,7 +67,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	hostedIn, hostedInConfigured := common.GetHostedIn(conf)
 	if common.IsAppSignalsKubernetes() {
 		if !hostedInConfigured {
-			hostedIn = common.GetClusterName(conf)
+			hostedIn = common.GetClusterName(conf, common.LegacyClusterNameKey)
 		}
 	}
 

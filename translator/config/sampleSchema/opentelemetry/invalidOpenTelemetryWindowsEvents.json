@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "collect": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_format": "invalid_format"
+          }
+        ]
+      }
+    }
+  }
+}

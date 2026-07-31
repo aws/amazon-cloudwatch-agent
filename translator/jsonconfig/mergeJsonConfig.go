@@ -11,6 +11,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/jsonconfig/mergeJsonUtil"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
@@ -26,7 +27,7 @@ func MergeJsonConfigMaps(jsonConfigMapMap map[string]map[string]interface{}, def
 				log.Println("No json config files found, use the default ecs config")
 				return util.GetJsonMapFromJsonBytes([]byte(config.DefaultECSJsonConfig()))
 			}
-		} else if cfg, ok := config.DefaultJSONConfigFor(useDefault); ok {
+		} else if cfg, ok := config.DefaultJSONConfigFor(useDefault, context.CurrentContext().KubernetesMode() != "", util.DetectECS()); ok {
 			log.Printf("No json config files found, use the default %s config", useDefault)
 			return util.GetJsonMapFromJsonBytes([]byte(cfg))
 		}
