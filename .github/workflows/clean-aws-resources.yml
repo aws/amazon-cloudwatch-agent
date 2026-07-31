@@ -15,6 +15,7 @@ on:
         default: true
 
 env:
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   # Scheduled (cron) runs perform real deletions. Any manual (workflow_dispatch)
   # run defaults to a dry run unless dry_run=false is explicitly passed — so a
   # manual trigger, including an API dispatch that omits the input, never deletes
@@ -37,6 +38,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old ami
         working-directory: tool/clean
@@ -56,6 +58,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old file system
         working-directory: tool/clean
@@ -75,6 +78,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old dedicated host
         working-directory: tool/clean
@@ -109,6 +113,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.INTERNAL_AWS_ASSUME_ROLE }}
           aws-region: ${{ matrix.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old dedicated host
         working-directory: tool/clean
@@ -149,6 +154,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets[matrix.role_secret] }}
           aws-region: ${{ matrix.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old host
         working-directory: tool/clean
@@ -170,6 +176,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
           aws-region: "cn-north-1"
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old hosts
         working-directory: tool/clean
@@ -189,6 +196,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old ecs resources
         working-directory: tool/clean
@@ -208,6 +216,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old eks cluster
         working-directory: tool/clean
@@ -226,6 +235,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old unused ebs volumes
         working-directory: tool/clean
@@ -245,6 +255,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old asg
         working-directory: tool/clean
@@ -264,6 +275,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old launch configuration
         working-directory: tool/clean
@@ -282,6 +294,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old IAM roles
         working-directory: tool/clean
@@ -300,6 +313,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old Log Groups
         working-directory: tool/clean
@@ -318,6 +332,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean Old Security Groups
         working-directory: tool/clean
