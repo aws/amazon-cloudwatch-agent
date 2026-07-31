@@ -1772,7 +1772,13 @@ jobs:
 
       - name: Get Runner IP
         id: runner_ip
-        run: echo "ip=$(curl -s ifconfig.me)/32" >> "$GITHUB_OUTPUT"
+        run: |
+          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
+            exit 1
+          fi
+          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -1789,46 +1795,64 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          BUILD_ID: ${{ inputs.build_id }}
+          AGENT_DEB_PATH: ${{ github.workspace }}/amazon-cloudwatch-agent.deb
+          TEST_REPO_URL: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
+          TEST_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_OIDC_PROVIDER_ARN: ${{ vars.AZURE_OIDC_PROVIDER_ARN }}
+          AZURE_TOKEN_AUDIENCE: ${{ vars.AZURE_TOKEN_AUDIENCE }}
         run: |
           terraform init
           terraform apply --auto-approve \
             -var="region=us-east-2" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="agent_deb_path=${{ github.workspace }}/amazon-cloudwatch-agent.deb" \
-            -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
-            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
-            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
-            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
-            -var="azure_oidc_provider_arn=${{ vars.AZURE_OIDC_PROVIDER_ARN }}" \
-            -var="azure_token_audience=${{ vars.AZURE_TOKEN_AUDIENCE }}"
+            -var="runner_ip=$RUNNER_IP" \
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="agent_deb_path=$AGENT_DEB_PATH" \
+            -var="github_test_repo=$TEST_REPO_URL" \
+            -var="github_test_repo_branch=$TEST_REPO_BRANCH" \
+            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+            -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            -var="azure_oidc_provider_arn=$AZURE_OIDC_PROVIDER_ARN" \
+            -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
 
       - name: Fail if apply failed
         if: steps.terraform_apply.outcome == 'failure'
         run: exit 1
 
       - name: Terraform destroy
-        if: ${{ always() }}
+        if: always()
         working-directory: terraform/azure/vm
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          BUILD_ID: ${{ inputs.build_id }}
+          AGENT_DEB_PATH: ${{ github.workspace }}/amazon-cloudwatch-agent.deb
+          TEST_REPO_URL: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
+          TEST_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_OIDC_PROVIDER_ARN: ${{ vars.AZURE_OIDC_PROVIDER_ARN }}
+          AZURE_TOKEN_AUDIENCE: ${{ vars.AZURE_TOKEN_AUDIENCE }}
         run: |
           terraform destroy --auto-approve \
             -var="region=us-east-2" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="agent_deb_path=${{ github.workspace }}/amazon-cloudwatch-agent.deb" \
-            -var="github_test_repo=${{ env.CWA_GITHUB_TEST_REPO_URL }}" \
-            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
-            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
-            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
-            -var="azure_oidc_provider_arn=${{ vars.AZURE_OIDC_PROVIDER_ARN }}" \
-            -var="azure_token_audience=${{ vars.AZURE_TOKEN_AUDIENCE }}" || true
+            -var="runner_ip=$RUNNER_IP" \
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="agent_deb_path=$AGENT_DEB_PATH" \
+            -var="github_test_repo=$TEST_REPO_URL" \
+            -var="github_test_repo_branch=$TEST_REPO_BRANCH" \
+            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+            -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            -var="azure_oidc_provider_arn=$AZURE_OIDC_PROVIDER_ARN" \
+            -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE" || true
 
-  AKS-default-otel:
+  AKSIntegrationTest:
     needs: [OutputEnvVariables]
     if: contains(inputs.test_dir_filter, './test/azure/aks') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
     name: 'AKS-default-otel'
@@ -1853,6 +1877,29 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
 
+      # Fail fast if the build hasn't published the image yet, before the ~60-min
+      # cluster provision (mirrors the VM job's .deb pre-check).
+      - name: Verify agent image exists
+        env:
+          IMAGE_TAG: ${{ inputs.build_id }}
+        run: |
+          if ! aws ecr describe-images \
+            --repository-name "${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "::error::No agent image ${{ env.ECR_INTEGRATION_TEST_REPO }}:$IMAGE_TAG in ECR (build job not finished or failed?)"
+            exit 1
+          fi
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: |
+          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
+            exit 1
+          fi
+          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
+
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
@@ -1862,7 +1909,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: '~1.22'
+          go-version: ~1.26.4
           cache: false
 
       - name: Terraform apply
@@ -1875,35 +1922,45 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          BUILD_ID: ${{ inputs.build_id }}
+          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           terraform init
           terraform apply --auto-approve \
             -var="region=us-east-2" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
-            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
-            -var="runner_ip=$(curl -s ifconfig.me)/32"
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
+            -var="cwagent_image_tag=$BUILD_ID" \
+            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+            -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            -var="runner_ip=$RUNNER_IP"
 
       - name: Fail if apply failed
         if: steps.terraform_apply.outcome == 'failure'
         run: exit 1
 
       - name: Terraform destroy
-        if: ${{ always() }}
+        if: always()
         working-directory: terraform/azure/aks
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          BUILD_ID: ${{ inputs.build_id }}
+          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           terraform destroy --auto-approve \
             -var="region=us-east-2" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="azure_resource_group=${{ vars.AZURE_RESOURCE_GROUP }}" \
-            -var="azure_vnet_name=${{ vars.AZURE_VNET_NAME }}" \
-            -var="runner_ip=$(curl -s ifconfig.me)/32" || true
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
+            -var="cwagent_image_tag=$BUILD_ID" \
+            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+            -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            -var="runner_ip=$RUNNER_IP" || true
