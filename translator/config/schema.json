@@ -162,6 +162,9 @@
             "ethtool": {
               "$ref": "#/definitions/metricsDefinition/definitions/ethtoolDefinitions"
             },
+            "dpdk": {
+              "$ref": "#/definitions/metricsDefinition/definitions/dpdkDefinitions"
+            },
             "nvidia_smi": {
               "$ref": "#/definitions/metricsDefinition/definitions/nvidiaGpuDefinitions"
             },
@@ -548,6 +551,57 @@
               }
             },
             "interface_exclude": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "metrics_include": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "append_dimensions": {
+              "$ref": "#/definitions/generalAppendDimensionsDefinition"
+            },
+            "drop_original_metrics": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "dpdkDefinitions": {
+          "type": "object",
+          "properties": {
+            "socket_path": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "device_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["ethdev", "rawdev"]
+              }
+            },
+            "additional_commands": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "ethdev_exclude_commands": {
               "type": "array",
               "items": {
                 "type": "string",
