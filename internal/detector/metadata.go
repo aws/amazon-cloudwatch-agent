@@ -32,6 +32,7 @@ const (
 	CategoryNvidiaGPU   Category = "NVIDIA_GPU"
 	CategoryMySQL       Category = "MYSQL"
 	CategorySQLServer   Category = "SQLSERVER"
+	CategoryPostgreSQL  Category = "POSTGRESQL"
 )
 
 // Status represents whether the resource requires more actions before telemetry is available.

@@ -132,12 +132,15 @@ jobs:
       - name: Build And Upload PKG
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         working-directory: /tmp/
+        env:
+          INPUT_BUCKET: ${{ inputs.Bucket }}
+          INPUT_PACKAGE_BUCKET_KEY: ${{ inputs.PackageBucketKey }}
         run: |
           chmod +x create_pkg.sh
           chmod +x arm64/create_pkg.sh
-          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" amd64
+          ./create_pkg.sh "$INPUT_BUCKET/$INPUT_PACKAGE_BUCKET_KEY" "nosha" amd64
           cd arm64
-          ./create_pkg.sh ${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }} "nosha" arm64
+          ./create_pkg.sh "$INPUT_BUCKET/$INPUT_PACKAGE_BUCKET_KEY" "nosha" arm64
 
   #GH actions set up gpg only works on ubuntu as of this commit date
   GPGSignMacPackage:
@@ -165,11 +168,14 @@ jobs:
 
       - name: Download from s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        env:
+          INPUT_BUCKET: ${{ inputs.Bucket }}
+          INPUT_PACKAGE_BUCKET_KEY: ${{ inputs.PackageBucketKey }}
         run: |
           mkdir -p packages/amd64
           mkdir packages/arm64
-          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg ./packages/amd64/amazon-cloudwatch-agent.pkg
-          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg ./packages/arm64/amazon-cloudwatch-agent.pkg
+          aws s3 cp "s3://$INPUT_BUCKET/$INPUT_PACKAGE_BUCKET_KEY/amd64/amazon-cloudwatch-agent.pkg" ./packages/amd64/amazon-cloudwatch-agent.pkg
+          aws s3 cp "s3://$INPUT_BUCKET/$INPUT_PACKAGE_BUCKET_KEY/arm64/amazon-cloudwatch-agent.pkg" ./packages/arm64/amazon-cloudwatch-agent.pkg
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@d6f3f49f3345e29369fe57596a3ca8f94c4d2ca7 # v5.4.0
         with:
@@ -181,6 +187,9 @@ jobs:
 
       - name: Upload to s3
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_sig.outputs.cache-hit == false
+        env:
+          INPUT_BUCKET: ${{ inputs.Bucket }}
+          INPUT_PACKAGE_BUCKET_KEY: ${{ inputs.PackageBucketKey }}
         run: |
-          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/amd64/amazon-cloudwatch-agent.pkg.sig
-          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig s3://${{ inputs.Bucket }}/${{ inputs.PackageBucketKey }}/arm64/amazon-cloudwatch-agent.pkg.sig
+          aws s3 cp packages/amd64/amazon-cloudwatch-agent.pkg.sig "s3://$INPUT_BUCKET/$INPUT_PACKAGE_BUCKET_KEY/amd64/amazon-cloudwatch-agent.pkg.sig"
+          aws s3 cp packages/arm64/amazon-cloudwatch-agent.pkg.sig "s3://$INPUT_BUCKET/$INPUT_PACKAGE_BUCKET_KEY/arm64/amazon-cloudwatch-agent.pkg.sig"

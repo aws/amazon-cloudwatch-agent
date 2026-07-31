@@ -32,8 +32,10 @@ jobs:
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
       - name: Echo test variables
+        env:
+          OUT_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
         run: |
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: $OUT_REPO_BRANCH"
 
   RepackageArtifacts:
     name: 'RepackageArtifacts'
@@ -52,6 +54,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Avoid the limit of 5 nested workflows by executing the workflow in this manner
-      - run: gh workflow run test-artifacts.yml --ref ${{ github.ref_name }} --repo $GITHUB_REPOSITORY -f build_id=${{ inputs.build_id }} -f test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+        run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH"
