@@ -129,6 +129,21 @@ func getMode(conf *confmap.Conf) string {
 	return ""
 }
 
+// solutionEnabled returns true if both the global solutions toggle and the
+// individual solution are enabled: otel_container_insights.solutions.enabled AND
+// otel_container_insights.solutions.<name>.enabled.
+func solutionEnabled(conf *confmap.Conf, name string) bool {
+	if conf == nil {
+		return false
+	}
+	globalKey := common.ConfigKey(ciConfigKey, "solutions", "enabled")
+	if !common.GetOrDefaultBool(conf, globalKey, true) {
+		return false
+	}
+	key := common.ConfigKey(ciConfigKey, "solutions", name, "enabled")
+	return common.GetOrDefaultBool(conf, key, true)
+}
+
 type pipelineSpec struct {
 	receivers  []string
 	processors []string
