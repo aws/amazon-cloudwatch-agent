@@ -85,11 +85,11 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
 	cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true
 
-	cfg.QuerySampleCollection.MaxRowsPerQuery = 500
+	cfg.QuerySampleCollection.MaxRowsPerQuery = 5000
 
 	cfg.TopQueryCollection.CollectionInterval = t.topQueryInterval
 	cfg.TopQueryCollection.TopQueryCount = 200
-	cfg.TopQueryCollection.MaxQuerySampleCount = 5000
+	cfg.TopQueryCollection.MaxQuerySampleCount = 1000
 	cfg.TopQueryCollection.QueryPlanCacheSize = 1000
 	cfg.TopQueryCollection.QueryPlanCacheTTL = time.Hour
 
