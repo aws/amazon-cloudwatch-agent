@@ -39,10 +39,10 @@ func TestSplitMapKeys_Empty(t *testing.T) {
 }
 
 func TestSplitMapKeys_Panic(t *testing.T) {
-	defer func() { recover() }()
 	testMap := make(map[string]*EC2MetaData)
 	testMap["a"] = nil
 	testMap["b"] = nil
-	splitMapKeys(testMap, 0)
-	t.Errorf("should have panicked")
+	assert.Panics(t, func() {
+		splitMapKeys(testMap, 0)
+	})
 }

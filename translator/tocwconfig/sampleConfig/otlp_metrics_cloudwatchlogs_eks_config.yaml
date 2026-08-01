@@ -1,47 +1,35 @@
 exporters:
     awsemf:
         add_entity: true
-        certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: ""
         enhanced_container_insights: false
-        external_id: ""
         imds_retries: 1
-        local_mode: false
         log_group_name: /aws/cwagent
         log_retention: 0
         log_stream_name: ""
         max_retries: 2
         middleware: agenthealth/logs
         namespace: CWAgent
-        no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
-        profile: ""
-        proxy_address: ""
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
-        role_arn: ""
         version: "0"
     awsemf/containerinsights:
         add_entity: true
-        certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: true
         eks_fargate_container_insights_enabled: false
-        endpoint: ""
         enhanced_container_insights: true
-        external_id: ""
         imds_retries: 1
-        local_mode: false
         log_group_name: /aws/containerinsights/{ClusterName}/performance
         log_retention: 0
         log_stream_name: '{NodeName}'
@@ -428,21 +416,17 @@ exporters:
               unit: Count
         middleware: agenthealth/logs
         namespace: ContainerInsights
-        no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
         parse_json_encoded_attr_values:
             - Sources
             - kubernetes
-        profile: ""
-        proxy_address: ""
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
-        role_arn: ""
         version: "0"
 extensions:
     agenthealth/logs:
@@ -499,7 +483,7 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     filter/containerinsights:
         error_mode: propagate
         logs: {}
@@ -512,6 +496,7 @@ processors:
                     - scrape_samples_scraped
                     - scrape_series_added
                     - scrape_samples_post_metric_relabeling
+        profiles: {}
         spans: {}
         traces: {}
     metricstransform/containerinsights:
@@ -811,39 +796,30 @@ receivers:
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true
-        certificate_file_path: ""
         cluster_name: TestCluster
         collection_interval: 30s
         collection_role: ALL
         container_orchestrator: eks
         enable_control_plane_metrics: true
-        endpoint: ""
-        external_id: ""
         host_ip: ""
         host_name: ""
         imds_retries: 1
         kube_config_path: ""
         leader_lock_name: cwagent-clusterleader
         leader_lock_using_config_map_only: true
-        local_mode: false
         max_retries: 0
         middleware: agenthealth/statuscode
-        no_verify_ssl: false
         num_workers: 0
         prefer_full_pod_name: true
-        profile: ""
-        proxy_address: ""
         region: us-west-2
         request_timeout_seconds: 0
-        resource_arn: ""
-        role_arn: ""
     otlp/grpc_0_0_0_0_1234:
         protocols:
             grpc:
                 endpoint: 0.0.0.0:1234
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 tls:
                     cert_file: /path/to/cert.pem
@@ -852,9 +828,10 @@ receivers:
     otlp/http_0_0_0_0_2345:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:2345
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
@@ -862,6 +839,7 @@ receivers:
                     cert_file: /path/to/cert.pem
                     key_file: /path/to/key.pem
                 traces_url_path: /v1/traces
+                transport: tcp
                 write_timeout: 0s
 service:
     extensions:
@@ -894,7 +872,9 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
+            output_paths: null
             sampling:
                 enabled: true
                 initial: 2
@@ -904,3 +884,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null

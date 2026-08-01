@@ -10,9 +10,7 @@ import (
 	otelconfmap "go.opentelemetry.io/collector/confmap"
 )
 
-const (
-	KeyDelimiter = otelconfmap.KeyDelimiter
-)
+var KeyDelimiter = otelconfmap.KeyDelimiter
 
 type Conf struct {
 	k *koanf.Koanf

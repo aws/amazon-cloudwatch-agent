@@ -11,8 +11,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -25,10 +27,10 @@ const (
 // If receivers set the special attribute "aws:AggregationInterval", then
 // this exporter will remove it and do aggregation.
 type aggregationDatum struct {
-	cloudwatch.MetricDatum
+	types.MetricDatum
 	aggregationInterval time.Duration
 	distribution        distribution.Distribution
-	entity              cloudwatch.Entity
+	entity              types.Entity
 }
 
 type Aggregator interface {
@@ -80,7 +82,7 @@ func (agg *aggregator) AddMetric(m *aggregationDatum) {
 	}
 	// auto configure high resolution
 	if aggDurationMapKey < time.Minute {
-		m.SetStorageResolution(1)
+		m.StorageResolution = aws.Int32(1)
 	}
 	durationAgg.addMetric(m)
 }
@@ -129,7 +131,7 @@ func (durationAgg *durationAggregator) aggregating() {
 		// loop begins, then the behavior is random.
 		select {
 		case m := <-durationAgg.aggregationChan:
-			if m == nil || m.Timestamp == nil || m.MetricName == nil || m.Unit == nil {
+			if m == nil || m.Timestamp == nil || m.MetricName == nil || m.Unit == "" {
 				log.Printf("E! cannot aggregate nil or partial datum")
 				continue
 			}
@@ -143,7 +145,7 @@ func (durationAgg *durationAggregator) aggregating() {
 				if m.distribution == nil {
 					// Assume function pointer is always valid.
 					m.distribution = distribution.NewClassicDistribution()
-					err := m.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
+					err := m.distribution.AddEntryWithUnit(*m.Value, 1, string(m.Unit))
 					if err != nil {
 						if errors.Is(err, distribution.ErrUnsupportedValue) {
 							log.Printf("W! err %s, metric %s", err, *m.MetricName)
@@ -158,7 +160,7 @@ func (durationAgg *durationAggregator) aggregating() {
 				if m.distribution != nil {
 					aggregatedMetric.distribution.AddDistribution(m.distribution)
 				} else {
-					err := aggregatedMetric.distribution.AddEntryWithUnit(*m.Value, 1, *m.Unit)
+					err := aggregatedMetric.distribution.AddEntryWithUnit(*m.Value, 1, string(m.Unit))
 					if err != nil {
 						log.Printf("W! err %s, metric %s", err, *m.MetricName)
 					}

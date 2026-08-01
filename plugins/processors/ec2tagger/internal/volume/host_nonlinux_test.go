@@ -13,7 +13,7 @@ import (
 
 func TestHostProvider(t *testing.T) {
 	p := newHostProvider()
-	got, err := p.DeviceToSerialMap()
+	got, err := p.DeviceToSerialMap(t.Context())
 	assert.Error(t, err)
 	assert.Nil(t, got)
 }
