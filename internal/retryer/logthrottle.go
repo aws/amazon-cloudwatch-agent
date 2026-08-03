@@ -5,6 +5,7 @@ package retryer
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -18,9 +19,11 @@ var (
 
 	// throttleChanBufferSize is the capacity of LogThrottleRetryer.throttleChan.
 	// The original value of 1 dropped events when the watcher goroutine was
-	// preempted under CI contention (6/200 lost). The non-blocking send in
-	// ShouldRetry still guarantees the AWS SDK path never blocks at any size.
-	throttleChanBufferSize = 1024
+	// preempted under load (observed ~6/200 lost under CI contention). 128 holds
+	// a full burst with headroom while bounding memory (~32 bytes/slot). The
+	// non-blocking send in ShouldRetry still guarantees the AWS SDK path never
+	// blocks regardless of this value.
+	throttleChanBufferSize = 128
 )
 
 type LogThrottleRetryer struct {
@@ -29,6 +32,7 @@ type LogThrottleRetryer struct {
 	throttleChan chan throttleEvent
 	done         chan struct{}
 	stopped      chan struct{}
+	stopOnce     sync.Once
 
 	client.DefaultRetryer
 }
@@ -74,10 +78,13 @@ func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
 
 func (r *LogThrottleRetryer) Stop() {
 	if r != nil {
-		close(r.done)
-		// Block until the watcher has exited and drained throttleChan, so callers
-		// (notably tests counting aggregated throttles) don't race the final events.
-		<-r.stopped
+		// sync.Once guards against a double Stop() panicking on close(r.done).
+		r.stopOnce.Do(func() {
+			close(r.done)
+			// Block until the watcher has exited and drained throttleChan, so callers
+			// (notably tests counting aggregated throttles) don't race the final events.
+			<-r.stopped
+		})
 	}
 }
 
