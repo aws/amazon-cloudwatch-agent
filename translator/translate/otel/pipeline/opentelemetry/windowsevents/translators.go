@@ -12,7 +12,9 @@ import (
 
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	logsutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
 
 const (
@@ -70,7 +72,13 @@ func parseEntries(conf *confmap.Conf) []eventEntry {
 		}
 
 		logGroupName, _ := m[logGroupNameKey].(string)
+		if logGroupName != "" {
+			logGroupName = logsutil.ResolvePlaceholder(logGroupName, globallogs.GlobalLogConfig.MetadataInfo)
+		}
 		logStreamName, _ := m[logStreamNameKey].(string)
+		if logStreamName != "" {
+			logStreamName = logsutil.ResolvePlaceholder(logStreamName, globallogs.GlobalLogConfig.MetadataInfo)
+		}
 
 		var levels []string
 		if rawLevels, ok := m[eventLevelsKey].([]any); ok {
