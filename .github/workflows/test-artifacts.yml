@@ -76,7 +76,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ${{ github.event.inputs.build_id }}
-        run: echo run identifier ${{ inputs.build_id }}
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+        run: echo "run identifier $INPUT_BUILD_ID"
   OutputEnvVariables:
     name: 'OutputEnvVariables'
     runs-on: ubuntu-latest
@@ -138,12 +140,18 @@ jobs:
           fi
 
       - name: Echo test variables
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          OUT_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          OUT_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}
+          OUT_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          OUT_COMMIT_DATE: ${{ steps.get-commit-date.outputs.commit_date }}
         run: |
-          echo "build_id: ${{ inputs.build_id }}"
-          echo "CWA_GITHUB_TEST_REPO_NAME: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_NAME }}"
-          echo "CWA_GITHUB_TEST_REPO_URL: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_URL }}"
-          echo "CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}"
-          echo "CWA_COMMIT_DATE: ${{ steps.get-commit-date.outputs.commit_date }}"
+          echo "build_id: $INPUT_BUILD_ID"
+          echo "CWA_GITHUB_TEST_REPO_NAME: $OUT_REPO_NAME"
+          echo "CWA_GITHUB_TEST_REPO_URL: $OUT_REPO_URL"
+          echo "CWA_GITHUB_TEST_REPO_BRANCH: $OUT_REPO_BRANCH"
+          echo "CWA_COMMIT_DATE: $OUT_COMMIT_DATE"
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -222,7 +230,11 @@ jobs:
           
           echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_matrix=$(apply_filters generator/resources/ec2_linux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          # ec2_linux_matrix is large — write to a file so the downstream Paginate
+          # step can read it from disk. Passing it via a step-level env var can
+          # exceed ARG_MAX (~2 MiB) on execve and prevent bash from starting.
+          apply_filters generator/resources/ec2_linux_complete_test_matrix.json > filtered_ec2_linux_matrix.json
+          echo "ec2_linux_matrix=$(cat filtered_ec2_linux_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
@@ -243,8 +255,12 @@ jobs:
         run: |
           # GitHub Actions matrix limit is 256 jobs per workflow run.
           # Use 200 per page for headroom. Up to 5 pages supported (1000 tests).
+          # Read the filtered matrix from the file written by the "Generate matrix"
+          # step instead of a step-level env var: the matrix can exceed the
+          # kernel's ARG_MAX (~2 MiB) on execve, which would prevent bash from
+          # starting for this step.
           PAGE_SIZE=200
-          FULL_MATRIX='${{ steps.set-matrix.outputs.ec2_linux_matrix }}'
+          FULL_MATRIX=$(cat filtered_ec2_linux_matrix.json)
           TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
           PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
 
@@ -264,36 +280,59 @@ jobs:
           done
 
       - name: Echo test plan matrix
+        env:
+          EC2_GPU_MATRIX: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
+          EKS_ADDON_MATRIX: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+          EC2_LINUX_PAGE_COUNT: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
+          EC2_LINUX_MATRIX_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
+          EC2_LINUX_MATRIX_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
+          EC2_LINUX_MATRIX_2: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}
+          EC2_LINUX_MATRIX_3: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}
+          EC2_LINUX_MATRIX_4: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}
+          EC2_LINUX_ONPREM_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
+          EC2_SELINUX_MATRIX: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+          EC2_WINDOWS_MATRIX: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
+          EC2_MAC_MATRIX: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
+          EC2_PERFORMANCE_MATRIX: ${{ steps.set-matrix.outputs.ec2_performance_matrix }}
+          EC2_WINDOWS_PERFORMANCE_MATRIX: ${{ steps.set-matrix.outputs.ec2_windows_performance_matrix }}
+          EC2_STRESS_MATRIX: ${{ steps.set-matrix.outputs.ec2_stress_matrix }}
+          EC2_WINDOWS_STRESS_MATRIX: ${{ steps.set-matrix.outputs.ec2_windows_stress_matrix }}
+          ECS_EC2_LAUNCH_DAEMON_MATRIX: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
+          ECS_FARGATE_MATRIX: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
+          EKS_DAEMON_MATRIX: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
+          EKS_DEPLOYMENT_MATRIX: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
+          EC2_LINUX_ITAR_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
+          EC2_LINUX_CHINA_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
         run: |
-          echo "ec2_gpu_matrix: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}"
-          echo "eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}"
-          echo "ec2_linux_matrix pages: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}"
+          echo "ec2_gpu_matrix: $EC2_GPU_MATRIX"
+          echo "eks_addon_matrix: $EKS_ADDON_MATRIX"
+          echo "ec2_linux_matrix pages: $EC2_LINUX_PAGE_COUNT"
           for i in 0 1 2 3 4; do
-            page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}'
+            page="$EC2_LINUX_MATRIX_0"
             case $i in
-              1) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}' ;;
-              2) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}' ;;
-              3) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}' ;;
-              4) page='${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}' ;;
+              1) page="$EC2_LINUX_MATRIX_1" ;;
+              2) page="$EC2_LINUX_MATRIX_2" ;;
+              3) page="$EC2_LINUX_MATRIX_3" ;;
+              4) page="$EC2_LINUX_MATRIX_4" ;;
             esac
             if [ -n "$page" ]; then
               echo "ec2_linux_matrix_$i: $(echo "$page" | jq 'length') entries"
             fi
           done
-          echo "ec2_linux_onprem_matrix: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}"
-          echo "ec2_selinux_matrix: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}"
-          echo "ec2_windows_matrix: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}"
-          echo "ec2_mac_matrix: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}"
-          echo "ec2_performance_matrix: ${{ steps.set-matrix.outputs.ec2_performance_matrix}}"
-          echo "ec2_windows_performance_matrix: ${{ steps.set-matrix.outputs.ec2_windows_performance_matrix}}"
-          echo "ec2_stress_matrix: ${{ steps.set-matrix.outputs.ec2_stress_matrix}}"
-          echo "ec2_windows_stress_matrix: ${{ steps.set-matrix.outputs.ec2_windows_stress_matrix}}"
-          echo "ecs_ec2_launch_daemon_matrix: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}"
-          echo "ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}"
-          echo "eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}"
-          echo "eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}"
-          echo "ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}"
-          echo "ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}"
+          echo "ec2_linux_onprem_matrix: $EC2_LINUX_ONPREM_MATRIX"
+          echo "ec2_selinux_matrix: $EC2_SELINUX_MATRIX"
+          echo "ec2_windows_matrix: $EC2_WINDOWS_MATRIX"
+          echo "ec2_mac_matrix: $EC2_MAC_MATRIX"
+          echo "ec2_performance_matrix: $EC2_PERFORMANCE_MATRIX"
+          echo "ec2_windows_performance_matrix: $EC2_WINDOWS_PERFORMANCE_MATRIX"
+          echo "ec2_stress_matrix: $EC2_STRESS_MATRIX"
+          echo "ec2_windows_stress_matrix: $EC2_WINDOWS_STRESS_MATRIX"
+          echo "ecs_ec2_launch_daemon_matrix: $ECS_EC2_LAUNCH_DAEMON_MATRIX"
+          echo "ecs_fargate_matrix: $ECS_FARGATE_MATRIX"
+          echo "eks_daemon_matrix: $EKS_DAEMON_MATRIX"
+          echo "eks_deployment_matrix: $EKS_DEPLOYMENT_MATRIX"
+          echo "ec2_linux_itar_matrix: $EC2_LINUX_ITAR_MATRIX"
+          echo "ec2_linux_china_matrix: $EC2_LINUX_CHINA_MATRIX"
 
   CloudformationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
@@ -324,9 +363,11 @@ jobs:
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Test cf
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
           cd test/test/cloudformation
-          go test -timeout 1h -package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.rpm -iam_role=${CF_IAM_ROLE} -key_name=${CF_KEY_NAME} -metric_name=mem_used_percent
+          go test -timeout 1h "-package_path=s3://${S3_INTEGRATION_BUCKET}/integration-test/binary/${INPUT_BUILD_ID}/linux/amd64/amazon-cloudwatch-agent.rpm" "-iam_role=${CF_IAM_ROLE}" "-key_name=${CF_KEY_NAME}" -metric_name=mem_used_percent
 
   StartLocalStack:
     name: 'StartLocalStack'
@@ -427,7 +468,11 @@ jobs:
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }}
+        env:
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+        run: echo "run on ec2 instance os $MATRIX_OS arc $MATRIX_ARC test dir $MATRIX_TEST_DIR"
 
 
       - name: Get Runner IP
@@ -444,9 +489,23 @@ jobs:
         continue-on-error: true
         if: ${{ matrix.arrays.family == 'linux' }}
         timeout-minutes: 30
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_INSTALL_AGENT: ${{ matrix.arrays.installAgentCommand }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_USERNAME: ${{ matrix.arrays.username }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_CA_CERT_PATH: ${{ matrix.arrays.caCertPath }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_BINARY_NAME: ${{ matrix.arrays.binaryName }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          LOCALSTACK_HOST: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/ec2/linux
           fi
@@ -455,20 +514,20 @@ jobs:
           if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-            -var="test_name=${{ matrix.arrays.os }}" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="install_agent=${{ matrix.arrays.installAgentCommand }}" \
-            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
-            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="user=${{ matrix.arrays.username }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="ca_cert_path=${{ matrix.arrays.caCertPath }}" \
-            -var="arc=${{ matrix.arrays.arc }}" \
-            -var="binary_name=${{ matrix.arrays.binaryName }}" \
-            -var="local_stack_host_name=${{ needs.StartLocalStack.outputs.local_stack_host_name }}" \
+            -var="test_name=$MATRIX_OS" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="install_agent=$MATRIX_INSTALL_AGENT" \
+            -var="github_test_repo_branch=$OUT_REPO_BRANCH" \
+            -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
+            -var="user=$MATRIX_USERNAME" \
+            -var="ami=$MATRIX_AMI" \
+            -var="ca_cert_path=$MATRIX_CA_CERT_PATH" \
+            -var="arc=$MATRIX_ARC" \
+            -var="binary_name=$MATRIX_BINARY_NAME" \
+            -var="local_stack_host_name=$LOCALSTACK_HOST" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" ; then terraform destroy -auto-approve
+            -var="test_dir=$MATRIX_TEST_DIR" ; then terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -492,9 +551,17 @@ jobs:
         continue-on-error: true
         if: ${{ matrix.arrays.family == 'window' }}
         timeout-minutes: 30
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/ec2/win
           fi
@@ -504,14 +571,14 @@ jobs:
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="ssh_key_name=${KEY_NAME}" \
             -var="github_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="ami=$MATRIX_AMI" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
             -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
-            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
+            -var="github_test_repo_branch=$OUT_REPO_BRANCH" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -532,14 +599,17 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' || steps.terraform_apply_windows.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_FAMILY: ${{ matrix.arrays.family }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
-            elif if "${{ matrix.arrays.os }}" == window; then
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
+            elif [ "$MATRIX_FAMILY" = "window" ]; then
               cd terraform/ec2/win
             else
               cd terraform/ec2/linux
@@ -754,7 +824,11 @@ jobs:
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} use ssm ${{ matrix.arrays.useSSM }} test ${{ matrix.arrays.test_dir }}
+        env:
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_USE_SSM: ${{ matrix.arrays.useSSM }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+        run: echo "run on ec2 instance os $MATRIX_OS use ssm $MATRIX_USE_SSM test $MATRIX_TEST_DIR"
 
       - name: Get Runner IP
         id: runner_ip
@@ -770,26 +844,36 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_USE_SSM: ${{ matrix.arrays.useSSM }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/ec2/win
           fi
 
           terraform init
           if terraform apply --auto-approve \
-            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
+            -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="test_name=${{ matrix.arrays.os }}" \
-            -var="cwa_github_sha=${{ inputs.build_id }}"  \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="use_ssm=${{ matrix.arrays.useSSM }}" \
+            -var="test_name=$MATRIX_OS" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID"  \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="ami=$MATRIX_AMI" \
+            -var="use_ssm=$MATRIX_USE_SSM" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-            -var="github_test_repo_branch=${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then
+            -var="github_test_repo_branch=$OUT_REPO_BRANCH" \
+            -var="runner_ip=$RUNNER_IP" ; then
             terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
@@ -812,13 +896,15 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/ec2/win
             fi
@@ -848,7 +934,9 @@ jobs:
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Echo OS
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }}
+        env:
+          MATRIX_OS: ${{ matrix.arrays.os }}
+        run: echo "run on ec2 instance os $MATRIX_OS"
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -860,9 +948,16 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/ec2/mac
           fi
@@ -871,11 +966,11 @@ jobs:
           if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="ssh_key_name=${KEY_NAME}"  \
-            -var="arc=${{ matrix.arrays.arc }}" \
-            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
+            -var="arc=$MATRIX_ARC" \
+            -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="ami=$MATRIX_AMI" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
             -var="license_manager_arn=${{ env.LICENSE_MANAGER_ARN }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}"; then
             terraform destroy -auto-approve
@@ -900,13 +995,15 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/ec2/mac
             fi
@@ -1005,21 +1102,29 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 30
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_METADATA_ENABLED: ${{ matrix.arrays.metadataEnabled }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/ecs_ec2/daemon
           fi
 
           terraform init
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="ec2_instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="metadataEnabled=${{ matrix.arrays.metadataEnabled }}" \
-            -var="ami=${{ matrix.arrays.ami }}"; then
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=$INPUT_BUILD_ID" \
+            -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
+            -var="metadataEnabled=$MATRIX_METADATA_ENABLED" \
+            -var="ami=$MATRIX_AMI"; then
             terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
@@ -1042,13 +1147,15 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/ecs_ec2/daemon
             fi
@@ -1092,18 +1199,23 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 30
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/ecs_fargate/linux
           fi
 
           terraform init
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}"; then
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=$INPUT_BUILD_ID"; then
             terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
@@ -1126,13 +1238,15 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/ecs_fargate/linux
             fi
@@ -1178,9 +1292,16 @@ jobs:
         timeout-minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
         env:
           HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_K8S_VERSION: ${{ matrix.arrays.k8sVersion }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/eks/daemon
           fi
@@ -1205,12 +1326,12 @@ jobs:
           fi
 
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="ami_type=${{ matrix.arrays.ami }}" \
-            -var="instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="k8s_version=${{ matrix.arrays.k8sVersion }}" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=$INPUT_BUILD_ID" \
+            -var="ami_type=$MATRIX_AMI" \
+            -var="instance_type=$MATRIX_INSTANCE_TYPE" \
+            -var="k8s_version=$MATRIX_K8S_VERSION" \
             $HELM_VAR; then
             terraform destroy -auto-approve
           else
@@ -1234,13 +1355,15 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/eks/daemon
             fi
@@ -1284,19 +1407,25 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_K8S_VERSION: ${{ matrix.arrays.k8sVersion }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/eks/deployment
           fi
 
           terraform init
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=$INPUT_BUILD_ID" \
+            -var="k8s_version=$MATRIX_K8S_VERSION"; then
             terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
@@ -1318,13 +1447,15 @@ jobs:
       - name: Terraform destroy
         if: ${{ cancelled() || failure() || steps.terraform_apply.outcome == 'failure' }}
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/eks/deployment
             fi
@@ -1368,21 +1499,30 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          COMMIT_DATE: ${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_VALUES_PER_MINUTE: ${{ matrix.arrays.values_per_minute }}
+          MATRIX_FAMILY: ${{ matrix.arrays.family }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           cd terraform/performance
           terraform init
           if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="cwa_github_sha_date=${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="arc=${{ matrix.arrays.arc }}" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="cwa_github_sha_date=$COMMIT_DATE" \
+            -var="ami=$MATRIX_AMI" \
+            -var="arc=$MATRIX_ARC" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-            -var="family=${{ matrix.arrays.family}}"\
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
+            -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
+            -var="family=$MATRIX_FAMILY"\
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -1448,21 +1588,30 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          COMMIT_DATE: ${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_VALUES_PER_MINUTE: ${{ matrix.arrays.values_per_minute }}
+          MATRIX_FAMILY: ${{ matrix.arrays.family }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           cd terraform/performance
           terraform init
           if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="cwa_github_sha_date=${{ needs.OutputEnvVariables.outputs.CWA_COMMIT_DATE }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="arc=${{ matrix.arrays.arc }}" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="cwa_github_sha_date=$COMMIT_DATE" \
+            -var="ami=$MATRIX_AMI" \
+            -var="arc=$MATRIX_ARC" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-            -var="family=${{ matrix.arrays.family}}"\
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
+            -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
+            -var="family=$MATRIX_FAMILY"\
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -1525,25 +1674,37 @@ jobs:
         run: terraform --version
 
       - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
+        env:
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_VALUES_PER_MINUTE: ${{ matrix.arrays.values_per_minute }}
+        run: echo "run on ec2 instance os $MATRIX_OS arc $MATRIX_ARC test dir $MATRIX_TEST_DIR values per minute $MATRIX_VALUES_PER_MINUTE"
 
       - name: Terraform apply
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_VALUES_PER_MINUTE: ${{ matrix.arrays.values_per_minute }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           cd terraform/stress
           terraform init
           if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="arc=${{ matrix.arrays.arc }}" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="ami=$MATRIX_AMI" \
+            -var="arc=$MATRIX_ARC" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
+            -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -1606,26 +1767,39 @@ jobs:
         run: terraform --version
 
       - name: Echo Test Info
-        run: echo run on ec2 instance os ${{ matrix.arrays.os }} arc ${{ matrix.arrays.arc }} test dir ${{ matrix.arrays.test_dir }} values per minute ${{ matrix.arrays.values_per_minute }}
+        env:
+          MATRIX_OS: ${{ matrix.arrays.os }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_VALUES_PER_MINUTE: ${{ matrix.arrays.values_per_minute }}
+        run: echo "run on ec2 instance os $MATRIX_OS arc $MATRIX_ARC test dir $MATRIX_TEST_DIR values per minute $MATRIX_VALUES_PER_MINUTE"
 
       - name: Terraform apply
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_ARC: ${{ matrix.arrays.arc }}
+          MATRIX_VALUES_PER_MINUTE: ${{ matrix.arrays.values_per_minute }}
+          MATRIX_FAMILY: ${{ matrix.arrays.family }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           cd terraform/stress
           terraform init
           if terraform apply --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
-            -var="cwa_github_sha=${{ inputs.build_id }}" \
-            -var="ami=${{ matrix.arrays.ami }}" \
-            -var="arc=${{ matrix.arrays.arc }}" \
+            -var="cwa_github_sha=$INPUT_BUILD_ID" \
+            -var="ami=$MATRIX_AMI" \
+            -var="arc=$MATRIX_ARC" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="values_per_minute=${{ matrix.arrays.values_per_minute}}"\
-            -var="family=${{ matrix.arrays.family}}"\
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="runner_ip=${{ steps.runner_ip.outputs.ip }}" ; then terraform destroy -auto-approve
+            -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
+            -var="family=$MATRIX_FAMILY"\
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
           fi
@@ -1690,21 +1864,29 @@ jobs:
       - name: Terraform apply and setup
         id: terraform_apply
         continue-on-error: true
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_AMI: ${{ matrix.arrays.ami }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+          MATRIX_K8S_VERSION: ${{ matrix.arrays.k8sVersion }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-            cd "${{ matrix.arrays.terraform_dir }}"
+          if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+            cd "$MATRIX_TERRAFORM_DIR"
           else
             cd terraform/eks/addon/gpu
           fi
 
           terraform init
           if terraform apply --auto-approve \
-            -var="test_dir=${{ matrix.arrays.test_dir }}" \
-            -var="cwagent_image_repo=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            -var="cwagent_image_tag=${{ inputs.build_id }}" \
-            -var="ami_type=${{ matrix.arrays.ami }}" \
-            -var="instance_type=${{ matrix.arrays.instanceType }}" \
-            -var="k8s_version=${{ matrix.arrays.k8sVersion }}"; then
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            -var="cwagent_image_tag=$INPUT_BUILD_ID" \
+            -var="ami_type=$MATRIX_AMI" \
+            -var="instance_type=$MATRIX_INSTANCE_TYPE" \
+            -var="k8s_version=$MATRIX_K8S_VERSION"; then
             echo "Terraform apply successful."
           else
             terraform destroy -auto-approve && exit 1
@@ -1727,13 +1909,15 @@ jobs:
       - name: Terraform destroy
         if: always()
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            if [ "${{ matrix.arrays.terraform_dir }}" != "" ]; then
-              cd "${{ matrix.arrays.terraform_dir }}"
+            if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
+              cd "$MATRIX_TERRAFORM_DIR"
             else
               cd terraform/eks/addon/gpu
             fi
