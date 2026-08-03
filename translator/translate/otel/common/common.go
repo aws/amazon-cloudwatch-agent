@@ -148,6 +148,7 @@ const (
 	DatabaseInsightsKey = "database_insights"
 	PostgreSQLKey       = "postgresql"
 	MySQLKey            = "mysql"
+	SQLServerKey        = "sqlserver"
 
 	// DBI component name prefixes (shared across engines; index-suffixed per instance)
 	DbiTransformFixStartTime = "dbi_fix_start_time"
@@ -165,13 +166,14 @@ const (
 )
 
 var (
-	DatabaseInsightsConfigKey   = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
-	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
-	DatabaseInsightsMysqlKey    = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, MySQLKey)
-	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
-	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
-	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
-	FilesConfigKey              = ConfigKey(OpenTelemetryKey, CollectKey, FilesKey)
+	DatabaseInsightsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey)
+	DatabaseInsightsPostgresKey  = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
+	DatabaseInsightsMysqlKey     = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, MySQLKey)
+	DatabaseInsightsSqlServerKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, SQLServerKey)
+	OtelCollectLogsConfigKey     = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
+	OtelSpanMetricsEnabledKey    = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
+	WindowsEventsConfigKey       = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
+	FilesConfigKey               = ConfigKey(OpenTelemetryKey, CollectKey, FilesKey)
 	// OtelResourceAttributesKey holds customer-supplied resource attributes added to every opentelemetry export pipeline.
 	OtelResourceAttributesKey = ConfigKey(OpenTelemetryKey, ResourceAttributesKey)
 )

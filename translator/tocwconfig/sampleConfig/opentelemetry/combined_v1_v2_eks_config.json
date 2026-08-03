@@ -155,6 +155,17 @@
               "file_path": "/var/log/mysql/error.log"
             }
           }
+        ],
+        "sqlserver": [
+          {
+            "endpoint": "localhost:1433",
+            "instance_name": "my-sqlserver",
+            "username": "cw_monitor",
+            "password_file": "sampleConfig/opentelemetry/testdata/.sqlserver_credentials",
+            "logs": {
+              "file_path": "/var/opt/mssql/log/errorlog"
+            }
+          }
         ]
       },
       "prometheus": {

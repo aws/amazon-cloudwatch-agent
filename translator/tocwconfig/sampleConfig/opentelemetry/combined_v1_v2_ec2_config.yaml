@@ -147,6 +147,83 @@ connectors:
         spans:
             trace.span.count:
                 description: The number of spans observed.
+    count/dbi_dbload_sqlserver:
+        datapoints:
+            metric.datapoint.count:
+                description: The number of data points observed.
+        logs:
+            sqlserver.active_sessions.by_app:
+                attributes:
+                    - key: db.system.name
+                    - key: sqlserver.application.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by application
+            sqlserver.active_sessions.by_db:
+                attributes:
+                    - key: db.system.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by database
+            sqlserver.active_sessions.by_host:
+                attributes:
+                    - key: db.system.name
+                    - key: network.peer.address
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by host
+            sqlserver.active_sessions.by_sql:
+                attributes:
+                    - key: db.system.name
+                    - key: sqlserver.query_hash
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by query hash
+            sqlserver.active_sessions.by_sql_wait:
+                attributes:
+                    - key: db.system.name
+                    - key: sqlserver.query_hash
+                    - key: sqlserver.wait_category
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by query and wait category
+            sqlserver.active_sessions.by_user:
+                attributes:
+                    - key: db.system.name
+                    - key: user.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by user
+            sqlserver.active_sessions.by_wait:
+                attributes:
+                    - key: db.system.name
+                    - key: sqlserver.wait_category
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Active sessions by wait category
+            sqlserver.active_sessions.count:
+                attributes:
+                    - key: db.system.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["sqlserver.session_status"] != "sleeping"
+                description: Total active sessions
+        metrics:
+            metric.count:
+                description: The number of metrics observed.
+        spanevents:
+            trace.span.event.count:
+                description: The number of span events observed.
+        spans:
+            trace.span.count:
+                description: The number of spans observed.
     forward/opentelemetry: {}
     signaltometrics/dbi_topsql_mysql:
         logs:
@@ -602,6 +679,160 @@ connectors:
               sum:
                 value: Int(attributes["postgresql.local_blks_read"])
               unit: ""
+    signaltometrics/dbi_topsql_sqlserver:
+        logs:
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.execution_count"] != nil
+              description: Number of executions
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.execution_count
+              sum:
+                value: Int(attributes["sqlserver.execution_count"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_elapsed_time"] != nil
+              description: Total elapsed time (seconds)
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_elapsed_time
+              sum:
+                value: Double(attributes["sqlserver.total_elapsed_time"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_worker_time"] != nil
+              description: Total CPU (worker) time (seconds)
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_worker_time
+              sum:
+                value: Double(attributes["sqlserver.total_worker_time"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_logical_reads"] != nil
+              description: Total logical reads (pages)
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_logical_reads
+              sum:
+                value: Int(attributes["sqlserver.total_logical_reads"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_logical_writes"] != nil
+              description: Total logical writes (pages)
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_logical_writes
+              sum:
+                value: Int(attributes["sqlserver.total_logical_writes"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_physical_reads"] != nil
+              description: Total physical reads (pages)
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_physical_reads
+              sum:
+                value: Int(attributes["sqlserver.total_physical_reads"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_rows"] != nil
+              description: Total rows returned
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_rows
+              sum:
+                value: Int(attributes["sqlserver.total_rows"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: sqlserver.query_hash
+                  optional: false
+                - key: sqlserver.query_plan_hash
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["sqlserver.total_grant_kb"] != nil
+              description: Total memory grant (KB)
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: sqlserver.total_grant_kb
+              sum:
+                value: Int(attributes["sqlserver.total_grant_kb"])
+              unit: ""
 exporters:
     awscloudwatch:
         backoff_retry_base: 200ms
@@ -942,6 +1173,14 @@ processors:
         metrics: {}
         spans: {}
         traces: {}
+    filter/dbi_exclude_monitor_sqlserver_0:
+        error_mode: propagate
+        logs:
+            log_record:
+                - attributes["user.name"] == "cw_monitor"
+        metrics: {}
+        spans: {}
+        traces: {}
     groupbyattrs/files:
         keys:
             - log.file.name
@@ -1255,6 +1494,21 @@ processors:
                 - replace_match(datapoint.attributes["postgresql.query_id"], "", "unknown")
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
         trace_statements: []
+    transform/dbi_fix_start_time_sqlserver:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ignore
+              statements:
+                - set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0
+                - replace_match(datapoint.attributes["sqlserver.wait_category"], "", "CPU")
+                - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
+                - replace_match(datapoint.attributes["sqlserver.query_hash"], "", "unknown")
+                - replace_match(datapoint.attributes["user.name"], "", "unknown")
+                - replace_match(datapoint.attributes["sqlserver.application.name"], "", "unknown")
+        trace_statements: []
     transform/dbi_logs_mysql_raw-events_0:
         error_mode: ignore
         flatten_data: false
@@ -1309,6 +1563,33 @@ processors:
                 - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
+    transform/dbi_logs_sqlserver_raw-events_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/sqlserver/raw-events")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-sqlserver"], "/"))
+        metric_statements: []
+        trace_statements: []
+    transform/dbi_logs_sqlserver_server-logs_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/sqlserver/server-logs")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-sqlserver"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
+        metric_statements: []
+        trace_statements: []
     transform/dbi_resource_mysql_0:
         error_mode: ignore
         flatten_data: false
@@ -1341,6 +1622,22 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         trace_statements: []
+    transform/dbi_resource_sqlserver_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["db.system.name"], "sqlserver")
+                - set(resource.attributes["db.instance.name"], "my-sqlserver")
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["db.system.name"], "sqlserver")
+                - set(resource.attributes["db.instance.name"], "my-sqlserver")
+        trace_statements: []
     transform/dbi_scope_mysql_0:
         error_mode: ignore
         flatten_data: false
@@ -1358,6 +1655,22 @@ processors:
                 - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
         trace_statements: []
     transform/dbi_scope_postgresql_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        trace_statements: []
+    transform/dbi_scope_sqlserver_0:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -1584,6 +1897,39 @@ receivers:
                 parse_from: attributes.severity
               type: regex_parser
         start_at: end
+    filelog/sqlserver_0:
+        encoding: utf-8
+        include:
+            - /var/opt/mssql/log/errorlog
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2}\.(\d{1,9}))
+              timestamp:
+                layout: 2006-1-_2 15:04:05.999999999
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+            - on_error: send_quiet
+              regex: 'Error: \d+, Severity: (?P<severity>\d+), State: \d+'
+              severity:
+                mapping:
+                    error:
+                        - max: 19
+                          min: 17
+                    fatal:
+                        - max: 25
+                          min: 20
+                    info:
+                        - max: 10
+                          min: 0
+                    warn:
+                        - max: 16
+                          min: 11
+                parse_from: attributes.severity
+              type: regex_parser
+        start_at: end
     hostmetrics/opentelemetry:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -1623,6 +1969,7 @@ receivers:
                     names:
                         - post(gres|master).*
                         - mysqld.*
+                        - sqlservr.*
                 metrics:
                     process.cpu.utilization:
                         enabled: true
@@ -2505,6 +2852,410 @@ receivers:
         start_time_metric_regex: ""
         trim_metric_suffixes: false
         use_start_time_metric: false
+    sqlserver/events_0:
+        collection_interval: 10s
+        computer_name: ""
+        datasource: ""
+        events:
+            db.server.query_sample:
+                enabled: true
+            db.server.top_query:
+                enabled: true
+        initial_delay: 1s
+        instance_name: ""
+        metrics:
+            sqlserver.batch.request.rate:
+                enabled: true
+            sqlserver.batch.sql_compilation.rate:
+                enabled: true
+            sqlserver.batch.sql_recompilation.rate:
+                enabled: true
+            sqlserver.computer.uptime:
+                enabled: false
+            sqlserver.cpu.count:
+                enabled: false
+            sqlserver.database.backup_or_restore.rate:
+                enabled: false
+            sqlserver.database.count:
+                aggregation_strategy: avg
+                attributes:
+                    - database.status
+                enabled: false
+            sqlserver.database.execution.errors:
+                enabled: true
+            sqlserver.database.full_scan.rate:
+                enabled: true
+            sqlserver.database.io:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.io.stall_queued:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.latency:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.tempdb.space:
+                aggregation_strategy: sum
+                attributes:
+                    - tempdb.state
+                enabled: true
+            sqlserver.database.tempdb.version_store.size:
+                enabled: true
+            sqlserver.deadlock.rate:
+                enabled: true
+            sqlserver.forwarded_records.rate:
+                enabled: true
+            sqlserver.index.search.rate:
+                enabled: true
+            sqlserver.latch.wait.rate:
+                enabled: true
+            sqlserver.lock.timeout.rate:
+                enabled: true
+            sqlserver.lock.wait.count:
+                enabled: true
+            sqlserver.lock.wait.rate:
+                enabled: true
+            sqlserver.lock.wait_time.avg:
+                enabled: false
+            sqlserver.login.rate:
+                enabled: true
+            sqlserver.logout.rate:
+                enabled: true
+            sqlserver.memory.grants.pending.count:
+                enabled: true
+            sqlserver.memory.usage:
+                enabled: true
+            sqlserver.os.wait.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - wait.category
+                    - wait.type
+                enabled: false
+            sqlserver.page.buffer_cache.free_list.stalls.rate:
+                enabled: true
+            sqlserver.page.buffer_cache.hit_ratio:
+                enabled: true
+            sqlserver.page.checkpoint.flush.rate:
+                enabled: false
+            sqlserver.page.lazy_write.rate:
+                enabled: false
+            sqlserver.page.life_expectancy:
+                aggregation_strategy: avg
+                attributes:
+                    - performance_counter.object_name
+                enabled: true
+            sqlserver.page.lookup.rate:
+                enabled: true
+            sqlserver.page.operation.rate:
+                aggregation_strategy: avg
+                attributes:
+                    - type
+                enabled: false
+            sqlserver.page.split.rate:
+                enabled: false
+            sqlserver.processes.blocked:
+                enabled: true
+            sqlserver.replica.data.rate:
+                aggregation_strategy: avg
+                attributes:
+                    - replica.direction
+                enabled: false
+            sqlserver.resource_pool.disk.operations:
+                aggregation_strategy: avg
+                attributes:
+                    - direction
+                enabled: false
+            sqlserver.resource_pool.disk.throttled.read.rate:
+                enabled: false
+            sqlserver.resource_pool.disk.throttled.write.rate:
+                enabled: false
+            sqlserver.session.count:
+                enabled: true
+            sqlserver.table.count:
+                aggregation_strategy: sum
+                attributes:
+                    - table.state
+                    - table.status
+                enabled: false
+            sqlserver.transaction.active.count:
+                enabled: false
+            sqlserver.transaction.delay:
+                enabled: false
+            sqlserver.transaction.mirror_write.rate:
+                enabled: false
+            sqlserver.transaction.rate:
+                enabled: false
+            sqlserver.transaction.write.rate:
+                enabled: false
+            sqlserver.transaction_log.flush.data.rate:
+                enabled: false
+            sqlserver.transaction_log.flush.rate:
+                enabled: false
+            sqlserver.transaction_log.flush.wait.rate:
+                enabled: false
+            sqlserver.transaction_log.growth.count:
+                enabled: false
+            sqlserver.transaction_log.shrink.count:
+                enabled: false
+            sqlserver.transaction_log.usage:
+                enabled: false
+            sqlserver.user.connection.count:
+                enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.sqlserver_credentials
+        port: 1433
+        query_sample_collection:
+            max_rows_per_query: 500
+        resource_attributes:
+            host.name:
+                enabled: true
+            server.address:
+                enabled: false
+            server.port:
+                enabled: false
+            service.instance.id:
+                enabled: true
+            sqlserver.computer.name:
+                enabled: false
+            sqlserver.database.name:
+                enabled: true
+            sqlserver.instance.name:
+                enabled: false
+        server: localhost
+        timeout: 0s
+        top_query_collection:
+            collection_interval: 1m0s
+            lookback_time: 0s
+            max_query_plan_size: 921600
+            max_query_sample_count: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_query_count: 200
+        username: cw_monitor
+    sqlserver/metrics_0:
+        collection_interval: 10s
+        computer_name: ""
+        datasource: ""
+        events:
+            db.server.query_sample:
+                enabled: true
+            db.server.top_query:
+                enabled: true
+        initial_delay: 1s
+        instance_name: ""
+        metrics:
+            sqlserver.batch.request.rate:
+                enabled: true
+            sqlserver.batch.sql_compilation.rate:
+                enabled: true
+            sqlserver.batch.sql_recompilation.rate:
+                enabled: true
+            sqlserver.computer.uptime:
+                enabled: false
+            sqlserver.cpu.count:
+                enabled: false
+            sqlserver.database.backup_or_restore.rate:
+                enabled: false
+            sqlserver.database.count:
+                aggregation_strategy: avg
+                attributes:
+                    - database.status
+                enabled: false
+            sqlserver.database.execution.errors:
+                enabled: true
+            sqlserver.database.full_scan.rate:
+                enabled: true
+            sqlserver.database.io:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.io.stall_queued:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.latency:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - physical_filename
+                    - logical_filename
+                    - file_type
+                    - direction
+                enabled: true
+            sqlserver.database.tempdb.space:
+                aggregation_strategy: sum
+                attributes:
+                    - tempdb.state
+                enabled: true
+            sqlserver.database.tempdb.version_store.size:
+                enabled: true
+            sqlserver.deadlock.rate:
+                enabled: true
+            sqlserver.forwarded_records.rate:
+                enabled: true
+            sqlserver.index.search.rate:
+                enabled: true
+            sqlserver.latch.wait.rate:
+                enabled: true
+            sqlserver.lock.timeout.rate:
+                enabled: true
+            sqlserver.lock.wait.count:
+                enabled: true
+            sqlserver.lock.wait.rate:
+                enabled: true
+            sqlserver.lock.wait_time.avg:
+                enabled: false
+            sqlserver.login.rate:
+                enabled: true
+            sqlserver.logout.rate:
+                enabled: true
+            sqlserver.memory.grants.pending.count:
+                enabled: true
+            sqlserver.memory.usage:
+                enabled: true
+            sqlserver.os.wait.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - wait.category
+                    - wait.type
+                enabled: false
+            sqlserver.page.buffer_cache.free_list.stalls.rate:
+                enabled: true
+            sqlserver.page.buffer_cache.hit_ratio:
+                enabled: true
+            sqlserver.page.checkpoint.flush.rate:
+                enabled: false
+            sqlserver.page.lazy_write.rate:
+                enabled: false
+            sqlserver.page.life_expectancy:
+                aggregation_strategy: avg
+                attributes:
+                    - performance_counter.object_name
+                enabled: true
+            sqlserver.page.lookup.rate:
+                enabled: true
+            sqlserver.page.operation.rate:
+                aggregation_strategy: avg
+                attributes:
+                    - type
+                enabled: false
+            sqlserver.page.split.rate:
+                enabled: false
+            sqlserver.processes.blocked:
+                enabled: true
+            sqlserver.replica.data.rate:
+                aggregation_strategy: avg
+                attributes:
+                    - replica.direction
+                enabled: false
+            sqlserver.resource_pool.disk.operations:
+                aggregation_strategy: avg
+                attributes:
+                    - direction
+                enabled: false
+            sqlserver.resource_pool.disk.throttled.read.rate:
+                enabled: false
+            sqlserver.resource_pool.disk.throttled.write.rate:
+                enabled: false
+            sqlserver.session.count:
+                enabled: true
+            sqlserver.table.count:
+                aggregation_strategy: sum
+                attributes:
+                    - table.state
+                    - table.status
+                enabled: false
+            sqlserver.transaction.active.count:
+                enabled: false
+            sqlserver.transaction.delay:
+                enabled: false
+            sqlserver.transaction.mirror_write.rate:
+                enabled: false
+            sqlserver.transaction.rate:
+                enabled: false
+            sqlserver.transaction.write.rate:
+                enabled: false
+            sqlserver.transaction_log.flush.data.rate:
+                enabled: false
+            sqlserver.transaction_log.flush.rate:
+                enabled: false
+            sqlserver.transaction_log.flush.wait.rate:
+                enabled: false
+            sqlserver.transaction_log.growth.count:
+                enabled: false
+            sqlserver.transaction_log.shrink.count:
+                enabled: false
+            sqlserver.transaction_log.usage:
+                enabled: false
+            sqlserver.user.connection.count:
+                enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.sqlserver_credentials
+        port: 1433
+        query_sample_collection:
+            max_rows_per_query: 500
+        resource_attributes:
+            host.name:
+                enabled: true
+            server.address:
+                enabled: false
+            server.port:
+                enabled: false
+            service.instance.id:
+                enabled: true
+            sqlserver.computer.name:
+                enabled: false
+            sqlserver.database.name:
+                enabled: true
+            sqlserver.instance.name:
+                enabled: false
+        server: localhost
+        timeout: 0s
+        top_query_collection:
+            collection_interval: 1m0s
+            lookback_time: 0s
+            max_query_plan_size: 921600
+            max_query_sample_count: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_query_count: 200
+        username: cw_monitor
     telegraf_cpu:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -2641,6 +3392,36 @@ service:
                 - transform/dbi_logs_postgresql_server-logs_0
             receivers:
                 - filelog/postgresql_0
+        logs/dbi_sqlserver_0:
+            exporters:
+                - count/dbi_dbload_sqlserver
+                - signaltometrics/dbi_topsql_sqlserver
+            processors:
+                - filter/dbi_exclude_monitor_sqlserver_0
+            receivers:
+                - sqlserver/metrics_0
+        logs/dbi_sqlserver_rawevents_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - filter/dbi_exclude_monitor_sqlserver_0
+                - transform/dbi_scope_sqlserver_0
+                - resourcedetection/opentelemetry
+                - transform/dbi_resource_sqlserver_0
+                - transform/dbi_logs_sqlserver_raw-events_0
+            receivers:
+                - sqlserver/events_0
+        logs/dbi_sqlserver_serverlogs_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/dbi_scope_sqlserver_0
+                - resourcedetection/opentelemetry
+                - groupbyattrs/files
+                - transform/dbi_resource_sqlserver_0
+                - transform/dbi_logs_sqlserver_server-logs_0
+            receivers:
+                - filelog/sqlserver_0
         logs/emf_logs:
             exporters:
                 - awscloudwatchlogs/emf_logs
@@ -2692,6 +3473,17 @@ service:
                 - postgresql/metrics_0
                 - count/dbi_dbload_postgresql
                 - signaltometrics/dbi_topsql_postgresql
+        metrics/dbi_sqlserver_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/dbi_scope_sqlserver_0
+                - transform/dbi_resource_sqlserver_0
+                - transform/dbi_fix_start_time_sqlserver
+            receivers:
+                - sqlserver/metrics_0
+                - count/dbi_dbload_sqlserver
+                - signaltometrics/dbi_topsql_sqlserver
         metrics/host:
             exporters:
                 - awscloudwatch
@@ -2701,11 +3493,11 @@ service:
             receivers:
                 - telegraf_mem
                 - telegraf_netstat
-                - telegraf_procstat/1917393364
+                - telegraf_disk
                 - telegraf_swap
                 - telegraf_processes
+                - telegraf_procstat/1917393364
                 - telegraf_cpu
-                - telegraf_disk
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry

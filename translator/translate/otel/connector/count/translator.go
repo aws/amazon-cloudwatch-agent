@@ -21,6 +21,9 @@ var dbiDbloadConfig string
 //go:embed dbi_dbload_mysql.yaml
 var dbiDbloadMysqlConfig string
 
+//go:embed dbi_dbload_sqlserver.yaml
+var dbiDbloadSqlServerConfig string
+
 type translator struct {
 	name    string
 	engine  string
@@ -51,6 +54,8 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		return common.GetYamlFileToYamlConfig(cfg, dbiDbloadConfig)
 	case common.MySQLKey:
 		return common.GetYamlFileToYamlConfig(cfg, dbiDbloadMysqlConfig)
+	case common.SQLServerKey:
+		return common.GetYamlFileToYamlConfig(cfg, dbiDbloadSqlServerConfig)
 	}
 
 	return nil, fmt.Errorf("unsupported count connector engine: %s", t.engine)

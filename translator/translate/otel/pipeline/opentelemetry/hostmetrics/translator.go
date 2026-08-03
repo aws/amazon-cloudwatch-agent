@@ -45,6 +45,9 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		if conf.IsSet(common.DatabaseInsightsMysqlKey) {
 			processNames = append(processNames, "mysqld.*")
 		}
+		if conf.IsSet(common.DatabaseInsightsSqlServerKey) {
+			processNames = append(processNames, "sqlservr.*")
+		}
 		opts = append(opts, hostmetrics.WithProcessScraper(map[string]any{
 			"include": map[string]any{
 				"match_type": "regexp",

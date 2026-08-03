@@ -61,3 +61,23 @@ func TestTranslateDbloadMysql(t *testing.T) {
 	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_host")
 	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.count")
 }
+func TestTranslatorID_SqlServer(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbload+"_"+common.SQLServerKey, common.SQLServerKey)
+	assert.Equal(t, "count/dbi_dbload_sqlserver", tr.ID().String())
+}
+
+func TestTranslateDbloadSqlServer(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbload+"_"+common.SQLServerKey, common.SQLServerKey)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	countCfg := cfg.(*countconnector.Config)
+	assert.Len(t, countCfg.Logs, 8)
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_app")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_wait")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_user")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_db")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_sql")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_sql_wait")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.by_host")
+	assert.Contains(t, countCfg.Logs, "sqlserver.active_sessions.count")
+}

@@ -31,6 +31,7 @@ const (
 	CategoryKafkaClient Category = "KAFKA/CLIENT"
 	CategoryNvidiaGPU   Category = "NVIDIA_GPU"
 	CategoryMySQL       Category = "MYSQL"
+	CategorySQLServer   Category = "SQLSERVER"
 	CategoryPostgreSQL  Category = "POSTGRESQL"
 )
 

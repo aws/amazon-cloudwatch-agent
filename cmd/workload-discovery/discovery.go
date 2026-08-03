@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/java"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/mysql"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/nvidia"
+	"github.com/aws/amazon-cloudwatch-agent/internal/detector/sqlserver"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/postgresql"
 	"github.com/aws/amazon-cloudwatch-agent/internal/detector/util"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
@@ -50,6 +51,7 @@ func NewDiscoverer(cfg Config, logger *slog.Logger) *Discoverer {
 		processDetectors: []detector.ProcessDetector{
 			java.NewDetector(logger, filters.Process.Name),
 			mysql.NewDetector(logger),
+			sqlserver.NewDetector(logger),
 			postgresql.NewDetector(logger),
 		},
 		deviceDetectors: []detector.DeviceDetector{

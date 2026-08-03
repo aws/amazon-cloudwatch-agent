@@ -54,3 +54,9 @@ func TestDefaultOtelConfigWindowsTranslation(t *testing.T) {
 	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_windows.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_windows.yaml")
 }
+
+func TestDBISqlServerConfigWindows(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	checkTranslation(t, "opentelemetry/dbi_sqlserver_config_windows", "windows", nil, "")
+}
