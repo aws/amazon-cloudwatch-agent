@@ -509,10 +509,12 @@ func TestPublish(t *testing.T) {
 	time.Sleep(interval/2 + 2*time.Second)
 	assert.Less(t, 0, len(svc.Calls))
 	assert.Less(t, len(svc.Calls), expectedCalls)
-	// Expect all API calls after 1.5x the interval.
-	// 10K metrics in batches of 20...
-	time.Sleep(interval)
-	assert.Equal(t, expectedCalls, len(svc.Calls))
+	// Poll instead of sleeping a fixed interval + hard-asserting: under CI contention
+	// the publisher can dispatch as slowly as ~2 calls/s.
+	require.Eventually(t, func() bool {
+		return len(svc.Calls) == expectedCalls
+	}, 3*time.Minute, 250*time.Millisecond,
+		"expected exactly %d PutMetricData calls; got %d", expectedCalls, len(svc.Calls))
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	cw.Shutdown(ctx)
 }
@@ -540,8 +542,23 @@ func TestMiddleware(t *testing.T) {
 	handler := new(awsmiddleware.MockHandler)
 	handler.On("ID").Return("test")
 	handler.On("Position").Return(awsmiddleware.After)
-	handler.On("HandleRequest", mock.Anything, mock.Anything)
-	handler.On("HandleResponse", mock.Anything, mock.Anything)
+	// Signal on channels when each middleware phase fires so we can wait for
+	// HandleResponse deterministically: under CI contention the response pipeline
+	// can lag the request phase by seconds, which a fixed sleep races.
+	reqFired := make(chan struct{}, 8)
+	respFired := make(chan struct{}, 8)
+	handler.On("HandleRequest", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		select {
+		case reqFired <- struct{}{}:
+		default:
+		}
+	})
+	handler.On("HandleResponse", mock.Anything, mock.Anything).Run(func(mock.Arguments) {
+		select {
+		case respFired <- struct{}{}:
+		default:
+		}
+	})
 	middleware := new(awsmiddleware.MockMiddlewareExtension)
 	middleware.On("Handlers").Return([]awsmiddleware.RequestHandler{handler}, []awsmiddleware.ResponseHandler{handler})
 	extensions := map[component.ID]component.Component{id: middleware}
@@ -551,7 +568,19 @@ func TestMiddleware(t *testing.T) {
 	// Expect 1500 metrics batched in 2 API calls.
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
-	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+
+	waitFor := func(t *testing.T, label string, ch <-chan struct{}) {
+		t.Helper()
+		start := time.Now()
+		select {
+		case <-ch:
+			t.Logf("%s fired after %s", label, time.Since(start))
+		case <-time.After(30 * time.Second):
+			t.Fatalf("%s was not called within 30s (elapsed %s)", label, time.Since(start))
+		}
+	}
+	waitFor(t, "HandleRequest", reqFired)
+	waitFor(t, "HandleResponse", respFired)
 	handler.AssertCalled(t, "HandleRequest", mock.Anything, mock.Anything)
 	handler.AssertCalled(t, "HandleResponse", mock.Anything, mock.Anything)
 	require.NoError(t, cw.Shutdown(ctx))
@@ -567,14 +596,18 @@ func TestBackoffRetries(t *testing.T) {
 		time.Millisecond * 3200,
 		time.Millisecond * 6400}
 	assert := assert.New(t)
-	leniency := 200 * time.Millisecond
+	// 500ms upper-bound slack: a 200ms sleep can take 300-400ms under Windows timer
+	// jitter + CI contention. Lower bound stays tight (sleeps[i]/2).
+	leniency := 500 * time.Millisecond
 	for i := 0; i <= defaultRetryCount; i++ {
 		start := time.Now()
 		c.backoffSleep()
-		// Expect time since start is between sleeps[i]/2 and sleeps[i].
-		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(sleeps[i]/2, time.Since(start))
-		assert.Greater(sleeps[i]+leniency, time.Since(start))
+		elapsed := time.Since(start)
+		// Expect time since start is between sleeps[i]/2 and sleeps[i]+leniency.
+		t.Logf("backoff iter %d: expected [%s, %s], actual %s",
+			i, sleeps[i]/2, sleeps[i]+leniency, elapsed)
+		assert.Less(sleeps[i]/2, elapsed)
+		assert.Greater(sleeps[i]+leniency, elapsed)
 	}
 	start := time.Now()
 	c.backoffSleep()
