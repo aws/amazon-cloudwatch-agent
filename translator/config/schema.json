@@ -1900,6 +1900,16 @@
                         }
                       },
                       "additionalProperties": false
+                    },
+                    "keda": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to collect KEDA metrics",
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false
                     }
                   },
                   "additionalProperties": false

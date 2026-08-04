@@ -405,6 +405,38 @@ func TestContainerInsightsKarpenterConfig(t *testing.T) {
 	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
 }
 
+func TestContainerInsightsKedaConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+
+	agent.Global_Config = *new(agent.Agent)
+	translator.SetTargetPlatform("linux")
+	var input interface{}
+	blob, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_keda_config.json")
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(blob, &input))
+	_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
+
+	var expected interface{}
+	bs, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_keda_config.yaml")
+	require.NoError(t, err)
+	require.NoError(t, yaml.Unmarshal(bs, &expected))
+
+	var actual interface{}
+	cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+	require.NoError(t, err)
+	yamlConfig, err := mapstructure.Marshal(cfg)
+	require.NoError(t, err)
+	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+		return pretty.Sprint(x) < pretty.Sprint(y)
+	})
+	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+}
+
 func TestPrometheusOtelPipelineConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

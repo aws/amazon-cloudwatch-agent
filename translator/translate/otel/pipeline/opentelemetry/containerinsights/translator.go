@@ -76,6 +76,9 @@ var kubeStateMetricsYAML string
 //go:embed karpenter.yaml
 var karpenterYAML string
 
+//go:embed keda.yaml
+var kedaYAML string
+
 // NewTranslators returns all container insights pipeline translators.
 // The pipelines generated depend on the resolved role (see getRole for priority):
 //   - "node": daemonset pipelines (per-node metrics + logs)
@@ -114,6 +117,9 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
 		if solutionEnabled(conf, "karpenter") {
 			translators.Set(newYAMLPipeline("karpenter", pipeline.SignalMetrics, karpenterYAML))
+		}
+		if solutionEnabled(conf, "keda") {
+			translators.Set(newYAMLPipeline("keda", pipeline.SignalMetrics, kedaYAML))
 		}
 	}
 

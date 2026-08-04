@@ -10,10 +10,10 @@
         "role": "cluster",
         "solutions": {
           "karpenter": {
-            "enabled": true
+            "enabled": false
           },
           "keda": {
-            "enabled": false
+            "enabled": true
           }
         }
       }
