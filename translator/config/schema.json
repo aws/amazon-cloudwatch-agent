@@ -1836,6 +1836,11 @@
                       "username": { "type": "string" },
                       "password_file": { "type": "string" },
                       "ca_file": { "type": "string" },
+                      "per_resource_collection_interval": {
+                        "description": "How often per-resource (table/index) metrics are collected, in seconds. Defaults to 60 if omitted.",
+                        "type": "integer",
+                        "minimum": 1
+                      },
                       "logs": {
                         "type": "object",
                         "properties": {
