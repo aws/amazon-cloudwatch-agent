@@ -1926,13 +1926,13 @@ jobs:
   AzureVMIntegrationTest:
     needs: [OutputEnvVariables]
     if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
-    name: '[WIP] AzureVM-default-otel'
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel
     runs-on: ubuntu-latest
-    # Mirrors the generator's per-test `wip` flag: failures report but do not block CI.
-    # These jobs are not matrix-driven, so it is declared here instead of in the test matrix.
-    # Remove the [WIP] name prefix and set this to 'false' once the suites are stable.
-    env:
-      WIP: 'true'
+    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: [{ wip: false }]
     permissions:
       id-token: write
       contents: read
@@ -2008,17 +2008,17 @@ jobs:
             -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
 
       - name: "[WIP] ✅ Passed"
-        if: steps.terraform_apply.outcome == 'success' && env.WIP == 'true'
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
         run: echo "::notice::WIP test passed"
 
       - name: "[WIP] ⚠️ Failed (Overruled)"
-        if: steps.terraform_apply.outcome == 'failure' && env.WIP == 'true'
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
         run: |
           echo "::warning::WIP test failed but allowed to continue"
           echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if not WIP
-        if: steps.terraform_apply.outcome == 'failure' && env.WIP != 'true'
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
 
       # Only the vars destroy actually resolves: runner_ip has no default, and the vnet/subnet
@@ -2054,13 +2054,13 @@ jobs:
   AKSIntegrationTest:
     needs: [OutputEnvVariables]
     if: contains(inputs.test_dir_filter, './test/azure/aks') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
-    name: '[WIP] AKS-default-otel'
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AKS-default-otel
     runs-on: ubuntu-latest
-    # Mirrors the generator's per-test `wip` flag: failures report but do not block CI.
-    # These jobs are not matrix-driven, so it is declared here instead of in the test matrix.
-    # Remove the [WIP] name prefix and set this to 'false' once the suites are stable.
-    env:
-      WIP: 'true'
+    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: [{ wip: false }]
     permissions:
       id-token: write
       contents: read
@@ -2146,17 +2146,17 @@ jobs:
             -var="runner_ip=$RUNNER_IP"
 
       - name: "[WIP] ✅ Passed"
-        if: steps.terraform_apply.outcome == 'success' && env.WIP == 'true'
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
         run: echo "::notice::WIP test passed"
 
       - name: "[WIP] ⚠️ Failed (Overruled)"
-        if: steps.terraform_apply.outcome == 'failure' && env.WIP == 'true'
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
         run: |
           echo "::warning::WIP test failed but allowed to continue"
           echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if not WIP
-        if: steps.terraform_apply.outcome == 'failure' && env.WIP != 'true'
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
         run: exit 1
 
       # cwagent_image_repo/_tag have no defaults, so destroy still has to resolve them.
