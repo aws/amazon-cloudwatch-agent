@@ -1882,6 +1882,27 @@
                     }
                   },
                   "additionalProperties": false
+                },
+                "solutions": {
+                  "description": "Solution-specific pipeline toggles for container insights",
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Global toggle for all solutions (default: true)",
+                      "type": "boolean"
+                    },
+                    "karpenter": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to collect Karpenter metrics",
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false
