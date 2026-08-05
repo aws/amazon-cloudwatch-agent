@@ -5,6 +5,7 @@ package databaseinsights
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -283,6 +284,10 @@ func (t *dbiTranslator) serverLogReceiver() common.ComponentTranslator {
 			filelog.WithSeverityPattern(buildSqlServerSeverityPattern()),
 			filelog.WithSeverityMapping(sqlserverLogSeverityMapping),
 		)
+		// Windows SQL Server writes ERRORLOG in UTF-16LE encoding.
+		if runtime.GOOS == "windows" {
+			opts = append(opts, filelog.WithEncoding("utf-16le"))
+		}
 	}
 	return filelog.NewTranslator(opts...)
 }
