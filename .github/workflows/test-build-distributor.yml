@@ -92,22 +92,29 @@ jobs:
 
       - name: Agent Version
         id: version
+        env:
+          INPUT_BUCKET: ${{ inputs.Bucket }}
+          INPUT_BUCKET_KEY: ${{ inputs.BucketKey }}
         run: |
-          aws s3 cp s3://${{ inputs.Bucket }}/${{ inputs.BucketKey }}/CWAGENT_VERSION .
+          aws s3 cp "s3://$INPUT_BUCKET/$INPUT_BUCKET_KEY/CWAGENT_VERSION" .
           echo "version=$(cat CWAGENT_VERSION)" >> "$GITHUB_OUTPUT"
 
       - name: Check if SSM distributor version already exists
         id: check
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
+          AGENT_VERSION: ${{ steps.version.outputs.version }}
         run: |
           VERSION_EXISTS=$(aws ssm list-document-versions \
-            --name "${{ inputs.DistributorName }}" \
-            --region ${{ inputs.Region }} \
+            --name "$INPUT_DISTRIBUTOR_NAME" \
+            --region "$INPUT_REGION" \
             --no-paginate \
-            --query "DocumentVersions[?VersionName=='${{ steps.version.outputs.version }}']" \
+            --query "DocumentVersions[?VersionName=='$AGENT_VERSION']" \
             --output text 2>/dev/null)
           if [ -n "$VERSION_EXISTS" ]; then
             echo "should-build=false" >> "$GITHUB_OUTPUT"
-            echo "Version ${{ steps.version.outputs.version }} already exists, skipping build"
+            echo "Version $AGENT_VERSION already exists, skipping build"
           else
             echo "should-build=true" >> "$GITHUB_OUTPUT"
           fi
@@ -142,35 +149,39 @@ jobs:
 
       - name: Prepare Linux package
         run: |
-          mkdir -p ${{ env.WORKING_DIRECTORY }}
-          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.rpm ${{ env.WORKING_DIRECTORY }}/
-          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.deb ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/install.sh ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/uninstall.sh ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/detect-system.sh ${{ env.WORKING_DIRECTORY }}/
+          mkdir -p "$WORKING_DIRECTORY"
+          aws s3 cp "$SOURCE_S3_PATH/amazon-cloudwatch-agent.rpm" "$WORKING_DIRECTORY/"
+          aws s3 cp "$SOURCE_S3_PATH/amazon-cloudwatch-agent.deb" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/install.sh" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/uninstall.sh" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/linux/detect-system.sh" "$WORKING_DIRECTORY/"
 
       - name: Create manifest JSON
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          MATRIX_ARCH: ${{ matrix.arch }}
+          AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
         run: |
-          cat > ${{ env.WORKING_DIRECTORY }}/manifest.json << EOF
+          cat > "$WORKING_DIRECTORY/manifest.json" << EOF
           {
-            "name": "${{ inputs.DistributorName }}",
+            "name": "$INPUT_DISTRIBUTOR_NAME",
             "platform": "linux",
-            "architecture": "${{ matrix.arch }}",
-            "version": "${{ needs.AgentVersion.outputs.agent-version }}"
+            "architecture": "$MATRIX_ARCH",
+            "version": "$AGENT_VERSION"
           }
           EOF
 
       - name: Zip
-        run: zip -j AmazonCloudWatchAgent.zip ${{ env.WORKING_DIRECTORY }}/*
+        run: zip -j AmazonCloudWatchAgent.zip "$WORKING_DIRECTORY"/*
 
       - name: Upload zip
-        run: aws s3 cp AmazonCloudWatchAgent.zip ${{ env.DESTINATION_S3_PATH }}/AmazonCloudWatchAgent.zip
+        run: aws s3 cp AmazonCloudWatchAgent.zip "$DESTINATION_S3_PATH/AmazonCloudWatchAgent.zip"
 
       - name: Calculate checksum
         run: echo "$(sha256sum AmazonCloudWatchAgent.zip | cut -d' ' -f1)" > checksum.txt
 
       - name: Upload checksum
-        run: aws s3 cp checksum.txt ${{ env.DESTINATION_S3_PATH }}/checksum.txt
+        run: aws s3 cp checksum.txt "$DESTINATION_S3_PATH/checksum.txt"
 
   PackageDarwin:
     name: 'PackageDarwin'
@@ -202,33 +213,37 @@ jobs:
 
       - name: Prepare macOS package
         run: |
-          mkdir -p ${{ env.WORKING_DIRECTORY }}
-          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.pkg ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/darwin/install.sh ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/darwin/uninstall.sh ${{ env.WORKING_DIRECTORY }}/
+          mkdir -p "$WORKING_DIRECTORY"
+          aws s3 cp "$SOURCE_S3_PATH/amazon-cloudwatch-agent.pkg" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/darwin/install.sh" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/darwin/uninstall.sh" "$WORKING_DIRECTORY/"
 
       - name: Create manifest JSON
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          MATRIX_ARCH: ${{ matrix.arch }}
+          AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
         run: |
-          cat > ${{ env.WORKING_DIRECTORY }}/manifest.json << EOF
+          cat > "$WORKING_DIRECTORY/manifest.json" << EOF
           {
-            "name": "${{ inputs.DistributorName }}",
+            "name": "$INPUT_DISTRIBUTOR_NAME",
             "platform": "mac_os_x",
-            "architecture": "${{ matrix.arch }}",
-            "version": "${{ needs.AgentVersion.outputs.agent-version }}"
+            "architecture": "$MATRIX_ARCH",
+            "version": "$AGENT_VERSION"
           }
           EOF
 
       - name: Zip
-        run: zip -j AmazonCloudWatchAgent.zip ${{ env.WORKING_DIRECTORY }}/*
+        run: zip -j AmazonCloudWatchAgent.zip "$WORKING_DIRECTORY"/*
 
       - name: Upload zip
-        run: aws s3 cp AmazonCloudWatchAgent.zip ${{ env.DESTINATION_S3_PATH }}/AmazonCloudWatchAgent.zip
+        run: aws s3 cp AmazonCloudWatchAgent.zip "$DESTINATION_S3_PATH/AmazonCloudWatchAgent.zip"
 
       - name: Calculate checksum
         run: echo "$(sha256sum AmazonCloudWatchAgent.zip | cut -d' ' -f1)" > checksum.txt
 
       - name: Upload checksum
-        run: aws s3 cp checksum.txt ${{ env.DESTINATION_S3_PATH }}/checksum.txt
+        run: aws s3 cp checksum.txt "$DESTINATION_S3_PATH/checksum.txt"
 
   PackageWindows:
     name: 'PackageWindows'
@@ -257,33 +272,36 @@ jobs:
 
       - name: Prepare Windows package
         run: |
-          mkdir -p ${{ env.WORKING_DIRECTORY }}
-          aws s3 cp ${{ env.SOURCE_S3_PATH }}/amazon-cloudwatch-agent.msi ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/windows/install.ps1 ${{ env.WORKING_DIRECTORY }}/
-          cp ${{ env.CHECKOUT_ROOT_DIR }}/packaging/windows/uninstall.ps1 ${{ env.WORKING_DIRECTORY }}/
+          mkdir -p "$WORKING_DIRECTORY"
+          aws s3 cp "$SOURCE_S3_PATH/amazon-cloudwatch-agent.msi" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/windows/install.ps1" "$WORKING_DIRECTORY/"
+          cp "${{ env.CHECKOUT_ROOT_DIR }}/packaging/windows/uninstall.ps1" "$WORKING_DIRECTORY/"
 
       - name: Create manifest JSON
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
         run: |
-          cat > ${{ env.WORKING_DIRECTORY }}/manifest.json << EOF
+          cat > "$WORKING_DIRECTORY/manifest.json" << EOF
           {
-            "name": "${{ inputs.DistributorName }}",
+            "name": "$INPUT_DISTRIBUTOR_NAME",
             "platform": "windows",
             "architecture": "amd64",
-            "version": "${{ needs.AgentVersion.outputs.agent-version }}"
+            "version": "$AGENT_VERSION"
           }
           EOF
 
       - name: Zip
-        run: zip -j AmazonCloudWatchAgent.zip ${{ env.WORKING_DIRECTORY }}/*
+        run: zip -j AmazonCloudWatchAgent.zip "$WORKING_DIRECTORY"/*
 
       - name: Upload zip
-        run: aws s3 cp AmazonCloudWatchAgent.zip ${{ env.DESTINATION_S3_PATH }}/AmazonCloudWatchAgent.zip
+        run: aws s3 cp AmazonCloudWatchAgent.zip "$DESTINATION_S3_PATH/AmazonCloudWatchAgent.zip"
 
       - name: Calculate checksum
         run: echo "$(sha256sum AmazonCloudWatchAgent.zip | cut -d' ' -f1)" > checksum.txt
 
       - name: Upload checksum
-        run: aws s3 cp checksum.txt ${{ env.DESTINATION_S3_PATH }}/checksum.txt
+        run: aws s3 cp checksum.txt "$DESTINATION_S3_PATH/checksum.txt"
 
   UploadDistributor:
     name: 'UploadDistributor'
@@ -312,11 +330,11 @@ jobs:
       - name: Download checksums
         run: |
           mkdir -p checksum/{windows/amd64,linux/{amd64,arm64},darwin/{amd64,arm64}}
-          aws s3 cp ${{ env.S3_PATH }}/windows/amd64/${{ env.AGENT_VERSION }}/checksum.txt checksum/windows/amd64/
-          aws s3 cp ${{ env.S3_PATH }}/linux/amd64/${{ env.AGENT_VERSION }}/checksum.txt checksum/linux/amd64/
-          aws s3 cp ${{ env.S3_PATH }}/linux/arm64/${{ env.AGENT_VERSION }}/checksum.txt checksum/linux/arm64/
-          aws s3 cp ${{ env.S3_PATH }}/darwin/amd64/${{ env.AGENT_VERSION }}/checksum.txt checksum/darwin/amd64/
-          aws s3 cp ${{ env.S3_PATH }}/darwin/arm64/${{ env.AGENT_VERSION }}/checksum.txt checksum/darwin/arm64/
+          aws s3 cp "$S3_PATH/windows/amd64/$AGENT_VERSION/checksum.txt" checksum/windows/amd64/
+          aws s3 cp "$S3_PATH/linux/amd64/$AGENT_VERSION/checksum.txt" checksum/linux/amd64/
+          aws s3 cp "$S3_PATH/linux/arm64/$AGENT_VERSION/checksum.txt" checksum/linux/arm64/
+          aws s3 cp "$S3_PATH/darwin/amd64/$AGENT_VERSION/checksum.txt" checksum/darwin/amd64/
+          aws s3 cp "$S3_PATH/darwin/arm64/$AGENT_VERSION/checksum.txt" checksum/darwin/arm64/
 
       - name: Create manifest JSON
         run: |
@@ -326,15 +344,18 @@ jobs:
           export DARWIN_AMD64_SHA=$(cat checksum/darwin/amd64/checksum.txt)
           export DARWIN_ARM64_SHA=$(cat checksum/darwin/arm64/checksum.txt)
           
-          envsubst < ${{ env.CHECKOUT_ROOT_DIR }}/packaging/manifest.json > manifest.json
+          envsubst < "${{ env.CHECKOUT_ROOT_DIR }}/packaging/manifest.json" > manifest.json
 
       - name: Upload manifest JSON to S3
-        run: aws s3 cp manifest.json ${{ env.S3_PATH }}/manifest.json
+        run: aws s3 cp manifest.json "$S3_PATH/manifest.json"
 
       - name: Check if distributor exists
         id: check-distributor
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
         run: |
-          if aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} 2>/dev/null; then
+          if aws ssm describe-document --name "$INPUT_DISTRIBUTOR_NAME" --region "$INPUT_REGION" 2>/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -342,44 +363,58 @@ jobs:
 
       - name: Create distributor
         if: steps.check-distributor.outputs.exists == 'false'
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
+          AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
         run: |
           aws ssm create-document \
-            --name "${{ inputs.DistributorName }}" \
+            --name "$INPUT_DISTRIBUTOR_NAME" \
             --content file://manifest.json \
-            --attachments Key="SourceUrl",Values="${{ env.S3_PATH }}" \
-            --version-name "${{ needs.AgentVersion.outputs.agent-version }}" \
+            --attachments Key="SourceUrl",Values="$S3_PATH" \
+            --version-name "$AGENT_VERSION" \
             --document-type Package \
-            --region ${{ inputs.Region }}
+            --region "$INPUT_REGION"
 
       - name: Remove oldest if limit hit
         if: steps.check-distributor.outputs.exists == 'true'
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
         run: |
-          VERSION_COUNT=$(aws ssm list-document-versions --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --no-paginate --query 'length(DocumentVersions)' --output text)
-          if [ "$VERSION_COUNT" -ge ${{ env.SSM_DISTRIBUTOR_VERSION_LIMIT }} ]; then
-            OLDEST_VERSION=$(aws ssm list-document-versions --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --no-paginate --query 'DocumentVersions[-1].DocumentVersion' --output text)
+          VERSION_COUNT=$(aws ssm list-document-versions --name "$INPUT_DISTRIBUTOR_NAME" --region "$INPUT_REGION" --no-paginate --query 'length(DocumentVersions)' --output text)
+          if [ "$VERSION_COUNT" -ge "${{ env.SSM_DISTRIBUTOR_VERSION_LIMIT }}" ]; then
+            OLDEST_VERSION=$(aws ssm list-document-versions --name "$INPUT_DISTRIBUTOR_NAME" --region "$INPUT_REGION" --no-paginate --query 'DocumentVersions[-1].DocumentVersion' --output text)
             echo "Deleting oldest version: $OLDEST_VERSION"
-            aws ssm delete-document --name "${{ inputs.DistributorName }}" --document-version "$OLDEST_VERSION" --region ${{ inputs.Region }}
+            aws ssm delete-document --name "$INPUT_DISTRIBUTOR_NAME" --document-version "$OLDEST_VERSION" --region "$INPUT_REGION"
           fi
 
       - name: Update distributor
         if: steps.check-distributor.outputs.exists == 'true'
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
+          AGENT_VERSION: ${{ needs.AgentVersion.outputs.agent-version }}
         run: |
           aws ssm update-document \
-            --name "${{ inputs.DistributorName }}" \
+            --name "$INPUT_DISTRIBUTOR_NAME" \
             --content file://manifest.json \
-            --attachments Key="SourceUrl",Values="${{ env.S3_PATH }}" \
-            --version-name "${{ needs.AgentVersion.outputs.agent-version }}" \
+            --attachments Key="SourceUrl",Values="$S3_PATH" \
+            --version-name "$AGENT_VERSION" \
             --document-version "\$LATEST" \
-            --region ${{ inputs.Region }}
+            --region "$INPUT_REGION"
 
       - name: Verify distributor
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
         with:
           max_attempts: 6
           timeout_minutes: 5
           retry_wait_seconds: 10
           command: |
-            STATUS=$(aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --query 'Document.Status' --output text)
+            STATUS=$(aws ssm describe-document --name "$INPUT_DISTRIBUTOR_NAME" --region "$INPUT_REGION" --query 'Document.Status' --output text)
             if [ "$STATUS" != "Active" ]; then
               echo "Error: Document status is $STATUS, expected Active"
               exit 1
@@ -387,14 +422,17 @@ jobs:
             echo "Document is Active"
 
       - name: Update default version
+        env:
+          INPUT_DISTRIBUTOR_NAME: ${{ inputs.DistributorName }}
+          INPUT_REGION: ${{ inputs.Region }}
         run: |
-          CURRENT_DEFAULT=$(aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --query 'Document.DefaultVersion' --output text)
-          LATEST_VERSION=$(aws ssm describe-document --name "${{ inputs.DistributorName }}" --region ${{ inputs.Region }} --query 'Document.LatestVersion' --output text)
-          if [ "$CURRENT_DEFAULT" != "$LATEST_DEFAULT" ]; then
+          CURRENT_DEFAULT=$(aws ssm describe-document --name "$INPUT_DISTRIBUTOR_NAME" --region "$INPUT_REGION" --query 'Document.DefaultVersion' --output text)
+          LATEST_VERSION=$(aws ssm describe-document --name "$INPUT_DISTRIBUTOR_NAME" --region "$INPUT_REGION" --query 'Document.LatestVersion' --output text)
+          if [ "$CURRENT_DEFAULT" != "$LATEST_VERSION" ]; then
             aws ssm update-document-default-version \
-              --name "${{ inputs.DistributorName }}" \
+              --name "$INPUT_DISTRIBUTOR_NAME" \
               --document-version "$LATEST_VERSION" \
-              --region ${{ inputs.Region }}
+              --region "$INPUT_REGION"
           else
             echo "Default version already matches latest version"
           fi

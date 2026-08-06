@@ -1,5 +1,74 @@
 connectors:
-    count/dbi_dbload:
+    count/dbi_dbload_mysql:
+        datapoints:
+            metric.datapoint.count:
+                description: The number of data points observed.
+        logs:
+            mysql.active_sessions.by_db:
+                attributes:
+                    - key: db.system.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Active sessions by database
+            mysql.active_sessions.by_host:
+                attributes:
+                    - key: db.system.name
+                    - key: network.peer.address
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Active sessions by host
+            mysql.active_sessions.by_sql:
+                attributes:
+                    - key: db.system.name
+                    - key: mysql.events_statements_current.digest
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Active sessions by query digest
+            mysql.active_sessions.by_sql_wait:
+                attributes:
+                    - key: db.system.name
+                    - key: mysql.events_statements_current.digest
+                    - key: mysql.wait_type
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Active sessions by query and wait
+            mysql.active_sessions.by_user:
+                attributes:
+                    - key: db.system.name
+                    - key: user.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Active sessions by user
+            mysql.active_sessions.by_wait:
+                attributes:
+                    - key: db.system.name
+                    - key: mysql.wait_type
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Active sessions by wait event
+            mysql.active_sessions.count:
+                attributes:
+                    - key: db.system.name
+                    - key: db.namespace
+                conditions:
+                    - attributes["mysql.session.status"] != "idle"
+                description: Total active sessions
+        metrics:
+            metric.count:
+                description: The number of metrics observed.
+        spanevents:
+            trace.span.event.count:
+                description: The number of span events observed.
+        spans:
+            trace.span.count:
+                description: The number of spans observed.
+    count/dbi_dbload_postgresql:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -79,7 +148,315 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql:
+    signaltometrics/dbi_topsql_mysql:
+        logs:
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.count_star"] != nil
+              description: SQL execution count
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.count_star
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.count_star"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"] != nil
+              description: Total execution time in picoseconds
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_timer_wait
+              sum:
+                value: Double(attributes["mysql.events_statements_summary_by_digest.sum_timer_wait"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_lock_time"] != nil
+              description: Total lock time in seconds
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_lock_time
+              sum:
+                value: Double(attributes["mysql.events_statements_summary_by_digest.sum_lock_time"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_rows_sent"] != nil
+              description: Rows sent to client
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_rows_sent
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_sent"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_rows_examined"] != nil
+              description: Rows examined
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_rows_examined
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_examined"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_errors"] != nil
+              description: Total errors
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_errors
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_errors"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_sort_rows"] != nil
+              description: Rows sorted
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_sort_rows
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_rows"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_tables"] != nil
+              description: Temporary tables created
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_created_tmp_tables
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_tables"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_disk_tables"] != nil
+              description: Temporary disk tables created
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_created_tmp_disk_tables
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_created_tmp_disk_tables"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_no_index_used"] != nil
+              description: Queries using no index
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_no_index_used
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_no_index_used"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_select_full_join"] != nil
+              description: Full joins without index
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_select_full_join
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_select_full_join"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_sort_scan"] != nil
+              description: Sorts done via full scan
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_sort_scan
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_scan"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_no_good_index_used"] != nil
+              description: Queries using no good index
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_no_good_index_used
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_no_good_index_used"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_select_scan"] != nil
+              description: Full table scans
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_select_scan
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_select_scan"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"] != nil
+              description: Rows affected
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_rows_affected
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_rows_affected"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"] != nil
+              description: Joins checking key usage per row
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_select_range_check
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_select_range_check"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"] != nil
+              description: Sort merge passes
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_sort_merge_passes
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_merge_passes"])
+              unit: ""
+            - attributes:
+                - key: db.system.name
+                  optional: false
+                - key: mysql.events_statements_summary_by_digest.digest
+                  optional: false
+                - key: db.namespace
+                  optional: false
+              conditions:
+                - attributes["mysql.events_statements_summary_by_digest.sum_sort_range"] != nil
+              description: Sorts using ranges
+              include_resource_attributes:
+                - key: service.instance.id
+                  optional: false
+              name: mysql.sum_sort_range
+              sum:
+                value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_range"])
+              unit: ""
+    signaltometrics/dbi_topsql_postgresql:
         logs:
             - attributes:
                 - key: db.system.name
@@ -617,7 +994,15 @@ processors:
         metrics:
             metric:
                 - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added)$")
-    filter/dbi_exclude_monitor_0:
+    filter/dbi_exclude_monitor_mysql_0:
+        error_mode: propagate
+        logs:
+            log_record:
+                - attributes["user.name"] == "cw_monitor"
+        metrics: {}
+        spans: {}
+        traces: {}
+    filter/dbi_exclude_monitor_postgresql_0:
         error_mode: propagate
         logs:
             log_record:
@@ -1273,7 +1658,21 @@ processors:
                 - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.cronjob.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.replicaset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
-    transform/dbi_fix_start_time:
+    transform/dbi_fix_start_time_mysql:
+        error_mode: ignore
+        flatten_data: false
+        log_statements: []
+        metric_statements:
+            - context: datapoint
+              error_mode: ignore
+              statements:
+                - set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0
+                - replace_match(datapoint.attributes["mysql.wait_type"], "", "CPU")
+                - replace_match(datapoint.attributes["network.peer.address"], "", "unknown")
+                - replace_match(datapoint.attributes["mysql.events_statements_current.digest"], "", "unknown")
+                - replace_match(datapoint.attributes["user.name"], "", "unknown")
+        trace_statements: []
+    transform/dbi_fix_start_time_postgresql:
         error_mode: ignore
         flatten_data: false
         log_statements: []
@@ -1289,7 +1688,34 @@ processors:
                 - replace_match(datapoint.attributes["postgresql.query_id"], "", "unknown")
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
         trace_statements: []
-    transform/dbi_logs_raw-events_0:
+    transform/dbi_logs_mysql_raw-events_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/mysql/raw-events")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-mysql"], "/"))
+        metric_statements: []
+        trace_statements: []
+    transform/dbi_logs_mysql_server-logs_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/mysql/server-logs")
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-mysql"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
+        metric_statements: []
+        trace_statements: []
+    transform/dbi_logs_postgresql_raw-events_0:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -1300,7 +1726,7 @@ processors:
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
         metric_statements: []
         trace_statements: []
-    transform/dbi_logs_server-logs_0:
+    transform/dbi_logs_postgresql_server-logs_0:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -1316,7 +1742,23 @@ processors:
                 - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
-    transform/dbi_resource_0:
+    transform/dbi_resource_mysql_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["db.system.name"], "mysql")
+                - set(resource.attributes["db.instance.name"], "my-mysql")
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["db.system.name"], "mysql")
+                - set(resource.attributes["db.instance.name"], "my-mysql")
+        trace_statements: []
+    transform/dbi_resource_postgresql_0:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -1332,7 +1774,23 @@ processors:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         trace_statements: []
-    transform/dbi_scope:
+    transform/dbi_scope_mysql_0:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        trace_statements: []
+    transform/dbi_scope_postgresql_0:
         error_mode: ignore
         flatten_data: false
         log_statements:
@@ -1595,6 +2053,32 @@ receivers:
             tls:
                 insecure: true
         transport: udp
+    filelog/mysql_0:
+        encoding: utf-8
+        include:
+            - /var/log/mysql/error.log
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2}T\d{2}:\d{2}:\d{2}\.(\d{1,9})Z)
+              timestamp:
+                layout: 2006-1-_2T15:04:05.999999999Z
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+            - on_error: send_quiet
+              regex: \s\d+\s+\[(?P<severity>System|Warning|Note|ERROR)\]
+              severity:
+                mapping:
+                    error: ERROR
+                    info:
+                        - System
+                        - Note
+                    warn: Warning
+                parse_from: attributes.severity
+              type: regex_parser
+        start_at: end
     filelog/postgresql_0:
         encoding: utf-8
         include:
@@ -1671,10 +2155,13 @@ receivers:
                     match_type: regexp
                     names:
                         - post(gres|master).*
+                        - mysqld.*
                 metrics:
                     process.cpu.utilization:
                         enabled: true
                     process.memory.utilization:
+                        enabled: true
+                    process.threads:
                         enabled: true
                 mute_process_all_errors: true
             processes: null
@@ -1717,6 +2204,562 @@ receivers:
                 enabled: true
             k8s.pod.uptime:
                 enabled: true
+    mysql/events_0:
+        allow_native_passwords: true
+        collection_interval: 10s
+        endpoint: localhost:3306
+        events:
+            db.server.query_sample:
+                enabled: true
+            db.server.top_query:
+                enabled: true
+        initial_delay: 1s
+        metrics:
+            mysql.active_transactions:
+                enabled: true
+            mysql.buffer_pool.data_pages:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: true
+            mysql.buffer_pool.limit:
+                enabled: true
+            mysql.buffer_pool.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.buffer_pool.page_flushes:
+                enabled: true
+            mysql.buffer_pool.pages:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.buffer_pool.usage:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: true
+            mysql.client.network.io:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: false
+            mysql.commands:
+                aggregation_strategy: sum
+                attributes:
+                    - command
+                enabled: true
+            mysql.connection.count:
+                enabled: true
+            mysql.connection.errors:
+                aggregation_strategy: sum
+                attributes:
+                    - error
+                enabled: true
+            mysql.deadlocks:
+                enabled: true
+            mysql.double_writes:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.handlers:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.history_list_length:
+                enabled: true
+            mysql.index.io.wait.count:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                    - index
+                enabled: true
+            mysql.index.io.wait.time:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                    - index
+                enabled: true
+            mysql.joins:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: false
+            mysql.locks:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.log_operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.max_used_connections:
+                enabled: true
+            mysql.mysqlx_connections:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: true
+            mysql.mysqlx_worker_threads:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: false
+            mysql.opened_resources:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.page_operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.page_size:
+                enabled: false
+            mysql.prepared_statements:
+                aggregation_strategy: sum
+                attributes:
+                    - command
+                enabled: true
+            mysql.query.client.count:
+                enabled: false
+            mysql.query.count:
+                enabled: true
+            mysql.query.slow.count:
+                enabled: false
+            mysql.replica.sql_delay:
+                enabled: true
+            mysql.replica.time_behind_source:
+                enabled: true
+            mysql.row_locks:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.row_operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.sessions:
+                enabled: false
+            mysql.sorts:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.statement_event.count:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - digest
+                    - digest_text
+                    - kind
+                enabled: false
+            mysql.statement_event.wait.time:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - digest
+                    - digest_text
+                enabled: false
+            mysql.table.average_row_length:
+                aggregation_strategy: sum
+                attributes:
+                    - table
+                    - schema
+                enabled: false
+            mysql.table.io.wait.count:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                enabled: true
+            mysql.table.io.wait.time:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                enabled: true
+            mysql.table.lock_wait.read.count:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.lock_wait.read.time:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.lock_wait.write.count:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.lock_wait.write.time:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - table
+                    - schema
+                enabled: false
+            mysql.table.size:
+                aggregation_strategy: sum
+                attributes:
+                    - table
+                    - schema
+                    - kind
+                enabled: true
+            mysql.table_open_cache:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: false
+            mysql.threads:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.tmp_resources:
+                aggregation_strategy: sum
+                attributes:
+                    - resource
+                enabled: true
+            mysql.uptime:
+                enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.mysql_credentials
+        query_sample_collection:
+            collection_interval: 1m0s
+            max_rows_per_query: 500
+        resource_attributes:
+            mysql.instance.endpoint:
+                enabled: true
+            service.instance.id:
+                enabled: true
+        statement_events:
+            digest_text_limit: 120
+            limit: 250
+            time_limit: 24h0m0s
+        timeout: 0s
+        tls:
+            insecure: true
+        top_query_collection:
+            collection_interval: 1m0s
+            lookback_time: 60
+            max_query_sample_count: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_query_count: 200
+        transport: tcp
+        username: cw_monitor
+    mysql/metrics_0:
+        allow_native_passwords: true
+        collection_interval: 10s
+        endpoint: localhost:3306
+        events:
+            db.server.query_sample:
+                enabled: true
+            db.server.top_query:
+                enabled: true
+        initial_delay: 1s
+        metrics:
+            mysql.active_transactions:
+                enabled: true
+            mysql.buffer_pool.data_pages:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: true
+            mysql.buffer_pool.limit:
+                enabled: true
+            mysql.buffer_pool.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.buffer_pool.page_flushes:
+                enabled: true
+            mysql.buffer_pool.pages:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.buffer_pool.usage:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: true
+            mysql.client.network.io:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: false
+            mysql.commands:
+                aggregation_strategy: sum
+                attributes:
+                    - command
+                enabled: true
+            mysql.connection.count:
+                enabled: true
+            mysql.connection.errors:
+                aggregation_strategy: sum
+                attributes:
+                    - error
+                enabled: true
+            mysql.deadlocks:
+                enabled: true
+            mysql.double_writes:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.handlers:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.history_list_length:
+                enabled: true
+            mysql.index.io.wait.count:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                    - index
+                enabled: true
+            mysql.index.io.wait.time:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                    - index
+                enabled: true
+            mysql.joins:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: false
+            mysql.locks:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.log_operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.max_used_connections:
+                enabled: true
+            mysql.mysqlx_connections:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: true
+            mysql.mysqlx_worker_threads:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: false
+            mysql.opened_resources:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.page_operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.page_size:
+                enabled: false
+            mysql.prepared_statements:
+                aggregation_strategy: sum
+                attributes:
+                    - command
+                enabled: true
+            mysql.query.client.count:
+                enabled: false
+            mysql.query.count:
+                enabled: true
+            mysql.query.slow.count:
+                enabled: false
+            mysql.replica.sql_delay:
+                enabled: true
+            mysql.replica.time_behind_source:
+                enabled: true
+            mysql.row_locks:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.row_operations:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                enabled: true
+            mysql.sessions:
+                enabled: false
+            mysql.sorts:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.statement_event.count:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - digest
+                    - digest_text
+                    - kind
+                enabled: false
+            mysql.statement_event.wait.time:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - digest
+                    - digest_text
+                enabled: false
+            mysql.table.average_row_length:
+                aggregation_strategy: sum
+                attributes:
+                    - table
+                    - schema
+                enabled: false
+            mysql.table.io.wait.count:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                enabled: true
+            mysql.table.io.wait.time:
+                aggregation_strategy: sum
+                attributes:
+                    - operation
+                    - table
+                    - schema
+                enabled: true
+            mysql.table.lock_wait.read.count:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.lock_wait.read.time:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.lock_wait.write.count:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.lock_wait.write.time:
+                aggregation_strategy: sum
+                attributes:
+                    - schema
+                    - table
+                    - kind
+                enabled: false
+            mysql.table.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - table
+                    - schema
+                enabled: false
+            mysql.table.size:
+                aggregation_strategy: sum
+                attributes:
+                    - table
+                    - schema
+                    - kind
+                enabled: true
+            mysql.table_open_cache:
+                aggregation_strategy: sum
+                attributes:
+                    - status
+                enabled: false
+            mysql.threads:
+                aggregation_strategy: sum
+                attributes:
+                    - kind
+                enabled: true
+            mysql.tmp_resources:
+                aggregation_strategy: sum
+                attributes:
+                    - resource
+                enabled: true
+            mysql.uptime:
+                enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.mysql_credentials
+        query_sample_collection:
+            collection_interval: 1m0s
+            max_rows_per_query: 500
+        resource_attributes:
+            mysql.instance.endpoint:
+                enabled: true
+            service.instance.id:
+                enabled: true
+        statement_events:
+            digest_text_limit: 120
+            limit: 250
+            time_limit: 24h0m0s
+        timeout: 0s
+        tls:
+            insecure: true
+        top_query_collection:
+            collection_interval: 1m0s
+            lookback_time: 60
+            max_query_sample_count: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_query_count: 200
+        transport: tcp
+        username: cw_monitor
     otlp/grpc_0_0_0_0_4317:
         protocols:
             grpc:
@@ -2225,34 +3268,64 @@ service:
         - entitystore
         - server
     pipelines:
+        logs/dbi_mysql_0:
+            exporters:
+                - count/dbi_dbload_mysql
+                - signaltometrics/dbi_topsql_mysql
+            processors:
+                - filter/dbi_exclude_monitor_mysql_0
+            receivers:
+                - mysql/metrics_0
+        logs/dbi_mysql_rawevents_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - filter/dbi_exclude_monitor_mysql_0
+                - transform/dbi_scope_mysql_0
+                - resourcedetection/opentelemetry
+                - transform/dbi_resource_mysql_0
+                - transform/dbi_logs_mysql_raw-events_0
+            receivers:
+                - mysql/events_0
+        logs/dbi_mysql_serverlogs_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/dbi_scope_mysql_0
+                - resourcedetection/opentelemetry
+                - groupbyattrs/files
+                - transform/dbi_resource_mysql_0
+                - transform/dbi_logs_mysql_server-logs_0
+            receivers:
+                - filelog/mysql_0
         logs/dbi_postgresql_0:
             exporters:
-                - count/dbi_dbload
-                - signaltometrics/dbi_topsql
+                - count/dbi_dbload_postgresql
+                - signaltometrics/dbi_topsql_postgresql
             processors:
-                - filter/dbi_exclude_monitor_0
+                - filter/dbi_exclude_monitor_postgresql_0
             receivers:
                 - postgresql/metrics_0
         logs/dbi_postgresql_rawevents_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - filter/dbi_exclude_monitor_0
-                - transform/dbi_scope
+                - filter/dbi_exclude_monitor_postgresql_0
+                - transform/dbi_scope_postgresql_0
                 - resourcedetection/opentelemetry
-                - transform/dbi_resource_0
-                - transform/dbi_logs_raw-events_0
+                - transform/dbi_resource_postgresql_0
+                - transform/dbi_logs_postgresql_raw-events_0
             receivers:
                 - postgresql/events_0
         logs/dbi_postgresql_serverlogs_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope
+                - transform/dbi_scope_postgresql_0
                 - resourcedetection/opentelemetry
                 - groupbyattrs/files
-                - transform/dbi_resource_0
-                - transform/dbi_logs_server-logs_0
+                - transform/dbi_resource_postgresql_0
+                - transform/dbi_logs_postgresql_server-logs_0
             receivers:
                 - filelog/postgresql_0
         logs/emf_logs:
@@ -2453,17 +3526,28 @@ service:
                 - awsattributelimit/cw_k8s_ci_v0
             receivers:
                 - prometheus/cw_k8s_ci_v0_node_exporter
+        metrics/dbi_mysql_0:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - transform/dbi_scope_mysql_0
+                - transform/dbi_resource_mysql_0
+                - transform/dbi_fix_start_time_mysql
+            receivers:
+                - mysql/metrics_0
+                - count/dbi_dbload_mysql
+                - signaltometrics/dbi_topsql_mysql
         metrics/dbi_postgresql_0:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope
-                - transform/dbi_resource_0
-                - transform/dbi_fix_start_time
+                - transform/dbi_scope_postgresql_0
+                - transform/dbi_resource_postgresql_0
+                - transform/dbi_fix_start_time_postgresql
             receivers:
                 - postgresql/metrics_0
-                - count/dbi_dbload
-                - signaltometrics/dbi_topsql
+                - count/dbi_dbload_postgresql
+                - signaltometrics/dbi_topsql_postgresql
         metrics/host:
             exporters:
                 - awscloudwatch
@@ -2471,13 +3555,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
+                - telegraf_mem
+                - telegraf_procstat/1917393364
+                - telegraf_cpu
+                - telegraf_processes
+                - telegraf_disk
                 - telegraf_netstat
                 - telegraf_swap
-                - telegraf_procstat/1917393364
-                - telegraf_disk
-                - telegraf_mem
-                - telegraf_processes
-                - telegraf_cpu
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry

@@ -14,12 +14,12 @@ import (
 )
 
 func TestTranslatorID(t *testing.T) {
-	tr := NewTranslator(common.DbiConnectorDbload)
-	assert.Equal(t, "count/dbi_dbload", tr.ID().String())
+	tr := NewTranslator(common.DbiConnectorDbload+"_"+common.PostgreSQLKey, common.PostgreSQLKey)
+	assert.Equal(t, "count/dbi_dbload_postgresql", tr.ID().String())
 }
 
 func TestTranslateDbload(t *testing.T) {
-	tr := NewTranslator(common.DbiConnectorDbload)
+	tr := NewTranslator(common.DbiConnectorDbload+"_"+common.PostgreSQLKey, common.PostgreSQLKey)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
@@ -36,8 +36,28 @@ func TestTranslateDbload(t *testing.T) {
 }
 
 func TestTranslateUnsupported(t *testing.T) {
-	tr := NewTranslator("unsupported")
+	tr := NewTranslator("dbi_dbload_unknown", "unsupported")
 	_, err := tr.Translate(nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported count connector config")
+	assert.Contains(t, err.Error(), "unsupported count connector engine")
+}
+
+func TestTranslatorID_MySQL(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbload+"_"+common.MySQLKey, common.MySQLKey)
+	assert.Equal(t, "count/dbi_dbload_mysql", tr.ID().String())
+}
+
+func TestTranslateDbloadMysql(t *testing.T) {
+	tr := NewTranslator(common.DbiConnectorDbload+"_"+common.MySQLKey, common.MySQLKey)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	countCfg := cfg.(*countconnector.Config)
+	assert.Len(t, countCfg.Logs, 7)
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_wait")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_user")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_db")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_sql")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_sql_wait")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.by_host")
+	assert.Contains(t, countCfg.Logs, "mysql.active_sessions.count")
 }

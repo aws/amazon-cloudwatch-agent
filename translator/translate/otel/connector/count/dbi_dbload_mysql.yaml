@@ -1,0 +1,56 @@
+logs:
+  mysql.active_sessions.by_wait:
+    description: "Active sessions by wait event"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: mysql.wait_type
+      - key: db.namespace
+  mysql.active_sessions.by_user:
+    description: "Active sessions by user"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: user.name
+      - key: db.namespace
+  mysql.active_sessions.by_db:
+    description: "Active sessions by database"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: db.namespace
+  mysql.active_sessions.by_sql:
+    description: "Active sessions by query digest"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_current.digest
+      - key: db.namespace
+  mysql.active_sessions.by_sql_wait:
+    description: "Active sessions by query and wait"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: mysql.events_statements_current.digest
+      - key: mysql.wait_type
+      - key: db.namespace
+  mysql.active_sessions.by_host:
+    description: "Active sessions by host"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: network.peer.address
+      - key: db.namespace
+  mysql.active_sessions.count:
+    description: "Total active sessions"
+    conditions:
+      - attributes["mysql.session.status"] != "idle"
+    attributes:
+      - key: db.system.name
+      - key: db.namespace

@@ -35,6 +35,7 @@ func TestComponents(t *testing.T) {
 		"nop",
 		"otlp",
 		"prometheus",
+		"mysql",
 		"postgresql",
 		"statsd",
 		"systemmetrics",
