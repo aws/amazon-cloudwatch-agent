@@ -781,8 +781,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -807,6 +809,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
         metric_statements:
             - context: resource
               error_mode: ignore
@@ -823,8 +826,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -849,6 +854,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -865,8 +871,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["azure.resourcegroup.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -891,6 +899,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
     transform/set_cluster_name:
         error_mode: ignore
         flatten_data: false

@@ -431,6 +431,7 @@ func TestOtlpOtelEKSConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Setenv("K8S_CLUSTER_NAME", "TestCluster")
 	checkTranslation(t, "opentelemetry/otlp_otel_eks_config", "linux", nil, "")
 }
 
@@ -1062,6 +1063,11 @@ func resetContext(t *testing.T) {
 	}
 	ecsutil.GetECSUtilSingleton().Region = ""
 	context.ResetContext()
+
+	// agent.Global_Config is package-level state carried over from whichever test
+	// ran last, so a config that omits a field (e.g. credentials.role_arn) would
+	// otherwise inherit the previous test's value.
+	agent.Global_Config = agent.Agent{}
 
 	// Clear OTLP config cache to avoid conflicts between tests
 	otlp.ClearConfigCache()
