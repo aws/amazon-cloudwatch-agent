@@ -1847,6 +1847,27 @@
                     "required": ["endpoint", "instance_name", "username", "password_file"],
                     "additionalProperties": false
                   }
+                },
+                "mysql": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": { "type": "string" },
+                      "instance_name": { "type": "string" },
+                      "username": { "type": "string" },
+                      "password_file": { "type": "string" },
+                      "logs": {
+                        "type": "object",
+                        "properties": {
+                          "file_path": { "type": "string" }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["endpoint", "instance_name", "username", "password_file"],
+                    "additionalProperties": false
+                  }
                 }
               },
               "additionalProperties": false
