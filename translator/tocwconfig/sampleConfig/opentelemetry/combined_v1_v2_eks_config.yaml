@@ -1863,7 +1863,7 @@ receivers:
             insecure_skip_verify: true
         top_query_collection:
             collection_interval: 1m0s
-            max_explain_each_interval: 0
+            max_explain_each_interval: 1000
             max_rows_per_query: 5000
             query_plan_cache_size: 1000
             query_plan_cache_ttl: 1h0m0s
@@ -1976,7 +1976,7 @@ receivers:
             insecure_skip_verify: true
         top_query_collection:
             collection_interval: 1m0s
-            max_explain_each_interval: 0
+            max_explain_each_interval: 1000
             max_rows_per_query: 5000
             query_plan_cache_size: 1000
             query_plan_cache_ttl: 1h0m0s
