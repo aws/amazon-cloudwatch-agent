@@ -37,8 +37,6 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
-
-	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
 )
 
 var (
@@ -69,14 +67,16 @@ type CloudWatchLogs struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	pusherWaitGroup sync.WaitGroup
-	cwDests         sync.Map
-	workerPool      pusher.WorkerPool
-	targetManager   pusher.TargetManager
-	once            sync.Once
-	middleware      awsmiddleware.Middleware
-	configurer      *awsmiddleware.Configurer
-	configurerOnce  sync.Once
+	pusherWaitGroup    sync.WaitGroup
+	cwDests            sync.Map
+	workerPool         pusher.WorkerPool
+	retryHeap          pusher.RetryHeap
+	retryHeapProcessor *pusher.RetryHeapProcessor
+	targetManager      pusher.TargetManager
+	once               sync.Once
+	middleware         awsmiddleware.Middleware
+	configurer         *awsmiddleware.Configurer
+	configurerOnce     sync.Once
 
 	// Dedicated retryer/client for the TargetManager, owned by the plugin so its
 	// lifecycle is independent of any destination stop.
@@ -92,6 +92,12 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
+	// Shutdown order:
+	// 1. Stop all pushers (queues stop accepting new events, final send)
+	// 2. Wait for pushers to complete (in-flight sends finish, failed batches pushed to heap)
+	// 3. Stop RetryHeap (no more pushes accepted after this point)
+	// 4. Stop RetryHeapProcessor (flush remaining ready batches, stop goroutine)
+	// 5. Stop WorkerPool (drain worker threads)
 
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
@@ -101,6 +107,14 @@ func (c *CloudWatchLogs) Close() error {
 	})
 
 	c.pusherWaitGroup.Wait()
+
+	if c.retryHeap != nil {
+		c.retryHeap.Stop()
+	}
+
+	if c.retryHeapProcessor != nil {
+		c.retryHeapProcessor.Stop()
+	}
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
@@ -158,15 +172,23 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		useragent.Get().SetContainerInsightsFlag()
 	}
 	c.once.Do(func() {
-		if c.Concurrency > 1 {
-			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
-		}
 		// Dedicated retryer/client so the TargetManager isn't tied to the first dest.
+		// Must precede the retry heap: its processor captures targetManager by value.
 		c.sharedRetryer = retryer.NewLogThrottleRetryer(c.Log)
 		c.sharedClient = c.createClient(c.sharedRetryer)
 		c.targetManager = pusher.NewTargetManager(c.Log, c.sharedClient)
+
+		if c.Concurrency > 1 {
+			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
+			c.retryHeap = pusher.NewRetryHeap(c.Log)
+
+			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
+			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, retryHeapProcessorRetryer)
+			c.retryHeapProcessor.Start()
+		}
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
+	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, &c.pusherWaitGroup, c.retryHeap)
 	cwd := &cwDest{
 		pusher:   p,
 		retryer:  logThrottleRetryer,
