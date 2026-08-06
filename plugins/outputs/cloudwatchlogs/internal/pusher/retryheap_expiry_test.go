@@ -58,7 +58,7 @@ func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	// Set up callback to track circuit breaker resume
 	var circuitBreakerResumed atomic.Bool
 
-	batch.addDoneCallback(func() {
+	batch.addResumeCallback(func() {
 		circuitBreakerResumed.Store(true)
 	})
 

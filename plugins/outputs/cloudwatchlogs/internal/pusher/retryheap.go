@@ -7,6 +7,7 @@ import (
 	"container/heap"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -125,8 +126,8 @@ type RetryHeapProcessor struct {
 	retryer    *retryer.LogThrottleRetryer
 	stopCh     chan struct{}
 	logger     telegraf.Logger
-	stopped    bool
-	stopMu     sync.Mutex
+	stopped    atomic.Bool
+	stopOnce   sync.Once
 	wg         sync.WaitGroup
 }
 
@@ -143,7 +144,6 @@ func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service c
 		retryer:    retryer,
 		stopCh:     make(chan struct{}),
 		logger:     logger,
-		stopped:    false,
 	}
 }
 
@@ -155,24 +155,23 @@ func (p *RetryHeapProcessor) Start() {
 
 // Stop stops the retry heap processor
 func (p *RetryHeapProcessor) Stop() {
-	p.stopMu.Lock()
-	defer p.stopMu.Unlock()
+	p.stopOnce.Do(func() {
+		// Flush remaining ready batches before marking as stopped.
+		p.flushReadyBatches()
 
-	if p.stopped {
-		return
-	}
+		// Release the process loop BEFORE waiting on it. Holding a lock that
+		// processReadyMessages also takes across wg.Wait() deadlocks: a tick landing in
+		// that window parks the loop on the lock, so it never observes stopCh.
+		p.stopped.Store(true)
+		close(p.stopCh)
+		p.wg.Wait()
 
-	// Flush remaining ready batches before marking as stopped
-	p.flushReadyBatches()
-
-	p.stopped = true
-
-	if p.retryer != nil {
-		p.retryer.Stop()
-	}
-	p.senderPool.Stop()
-	close(p.stopCh)
-	p.wg.Wait()
+		// Downstream stops only once the producer loop is confirmed dead.
+		if p.retryer != nil {
+			p.retryer.Stop()
+		}
+		p.senderPool.Stop()
+	})
 }
 
 // processLoop runs the main processing loop
@@ -193,12 +192,9 @@ func (p *RetryHeapProcessor) processLoop() {
 
 // processReadyMessages checks the heap for ready batches and moves them back to sender queue
 func (p *RetryHeapProcessor) processReadyMessages() {
-	p.stopMu.Lock()
-	if p.stopped {
-		p.stopMu.Unlock()
+	if p.stopped.Load() {
 		return
 	}
-	p.stopMu.Unlock()
 
 	p.flushReadyBatches()
 }
@@ -212,7 +208,9 @@ func (p *RetryHeapProcessor) flushReadyBatches() {
 		// Check if batch has expired
 		if batch.isExpired() {
 			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
-			batch.done() // Resume circuit breaker to allow target to process new batches
+			// Permanent give-up: persist state and clear the breaker, but do not
+			// report these events as delivered.
+			batch.drop()
 			continue
 		}
 

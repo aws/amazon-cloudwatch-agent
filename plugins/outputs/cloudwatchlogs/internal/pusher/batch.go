@@ -105,7 +105,9 @@ type logEventBatch struct {
 	stateCallbacks []func()
 	// Callbacks to execute when batch fails (for circuit breaker notification)
 	failCallbacks []func()
-	batchers      map[string]*state.RangeQueueBatcher
+	// Callbacks that clear the circuit breaker without signalling delivery
+	resumeCallbacks []func()
+	batchers        map[string]*state.RangeQueueBatcher
 
 	// Retry metadata
 	retryCountShort int       // Number of retries using short delay strategy
@@ -223,6 +225,40 @@ func (b *logEventBatch) fail() {
 		callback := b.failCallbacks[i]
 		callback()
 	}
+}
+
+// addResumeCallback adds the callback to the end of the registered resume callbacks.
+func (b *logEventBatch) addResumeCallback(callback func()) {
+	if callback != nil {
+		b.resumeCallbacks = append(b.resumeCallbacks, callback)
+	}
+}
+
+// resume runs only the resume callbacks, clearing the circuit breaker for this target
+// without signalling delivery. Needed because halt() is latched by fail() and would
+// otherwise only ever be cleared by done(), which implies success.
+func (b *logEventBatch) resume() {
+	for i := len(b.resumeCallbacks) - 1; i >= 0; i-- {
+		callback := b.resumeCallbacks[i]
+		callback()
+	}
+}
+
+// drop finalizes a batch that will never be delivered after a permanent failure. It
+// persists state so the events are not reprocessed on restart and clears the circuit
+// breaker, but deliberately does NOT run doneCallbacks: those signal successful
+// delivery (per-event LogEvent.Done plus the queue's success bookkeeping).
+func (b *logEventBatch) drop() {
+	b.updateState()
+	b.resume()
+}
+
+// abandon finalizes a batch dropped for a transient reason, such as the retry heap
+// closing during shutdown. State is deliberately NOT persisted so the events are
+// re-read after restart rather than silently lost; the circuit breaker is still
+// cleared so shutdown is not blocked.
+func (b *logEventBatch) abandon() {
+	b.resume()
 }
 
 // build creates a cloudwatchlogs.PutLogEventsInput from the batch. The log events in the batch must be in

@@ -92,12 +92,14 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
-	// Shutdown order:
+	// Shutdown order. The retry heap closes LAST of the publishing components: a worker
+	// whose send fails after the heap is closed cannot re-queue that batch and has to
+	// abandon it, so the workers are drained first to keep that path rare.
 	// 1. Stop all pushers (queues stop accepting new events, final send)
 	// 2. Wait for pushers to complete (in-flight sends finish, failed batches pushed to heap)
-	// 3. Stop RetryHeap (no more pushes accepted after this point)
-	// 4. Stop RetryHeapProcessor (flush remaining ready batches, stop goroutine)
-	// 5. Stop WorkerPool (drain worker threads)
+	// 3. Stop RetryHeapProcessor (final flush, stop the ticker goroutine)
+	// 4. Stop WorkerPool (drain in-flight sends while the heap still accepts retries)
+	// 5. Stop RetryHeap (no more pushes accepted after this point)
 
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
@@ -108,16 +110,16 @@ func (c *CloudWatchLogs) Close() error {
 
 	c.pusherWaitGroup.Wait()
 
-	if c.retryHeap != nil {
-		c.retryHeap.Stop()
-	}
-
 	if c.retryHeapProcessor != nil {
 		c.retryHeapProcessor.Stop()
 	}
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
+	}
+
+	if c.retryHeap != nil {
+		c.retryHeap.Stop()
 	}
 
 	// Stop the shared retryer last, after all pushers have drained.

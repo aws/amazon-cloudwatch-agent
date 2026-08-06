@@ -88,7 +88,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		var awsErr awserr.Error
 		if !errors.As(err, &awsErr) {
 			s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
-			batch.updateState()
+			batch.drop()
 			return
 		}
 
@@ -101,7 +101,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		case *cloudwatchlogs.InvalidParameterException,
 			*cloudwatchlogs.DataAlreadyAcceptedException:
 			s.logger.Errorf("%v, will not retry the request", e)
-			batch.updateState()
+			batch.drop()
 			return
 		default:
 			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, awsErr)
@@ -114,7 +114,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		totalRetries := batch.retryCountShort + batch.retryCountLong - 1
 		if batch.isExpired() {
 			s.logger.Errorf("All %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
-			batch.updateState()
+			batch.drop()
 			return
 		}
 
@@ -122,11 +122,11 @@ func (s *sender) Send(batch *logEventBatch) {
 		// Otherwise, continue with existing busy-wait retry behavior
 		if s.retryHeap != nil {
 			if err := s.retryHeap.Push(batch); err != nil {
-				// Heap is stopped (shutdown in progress). Persist file offsets
-				// so these events aren't re-read on restart, then notify the
-				// circuit breaker so the queue isn't permanently halted.
-				s.logger.Warnf("RetryHeap stopped, dropping batch for %v/%v: %v", batch.Group, batch.Stream, err)
-				batch.done()
+				// Heap closed because shutdown is in progress. This is transient, so
+				// state is NOT persisted: the events are re-read after restart rather
+				// than being reported as delivered and silently lost.
+				s.logger.Warnf("RetryHeap stopped, abandoning batch for %v/%v (will be re-read after restart): %v", batch.Group, batch.Stream, err)
+				batch.abandon()
 				return
 			}
 			batch.fail()
@@ -144,7 +144,7 @@ func (s *sender) Send(batch *logEventBatch) {
 		select {
 		case <-s.stopCh:
 			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
-			batch.updateState()
+			batch.drop()
 			return
 		case <-time.After(wait):
 		}

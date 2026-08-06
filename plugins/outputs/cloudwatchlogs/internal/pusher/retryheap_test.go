@@ -96,7 +96,7 @@ func TestRetryHeapProcessor(t *testing.T) {
 	// Test start/stop
 	processor.Start()
 	processor.Stop()
-	assert.True(t, processor.stopped)
+	assert.True(t, processor.stopped.Load())
 }
 
 func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
@@ -116,14 +116,16 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	batch.expireAfter = time.Now().Add(-1 * time.Hour) // Already expired
 	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
 
-	var doneCalled bool
+	var doneCalled, resumeCalled bool
 	batch.addDoneCallback(func() { doneCalled = true })
+	batch.addResumeCallback(func() { resumeCalled = true })
 
 	heap.Push(batch)
 
 	processor.processReadyMessages()
 	assert.Equal(t, 0, heap.Size(), "Expired batch should be removed from heap")
-	assert.True(t, doneCalled, "done() should be called on expired batch to resume circuit breaker")
+	assert.True(t, resumeCalled, "expired batch should resume the circuit breaker")
+	assert.False(t, doneCalled, "expired batch was never delivered, so it must not signal success")
 }
 
 func TestRetryHeapProcessorSendsBatch(t *testing.T) {
@@ -316,5 +318,5 @@ func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
 	assert.Equal(t, 1, heap.Size())
 
 	// Verify processor is marked as stopped
-	assert.True(t, processor.stopped)
+	assert.True(t, processor.stopped.Load())
 }

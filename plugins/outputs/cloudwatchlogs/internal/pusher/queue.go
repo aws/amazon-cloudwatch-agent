@@ -183,6 +183,9 @@ func (q *queue) send() {
 	if len(q.batch.events) > 0 {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
 		q.batch.addFailCallback(q.halt)
+		// Lets a permanently-failed or abandoned batch clear the breaker without being
+		// reported as delivered. Without this, halt() latches until the next done().
+		q.batch.addResumeCallback(q.resume)
 
 		// In synchronous mode (no retryHeap), halt() is never called because
 		// sender only calls batch.fail() when retryHeap != nil. So waitIfHalted
