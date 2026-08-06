@@ -90,7 +90,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.TopQueryCollection.CollectionInterval = 60 * time.Second
 	cfg.TopNQuery = 200
 	cfg.TopQueryCollection.MaxRowsPerQuery = 5000
-	cfg.MaxExplainEachInterval = 0
+	cfg.MaxExplainEachInterval = 1000
 
 	return cfg, nil
 }

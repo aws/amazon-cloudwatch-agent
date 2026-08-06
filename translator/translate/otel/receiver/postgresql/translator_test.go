@@ -41,6 +41,23 @@ func TestTranslator_Translate_Defaults(t *testing.T) {
 	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
 	assert.Equal(t, int64(200), pgCfg.TopNQuery)
 	assert.Equal(t, int64(5000), pgCfg.TopQueryCollection.MaxRowsPerQuery)
+	assert.Equal(t, int64(1000), pgCfg.MaxExplainEachInterval)
+}
+
+// Explain plan collection is disabled entirely when the budget is zero, so guard
+// against it silently regressing to that state.
+func TestTranslator_Translate_ExplainPlansEnabled(t *testing.T) {
+	tr := NewTranslator(
+		WithEndpoint("localhost:5432"),
+		WithUsername("cw_monitor"),
+		WithPassfile("/etc/.pgpass"),
+		WithIsLocalhost(true),
+	)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	pgCfg := cfg.(*postgresqlreceiver.Config)
+
+	assert.Positive(t, pgCfg.MaxExplainEachInterval)
 }
 
 func TestTranslator_Translate_Events(t *testing.T) {
