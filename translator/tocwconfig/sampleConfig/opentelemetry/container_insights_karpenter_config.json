@@ -9,6 +9,7 @@
         "collection_interval": 30,
         "role": "cluster",
         "solutions": {
+          "enabled": true,
           "karpenter": {
             "enabled": true
           },
