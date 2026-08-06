@@ -22,15 +22,14 @@ type portExtractor struct {
 	subExtractors []detector.PortExtractor
 }
 
-// NewPortExtractor creates a port extractor that attempts to find the SQL Server port
-// from command line arguments (-p flag) or environment variables (MSSQL_TCP_PORT).
-// Falls back to the default SQL Server port 1433.
+// NewPortExtractor creates a port extractor that attempts to find the SQL Server port.
+// On Windows, it first checks the registry to resolve named instance ports.
+// Then it tries command line arguments (-p flag) and environment variables (MSSQL_TCP_PORT).
+// Falls back to the default SQL Server port 1433 if all sources fail.
 func NewPortExtractor() detector.PortExtractor {
+	extractors := append(platformPortExtractors(), &cmdlinePortExtractor{}, &envPortExtractor{})
 	return &portExtractor{
-		subExtractors: []detector.PortExtractor{
-			&cmdlinePortExtractor{},
-			&envPortExtractor{},
-		},
+		subExtractors: extractors,
 	}
 }
 
