@@ -605,7 +605,8 @@ processors:
                   aggregation_type: sum
                   experimental_scale: 0
                   label: ""
-                  label_set: []
+                  label_set:
+                    - name
                   label_value: ""
                   new_label: ""
                   new_value: ""
@@ -627,7 +628,8 @@ processors:
                   aggregation_type: sum
                   experimental_scale: 0
                   label: ""
-                  label_set: []
+                  label_set:
+                    - name
                   label_value: ""
                   new_label: ""
                   new_value: ""
