@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log"
 	"strings"
@@ -58,6 +59,9 @@ func cleanWorkspaces() error {
 
 func aliasMatchesWorkspacesToClean(alias string, workspacesToClean []string) bool {
 	for _, workspaceToClean := range workspacesToClean {
+		if workspaceToClean == "" {
+			continue
+		}
 		if strings.HasPrefix(alias, workspaceToClean) {
 			return true
 		}
@@ -68,6 +72,7 @@ func aliasMatchesWorkspacesToClean(alias string, workspacesToClean []string) boo
 func terminateWorkspaces(ctx context.Context, client *amp.Client) error {
 	expirationDate := time.Now().UTC().Add(clean.KeepDurationOneDay)
 
+	var deleteErrors []error
 	paginator := amp.NewListWorkspacesPaginator(client, &amp.ListWorkspacesInput{})
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
@@ -78,13 +83,15 @@ func terminateWorkspaces(ctx context.Context, client *amp.Client) error {
 			workspaceID := aws.ToString(workspace.WorkspaceId)
 			alias := aws.ToString(workspace.Alias)
 
-			if workspace.Status == nil || workspace.Status.StatusCode != types.WorkspaceStatusCodeActive {
-				log.Printf("Ignoring workspace %s (alias %q) since it is not ACTIVE", workspaceID, alias)
+			if workspace.Status == nil ||
+				(workspace.Status.StatusCode != types.WorkspaceStatusCodeActive &&
+					workspace.Status.StatusCode != types.WorkspaceStatusCodeCreationFailed) {
+				log.Printf("Ignoring workspace %s (alias %q) since it is not ACTIVE or CREATION_FAILED", workspaceID, alias)
 				continue
 			}
 			if workspace.CreatedAt == nil || !expirationDate.After(*workspace.CreatedAt) {
 				log.Printf("Ignoring workspace %s (alias %q) with create-date %v since it was created in the last %s",
-					workspaceID, alias, aws.ToTime(workspace.CreatedAt), clean.KeepDurationOneDay)
+					workspaceID, alias, aws.ToTime(workspace.CreatedAt), -clean.KeepDurationOneDay)
 				continue
 			}
 			if !aliasMatchesWorkspacesToClean(alias, WorkspacesToClean) {
@@ -100,8 +107,9 @@ func terminateWorkspaces(ctx context.Context, client *amp.Client) error {
 				workspaceID, alias, aws.ToTime(workspace.CreatedAt))
 			if _, err := client.DeleteWorkspace(ctx, &amp.DeleteWorkspaceInput{WorkspaceId: workspace.WorkspaceId}); err != nil {
 				log.Printf("could not delete workspace %s err %v", workspaceID, err)
+				deleteErrors = append(deleteErrors, err)
 			}
 		}
 	}
-	return nil
+	return errors.Join(deleteErrors...)
 }
