@@ -79,6 +79,13 @@ var knownNonConvertibleUnits = collections.NewSet(
 	"errors",
 	"threads",
 	"requests",
+	// JMX/Tomcat and JVM UCUM annotation units (JMX Metric Gatherer v1.50.0-alpha)
+	"{session}",
+	"{error}",
+	"{thread}",
+	"{request}",
+	"{class}",
+	"{collection}",
 	// JMX/Kafka units
 	"{messages}",
 	"{requests}",
