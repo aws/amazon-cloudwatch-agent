@@ -7,6 +7,21 @@ on:
   schedule:
     - cron: "0 0 * * *" # Run Every Day At Midnight
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: log the resources that would be deleted without deleting them"
+        type: boolean
+        required: false
+        default: true
+
+env:
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+  # Scheduled (cron) runs perform real deletions. Any manual (workflow_dispatch)
+  # run defaults to a dry run unless dry_run=false is explicitly passed — so a
+  # manual trigger, including an API dispatch that omits the input, never deletes
+  # by accident. UI dispatches include the input's default; an API dispatch that
+  # omits dry_run yields an empty string, which the || falls back to 'true'.
+  DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (github.event.inputs.dry_run || 'true') }}
 
 jobs:
   clean-opensource-ami:
@@ -23,10 +38,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old ami
         working-directory: tool/clean
-        run: go run ./clean_ami/clean_ami.go --tags=clean
+        run: go run --tags=clean ./clean_ami/clean_ami.go -dry-run="${DRY_RUN}"
 
   clean-old-file-systems:
     runs-on: ubuntu-latest
@@ -42,10 +58,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old file system
         working-directory: tool/clean
-        run: go run ./clean_file_system/clean_file_system.go --tags=clean
+        run: go run --tags=clean ./clean_file_system/clean_file_system.go -dry-run="${DRY_RUN}"
 
   clean-opensource-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -61,10 +78,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old dedicated host
         working-directory: tool/clean
-        run: go run ./clean_dedicated_host/clean_dedicated_host.go --tags=clean
+        run: go run --tags=clean ./clean_dedicated_host/clean_dedicated_host.go -dry-run="${DRY_RUN}"
 
   clean-internal-dedicated-hosts:
     runs-on: ubuntu-latest
@@ -95,10 +113,11 @@ jobs:
         with:
           role-to-assume: ${{ secrets.INTERNAL_AWS_ASSUME_ROLE }}
           aws-region: ${{ matrix.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old dedicated host
         working-directory: tool/clean
-        run: go run ./clean_dedicated_host/clean_dedicated_host.go --tags=clean
+        run: go run --tags=clean ./clean_dedicated_host/clean_dedicated_host.go -dry-run="${DRY_RUN}"
 
   clean-hosts:
     runs-on: ubuntu-latest
@@ -135,12 +154,13 @@ jobs:
         with:
           role-to-assume: ${{ secrets[matrix.role_secret] }}
           aws-region: ${{ matrix.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old host
         working-directory: tool/clean
         env:
           MATRIX_REGION: ${{ matrix.region }}
-        run: go run ./clean_host/clean_host.go "$MATRIX_REGION"
+        run: go run ./clean_host/clean_host.go -dry-run="${DRY_RUN}" "$MATRIX_REGION"
 
   clean-hosts-china:
     runs-on: ubuntu-latest
@@ -156,10 +176,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
           aws-region: "cn-north-1"
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old hosts
         working-directory: tool/clean
-        run: go run ./clean_host/clean_host.go cn-north-1
+        run: go run ./clean_host/clean_host.go -dry-run="${DRY_RUN}" cn-north-1
 
   clean-ecs-resources:
     runs-on: ubuntu-latest
@@ -175,10 +196,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old ecs resources
         working-directory: tool/clean
-        run: go run --tags=clean ./clean_ecs/clean_ecs.go us-west-2
+        run: go run --tags=clean ./clean_ecs/clean_ecs.go -dry-run="${DRY_RUN}" us-west-2
 
   clean-eks-clusters:
     runs-on: ubuntu-latest
@@ -194,10 +216,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old eks cluster
         working-directory: tool/clean
-        run: go run ./clean_eks/clean_eks.go --tags=clean
+        run: go run ./clean_eks/clean_eks.go -dry-run="${DRY_RUN}"
   clean-ebs-volumes:
     runs-on: ubuntu-latest
     permissions:
@@ -212,10 +235,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old unused ebs volumes
         working-directory: tool/clean
-        run: go run ./clean_ebs/clean_ebs.go --tags=clean
+        run: go run ./clean_ebs/clean_ebs.go -dry-run="${DRY_RUN}"
 
   clean-asg:
     runs-on: ubuntu-latest
@@ -231,10 +255,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old asg
         working-directory: tool/clean
-        run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go --tags=clean
+        run: go run ./clean_auto_scaling_groups/clean_auto_scaling_groups.go -dry-run="${DRY_RUN}"
 
   clean-launch-configs:
     runs-on: ubuntu-latest
@@ -250,10 +275,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old launch configuration
         working-directory: tool/clean
-        run: go run ./clean_launch_configuration/clean_launch_configuration.go --tags=clean
+        run: go run ./clean_launch_configuration/clean_launch_configuration.go -dry-run="${DRY_RUN}"
   clean-iam-roles:
     runs-on: ubuntu-latest
     permissions:
@@ -268,10 +294,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old IAM roles
         working-directory: tool/clean
-        run: go run ./clean_iam_roles/clean_iam_roles.go --tags=clean
+        run: go run ./clean_iam_roles/clean_iam_roles.go -dry-run="${DRY_RUN}"
   clean-log-groups:
     runs-on: ubuntu-latest
     permissions:
@@ -286,10 +313,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean old Log Groups
         working-directory: tool/clean
-        run: go run ./clean_log_group/clean_log_group.go 
+        run: go run ./clean_log_group/clean_log_group.go -dry-run="${DRY_RUN}"
   clean-security-groups:
     runs-on: ubuntu-latest
     permissions:
@@ -304,10 +332,11 @@ jobs:
         with:
           role-to-assume: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Clean Old Security Groups
         working-directory: tool/clean
         run: |
           set -e
-          go run ./clean_security_group/clean_security_group.go || { echo "Failed to clean security groups"; exit 1; }
+          go run ./clean_security_group/clean_security_group.go -dry-run="${DRY_RUN}" || { echo "Failed to clean security groups"; exit 1; }
 

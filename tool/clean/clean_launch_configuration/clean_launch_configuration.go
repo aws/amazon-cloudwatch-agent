@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"strings"
 	"time"
@@ -16,6 +17,8 @@ import (
 )
 
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
 	err := cleanLaunchConfiguration()
 	if err != nil {
 		log.Fatalf("errors cleaning %v", err)
@@ -46,6 +49,9 @@ func cleanLaunchConfiguration() error {
 		}
 		if expirationDate.After(*launchConfig.CreatedTime) {
 			log.Printf("Try to delete %s", *launchConfig.LaunchConfigurationName)
+			if clean.Skip("delete launch configuration %s", *launchConfig.LaunchConfigurationName) {
+				continue
+			}
 			_, err := autoScalingClient.DeleteLaunchConfiguration(ctx, &autoscaling.DeleteLaunchConfigurationInput{
 				LaunchConfigurationName: launchConfig.LaunchConfigurationName,
 			})
