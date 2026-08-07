@@ -112,10 +112,10 @@ func (e *ecsUtil) parseRegion(em *ecsMetadataResponse) {
 // There is only one format for ClusterArn (https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_Cluster.html)
 // arn:aws:ecs:region:aws_account_id:cluster/cluster-name
 func (e *ecsUtil) parseClusterName(em *ecsMetadataResponse) {
-	splitedContent := strings.Split(em.Cluster, "/")
-	// When splitting the ClusterName with /, the last is always the cluster name
-	if len(splitedContent) == 0 {
-		log.Printf("E! Invalid cluster arn: %s", em.Cluster)
+	if em.Cluster == "" {
+		log.Printf("E! Invalid ecs cluster name: %s", em.Cluster)
+		return
 	}
+	splitedContent := strings.Split(em.Cluster, "/")
 	e.Cluster = splitedContent[len(splitedContent)-1]
 }
