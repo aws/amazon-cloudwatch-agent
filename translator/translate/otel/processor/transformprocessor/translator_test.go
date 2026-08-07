@@ -5,6 +5,7 @@ package transformprocessor
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -278,6 +279,59 @@ func TestLogsRoutingWindowsSync(t *testing.T) {
 		"Windows routing YAML must have exactly 2 channel-routing statements")
 	assert.Equal(t, baseStmts, sharedStmts,
 		"Windows routing YAML shared statements must match base")
+
+	// Channel routing must be gated on the source the agent itself sets, or an
+	// OTLP client sending aws.log.channel could dictate its own stream name.
+	guard := fmt.Sprintf(`resource.attributes["aws.log.source"] == %q`, common.WindowsEventsKey)
+	for _, stmt := range channelStmts {
+		assert.Contains(t, stmt, guard,
+			"channel-routing statement must be guarded by aws.log.source")
+	}
+}
+
+// TestLogsRoutingSourceGuards asserts that every stream-name rule keying off an
+// attribute the agent itself attaches per source is gated on aws.log.source.
+// Without the guard an OTLP client can set that attribute and choose its own log
+// stream. Covers both source-specific attributes in both host routing YAMLs.
+func TestLogsRoutingSourceGuards(t *testing.T) {
+	type routingConfig struct {
+		LogStatements []struct {
+			Statements []string `yaml:"statements"`
+		} `yaml:"log_statements"`
+	}
+
+	// attribute -> the aws.log.source value that must gate rules using it
+	sourceAttrs := map[string]string{
+		"log.file.name":   common.FilesKey,
+		"aws.log.channel": common.WindowsEventsKey,
+	}
+
+	for _, path := range []string{"transform_logs_routing_host.yaml", "transform_logs_routing_host_windows.yaml"} {
+		t.Run(path, func(t *testing.T) {
+			b, err := os.ReadFile(path)
+			require.NoError(t, err)
+			var cfg routingConfig
+			require.NoError(t, yaml.Unmarshal(b, &cfg))
+			require.Len(t, cfg.LogStatements, 1)
+
+			var guarded int
+			for _, stmt := range cfg.LogStatements[0].Statements {
+				if !strings.Contains(stmt, `set(resource.attributes["aws.log.stream.name"]`) {
+					continue
+				}
+				for attr, source := range sourceAttrs {
+					if !strings.Contains(stmt, fmt.Sprintf(`resource.attributes[%q]`, attr)) {
+						continue
+					}
+					assert.Contains(t, stmt, fmt.Sprintf(`resource.attributes["aws.log.source"] == %q`, source),
+						"stream rule using %q must be guarded by aws.log.source == %q", attr, source)
+					guarded++
+				}
+			}
+			// Guard against the assertions passing vacuously if the rules are renamed.
+			assert.NotZero(t, guarded, "expected at least one source-specific stream rule")
+		})
+	}
 }
 
 // TestIdentityTransformSemconvValues asserts that the semconv constants used by
@@ -306,4 +360,44 @@ func TestIdentityTransformSemconvValues(t *testing.T) {
 	assert.Equal(t, "service.namespace", semconv.AttributeServiceNamespace)
 	assert.Equal(t, "service.instance.id", semconv.AttributeServiceInstanceID)
 	assert.Equal(t, "service.version", semconv.AttributeServiceVersion)
+}
+
+// TestAKSClusterResourceIDDerivation guards the AKS cloud.resource_id fix: the k8s identity transform
+// must derive the cluster's resource group from the node's MC_<clusterRG>_<cluster>_<region> RG rather
+// than using azure.resourcegroup.name (the node RG) directly, and the Azure VM transform must NOT --
+// there the detected RG is the correct VM identity.
+func TestAKSClusterResourceIDDerivation(t *testing.T) {
+	// The derivation lives only in the k8s transform.
+	assert.Contains(t, transformIdentityK8sConfig, `replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"]`,
+		"k8s identity transform must derive the cluster RG via replace_pattern")
+	assert.Contains(t, transformIdentityK8sConfig, `delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")`,
+		"k8s identity transform must clean up the temp attribute")
+	assert.NotContains(t, transformIdentityAzureVMConfig, "_tmp.azure.resourcegroup.name",
+		"Azure VM transform must use the detected RG directly, not derive it")
+
+	// Every %s in the AKS Format is nil-guarded (a nil arg would render a corrupt %!s(<nil>) ID).
+	for _, attr := range []string{"cloud.account.id", "_tmp.azure.resourcegroup.name", "k8s.cluster.name"} {
+		assert.Contains(t, transformIdentityK8sConfig,
+			fmt.Sprintf(`resource.attributes[%q] != nil`, attr),
+			"AKS resource_id statement must guard %q", attr)
+	}
+}
+
+// TestResolveK8sIdentityConfig asserts the cluster name is injected into the regex literal at
+// translate time (replace_pattern's regex is compile-time, so it cannot read the attribute at runtime).
+func TestResolveK8sIdentityConfig(t *testing.T) {
+	// No cluster name configured -> underscore-free fallback segment.
+	got := injectClusterName(confmap.New())
+	assert.NotContains(t, got, "%CLUSTER_NAME%", "placeholder must be substituted")
+	assert.Contains(t, got, `"^MC_(.+)_[^_]+_[^_]+$"`, "empty cluster name should fall back to [^_]+")
+
+	// Configured cluster name -> injected verbatim into the regex literal. ValidateClusterName
+	// (enforced on every path reaching this transform) restricts names to [A-Za-z0-9-_], none of
+	// which are regex metacharacters, so no escaping is needed.
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{"cluster_name": "my_cluster"},
+	})
+	got = injectClusterName(conf)
+	assert.NotContains(t, got, "%CLUSTER_NAME%")
+	assert.Contains(t, got, `"^MC_(.+)_my_cluster_[^_]+$"`, "cluster name must be injected into the regex literal")
 }
