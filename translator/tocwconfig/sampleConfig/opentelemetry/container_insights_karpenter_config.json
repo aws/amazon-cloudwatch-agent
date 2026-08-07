@@ -1,0 +1,23 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "cluster_name": "TestCluster",
+    "collect": {
+      "container_insights": {
+        "collection_interval": 30,
+        "role": "cluster",
+        "solutions": {
+          "enabled": true,
+          "karpenter": {
+            "enabled": true
+          },
+          "keda": {
+            "enabled": false
+          }
+        }
+      }
+    }
+  }
+}
