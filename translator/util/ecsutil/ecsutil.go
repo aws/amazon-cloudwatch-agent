@@ -104,6 +104,7 @@ func (e *ecsUtil) parseRegion(em *ecsMetadataResponse) {
 	// When splitting the ARN with ":", the 4th segment is the region
 	if len(splitedContent) < 4 {
 		log.Printf("E! Invalid ecs task arn: %s", em.TaskARN)
+		return
 	}
 	e.Region = splitedContent[3]
 }
