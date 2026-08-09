@@ -31,6 +31,7 @@ const (
 	LogsCollectedKey                               = "logs_collected"
 	TracesCollectedKey                             = "traces_collected"
 	OpenTelemetryKey                               = "opentelemetry"
+	SelfTelemetryKey                               = "self_telemetry"
 	CollectKey                                     = "collect"
 	ResourceAttributesKey                          = "resource_attributes"
 	HostMetricsKey                                 = "host_metrics"
