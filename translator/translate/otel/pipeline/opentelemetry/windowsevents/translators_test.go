@@ -12,6 +12,7 @@ import (
 
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
+	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 )
 
 func TestNewTranslators_Disabled(t *testing.T) {
@@ -90,6 +91,56 @@ func TestParseEntries(t *testing.T) {
 	assert.Equal(t, "microsoft-windows-powershell_operational_2", entries[2].name())
 	assert.Equal(t, "Microsoft-Windows-PowerShell/Operational", entries[2].channel)
 	assert.Equal(t, []string{"WARNING"}, entries[2].eventLevels)
+}
+
+func TestParseEntries_ResolvesPlaceholders(t *testing.T) {
+	globallogs.GlobalLogConfig.MetadataInfo = map[string]string{
+		"{hostname}":    "EC2AMAZ-ABC123",
+		"{instance_id}": "i-abcdef1234567890",
+		"{ip_address}":  "172.31.0.1",
+	}
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{
+			"collect": map[string]any{
+				"windows_events": map[string]any{
+					"collect_list": []any{
+						map[string]any{
+							"event_name":      "System",
+							"log_group_name":  "logs-{instance_id}",
+							"log_stream_name": "{hostname}/{ip_address}",
+						},
+					},
+				},
+			},
+		},
+	})
+	entries := parseEntries(conf)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "logs-i-abcdef1234567890", entries[0].logGroupName)
+	assert.Equal(t, "EC2AMAZ-ABC123/172.31.0.1", entries[0].logStreamName)
+}
+
+// Empty names must skip resolution: ResolvePlaceholder defaults an empty input
+// to {instance_id} rather than leaving it empty.
+func TestParseEntries_EmptyNamesSkipPlaceholderResolution(t *testing.T) {
+	globallogs.GlobalLogConfig.MetadataInfo = map[string]string{
+		"{instance_id}": "i-abcdef1234567890",
+	}
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{
+			"collect": map[string]any{
+				"windows_events": map[string]any{
+					"collect_list": []any{
+						map[string]any{"event_name": "System"},
+					},
+				},
+			},
+		},
+	})
+	entries := parseEntries(conf)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "", entries[0].logGroupName)
+	assert.Equal(t, "", entries[0].logStreamName)
 }
 
 func TestParseEntries_ReceiverNames(t *testing.T) {
