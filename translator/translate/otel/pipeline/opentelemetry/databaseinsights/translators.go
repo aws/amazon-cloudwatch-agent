@@ -5,6 +5,7 @@ package databaseinsights
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -112,7 +113,9 @@ func parseDbiMysqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	arr, _ := conf.Get(common.DatabaseInsightsMysqlKey).([]any)
 	var raw []mysqlRawInstance
 	if err := mapstructure.Decode(arr, &raw); err != nil {
-		return nil
+		// Log error but return empty slice to allow other database instances to be processed
+		fmt.Fprintf(os.Stderr, "failed to decode MySQL database_insights config: %v\n", err)
+		return []dbiInstanceConfig{}
 	}
 	instances := make([]dbiInstanceConfig, 0, len(raw))
 	for _, r := range raw {
