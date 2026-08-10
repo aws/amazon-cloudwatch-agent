@@ -263,13 +263,17 @@ func (t *dbiTranslator) serverLogReceiver() common.ComponentTranslator {
 // "events"; for PostgreSQL events we override the query sample interval.
 func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 	if t.cfg.engine == common.MySQLKey {
-		return mysql.NewTranslator(
+		opts := []mysql.Option{
 			mysql.WithName(name),
 			mysql.WithIndex(t.instanceIndex),
 			mysql.WithEndpoint(t.cfg.endpoint),
 			mysql.WithUsername(t.cfg.username),
 			mysql.WithPassfile(t.cfg.passfile),
-		)
+		}
+		if name == "events" {
+			opts = append(opts, mysql.WithTopQueryInterval(60*time.Second))
+		}
+		return mysql.NewTranslator(opts...)
 	}
 
 	opts := []postgresql.Option{
