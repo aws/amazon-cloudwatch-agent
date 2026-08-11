@@ -55,6 +55,6 @@ func TestTranslator_Translate_CustomTopQueryInterval(t *testing.T) {
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 	mysqlCfg := cfg.(*mysqlreceiver.Config)
-	
+
 	assert.Equal(t, 30*time.Second, mysqlCfg.TopQueryCollection.CollectionInterval)
 }
