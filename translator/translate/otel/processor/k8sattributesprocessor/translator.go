@@ -35,8 +35,31 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.name)
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig()
+
+	metadata := []string{
+		"k8s.namespace.name",
+		"k8s.deployment.name",
+		"k8s.replicaset.name",
+		"k8s.statefulset.name",
+		"k8s.daemonset.name",
+		"k8s.job.name",
+		"k8s.cronjob.name",
+		"k8s.node.name",
+		"k8s.pod.name",
+		"k8s.pod.uid",
+		"k8s.pod.start_time",
+		"k8s.container.name",
+	}
+	// container_insights.watch_replicaset is on by default; false drops k8s.deployment.name,
+	// which stops this processor's cluster-wide ReplicaSet informer (the pod->RS->Deployment
+	// walk). k8s.replicaset.name stays (pod ownerRef, no informer). App Signals is unaffected
+	// (it never uses this processor). Only co-enabled raw OTLP telemetry loses deployment.name.
+	watchRSKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey, "watch_replicaset")
+	if conf != nil && !common.GetOrDefaultBool(conf, watchRSKey, true) {
+		metadata = removeString(metadata, "k8s.deployment.name")
+	}
 
 	cfgMap := map[string]interface{}{
 		"auth_type":   "serviceAccount",
@@ -45,20 +68,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 			"node_from_env_var": "K8S_NODE_NAME",
 		},
 		"extract": map[string]interface{}{
-			"metadata": []string{
-				"k8s.namespace.name",
-				"k8s.deployment.name",
-				"k8s.replicaset.name",
-				"k8s.statefulset.name",
-				"k8s.daemonset.name",
-				"k8s.job.name",
-				"k8s.cronjob.name",
-				"k8s.node.name",
-				"k8s.pod.name",
-				"k8s.pod.uid",
-				"k8s.pod.start_time",
-				"k8s.container.name",
-			},
+			"metadata": metadata,
 			"annotations": []map[string]interface{}{
 				{"tag_name": "resource.opentelemetry.io/service.name", "key": "resource.opentelemetry.io/service.name", "from": "pod"},
 				{"tag_name": "resource.opentelemetry.io/service.namespace", "key": "resource.opentelemetry.io/service.namespace", "from": "pod"},
@@ -81,4 +91,14 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func removeString(s []string, target string) []string {
+	out := make([]string, 0, len(s))
+	for _, v := range s {
+		if v != target {
+			out = append(out, v)
+		}
+	}
+	return out
 }
