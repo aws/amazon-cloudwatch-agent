@@ -5,8 +5,10 @@ package databaseinsights
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/confmap"
@@ -20,14 +22,15 @@ import (
 var ottlSafeRegex = regexp.MustCompile(`^[a-zA-Z0-9._@/:\-]+$`)
 
 type dbiInstanceConfig struct {
-	engine       string
-	endpoint     string
-	username     string
-	passfile     string
-	caFile       string
-	instanceName string
-	logFilePath  string
-	isLocalhost  bool
+	engine                        string
+	endpoint                      string
+	username                      string
+	passfile                      string
+	caFile                        string
+	instanceName                  string
+	logFilePath                   string
+	isLocalhost                   bool
+	perResourceCollectionInterval time.Duration
 }
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
@@ -57,12 +60,13 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 }
 
 type pgRawInstance struct {
-	Endpoint     string `mapstructure:"endpoint"`
-	Username     string `mapstructure:"username"`
-	PasswordFile string `mapstructure:"password_file"`
-	CAFile       string `mapstructure:"ca_file"`
-	InstanceName string `mapstructure:"instance_name"`
-	Logs         struct {
+	Endpoint                      string `mapstructure:"endpoint"`
+	Username                      string `mapstructure:"username"`
+	PasswordFile                  string `mapstructure:"password_file"`
+	CAFile                        string `mapstructure:"ca_file"`
+	InstanceName                  string `mapstructure:"instance_name"`
+	PerResourceCollectionInterval int    `mapstructure:"per_resource_collection_interval"`
+	Logs                          struct {
 		FilePath string `mapstructure:"file_path"`
 	} `mapstructure:"logs"`
 }
@@ -75,15 +79,20 @@ func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	}
 	instances := make([]dbiInstanceConfig, 0, len(raw))
 	for _, r := range raw {
+		perResourceInterval := 60 * time.Second
+		if r.PerResourceCollectionInterval > 0 {
+			perResourceInterval = time.Duration(r.PerResourceCollectionInterval) * time.Second
+		}
 		instances = append(instances, dbiInstanceConfig{
-			engine:       common.PostgreSQLKey,
-			endpoint:     r.Endpoint,
-			username:     r.Username,
-			passfile:     r.PasswordFile,
-			caFile:       r.CAFile,
-			instanceName: r.InstanceName,
-			logFilePath:  r.Logs.FilePath,
-			isLocalhost:  isLocalhostEndpoint(r.Endpoint),
+			engine:                        common.PostgreSQLKey,
+			endpoint:                      r.Endpoint,
+			username:                      r.Username,
+			passfile:                      r.PasswordFile,
+			caFile:                        r.CAFile,
+			instanceName:                  r.InstanceName,
+			logFilePath:                   r.Logs.FilePath,
+			isLocalhost:                   isLocalhostEndpoint(r.Endpoint),
+			perResourceCollectionInterval: perResourceInterval,
 		})
 	}
 	return instances
@@ -113,18 +122,21 @@ func parseDbiMysqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	arr, _ := conf.Get(common.DatabaseInsightsMysqlKey).([]any)
 	var raw []mysqlRawInstance
 	if err := mapstructure.Decode(arr, &raw); err != nil {
-		return nil
+		// Log error but return empty slice to allow other database instances to be processed
+		fmt.Fprintf(os.Stderr, "failed to decode MySQL database_insights config: %v\n", err)
+		return []dbiInstanceConfig{}
 	}
 	instances := make([]dbiInstanceConfig, 0, len(raw))
 	for _, r := range raw {
 		instances = append(instances, dbiInstanceConfig{
-			engine:       common.MySQLKey,
-			endpoint:     r.Endpoint,
-			username:     r.Username,
-			passfile:     r.PasswordFile,
-			instanceName: r.InstanceName,
-			logFilePath:  r.Logs.FilePath,
-			isLocalhost:  isLocalhostEndpoint(r.Endpoint),
+			engine:                        common.MySQLKey,
+			endpoint:                      r.Endpoint,
+			username:                      r.Username,
+			passfile:                      r.PasswordFile,
+			instanceName:                  r.InstanceName,
+			logFilePath:                   r.Logs.FilePath,
+			isLocalhost:                   isLocalhostEndpoint(r.Endpoint),
+			perResourceCollectionInterval: 0, // MySQL doesn't have per-resource metrics
 		})
 	}
 	return instances

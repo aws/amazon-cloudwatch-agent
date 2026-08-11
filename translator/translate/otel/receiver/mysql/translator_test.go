@@ -45,7 +45,7 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 	assert.Equal(t, 60*time.Second, mysqlCfg.TopQueryCollection.CollectionInterval)
 }
 
-func TestTranslator_Translate_CustomInterval(t *testing.T) {
+func TestTranslator_Translate_CustomTopQueryInterval(t *testing.T) {
 	tr := NewTranslator(
 		WithEndpoint("localhost:3306"),
 		WithUsername("cw_monitor"),
@@ -54,5 +54,7 @@ func TestTranslator_Translate_CustomInterval(t *testing.T) {
 	)
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
-	assert.Equal(t, 30*time.Second, cfg.(*mysqlreceiver.Config).TopQueryCollection.CollectionInterval)
+	mysqlCfg := cfg.(*mysqlreceiver.Config)
+
+	assert.Equal(t, 30*time.Second, mysqlCfg.TopQueryCollection.CollectionInterval)
 }

@@ -110,7 +110,7 @@ transforms:
     new_name: JVMGCDuration
     operations:
     - action: aggregate_labels
-      label_set: []
+      label_set: ["name"]
       aggregation_type: sum
     - action: add_label
       new_label: Telemetry.Source
@@ -120,7 +120,7 @@ transforms:
     new_name: JVMGCCount
     operations:
       - action: aggregate_labels
-        label_set: []
+        label_set: ["name"]
         aggregation_type: sum
       - action: add_label
         new_label: Telemetry.Source

@@ -158,8 +158,29 @@ func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error)
 	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine, t.cfg.engine)
 	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine, t.cfg.engine)
 
+	var receivers []common.ComponentTranslator
+	if t.cfg.engine == common.PostgreSQLKey {
+		// Split postgresql metric collection into two receiver instances so per-resource
+		// (table/index) metrics are scraped at a configurable interval (default 60s) while
+		// server metrics stay at the default 10s. This caps per-resource ingestion volume
+		// for DBI GA pricing. The per-resource interval can be overridden via
+		// per_resource_collection_interval in the agent JSON config. The server instance
+		// keeps the events (query-sample / top-query) that feed DBLoad and TopSQL; the
+		// per-resource instance disables events so those are not double-counted.
+		serverRx := t.pgReceiver("metrics", postgresql.WithServerMetricsOnly())
+		perResourceRx := t.pgReceiver("metrics_perresource",
+			postgresql.WithPerResourceMetricsOnly(),
+			postgresql.WithCollectionInterval(t.cfg.perResourceCollectionInterval),
+			postgresql.WithEventsDisabled(),
+		)
+		receivers = []common.ComponentTranslator{serverRx, perResourceRx, countConn, s2mConn}
+	} else {
+		// MySQL uses a single metrics receiver (no split collection)
+		receivers = []common.ComponentTranslator{t.receiver("metrics"), countConn, s2mConn}
+	}
+
 	return &common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.receiver("metrics"), countConn, s2mConn),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](receivers...),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.scopeTransform(),
 			transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+t.cfg.engine+"_"+idx, transformprocessor.WithMetricResourceStatements(t.resourceStatements())),
@@ -174,8 +195,15 @@ func (t *dbiTranslator) translateLogToMetrics() (*common.ComponentTranslators, e
 	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine, t.cfg.engine)
 	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine, t.cfg.engine)
 
+	var receiver common.ComponentTranslator
+	if t.cfg.engine == common.PostgreSQLKey {
+		receiver = t.pgReceiver("metrics", postgresql.WithServerMetricsOnly())
+	} else {
+		receiver = t.receiver("metrics")
+	}
+
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.receiver("metrics")),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](receiver),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter()),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](countConn, s2mConn),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
@@ -187,8 +215,22 @@ func (t *dbiTranslator) translateRawEvents() (*common.ComponentTranslators, erro
 	idx := strconv.Itoa(t.instanceIndex)
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
+	var receiver common.ComponentTranslator
+	if t.cfg.engine == common.PostgreSQLKey {
+		// The events receiver feeds a logs pipeline only, so no metrics pipeline consumes
+		// it. Disable its metrics so the generated config reflects that instead of
+		// listing metrics that are never collected.
+		receiver = t.pgReceiver("events",
+			postgresql.WithQuerySampleInterval(60*time.Second),
+			postgresql.WithMetricsDisabled(),
+		)
+	} else {
+		// MySQL events receiver with 60s interval for top query collection
+		receiver = t.receiver("events")
+	}
+
 	return &common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.receiver("events")),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](receiver),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.excludeMonitorFilter(),
 			t.scopeTransform(),
@@ -296,13 +338,17 @@ func (t *dbiTranslator) serverLogReceiver() common.ComponentTranslator {
 // "events"; for PostgreSQL events we override the query sample interval.
 func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 	if t.cfg.engine == common.MySQLKey {
-		return mysql.NewTranslator(
+		opts := []mysql.Option{
 			mysql.WithName(name),
 			mysql.WithIndex(t.instanceIndex),
 			mysql.WithEndpoint(t.cfg.endpoint),
 			mysql.WithUsername(t.cfg.username),
 			mysql.WithPassfile(t.cfg.passfile),
-		)
+		}
+		if name == "events" {
+			opts = append(opts, mysql.WithTopQueryInterval(60*time.Second))
+		}
+		return mysql.NewTranslator(opts...)
 	}
 
 	if t.cfg.engine == common.SQLServerKey {
@@ -327,6 +373,21 @@ func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 	if name == "events" {
 		opts = append(opts, postgresql.WithQuerySampleInterval(60*time.Second))
 	}
+	return postgresql.NewTranslator(opts...)
+}
+
+// pgReceiver builds a PostgreSQL receiver with custom options (for split metrics collection).
+func (t *dbiTranslator) pgReceiver(name string, extraOpts ...postgresql.Option) common.ComponentTranslator {
+	opts := []postgresql.Option{
+		postgresql.WithName(name),
+		postgresql.WithIndex(t.instanceIndex),
+		postgresql.WithEndpoint(t.cfg.endpoint),
+		postgresql.WithUsername(t.cfg.username),
+		postgresql.WithPassfile(t.cfg.passfile),
+		postgresql.WithCAFile(t.cfg.caFile),
+		postgresql.WithIsLocalhost(t.cfg.isLocalhost),
+	}
+	opts = append(opts, extraOpts...)
 	return postgresql.NewTranslator(opts...)
 }
 

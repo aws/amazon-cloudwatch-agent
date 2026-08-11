@@ -133,10 +133,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
 	cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true
 
-	cfg.QuerySample.MaxRowsPerQuery = 5000
+	cfg.QuerySample.MaxRowsPerQuery = 500
 	cfg.TopQueryCollection.CollectionInterval = t.topQueryInterval
 	cfg.TopQueryCollection.TopQueryCount = 200
-	cfg.TopQueryCollection.MaxQuerySampleCount = 1000
+	cfg.TopQueryCollection.MaxQuerySampleCount = 5000
 	
 	// Query Plan Caching: Controls caching behavior for SQL Server XML ShowPlan data
 	// Plans are automatically compressed (always-on) to fit within CloudWatch Logs 1MB limit

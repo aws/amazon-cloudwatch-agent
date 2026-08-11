@@ -5,8 +5,10 @@ package databaseinsights
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -264,4 +266,53 @@ func TestNewTranslators_SqlServer_MultiInstance(t *testing.T) {
 		"logs/dbi_sqlserver_rawevents_1",
 	}
 	assert.ElementsMatch(t, expected, ids)
+}
+
+func TestParseDbiPostgresqlInstances_PerResourceCollectionInterval(t *testing.T) {
+	tests := []struct {
+		name             string
+		intervalValue    interface{} // nil means field absent
+		expectedInterval time.Duration
+	}{
+		{
+			name:             "default when omitted",
+			intervalValue:    nil,
+			expectedInterval: 60 * time.Second,
+		},
+		{
+			name:             "custom value",
+			intervalValue:    120,
+			expectedInterval: 120 * time.Second,
+		},
+		{
+			name:             "zero falls back to default",
+			intervalValue:    0,
+			expectedInterval: 60 * time.Second,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			instance := map[string]interface{}{ //nolint:gosec // test fixture path, not a real credential
+				"endpoint":      "localhost:5432",
+				"username":      "cw_monitor",
+				"password_file": "/etc/.pgpass",
+				"instance_name": "test-db",
+			}
+			if tc.intervalValue != nil {
+				instance["per_resource_collection_interval"] = tc.intervalValue
+			}
+			cfg := confmap.NewFromStringMap(map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"postgresql": []interface{}{instance},
+						},
+					},
+				},
+			})
+			instances := parseDbiPostgresqlInstances(cfg)
+			require.Len(t, instances, 1)
+			assert.Equal(t, tc.expectedInterval, instances[0].perResourceCollectionInterval)
+		})
+	}
 }
