@@ -40,7 +40,7 @@ var imagePrefixes = []string{
 	"cloudwatch-agent-integration-test-rocky-linux-9",
 	"cloudwatch-agent-integration-test-rocky-linux-10",
 	"cloudwatch-agent-integration-test-sles-15",
-	"cloudwatch-agent-integration-test-sles-16-arm64",
+	"cloudwatch-agent-integration-test-sles-16",
 	"cloudwatch-agent-integration-test-ubuntu-24",
 	"cloudwatch-agent-integration-test-ubuntu-LTS-22",
 	"cloudwatch-agent-integration-test-ubuntu-25",
