@@ -1665,6 +1665,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
+        skip_replicaset_watch: false
     otlp/grpc_0_0_0_0_4315:
         protocols:
             grpc:

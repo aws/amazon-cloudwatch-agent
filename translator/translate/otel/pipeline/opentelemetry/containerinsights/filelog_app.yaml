@@ -107,7 +107,9 @@ processors:
       metadata:
       - k8s.pod.uid
       - k8s.node.name
+{{- if .WatchReplicaSet }}
       - k8s.deployment.name
+{{- end }}
       - k8s.statefulset.name
       - k8s.daemonset.name
       - k8s.replicaset.name

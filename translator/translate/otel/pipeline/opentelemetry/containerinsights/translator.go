@@ -158,6 +158,7 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		AppLogStream:       envOrPlaceholder("K8S_NODE_NAME") + "-application",
 		NodeLogGroup:       fmt.Sprintf("/aws/otel/containerinsights/%s/host", clusterName),
 		NodeLogStream:      envOrPlaceholder("K8S_NODE_NAME") + "-host",
+		WatchReplicaSet:    watchReplicaSet(conf),
 	}
 
 	// Execute template

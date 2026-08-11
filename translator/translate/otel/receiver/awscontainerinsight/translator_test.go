@@ -143,6 +143,29 @@ func TestTranslator(t *testing.T) {
 				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
 			},
 		},
+		"WithKubernetes/WatchReplicaSetDisabled": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"metrics_collected": map[string]interface{}{
+						"kubernetes": map[string]interface{}{
+							"watch_replicaset": false,
+							"cluster_name":     "TestCluster",
+						},
+					},
+				},
+			},
+			want: &awscontainerinsightreceiver.Config{
+				ContainerOrchestrator:        eks,
+				CollectionInterval:           60 * time.Second,
+				TagService:                   true,
+				SkipReplicaSetWatch:          true,
+				LeaderLockName:               defaultLeaderLockName,
+				LeaderLockUsingConfigMapOnly: true,
+				ClusterName:                  "TestCluster",
+				KubeConfigPath:               "",
+				AcceleratedComputeGPUMetricsCollectionInterval: 60 * time.Second, // Default value
+			},
+		},
 		"WithKubernetes/WithCollectionRoleLeader": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
@@ -399,6 +422,7 @@ func TestTranslator(t *testing.T) {
 				require.Equal(t, testCase.want.AddContainerNameMetricLabel, gotCfg.AddContainerNameMetricLabel)
 				require.Equal(t, testCase.want.AddFullPodNameMetricLabel, gotCfg.AddFullPodNameMetricLabel)
 				require.Equal(t, testCase.want.TagService, gotCfg.TagService)
+				require.Equal(t, testCase.want.SkipReplicaSetWatch, gotCfg.SkipReplicaSetWatch)
 				require.Equal(t, testCase.want.LeaderLockName, gotCfg.LeaderLockName)
 				require.Equal(t, testCase.want.LeaderLockUsingConfigMapOnly, gotCfg.LeaderLockUsingConfigMapOnly)
 				require.Equal(t, testCase.want.EnableControlPlaneMetrics, gotCfg.EnableControlPlaneMetrics)

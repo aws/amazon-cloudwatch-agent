@@ -37,6 +37,10 @@ type templateData struct {
 	AppLogStream       string
 	NodeLogGroup       string
 	NodeLogStream      string
+	// WatchReplicaSet gates k8s.deployment.name in the k8sattributes metadata.
+	// When false the pod->RS->Deployment owner walk (and its cluster-wide
+	// ReplicaSet informer) is not started. Default true.
+	WatchReplicaSet bool
 }
 
 // rawMapConfig wraps a raw config map and passes it through serialization unchanged.
@@ -98,6 +102,12 @@ func logsEnabled(conf *confmap.Conf) bool {
 	}
 	key := common.ConfigKey(ciConfigKey, "logs", "enabled")
 	return common.GetOrDefaultBool(conf, key, false)
+}
+
+// watchReplicaSet returns container_insights.watch_replicaset (default true).
+// When false the k8sattributes ReplicaSet informer is not started.
+func watchReplicaSet(conf *confmap.Conf) bool {
+	return common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "watch_replicaset"), true)
 }
 
 // getRole resolves the container insights pipeline role using the following

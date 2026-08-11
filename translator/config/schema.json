@@ -1878,6 +1878,10 @@
                   "type": "string",
                   "enum": ["node", "cluster"]
                 },
+                "watch_replicaset": {
+                  "description": "Whether to watch ReplicaSets cluster-wide to attribute pods to their Deployment (sets k8s.deployment.name). Set to false to stop the ReplicaSet watch; k8s.replicaset.name is unaffected. Default true.",
+                  "type": "boolean"
+                },
                 "logs": {
                   "type": "object",
                   "properties": {
