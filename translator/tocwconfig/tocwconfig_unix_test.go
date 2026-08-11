@@ -304,6 +304,7 @@ func TestAKSHostMetricsConfig(t *testing.T) {
 	// AKS nodes are Azure VMs, so DetectAgentMode resolves host mode to AzureVM; mirror that here.
 	context.CurrentContext().SetMode(config.ModeAzureVM)
 	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
+	t.Setenv("K8S_CLUSTER_NAME", "TestCluster")
 
 	checkTranslation(t, "opentelemetry/host_metrics_aks_config", "linux", nil, "")
 }
