@@ -1,13 +1,21 @@
 {
   "agent": {
-    "region": "us-east-1"
+    "region": "us-west-2"
   },
   "opentelemetry": {
     "cluster_name": "TestCluster",
     "collect": {
       "container_insights": {
+<<<<<<<< HEAD:translator/tocwconfig/sampleConfig/opentelemetry/container_insights_cluster_config.json
         "role": "cluster",
         "collection_interval": 30
+========
+        "role": "node",
+        "collection_interval": 30,
+        "logs": {
+          "enabled": true
+        }
+>>>>>>>> 1fa5ab77 (Add KEDA/Karpenter scrapping to CWAgent):translator/tocwconfig/sampleConfig/opentelemetry/container_insights_node_config.json
       }
     }
   }

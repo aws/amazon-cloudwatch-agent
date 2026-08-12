@@ -1,19 +1,32 @@
 receivers:
-  prometheus/cw_k8s_ci_v0_dcgm:
+  prometheus/cw_k8s_ci_v0_karpenter:
     config:
       global:
         scrape_interval: {{.CollectionInterval}}
         scrape_timeout: {{.ScrapeTimeout}}
       scrape_configs:
-      - job_name: dcgm-exporter
-        scheme: https
+      - job_name: karpenter
         scrape_interval: {{.CollectionInterval}}
         scrape_timeout: {{.ScrapeTimeout}}
-        static_configs:
-        - targets:
-          - dcgm-exporter-service:9400
-        tls_config:
-          ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        metrics_path: /metrics
+        kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names:
+            - {{.KarpenterNamespace}}
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          regex: karpenter
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_container_port_name]
+          regex: http-metrics
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: pod
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          target_label: node
 processors:
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
@@ -46,43 +59,44 @@ processors:
       - set(unit, "A") where IsMatch(name, ".*_amperes$")
       - set(unit, "m") where IsMatch(name, ".*_meters(_total)?$")
       - set(unit, "1") where unit == "" and IsMatch(name, ".*_total$")
-      - set(unit, "%") where name == "DCGM_FI_DEV_GPU_UTIL"
-      - set(unit, "%") where name == "DCGM_FI_DEV_MEM_COPY_UTIL"
-      - set(unit, "%") where name == "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE"
-      - set(unit, "MiBy") where name == "DCGM_FI_DEV_FB_USED"
-      - set(unit, "MiBy") where name == "DCGM_FI_DEV_FB_FREE"
-      - set(unit, "MiBy") where name == "DCGM_FI_DEV_FB_TOTAL"
-      - set(unit, "Cel") where name == "DCGM_FI_DEV_GPU_TEMP"
-      - set(unit, "W") where name == "DCGM_FI_DEV_POWER_USAGE"
-      - set(unit, "MHz") where name == "DCGM_FI_DEV_SM_CLOCK"
-      - set(unit, "By") where IsMatch(name, "^neuroncore_memory_usage_.*")
   metricstarttime/cw_k8s_ci_v0: {}
+  transform/cw_k8s_ci_v0_set_scope_karpenter:
+    error_mode: ignore
+    metric_statements:
+    - context: scope
+      statements:
+      - set(scope.name, "github.com/aws/karpenter")
+      - set(scope.schema_url, "")
+      - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+      - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+      - set(attributes["cloudwatch.pipeline"], "karpenter")
   transform/cw_k8s_ci_v0_set_cluster_name:
     error_mode: ignore
     metric_statements:
     - context: datapoint
       statements:
       - set(resource.attributes["k8s.cluster.name"], "{{.ClusterName}}")
-  groupbyattrs/cw_k8s_ci_v0_dcgm:
+  groupbyattrs/cw_k8s_ci_v0_karpenter:
     keys:
     - pod
     - namespace
-    - container
-  transform/cw_k8s_ci_v0_dcgm_promote:
+    - node
+  transform/cw_k8s_ci_v0_karpenter_promote:
     error_mode: ignore
     metric_statements:
     - context: resource
       statements:
       - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
       - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
-      - set(attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil
+      - set(attributes["k8s.node.name"], attributes["node"]) where attributes["node"] != nil
+      - delete_key(attributes, "net.host.name") where attributes["net.host.name"] != nil
+      - delete_key(attributes, "net.host.port") where attributes["net.host.port"] != nil
+      - delete_key(attributes, "url.scheme") where attributes["url.scheme"] != nil
     - context: datapoint
       statements:
       - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
       - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
-      - set(attributes["container"], resource.attributes["container"]) where resource.attributes["container"] != nil
-      - delete_key(attributes, "Hostname") where attributes["Hostname"] != nil
-      - delete_key(attributes, "pci_bus_id") where attributes["pci_bus_id"] != nil
+      - set(attributes["node"], resource.attributes["node"]) where resource.attributes["node"] != nil
   k8sattributes/cw_k8s_ci_v0_pod:
     auth_type: serviceAccount
     extract:
@@ -99,8 +113,6 @@ processors:
       - k8s.replicaset.name
       - k8s.job.name
       - k8s.cronjob.name
-    filter:
-      node_from_env_var: K8S_NODE_NAME
     passthrough: false
     exclude:
       pods: []
@@ -110,46 +122,19 @@ processors:
         name: k8s.pod.name
       - from: resource_attribute
         name: k8s.namespace.name
-  transform/cw_k8s_ci_v0_set_node_name:
+  transform/cw_k8s_ci_v0_set_workload:
     error_mode: ignore
     metric_statements:
     - context: datapoint
       statements:
-      - set(attributes["node_name"], "{{.NodeName}}")
-  transform/cw_k8s_ci_v0_promote_node_name:
-    error_mode: ignore
-    metric_statements:
-    - context: datapoint
-      statements:
-      - set(resource.attributes["k8s.node.name"], attributes["node_name"]) where attributes["node_name"] != nil
-  k8sattributes/cw_k8s_ci_v0_node:
-    auth_type: serviceAccount
-    extract:
-      labels:
-      - from: node
-        key_regex: (.*)
-        tag_name: k8s.node.label.$1
-      metadata:
-      - k8s.node.name
-    filter:
-      node_from_env_var: K8S_NODE_NAME
-    passthrough: false
-    exclude:
-      pods: []
-    pod_association:
-    - sources:
-      - from: resource_attribute
-        name: k8s.node.name
-  transform/cw_k8s_ci_v0_set_scope_dcgm:
-    error_mode: ignore
-    metric_statements:
-    - context: scope
-      statements:
-      - set(scope.name, "github.com/NVIDIA/dcgm-exporter")
-      - set(scope.schema_url, "")
-      - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-      - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
-      - set(attributes["cloudwatch.pipeline"], "dcgm")
+      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
+      - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.deployment.name"] != nil
+      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+      - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+      - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+      - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.replicaset.name"] != nil
   resourcedetection/cw_k8s_ci_v0:
     detectors: [eks, env, ec2]
     override: false
@@ -160,23 +145,20 @@ processors:
     - context: resource
       statements:
       - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil
-  transform/cw_k8s_ci_v0_set_workload:
+  transform/cw_k8s_ci_v0_clear_schema_url:
     error_mode: ignore
     metric_statements:
-    - context: datapoint
+    - context: resource
       statements:
-      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
-      - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil
-      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
-      - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.statefulset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
-      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
-      - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.daemonset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
-      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.job.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.job.name"] != nil
-      - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.job.name"] != nil and resource.attributes["k8s.workload.type"] == nil
-      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.cronjob.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.cronjob.name"] != nil
-      - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.cronjob.name"] != nil and resource.attributes["k8s.workload.type"] == nil
-      - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
-      - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.replicaset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+      - set(resource.schema_url, "")
+  # Marks records as cluster-scoped so the shared pipeline strips the scraper node's
+  # host.*/cloud.availability_zone after resourcedetection re-adds them (Helm parity).
+  transform/cw_k8s_ci_v0_mark_cluster:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      statements:
+      - set(attributes["_tmp.cluster_scoped"], true)
   awsattributelimit/cw_k8s_ci_v0:
     max_total_attributes: 150
     unconditional_removal_keys:
@@ -200,25 +182,23 @@ processors:
     - k8s.node.label.alpha.eksctl.io/
 service:
   pipelines:
-    metrics/cw_k8s_ci_v0_dcgm:
+    metrics/cw_k8s_ci_v0_karpenter:
       receivers:
-      - prometheus/cw_k8s_ci_v0_dcgm
+      - prometheus/cw_k8s_ci_v0_karpenter
       processors:
       - filter/cw_k8s_ci_v0_scrape_metadata
       - transform/cw_k8s_ci_v0_set_unit
       - metricstarttime/cw_k8s_ci_v0
+      - transform/cw_k8s_ci_v0_set_scope_karpenter
       - transform/cw_k8s_ci_v0_set_cluster_name
-      - groupbyattrs/cw_k8s_ci_v0_dcgm
-      - transform/cw_k8s_ci_v0_dcgm_promote
+      - groupbyattrs/cw_k8s_ci_v0_karpenter
+      - transform/cw_k8s_ci_v0_karpenter_promote
       - k8sattributes/cw_k8s_ci_v0_pod
-      - transform/cw_k8s_ci_v0_set_node_name
-      - transform/cw_k8s_ci_v0_promote_node_name
-      - k8sattributes/cw_k8s_ci_v0_node
-      - transform/cw_k8s_ci_v0_set_scope_dcgm
+      - transform/cw_k8s_ci_v0_set_workload
       - resourcedetection/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
       - transform/cw_k8s_ci_v0_clear_schema_url
-      - transform/cw_k8s_ci_v0_set_workload
+      - transform/cw_k8s_ci_v0_mark_cluster
       - awsattributelimit/cw_k8s_ci_v0
       exporters:
       - forward/opentelemetry

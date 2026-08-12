@@ -36,6 +36,9 @@ processors:
       statements:
       - set(attributes["k8s.cluster.name"], "{{.ClusterName}}")
       - set(attributes["k8s.node.name"], "{{.NodeName}}")
+  # Standard CI resourcedetection (same as metrics sources) — the shared pipeline
+  # stamps cloud/host attributes anyway; kept identical across pipelines to avoid
+  # a same-ID definition conflict when metrics and logs coexist.
   resourcedetection/cw_k8s_ci_v0:
     detectors: [eks, env, ec2]
     override: false

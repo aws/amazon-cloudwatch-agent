@@ -1887,6 +1887,41 @@
                     }
                   },
                   "additionalProperties": false
+                },
+                "solutions": {
+                  "description": "Optional add-on solution scrapers (cluster role only): Karpenter and KEDA operator metrics",
+                  "type": "object",
+                  "properties": {
+                    "karpenter": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape Karpenter metrics (cluster role only)",
+                          "type": "boolean"
+                        },
+                        "namespace": {
+                          "description": "Namespace where the Karpenter operator runs (default: karpenter)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "keda": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape KEDA operator metrics (cluster role only)",
+                          "type": "boolean"
+                        },
+                        "namespace": {
+                          "description": "Namespace where the KEDA operator runs (default: keda)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false
