@@ -6,10 +6,12 @@ package opentelemetry
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -181,4 +183,30 @@ func TestBaseMetricsTranslatorNoClusterName(t *testing.T) {
 		keys = append(keys, k.String())
 	}
 	assert.NotContains(t, keys, "transform/set_cluster_name")
+}
+
+func TestBaseMetricsBatch1000In10s(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewBaseMetricsTranslator()
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{"otlp": map[string]interface{}{}},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	var batchT common.ComponentTranslator
+	for _, id := range got.Processors.Keys() {
+		if id.String() == "batch/opentelemetry_metrics" {
+			batchT, _ = got.Processors.Get(id)
+		}
+	}
+	require.NotNil(t, batchT)
+	cfg, err := batchT.Translate(conf)
+	require.NoError(t, err)
+	bcfg := cfg.(*batchprocessor.Config)
+	assert.Equal(t, 10*time.Second, bcfg.Timeout)
+	assert.EqualValues(t, 1000, bcfg.SendBatchSize)
+	assert.EqualValues(t, 1000, bcfg.SendBatchMaxSize)
 }
