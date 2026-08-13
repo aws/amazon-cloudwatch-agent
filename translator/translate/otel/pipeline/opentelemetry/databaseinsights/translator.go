@@ -401,7 +401,7 @@ func (t *dbiTranslator) pgReceiver(name string, extraOpts ...postgresql.Option) 
 
 func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
-	
+
 	condition := fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
 	if t.cfg.engine == common.PostgreSQLKey {
 		condition = fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)

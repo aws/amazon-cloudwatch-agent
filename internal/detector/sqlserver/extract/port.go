@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	portFlagShort         = "-p"
-	portEnvVar            = "MSSQL_TCP_PORT"
+	portFlagShort        = "-p"
+	portEnvVar           = "MSSQL_TCP_PORT"
 	defaultSQLServerPort = 1433
 )
 

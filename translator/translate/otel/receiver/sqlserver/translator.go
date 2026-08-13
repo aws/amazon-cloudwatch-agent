@@ -76,23 +76,23 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	// Enable metrics disabled-by-default in the receiver but required by DBI.
 	// These metrics align with RDS SQL Server monitoring best practices.
-	
-	// Performance & Resource Metrics 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverProcessesBlocked.Enabled = true        
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDeadlockRate.Enabled = true             
-	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryGrantsPendingCount.Enabled = true 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryUsage.Enabled = true              
-	
-	// Page & Buffer Pool Metrics 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverPageLookupRate.Enabled = true          
-	cfg.MetricsBuilderConfig.Metrics.SqlserverForwardedRecordsRate.Enabled = true    
-	cfg.MetricsBuilderConfig.Metrics.SqlserverPageBufferCacheFreeListStallsRate.Enabled = true 
-	
+
+	// Performance & Resource Metrics
+	cfg.MetricsBuilderConfig.Metrics.SqlserverProcessesBlocked.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDeadlockRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryGrantsPendingCount.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverMemoryUsage.Enabled = true
+
+	// Page & Buffer Pool Metrics
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageLookupRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverForwardedRecordsRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverPageBufferCacheFreeListStallsRate.Enabled = true
+
 	// Wait Statistics
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLatchWaitRate.Enabled = true   
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLockTimeoutRate.Enabled = true 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLockWaitCount.Enabled = true 
-	
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLatchWaitRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLockTimeoutRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLockWaitCount.Enabled = true
+
 	// Windows-only metrics: These use Windows Performance Monitor counters (via recorders.go)
 	// that are unavailable on Linux. The SQL query fetches the data from sys.dm_os_performance_counters
 	// but scraper.go does not process them on the direct-connect (Linux) path.
@@ -109,26 +109,26 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogFlushWaitRate.Enabled = isWindows
 	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogGrowthCount.Enabled = isWindows
 	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogShrinkCount.Enabled = isWindows
-	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogUsage.Enabled = isWindows         
-	
-	// Database I/O Metrics 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIo.Enabled = true     
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseLatency.Enabled = true  
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseOperations.Enabled = true 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIoStallQueued.Enabled = true 
-	
-	// Connection & Workload Metrics 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLoginRate.Enabled = true  
-	cfg.MetricsBuilderConfig.Metrics.SqlserverLogoutRate.Enabled = true 
-	cfg.MetricsBuilderConfig.Metrics.SqlserverSessionCount.Enabled = true 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverTransactionLogUsage.Enabled = isWindows
+
+	// Database I/O Metrics
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIo.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseLatency.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseOperations.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseIoStallQueued.Enabled = true
+
+	// Connection & Workload Metrics
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLoginRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverLogoutRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverSessionCount.Enabled = true
 	// Index & Query Performance Metrics
-	cfg.MetricsBuilderConfig.Metrics.SqlserverIndexSearchRate.Enabled = true        
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseFullScanRate.Enabled = true  
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseExecutionErrors.Enabled = true 
-	
+	cfg.MetricsBuilderConfig.Metrics.SqlserverIndexSearchRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseFullScanRate.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseExecutionErrors.Enabled = true
+
 	// Optional: TempDB Metrics (useful for workload analysis)
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbSpace.Enabled = true            
-	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbVersionStoreSize.Enabled = true 
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbSpace.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.SqlserverDatabaseTempdbVersionStoreSize.Enabled = true
 
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
 	cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true
@@ -137,12 +137,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.TopQueryCollection.CollectionInterval = t.topQueryInterval
 	cfg.TopQueryCollection.TopQueryCount = 200
 	cfg.TopQueryCollection.MaxQuerySampleCount = 5000
-	
+
 	// Query Plan Caching: Controls caching behavior for SQL Server XML ShowPlan data
 	// Plans are automatically compressed (always-on) to fit within CloudWatch Logs 1MB limit
-	cfg.TopQueryCollection.QueryPlanCacheSize = 1000       // Cache up to 1000 plans
-	cfg.TopQueryCollection.QueryPlanCacheTTL = time.Hour   // Keep plans for 1 hour
-	cfg.TopQueryCollection.MaxQueryPlanSize = 921600       // Max 900KB after compression (safety limit)
+	cfg.TopQueryCollection.QueryPlanCacheSize = 1000     // Cache up to 1000 plans
+	cfg.TopQueryCollection.QueryPlanCacheTTL = time.Hour // Keep plans for 1 hour
+	cfg.TopQueryCollection.MaxQueryPlanSize = 921600     // Max 900KB after compression (safety limit)
 
 	return cfg, nil
 }

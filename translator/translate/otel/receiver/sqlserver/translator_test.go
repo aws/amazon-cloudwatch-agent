@@ -58,7 +58,7 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 	assert.Equal(t, uint(200), c.TopQueryCollection.TopQueryCount)
 	assert.Equal(t, uint(1000), c.TopQueryCollection.MaxQuerySampleCount)
 	assert.Equal(t, 60*time.Second, c.TopQueryCollection.CollectionInterval)
-	
+
 	// Query Plan Caching: verify all 3 fields (compression is always-on in receiver).
 	assert.Equal(t, 1000, c.TopQueryCollection.QueryPlanCacheSize)
 	assert.Equal(t, time.Hour, c.TopQueryCollection.QueryPlanCacheTTL)
@@ -66,23 +66,23 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 
 	// Metrics that are disabled-by-default in the receiver but required for DBI
 	m := c.MetricsBuilderConfig.Metrics
-	
-	// Performance & Resource Metrics 
-	assert.True(t, m.SqlserverProcessesBlocked.Enabled)         
-	assert.True(t, m.SqlserverDeadlockRate.Enabled)             
-	assert.True(t, m.SqlserverMemoryGrantsPendingCount.Enabled) 
-	assert.True(t, m.SqlserverMemoryUsage.Enabled)  
-	
-	// Page & Buffer Pool Metrics 
-	assert.True(t, m.SqlserverPageLookupRate.Enabled)                     
-	assert.True(t, m.SqlserverForwardedRecordsRate.Enabled)                
-	assert.True(t, m.SqlserverPageBufferCacheFreeListStallsRate.Enabled)   
-	
+
+	// Performance & Resource Metrics
+	assert.True(t, m.SqlserverProcessesBlocked.Enabled)
+	assert.True(t, m.SqlserverDeadlockRate.Enabled)
+	assert.True(t, m.SqlserverMemoryGrantsPendingCount.Enabled)
+	assert.True(t, m.SqlserverMemoryUsage.Enabled)
+
+	// Page & Buffer Pool Metrics
+	assert.True(t, m.SqlserverPageLookupRate.Enabled)
+	assert.True(t, m.SqlserverForwardedRecordsRate.Enabled)
+	assert.True(t, m.SqlserverPageBufferCacheFreeListStallsRate.Enabled)
+
 	// Wait Statistics (RDS Performance Insights equivalents)
-	assert.True(t, m.SqlserverLatchWaitRate.Enabled)   
-	assert.True(t, m.SqlserverLockTimeoutRate.Enabled) 
-	assert.True(t, m.SqlserverLockWaitCount.Enabled)   
-	
+	assert.True(t, m.SqlserverLatchWaitRate.Enabled)
+	assert.True(t, m.SqlserverLockTimeoutRate.Enabled)
+	assert.True(t, m.SqlserverLockWaitCount.Enabled)
+
 	// Windows-only metrics: use Windows Performance Monitor counters unavailable on Linux
 	if runtime.GOOS == "windows" {
 		assert.True(t, m.SqlserverLockWaitTimeAvg.Enabled)
@@ -113,25 +113,25 @@ func TestTranslator_Translate_Localhost(t *testing.T) {
 		assert.False(t, m.SqlserverTransactionLogShrinkCount.Enabled)
 		assert.False(t, m.SqlserverTransactionLogUsage.Enabled)
 	}
-	
-	// Database I/O Metrics 
-	assert.True(t, m.SqlserverDatabaseIo.Enabled)       
-	assert.True(t, m.SqlserverDatabaseLatency.Enabled)  
-	assert.True(t, m.SqlserverDatabaseOperations.Enabled) 
+
+	// Database I/O Metrics
+	assert.True(t, m.SqlserverDatabaseIo.Enabled)
+	assert.True(t, m.SqlserverDatabaseLatency.Enabled)
+	assert.True(t, m.SqlserverDatabaseOperations.Enabled)
 	assert.True(t, m.SqlserverDatabaseIoStallQueued.Enabled)
-	
+
 	// Connection & Workload Metrics
-	assert.True(t, m.SqlserverLoginRate.Enabled)  
-	assert.True(t, m.SqlserverLogoutRate.Enabled) 
-	assert.True(t, m.SqlserverSessionCount.Enabled) 
-	
+	assert.True(t, m.SqlserverLoginRate.Enabled)
+	assert.True(t, m.SqlserverLogoutRate.Enabled)
+	assert.True(t, m.SqlserverSessionCount.Enabled)
+
 	// Index & Query Performance Metrics
-	assert.True(t, m.SqlserverIndexSearchRate.Enabled)        
-	assert.True(t, m.SqlserverDatabaseFullScanRate.Enabled)   
-	assert.True(t, m.SqlserverDatabaseExecutionErrors.Enabled) 
-	
+	assert.True(t, m.SqlserverIndexSearchRate.Enabled)
+	assert.True(t, m.SqlserverDatabaseFullScanRate.Enabled)
+	assert.True(t, m.SqlserverDatabaseExecutionErrors.Enabled)
+
 	// Optional: TempDB Metrics (useful for workload analysis)
-	assert.True(t, m.SqlserverDatabaseTempdbSpace.Enabled)           
+	assert.True(t, m.SqlserverDatabaseTempdbSpace.Enabled)
 	assert.True(t, m.SqlserverDatabaseTempdbVersionStoreSize.Enabled)
 }
 
