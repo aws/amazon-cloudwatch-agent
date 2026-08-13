@@ -42,6 +42,12 @@
 #     CWAGENT_AWS_ROLE_ARN          IAM role ARN, install runs too when set
 #     CWAGENT_AWS_REGION            AWS region telemetry is sent to (required
 #                                   for install)
+#     CWAGENT_AZURE_SUBSCRIPTION    Subscription ID or name the resource lives
+#                                   in (Cloud Shell's ambient default is used
+#                                   when unset)
+#     CWAGENT_AZURE_RESOURCE_ID     Full ARM resource ID of the VM / AKS
+#                                   cluster; supplies the subscription,
+#                                   resource group, and name in one value
 #     CWAGENT_AZURE_RESOURCE_GROUP  Resource group
 #     CWAGENT_EMIT_ENV              When set (1/true/yes/on), print eval-able KEY='value'
 #                                   lines on stdout and route all logging to stderr
@@ -55,6 +61,8 @@ set -eu
 PLATFORM="${CWAGENT_PLATFORM:-}"
 ROLE_ARN="${CWAGENT_AWS_ROLE_ARN:-}"
 REGION="${CWAGENT_AWS_REGION:-}"
+SUBSCRIPTION="${CWAGENT_AZURE_SUBSCRIPTION:-}"
+RESOURCE_ID="${CWAGENT_AZURE_RESOURCE_ID:-}"
 RESOURCE_GROUP="${CWAGENT_AZURE_RESOURCE_GROUP:-}"
 VM_NAME="${CWAGENT_AZURE_VM_NAME:-}"
 CLUSTER_NAME="${CWAGENT_K8S_CLUSTER_NAME:-}"
@@ -127,6 +135,8 @@ Environment variables:
     CWAGENT_PLATFORM              azure_vm | azure_aks
     CWAGENT_AWS_ROLE_ARN          IAM role ARN; when set, install runs too
     CWAGENT_AWS_REGION            AWS region (required for install)
+    CWAGENT_AZURE_SUBSCRIPTION    Subscription ID or name of the resource
+    CWAGENT_AZURE_RESOURCE_ID     Full ARM resource ID (subscription + group + name)
     CWAGENT_AZURE_RESOURCE_GROUP  Resource group
     CWAGENT_EMIT_ENV              Print eval-able KEY='value' lines on stdout
   azure_vm:
@@ -258,15 +268,45 @@ interactive_setup() {
      esac
 }
 
+# Split an ARM resource ID into subscription / resource group / name, and return
+# the provider type so the caller can reject an ID from the wrong platform.
+# [rR]esource[gG]roups handles both spellings ARM emits.
+parse_resource_id() {
+     _rest="$1"
+     case "${_rest}" in
+     /subscriptions/*/[rR]esource[gG]roups/*/providers/*/*/*) : ;;
+     *) die "not a valid Azure resource ID: $1" ;;
+     esac
+     _rest="${_rest#/subscriptions/}"
+     SUBSCRIPTION="${_rest%%/*}"
+     _rest="${_rest#*[rR]esource[gG]roups/}"
+     RESOURCE_GROUP="${_rest%%/*}"
+     RESOURCE_NAME="${_rest##*/}"
+     _rest="${_rest%/*}"
+     RESOURCE_TYPE="${_rest##*/}"
+}
+
 check_prerequisites() {
      command -v az >/dev/null 2>&1 || die "Azure CLI is required but not installed"
      AZ_CLI_VERSION=$(az version --query '"azure-cli"' -o tsv 2>/dev/null || echo "0.0.0")
      if ! version_ge "${AZ_CLI_VERSION}" "2.47.0"; then
           logwarn "Azure CLI ${AZ_CLI_VERSION} detected (2.47+ recommended for full functionality)"
      fi
+     # Pin every subsequent az call to the resource's subscription; without this
+     # they all resolve against Cloud Shell's ambient default, and ARM answers
+     # for a resource in another subscription with an AuthorizationFailed that
+     # is indistinguishable from a genuine RBAC gap.
+     if [ -n "${SUBSCRIPTION}" ]; then
+          az_err=$(az account set --subscription "${SUBSCRIPTION}" 2>&1) ||
+               die "cannot select subscription ${SUBSCRIPTION}: ${az_err}
+Check 'az account list'; if it is in another tenant, run: az login --tenant <tenant-id>"
+          log "Subscription: ${SUBSCRIPTION}"
+     fi
      # One az account show for the liveness check, subscription id/name, and
      # tenant id (used later for the azure_vm identity emit).
-     AZ_ACCOUNT=$(az account show --query "[id, name, tenantId]" -o tsv 2>/dev/null) ||
+     # The nested [[...]] makes -o tsv emit one tab-separated row; a flat
+     # [...] array would print one value per line, breaking the cut parsing.
+     AZ_ACCOUNT=$(az account show --query "[[id, name, tenantId]]" -o tsv 2>/dev/null) ||
           die "Azure CLI not logged in (run 'az login')"
      AZ_SUB=$(printf '%s' "${AZ_ACCOUNT}" | cut -f1)
      AZ_NAME=$(printf '%s' "${AZ_ACCOUNT}" | cut -f2)
@@ -364,10 +404,14 @@ setup_azure_vm() {
      # One az vm show for both fields: the identity (to decide whether to assign
      # one) and the OS type (to pick the install payload). A tsv list projection
      # returns them tab-separated on one line, in query order.
+     # The nested [[...]] makes -o tsv emit one tab-separated row (null
+     # renders as "None"); a flat [...] array would print one value per line,
+     # making cut return both lines and IDENTITY test truthy for a VM with no
+     # identity at all.
      VM_INFO=$(az vm show \
           --resource-group "${RESOURCE_GROUP}" \
           --name "${VM_NAME}" \
-          --query "[identity.principalId, storageProfile.osDisk.osType]" -o tsv 2>/dev/null || true)
+          --query "[[identity.principalId, storageProfile.osDisk.osType]]" -o tsv 2>/dev/null || true)
      IDENTITY=$(printf '%s' "${VM_INFO}" | cut -f1)
      VM_OS=$(printf '%s' "${VM_INFO}" | cut -f2)
 
@@ -433,18 +477,22 @@ setup_azure_aks() {
 
      section "Configuring AKS cluster..."
 
-     # One az aks show for both the enabled flag and the issuer URL (present when
-     # already enabled). Only re-fetch the URL after enabling it ourselves.
+     # One az aks show for the two enabled flags and the issuer URL (present
+     # when OIDC is already enabled). Both flags must be checked: newer AKS
+     # enables the OIDC issuer at creation by default, but never workload
+     # identity, so keying on the issuer alone would skip the update and leave
+     # workload identity off.
      AKS_INFO=$(az aks show \
           --resource-group "${RESOURCE_GROUP}" \
           --name "${CLUSTER_NAME}" \
-          --query "[oidcIssuerProfile.enabled, oidcIssuerProfile.issuerUrl]" -o tsv 2>/dev/null || true)
+          --query "[[oidcIssuerProfile.enabled, securityProfile.workloadIdentity.enabled, oidcIssuerProfile.issuerUrl]]" -o tsv 2>/dev/null || true)
      OIDC_ENABLED=$(printf '%s' "${AKS_INFO}" | cut -f1)
-     OIDC_ISSUER=$(printf '%s' "${AKS_INFO}" | cut -f2)
+     WI_ENABLED=$(printf '%s' "${AKS_INFO}" | cut -f2)
+     OIDC_ISSUER=$(printf '%s' "${AKS_INFO}" | cut -f3)
 
      # az -o tsv renders a JSON boolean via Python str(), i.e. "True"/"False",
      # so match case-insensitively rather than against a lowercase "true".
-     if [ "$(printf '%s' "${OIDC_ENABLED}" | tr '[:upper:]' '[:lower:]')" = "true" ]; then
+     if [ "$(printf '%s%s' "${OIDC_ENABLED}" "${WI_ENABLED}" | tr '[:upper:]' '[:lower:]')" = "truetrue" ]; then
           log "OIDC issuer and workload identity enabled"
      else
           logaction "Enabling OIDC issuer and workload identity (this may take a few minutes)"
@@ -550,6 +598,19 @@ main() {
      # Region is only needed for the install, so require it only when the ARN is set.
      if [ -n "${ROLE_ARN}" ]; then
           [ -n "${REGION}" ] || die "CWAGENT_AWS_REGION is required to install"
+     fi
+
+     # A full ARM resource ID carries the subscription, resource group, and name
+     # in one value; resolve it into the existing variables (taking precedence
+     # over the individual CWAGENT_AZURE_* values) so the rest of the script is
+     # untouched.
+     if [ -n "${RESOURCE_ID}" ]; then
+          parse_resource_id "${RESOURCE_ID}"
+          case "${PLATFORM}:${RESOURCE_TYPE}" in
+          azure_vm:virtualMachines) VM_NAME="${RESOURCE_NAME}" ;;
+          azure_aks:managedClusters) CLUSTER_NAME="${RESOURCE_NAME}" ;;
+          *) die "resource ID is a ${RESOURCE_TYPE}, which does not match CWAGENT_PLATFORM=${PLATFORM}" ;;
+          esac
      fi
 
      check_prerequisites
