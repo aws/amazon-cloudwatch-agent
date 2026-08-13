@@ -18,7 +18,7 @@ const (
 	MaxSpansPerRequest   = 10000
 	BatchTimeout         = 30 * time.Second
 	// MetricsBatchTimeout is the batch flush interval for the shared opentelemetry
-	// metrics pipeline.
+	// metrics pipeline. 
 	MetricsBatchTimeout = 10 * time.Second
 )
 
