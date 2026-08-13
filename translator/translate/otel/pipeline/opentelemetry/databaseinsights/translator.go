@@ -318,19 +318,23 @@ func (t *dbiTranslator) receiver(name string) common.ComponentTranslator {
 		return mysql.NewTranslator(opts...)
 	}
 
-	opts := []postgresql.Option{
-		postgresql.WithName(name),
-		postgresql.WithIndex(t.instanceIndex),
-		postgresql.WithEndpoint(t.cfg.endpoint),
-		postgresql.WithUsername(t.cfg.username),
-		postgresql.WithPassfile(t.cfg.passfile),
-		postgresql.WithCAFile(t.cfg.caFile),
-		postgresql.WithIsLocalhost(t.cfg.isLocalhost),
+	if t.cfg.engine == common.PostgreSQLKey {
+		opts := []postgresql.Option{
+			postgresql.WithName(name),
+			postgresql.WithIndex(t.instanceIndex),
+			postgresql.WithEndpoint(t.cfg.endpoint),
+			postgresql.WithUsername(t.cfg.username),
+			postgresql.WithPassfile(t.cfg.passfile),
+			postgresql.WithCAFile(t.cfg.caFile),
+			postgresql.WithIsLocalhost(t.cfg.isLocalhost),
+		}
+		if name == "events" {
+			opts = append(opts, postgresql.WithQuerySampleInterval(60*time.Second))
+		}
+		return postgresql.NewTranslator(opts...)
 	}
-	if name == "events" {
-		opts = append(opts, postgresql.WithQuerySampleInterval(60*time.Second))
-	}
-	return postgresql.NewTranslator(opts...)
+
+	return nil
 }
 
 // pgReceiver builds a PostgreSQL receiver with custom options (for split metrics collection).

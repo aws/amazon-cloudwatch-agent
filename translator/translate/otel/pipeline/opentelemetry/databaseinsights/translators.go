@@ -74,7 +74,9 @@ func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	arr, _ := conf.Get(common.DatabaseInsightsPostgresKey).([]any)
 	var raw []pgRawInstance
 	if err := mapstructure.Decode(arr, &raw); err != nil {
-		return nil
+		// Log error but return empty slice to allow other database instances to be processed
+		fmt.Fprintf(os.Stderr, "failed to decode PostgreSQL database_insights config: %v\n", err)
+		return []dbiInstanceConfig{}
 	}
 	instances := make([]dbiInstanceConfig, 0, len(raw))
 	for _, r := range raw {
