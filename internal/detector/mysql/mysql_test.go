@@ -107,7 +107,7 @@ func TestDetect(t *testing.T) {
 			},
 			wantErr: assert.AnError,
 		},
-		"Error/CmdlineSliceWithContext": {
+		"Success/DefaultPortOnCmdlineError": {
 			setup: func(mp *detectortest.MockProcess) {
 				mp.On("ExeWithContext", ctx).Return("/usr/sbin/mysqld", nil)
 				mp.On("CmdlineSliceWithContext", ctx).Return(nil, assert.AnError)
