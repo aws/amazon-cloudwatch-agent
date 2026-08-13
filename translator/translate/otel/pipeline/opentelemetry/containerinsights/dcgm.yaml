@@ -217,7 +217,6 @@ service:
       - transform/cw_k8s_ci_v0_set_scope_dcgm
       - resourcedetection/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
-      - transform/cw_k8s_ci_v0_clear_schema_url
       - transform/cw_k8s_ci_v0_set_workload
       - awsattributelimit/cw_k8s_ci_v0
       exporters:
