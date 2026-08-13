@@ -189,6 +189,7 @@ func TestTranslate(t *testing.T) {
 
 func TestTranslate_OpenTelemetryKey_NoMiddleware(t *testing.T) {
 	tt := NewTranslator(WithName("opentelemetry"))
+	context.ResetContext()
 	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
 	ecsutil.GetECSUtilSingleton().Region = ""
 	conf := confmap.NewFromStringMap(map[string]interface{}{})

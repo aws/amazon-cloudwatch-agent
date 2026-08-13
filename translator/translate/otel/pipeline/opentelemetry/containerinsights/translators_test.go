@@ -54,6 +54,25 @@ func TestNewTranslators_RoleNodeWithLogs(t *testing.T) {
 	assert.Equal(t, 10, translators.Len())
 }
 
+// TestNewTranslators_RoleClusterWithLogs verifies logs.enabled is ignored for
+// cluster role (no node log sources) so no log pipelines are created.
+func TestNewTranslators_RoleClusterWithLogs(t *testing.T) {
+	cfg := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{
+					"role": "cluster",
+					"logs": map[string]interface{}{"enabled": true},
+				},
+			},
+		},
+	})
+	translators := NewTranslators(cfg)
+	// cluster role has no logs; logs.enabled is ignored -> still 2 metric pipelines.
+	assert.Equal(t, 2, translators.Len())
+}
+
 func TestNewTranslators_RoleCluster(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{

@@ -100,6 +100,11 @@ func logsEnabled(conf *confmap.Conf) bool {
 	return common.GetOrDefaultBool(conf, key, false)
 }
 
+// NodeLogsEnabled reports when Container Insights node-role log pipelines are enabled
+func NodeLogsEnabled(conf *confmap.Conf) bool {
+	return logsEnabled(conf) && getRole(conf) == roleNode
+}
+
 // getRole resolves the container insights pipeline role using the following
 // priority order:
 //  1. JSON config field

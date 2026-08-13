@@ -98,16 +98,16 @@ processors:
               converted_type: ""
               from_attribute: ""
               from_context: ""
-              key: aws.log.stream.name
+              key: aws.log.group.name
               pattern: ""
-              value: i-0123456789abcdef0
+              value: /aws/app/logs
             - action: upsert
               converted_type: ""
               from_attribute: ""
               from_context: ""
-              key: aws.log.group.name
+              key: aws.log.stream.name
               pattern: ""
-              value: /aws/app/logs
+              value: i-0123456789abcdef0
     resource/files__var_log_syslog_1:
         attributes:
             - action: upsert
