@@ -42,19 +42,33 @@ type source struct {
 	fallback string
 }
 
+// publishedInstrument records the metric type an instrument was created for, so the observe path
+// only feeds it series of that type even if two source registries expose the same family name with
+// different types.
+type publishedInstrument struct {
+	observable otelmetric.Float64Observable
+	metricType dto.MetricType
+}
+
 type selfTelemetry struct {
 	logger *zap.Logger
 	cfg    *Config
 	meter  otelmetric.Meter
 
 	cancel context.CancelFunc
+	// done is closed when run() returns, so Shutdown can wait for the sync goroutine to stop before
+	// touching registration.
+	done chan struct{}
 
 	// sources is a field so tests can supply registries instead of the process-wide ones.
 	sources func() []source
 
-	// instruments and registration are only touched by the sync goroutine; each callback closes over
-	// its own snapshot, so the observe path needs no locking.
-	instruments  map[string]otelmetric.Float64Observable
+	// instruments, registration, and dirty are only touched by the sync goroutine; each callback
+	// closes over its own snapshot, so the observe path needs no locking.
+	instruments map[string]publishedInstrument
+	// dirty is set when the instrument set changes and cleared only once reregister() fully succeeds,
+	// so a failed Unregister/RegisterCallback is retried on the next pass instead of stranding metrics.
+	dirty        bool
 	registration otelmetric.Registration
 	shutdownOnce sync.Once
 }
@@ -67,7 +81,7 @@ func newSelfTelemetry(settings extension.Settings, cfg *Config) *selfTelemetry {
 		cfg:         cfg,
 		meter:       settings.MeterProvider.Meter(scopeName),
 		sources:     processSources,
-		instruments: map[string]otelmetric.Float64Observable{},
+		instruments: map[string]publishedInstrument{},
 	}
 }
 
@@ -84,6 +98,7 @@ func processSources() []source {
 func (s *selfTelemetry) Start(_ context.Context, _ component.Host) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
+	s.done = make(chan struct{})
 	go s.run(ctx)
 	return nil
 }
@@ -91,6 +106,7 @@ func (s *selfTelemetry) Start(_ context.Context, _ component.Host) error {
 // run rescans on an interval because extensions start before receivers, so nothing is registered yet
 // on the first pass, and families keep appearing as counters are first incremented.
 func (s *selfTelemetry) run(ctx context.Context) {
+	defer close(s.done)
 	ticker := time.NewTicker(s.cfg.discoveryInterval())
 	defer ticker.Stop()
 	s.sync()
@@ -105,7 +121,6 @@ func (s *selfTelemetry) run(ctx context.Context) {
 }
 
 func (s *selfTelemetry) sync() {
-	var added bool
 	for _, src := range s.sources() {
 		families, err := src.gatherer.Gather()
 		if err != nil {
@@ -128,11 +143,13 @@ func (s *selfTelemetry) sync() {
 			if inst == nil {
 				continue
 			}
-			s.instruments[mf.GetName()] = inst
-			added = true
+			s.instruments[mf.GetName()] = publishedInstrument{observable: inst, metricType: mf.GetType()}
+			s.dirty = true
 		}
 	}
-	if added {
+	// Retry whenever the callback is out of sync with the instrument set, not only when new families
+	// appeared this pass: a prior reregister() may have failed and left dirty set.
+	if s.dirty {
 		s.reregister()
 	}
 }
@@ -153,29 +170,32 @@ func (s *selfTelemetry) newInstrument(mf *dto.MetricFamily) (otelmetric.Float64O
 // reregister swaps in a single callback covering every instrument, so one gather serves a collection
 // no matter how many passes it took to discover them.
 func (s *selfTelemetry) reregister() {
-	snapshot := make(map[string]otelmetric.Float64Observable, len(s.instruments))
+	snapshot := make(map[string]publishedInstrument, len(s.instruments))
 	observables := make([]otelmetric.Observable, 0, len(s.instruments))
 	for name, inst := range s.instruments {
 		snapshot[name] = inst
-		observables = append(observables, inst)
+		observables = append(observables, inst.observable)
 	}
 	if s.registration != nil {
 		if err := s.registration.Unregister(); err != nil {
-			s.logger.Warn("unable to replace self-telemetry callback", zap.Error(err))
+			// Leave dirty set and the old callback in place so the next pass retries the swap.
+			s.logger.Warn("unable to replace self-telemetry callback; will retry", zap.Error(err))
 			return
 		}
 		s.registration = nil
 	}
 	registration, err := s.meter.RegisterCallback(s.observe(snapshot), observables...)
 	if err != nil {
-		s.logger.Error("unable to register self-telemetry callback", zap.Error(err))
+		// Leave dirty set so the next pass retries; registration is already nil here.
+		s.logger.Error("unable to register self-telemetry callback; will retry", zap.Error(err))
 		return
 	}
 	s.registration = registration
+	s.dirty = false
 	s.logger.Debug("publishing self-telemetry families", zap.Int("count", len(observables)))
 }
 
-func (s *selfTelemetry) observe(snapshot map[string]otelmetric.Float64Observable) otelmetric.Callback {
+func (s *selfTelemetry) observe(snapshot map[string]publishedInstrument) otelmetric.Callback {
 	return func(_ context.Context, observer otelmetric.Observer) error {
 		for _, src := range s.sources() {
 			families, err := src.gatherer.Gather()
@@ -187,12 +207,17 @@ func (s *selfTelemetry) observe(snapshot map[string]otelmetric.Float64Observable
 				if !ok {
 					continue
 				}
+				// Only observe series matching the type the instrument was built for, so a same-named
+				// family from another registry with a different type cannot feed the wrong instrument.
+				if mf.GetType() != inst.metricType {
+					continue
+				}
 				for _, m := range mf.GetMetric() {
-					value, ok := valueOf(mf.GetType(), m)
+					value, ok := valueOf(inst.metricType, m)
 					if !ok {
 						continue
 					}
-					observer.ObserveFloat64(inst, value,
+					observer.ObserveFloat64(inst.observable, value,
 						otelmetric.WithAttributes(seriesAttributes(m, src.fallback)...))
 				}
 			}
@@ -231,10 +256,27 @@ func seriesAttributes(m *dto.Metric, fallback string) []attribute.KeyValue {
 	return attrs
 }
 
-func (s *selfTelemetry) Shutdown(_ context.Context) error {
+func (s *selfTelemetry) Shutdown(ctx context.Context) error {
 	s.shutdownOnce.Do(func() {
 		if s.cancel != nil {
 			s.cancel()
+		}
+		if s.done == nil {
+			return // Start was never called: no goroutine and no callback to clean up.
+		}
+		select {
+		case <-s.done:
+			// run() has returned, so nothing else touches registration; safe to unregister here.
+			if s.registration != nil {
+				if err := s.registration.Unregister(); err != nil {
+					s.logger.Warn("unable to unregister self-telemetry callback on shutdown", zap.Error(err))
+				}
+				s.registration = nil
+			}
+		case <-ctx.Done():
+			// Don't touch registration if the sync goroutine may still be running.
+			s.logger.Warn("self-telemetry shutdown timed out waiting for the sync loop to stop",
+				zap.Error(ctx.Err()))
 		}
 	})
 	return nil

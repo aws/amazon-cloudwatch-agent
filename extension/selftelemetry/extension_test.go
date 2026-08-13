@@ -4,7 +4,10 @@
 package selftelemetry
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +39,7 @@ func newTestBridge(t *testing.T, sources func() []source) (*selfTelemetry, *prom
 		cfg:         &Config{},
 		meter:       provider.Meter(scopeName),
 		sources:     sources,
-		instruments: map[string]otelmetric.Float64Observable{},
+		instruments: map[string]publishedInstrument{},
 	}, out
 }
 
@@ -179,4 +182,75 @@ func TestSyncPicksUpLateFamilies(t *testing.T) {
 
 	bridge.sync()
 	assert.Contains(t, served(t, out), "prometheus_target_scrape_pool_targets")
+}
+
+// flakyMeter fails the first N RegisterCallback calls, then delegates, to exercise reregister failure.
+type flakyMeter struct {
+	otelmetric.Meter
+	failNext int
+}
+
+func (m *flakyMeter) RegisterCallback(cb otelmetric.Callback, instruments ...otelmetric.Observable) (otelmetric.Registration, error) {
+	if m.failNext > 0 {
+		m.failNext--
+		return nil, errors.New("induced RegisterCallback failure")
+	}
+	return m.Meter.RegisterCallback(cb, instruments...)
+}
+
+// TestReregisterRetriesAfterFailure is the M1 guard: a failed reregister must not strand the metrics.
+// The next pass has to retry even though no new families appeared, since 'added' alone would not.
+func TestReregisterRetriesAfterFailure(t *testing.T) {
+	out := prometheus.NewRegistry()
+	exporter, err := otelprom.New(
+		otelprom.WithRegisterer(out),
+		otelprom.WithoutCounterSuffixes(),
+		otelprom.WithoutUnits(),
+		otelprom.WithoutScopeInfo(),
+		otelprom.WithoutTargetInfo(),
+	)
+	require.NoError(t, err)
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+	t.Cleanup(func() { require.NoError(t, provider.Shutdown(t.Context())) })
+
+	src := receiverRegistry(t, "prometheus/alpha")
+	bridge := &selfTelemetry{
+		logger:      zap.NewNop(),
+		cfg:         &Config{},
+		meter:       &flakyMeter{Meter: provider.Meter(scopeName), failNext: 1},
+		sources:     func() []source { return []source{{gatherer: src}} },
+		instruments: map[string]publishedInstrument{},
+	}
+
+	// First pass: instruments are created but RegisterCallback fails, so nothing is published yet.
+	bridge.sync()
+	assert.Empty(t, served(t, out), "callback registration failed, so no series should be published")
+	assert.True(t, bridge.dirty, "a failed reregister must stay dirty so the next pass retries")
+
+	// Second pass: no new families, but dirty drives a retry that now succeeds.
+	bridge.sync()
+	assert.Contains(t, served(t, out), "prometheus_target_scrape_pool_targets",
+		"the family must be published once the reregister retry succeeds")
+	assert.False(t, bridge.dirty, "dirty must clear once reregister succeeds")
+}
+
+// TestShutdownStopsGoroutineAndUnregisters is the M2 guard: Shutdown must wait for the sync loop to
+// exit and unregister the callback rather than returning while it is still running.
+func TestShutdownStopsGoroutineAndUnregisters(t *testing.T) {
+	src := receiverRegistry(t, "prometheus/alpha")
+	bridge, out := newTestBridge(t, func() []source { return []source{{gatherer: src}} })
+
+	require.NoError(t, bridge.Start(context.Background(), nil))
+	require.Eventually(t, func() bool { return len(served(t, out)) > 0 }, 2*time.Second, 20*time.Millisecond,
+		"the sync goroutine should register the callback shortly after Start")
+
+	require.NoError(t, bridge.Shutdown(context.Background()))
+
+	// Shutdown only returns after run() closes done, so reading these fields here is race-free.
+	assert.Nil(t, bridge.registration, "Shutdown must unregister the callback")
+	select {
+	case <-bridge.done:
+	default:
+		t.Fatal("Shutdown returned before the sync goroutine exited")
+	}
 }
