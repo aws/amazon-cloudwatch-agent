@@ -58,28 +58,44 @@ func (e *cmdlinePortExtractor) Extract(ctx context.Context, process detector.Pro
 		// --port=3307 or --port 3307
 		if arg == portFlagLong && i+1 < len(args) {
 			port, err := strconv.Atoi(args[i+1])
-			if err == nil && util.IsValidPort(port) {
-				return port, nil
+			if err != nil {
+				return 0, detector.ErrInvalidPort
 			}
+			if port == 0 || !util.IsValidPort(port) {
+				return 0, detector.ErrInvalidPort
+			}
+			return port, nil
 		}
 		if strings.HasPrefix(arg, portFlagLong+"=") {
 			port, err := strconv.Atoi(arg[len(portFlagLong)+1:])
-			if err == nil && util.IsValidPort(port) {
-				return port, nil
+			if err != nil {
+				return 0, detector.ErrInvalidPort
 			}
+			if port == 0 || !util.IsValidPort(port) {
+				return 0, detector.ErrInvalidPort
+			}
+			return port, nil
 		}
 		// -P 3307 or -P3307
 		if arg == portFlagShort && i+1 < len(args) {
 			port, err := strconv.Atoi(args[i+1])
-			if err == nil && util.IsValidPort(port) {
-				return port, nil
+			if err != nil {
+				return 0, detector.ErrInvalidPort
 			}
+			if port == 0 || !util.IsValidPort(port) {
+				return 0, detector.ErrInvalidPort
+			}
+			return port, nil
 		}
 		if strings.HasPrefix(arg, portFlagShort) && len(arg) > len(portFlagShort) {
 			port, err := strconv.Atoi(arg[len(portFlagShort):])
-			if err == nil && util.IsValidPort(port) {
-				return port, nil
+			if err != nil {
+				return 0, detector.ErrInvalidPort
 			}
+			if port == 0 || !util.IsValidPort(port) {
+				return 0, detector.ErrInvalidPort
+			}
+			return port, nil
 		}
 	}
 
@@ -99,9 +115,13 @@ func (e *envPortExtractor) Extract(ctx context.Context, process detector.Process
 		parts := strings.SplitN(entry, "=", 2)
 		if len(parts) == 2 && parts[0] == portEnvVar {
 			port, err := strconv.Atoi(strings.TrimSpace(parts[1]))
-			if err == nil && util.IsValidPort(port) {
-				return port, nil
+			if err != nil {
+				return 0, detector.ErrInvalidPort
 			}
+			if port == 0 || !util.IsValidPort(port) {
+				return 0, detector.ErrInvalidPort
+			}
+			return port, nil
 		}
 	}
 
