@@ -43,6 +43,7 @@ func TestPortExtractor(t *testing.T) {
 		"Success/CmdlineTakesPrecedence": {
 			setup: func(mp *detectortest.MockProcess) {
 				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"sqlservr", "-p", "1437"}, nil)
+				mp.On("EnvironWithContext", ctx).Maybe().Return([]string{"PATH=/usr/bin", "MSSQL_TCP_PORT=1440"}, nil)
 			},
 			wantPort: 1437,
 		},
@@ -57,6 +58,34 @@ func TestPortExtractor(t *testing.T) {
 			setup: func(mp *detectortest.MockProcess) {
 				mp.On("CmdlineSliceWithContext", ctx).Return(nil, assert.AnError)
 				mp.On("EnvironWithContext", ctx).Return(nil, assert.AnError)
+			},
+			wantPort: 1433,
+		},
+		"Success/DefaultOnInvalidPort": {
+			setup: func(mp *detectortest.MockProcess) {
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"sqlservr", "-p", "99999"}, nil)
+				mp.On("EnvironWithContext", ctx).Return([]string{"PATH=/usr/bin"}, nil)
+			},
+			wantPort: 1433,
+		},
+		"Success/DefaultOnMalformedPort": {
+			setup: func(mp *detectortest.MockProcess) {
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"sqlservr", "-p", "abc"}, nil)
+				mp.On("EnvironWithContext", ctx).Return([]string{"PATH=/usr/bin"}, nil)
+			},
+			wantPort: 1433,
+		},
+		"Success/DefaultOnPort0": {
+			setup: func(mp *detectortest.MockProcess) {
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"sqlservr", "-p", "0"}, nil)
+				mp.On("EnvironWithContext", ctx).Return([]string{"PATH=/usr/bin"}, nil)
+			},
+			wantPort: 1433,
+		},
+		"Success/DefaultOnShortFlagInvalidPort": {
+			setup: func(mp *detectortest.MockProcess) {
+				mp.On("CmdlineSliceWithContext", ctx).Return([]string{"sqlservr", "-p99999"}, nil)
+				mp.On("EnvironWithContext", ctx).Return([]string{"PATH=/usr/bin"}, nil)
 			},
 			wantPort: 1433,
 		},

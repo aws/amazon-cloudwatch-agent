@@ -117,9 +117,9 @@ func readPortValue(key registry.Key, valueName string) (int, error) {
 	}
 	port, err := strconv.Atoi(val)
 	if err != nil {
-		return 0, err
+		return 0, detector.ErrInvalidPort
 	}
-	if !util.IsValidPort(port) {
+	if port == 0 || !util.IsValidPort(port) {
 		return 0, detector.ErrInvalidPort
 	}
 	return port, nil
