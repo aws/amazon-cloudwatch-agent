@@ -45,7 +45,7 @@ func (t *translator) ID() pipeline.ID {
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
 	// Self telemetry needs this placeholder too: a config carrying only service::telemetry has no
 	// pipeline, and a pipeline-less service fails validation, so nothing would be emitted at all.
-	if conf == nil || !(conf.IsSet(logAgentKey) || selftelemetry.Enabled(conf)) {
+	if conf == nil || (!conf.IsSet(logAgentKey) && !selftelemetry.Enabled(conf)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(logAgentKey)}
 	}
 
