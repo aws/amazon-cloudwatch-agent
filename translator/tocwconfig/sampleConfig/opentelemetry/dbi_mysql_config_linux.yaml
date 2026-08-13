@@ -817,7 +817,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/mysql/raw-events")
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-mysql"], "/"))
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "mysql-instance"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_logs_mysql_server-logs_0:
@@ -828,7 +828,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/mysql/server-logs")
-                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "pentest-mysql"], "/"))
+                - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "mysql-instance"], "/"))
             - context: log
               error_mode: ignore
               statements:
@@ -844,13 +844,13 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "mysql")
-                - set(resource.attributes["db.instance.name"], "pentest-mysql")
+                - set(resource.attributes["db.instance.name"], "mysql-instance")
         metric_statements:
             - context: resource
               error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "mysql")
-                - set(resource.attributes["db.instance.name"], "pentest-mysql")
+                - set(resource.attributes["db.instance.name"], "mysql-instance")
         trace_statements: []
     transform/dbi_scope_mysql_0:
         error_mode: ignore
