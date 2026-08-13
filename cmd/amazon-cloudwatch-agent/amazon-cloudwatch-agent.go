@@ -101,6 +101,7 @@ var fSetEnv = flag.String("setenv", "", "set an env in the configuration file in
 var fStartUpErrorFile = flag.String("startup-error-file", "", "file to touch if agent can't start")
 
 var stop chan struct{}
+var done chan struct{}
 
 func reloadLoop(
 	stop chan struct{},
@@ -109,6 +110,7 @@ func reloadLoop(
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
+	defer close(done)
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
@@ -432,6 +434,7 @@ func (p *program) Start(_ service.Service) error {
 }
 func (p *program) run() {
 	stop = make(chan struct{})
+	done = make(chan struct{})
 	reloadLoop(
 		stop,
 		p.inputFilters,
@@ -442,6 +445,18 @@ func (p *program) run() {
 }
 func (p *program) Stop(_ service.Service) error {
 	close(stop)
+
+	// Wait for reloadLoop to finish, with a timeout.
+	// If goroutines are stuck in blocking syscalls (e.g., PDH on Windows),
+	// Go cannot interrupt them. Force exit after timeout to prevent zombie process.
+	const shutdownTimeout = 15 * time.Second
+	select {
+	case <-done:
+		log.Println("I! Agent shutdown complete")
+	case <-time.After(shutdownTimeout):
+		log.Println("E! Agent shutdown timed out, forcing exit")
+		os.Exit(1)
+	}
 	return nil
 }
 

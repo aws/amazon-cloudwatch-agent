@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 	"github.com/influxdata/wlog"
@@ -109,4 +110,26 @@ func TestFallbackOtelConfig(t *testing.T) {
 			assert.Equal(t, filepath.Join(tmpDir, testCase.want), got)
 		})
 	}
+}
+
+func TestStopWaitsForDoneChannel(t *testing.T) {
+	// Setup: initialize the global channels as run() would
+	stop = make(chan struct{})
+	done = make(chan struct{})
+
+	p := &program{}
+
+	// Simulate reloadLoop completing normally in background
+	go func() {
+		<-stop        // Wait for stop signal
+		close(done)   // Signal completion (like defer close(done) in reloadLoop)
+	}()
+
+	// Call Stop() and verify it returns quickly (not timing out)
+	start := time.Now()
+	err := p.Stop(nil)
+	elapsed := time.Since(start)
+
+	assert.NoError(t, err)
+	assert.Less(t, elapsed, 1*time.Second, "Stop() should return quickly when done channel closes")
 }
