@@ -1889,14 +1889,14 @@
                   "additionalProperties": false
                 },
                 "solutions": {
-                  "description": "Optional add-on solution scrapers (cluster role only): Karpenter and KEDA operator metrics",
+                  "description": "Optional add-on solution scrapers for Karpenter and KEDA operator metrics",
                   "type": "object",
                   "properties": {
                     "karpenter": {
                       "type": "object",
                       "properties": {
                         "enabled": {
-                          "description": "Whether to scrape Karpenter metrics (cluster role only)",
+                          "description": "Whether to scrape Karpenter metrics",
                           "type": "boolean"
                         },
                         "namespace": {
@@ -1910,7 +1910,7 @@
                       "type": "object",
                       "properties": {
                         "enabled": {
-                          "description": "Whether to scrape KEDA operator metrics (cluster role only)",
+                          "description": "Whether to scrape KEDA operator metrics.",
                           "type": "boolean"
                         },
                         "namespace": {

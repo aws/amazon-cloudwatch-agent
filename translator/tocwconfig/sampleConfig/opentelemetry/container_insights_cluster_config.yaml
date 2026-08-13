@@ -87,6 +87,11 @@ processors:
         metrics:
             metric:
                 - name == "kubernetes_build_info"
+    filter/cw_k8s_ci_v0_keda_drop_non_keda:
+        error_mode: ignore
+        metrics:
+            metric:
+                - IsMatch(name, "^(rest_client_.*|apiserver_.*|workqueue_.*|process_.*|go_.*)$")
     filter/cw_k8s_ci_v0_scrape_metadata:
         error_mode: ignore
         metrics:
@@ -107,6 +112,11 @@ processors:
             - replicaset
             - job_name
             - cronjob
+    groupbyattrs/cw_k8s_ci_v0_solution:
+        keys:
+            - pod
+            - namespace
+            - node
     k8sattributes/cw_k8s_ci_v0_node:
         auth_type: serviceAccount
         exclude:
@@ -617,6 +627,26 @@ processors:
                 - set(attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
                 - set(attributes["cloudwatch.pipeline"], "apiserver")
+    transform/cw_k8s_ci_v0_set_scope_karpenter:
+        error_mode: ignore
+        metric_statements:
+            - context: scope
+              statements:
+                - set(scope.name, "github.com/aws/karpenter")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "karpenter")
+    transform/cw_k8s_ci_v0_set_scope_keda:
+        error_mode: ignore
+        metric_statements:
+            - context: scope
+              statements:
+                - set(scope.name, "github.com/kedacore/keda")
+                - set(scope.schema_url, "")
+                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
+                - set(attributes["cloudwatch.pipeline"], "keda")
     transform/cw_k8s_ci_v0_set_scope_kube_state_metrics:
         error_mode: ignore
         metric_statements:
@@ -658,18 +688,34 @@ processors:
         metric_statements:
             - context: datapoint
               statements:
-                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
-                - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
-                - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.statefulset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "StatefulSet") where resource.attributes["k8s.statefulset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.daemonset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.daemonset.name"] != nil
-                - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.daemonset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "DaemonSet") where resource.attributes["k8s.daemonset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.job.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.job.name"] != nil
-                - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.job.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "Job") where resource.attributes["k8s.job.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.cronjob.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.cronjob.name"] != nil
-                - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.cronjob.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "CronJob") where resource.attributes["k8s.cronjob.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.replicaset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.replicaset.name"] != nil
-                - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.workload.type"] == nil and resource.attributes["k8s.replicaset.name"] != nil
+                - set(resource.attributes["k8s.workload.type"], "ReplicaSet") where resource.attributes["k8s.replicaset.name"] != nil and resource.attributes["k8s.workload.type"] == nil
+    transform/cw_k8s_ci_v0_solution_promote:
+        error_mode: ignore
+        metric_statements:
+            - context: resource
+              statements:
+                - set(attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
+                - set(attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
+                - set(attributes["k8s.node.name"], attributes["node"]) where attributes["node"] != nil
+                - delete_key(attributes, "net.host.name") where attributes["net.host.name"] != nil
+                - delete_key(attributes, "net.host.port") where attributes["net.host.port"] != nil
+                - delete_key(attributes, "url.scheme") where attributes["url.scheme"] != nil
+            - context: datapoint
+              statements:
+                - set(attributes["pod"], resource.attributes["pod"]) where resource.attributes["pod"] != nil
+                - set(attributes["namespace"], resource.attributes["namespace"]) where resource.attributes["namespace"] != nil
+                - set(attributes["node"], resource.attributes["node"]) where resource.attributes["node"] != nil
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -860,6 +906,72 @@ receivers:
                   tls_config:
                     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
                     insecure_skip_verify: false
+    prometheus/cw_k8s_ci_v0_karpenter:
+        config:
+            global:
+                scrape_interval: 30s
+                scrape_timeout: 10s
+            scrape_configs:
+                - job_name: karpenter
+                  kubernetes_sd_configs:
+                    - namespaces:
+                        names:
+                            - karpenter
+                      role: pod
+                  metrics_path: /metrics
+                  relabel_configs:
+                    - action: keep
+                      regex: karpenter
+                      source_labels:
+                        - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                    - action: keep
+                      regex: http-metrics
+                      source_labels:
+                        - __meta_kubernetes_pod_container_port_name
+                    - source_labels:
+                        - __meta_kubernetes_pod_name
+                      target_label: pod
+                    - source_labels:
+                        - __meta_kubernetes_namespace
+                      target_label: namespace
+                    - source_labels:
+                        - __meta_kubernetes_pod_node_name
+                      target_label: node
+                  scrape_interval: 30s
+                  scrape_timeout: 10s
+    prometheus/cw_k8s_ci_v0_keda:
+        config:
+            global:
+                scrape_interval: 30s
+                scrape_timeout: 10s
+            scrape_configs:
+                - job_name: keda
+                  kubernetes_sd_configs:
+                    - namespaces:
+                        names:
+                            - keda
+                      role: pod
+                  metrics_path: /metrics
+                  relabel_configs:
+                    - action: keep
+                      regex: keda-operator
+                      source_labels:
+                        - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                    - action: keep
+                      regex: metrics
+                      source_labels:
+                        - __meta_kubernetes_pod_container_port_name
+                    - source_labels:
+                        - __meta_kubernetes_pod_name
+                      target_label: pod
+                    - source_labels:
+                        - __meta_kubernetes_namespace
+                      target_label: namespace
+                    - source_labels:
+                        - __meta_kubernetes_pod_node_name
+                      target_label: node
+                  scrape_interval: 30s
+                  scrape_timeout: 10s
     prometheus/cw_k8s_ci_v0_kube_state_metrics:
         config:
             global:
@@ -902,6 +1014,45 @@ service:
                 - awsattributelimit/cw_k8s_ci_v0
             receivers:
                 - prometheus/cw_k8s_ci_v0_apiserver
+        metrics/cw_k8s_ci_v0_karpenter:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_scope_karpenter
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - groupbyattrs/cw_k8s_ci_v0_solution
+                - transform/cw_k8s_ci_v0_solution_promote
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - transform/cw_k8s_ci_v0_set_workload
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - transform/cw_k8s_ci_v0_mark_cluster
+                - awsattributelimit/cw_k8s_ci_v0
+            receivers:
+                - prometheus/cw_k8s_ci_v0_karpenter
+        metrics/cw_k8s_ci_v0_keda:
+            exporters:
+                - forward/opentelemetry
+            processors:
+                - filter/cw_k8s_ci_v0_scrape_metadata
+                - filter/cw_k8s_ci_v0_keda_drop_non_keda
+                - transform/cw_k8s_ci_v0_set_unit
+                - metricstarttime/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_scope_keda
+                - transform/cw_k8s_ci_v0_set_cluster_name
+                - groupbyattrs/cw_k8s_ci_v0_solution
+                - transform/cw_k8s_ci_v0_solution_promote
+                - k8sattributes/cw_k8s_ci_v0_pod
+                - transform/cw_k8s_ci_v0_set_workload
+                - resourcedetection/cw_k8s_ci_v0
+                - transform/cw_k8s_ci_v0_set_cloud_resource_id
+                - transform/cw_k8s_ci_v0_mark_cluster
+                - awsattributelimit/cw_k8s_ci_v0
+            receivers:
+                - prometheus/cw_k8s_ci_v0_keda
         metrics/cw_k8s_ci_v0_kube_state_metrics:
             exporters:
                 - forward/opentelemetry
