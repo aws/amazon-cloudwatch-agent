@@ -59,20 +59,20 @@ func (e *cmdlinePortExtractor) Extract(ctx context.Context, process detector.Pro
 		if arg == portFlagLong && i+1 < len(args) {
 			port, err := strconv.Atoi(args[i+1])
 			if err != nil {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid value, check for later occurrences
 			}
 			if port == 0 || !util.IsValidPort(port) {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid port, check for later occurrences
 			}
 			return port, nil
 		}
 		if strings.HasPrefix(arg, portFlagLong+"=") {
 			port, err := strconv.Atoi(arg[len(portFlagLong)+1:])
 			if err != nil {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid value, check for later occurrences
 			}
 			if port == 0 || !util.IsValidPort(port) {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid port, check for later occurrences
 			}
 			return port, nil
 		}
@@ -80,20 +80,20 @@ func (e *cmdlinePortExtractor) Extract(ctx context.Context, process detector.Pro
 		if arg == portFlagShort && i+1 < len(args) {
 			port, err := strconv.Atoi(args[i+1])
 			if err != nil {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid value, check for later occurrences
 			}
 			if port == 0 || !util.IsValidPort(port) {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid port, check for later occurrences
 			}
 			return port, nil
 		}
 		if strings.HasPrefix(arg, portFlagShort) && len(arg) > len(portFlagShort) {
 			port, err := strconv.Atoi(arg[len(portFlagShort):])
 			if err != nil {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid value, check for later occurrences
 			}
 			if port == 0 || !util.IsValidPort(port) {
-				return 0, detector.ErrInvalidPort
+				continue // Skip invalid port, check for later occurrences
 			}
 			return port, nil
 		}

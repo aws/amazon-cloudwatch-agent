@@ -17,7 +17,7 @@ The detector attempts to find the MySQL port using the following priority:
 2. Environment variable: `MYSQL_TCP_PORT`
 3. Default fallback: 3306
 
-Invalid or malformed port values (e.g., `--port=0`, `--port=99999`, `--port=abc`) are rejected and the detector falls back to the default port.
+Invalid or malformed port values (e.g., `--port=0`, `--port=99999`, `--port=abc`) are rejected and the detector falls back to the next source in the priority list (e.g., `MYSQL_TCP_PORT`, then the default 3306).
 
 ## Status Results
 - `READY`: MySQL process detected with a port (explicit via `--port`/`-P` flag or `MYSQL_TCP_PORT`, otherwise defaults to 3306).
