@@ -455,7 +455,7 @@ func (p *program) Stop(_ service.Service) error {
 		log.Println("I! Agent shutdown complete")
 	case <-time.After(shutdownTimeout):
 		log.Println("E! Agent shutdown timed out, forcing exit")
-		os.Exit(1)
+		syscall.Exit(1)
 	}
 	return nil
 }
