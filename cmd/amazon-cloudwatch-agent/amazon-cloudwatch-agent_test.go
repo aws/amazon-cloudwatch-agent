@@ -121,8 +121,8 @@ func TestStopWaitsForDoneChannel(t *testing.T) {
 
 	// Simulate reloadLoop completing normally in background
 	go func() {
-		<-stop        // Wait for stop signal
-		close(done)   // Signal completion (like defer close(done) in reloadLoop)
+		<-stop      // Wait for stop signal
+		close(done) // Signal completion (like defer close(done) in reloadLoop)
 	}()
 
 	// Call Stop() and verify it returns quickly (not timing out)
