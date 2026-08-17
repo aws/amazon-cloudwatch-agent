@@ -105,10 +105,10 @@ func TestDbiTranslateMetrics_ComponentIDs(t *testing.T) {
 		connectors = append(connectors, c.ID().String())
 	})
 
-	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "postgresql/metrics_perresource_0", "count/dbi_dbload_postgresql", "signaltometrics/dbi_topsql_postgresql"}, receivers)
+	assert.ElementsMatch(t, []string{"postgresql/metrics_0", "postgresql/metrics_perresource_0", "count/dbi_dbload_postgresql_0", "signaltometrics/dbi_topsql_postgresql_0"}, receivers)
 	assert.Equal(t, []string{"transform/dbi_scope_postgresql_0", "transform/dbi_resource_postgresql_0", "transform/dbi_fix_start_time_postgresql"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
-	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_postgresql", "signaltometrics/dbi_topsql_postgresql"}, connectors)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_postgresql_0", "signaltometrics/dbi_topsql_postgresql_0"}, connectors)
 }
 
 func TestDbiMysqlTranslate(t *testing.T) {
@@ -175,10 +175,10 @@ func TestDbiMysqlTranslateMetrics_ComponentIDs(t *testing.T) {
 		connectors = append(connectors, c.ID().String())
 	})
 
-	assert.ElementsMatch(t, []string{"mysql/metrics_0", "count/dbi_dbload_mysql", "signaltometrics/dbi_topsql_mysql"}, receivers)
+	assert.ElementsMatch(t, []string{"mysql/metrics_0", "count/dbi_dbload_mysql_0", "signaltometrics/dbi_topsql_mysql_0"}, receivers)
 	assert.Equal(t, []string{"transform/dbi_scope_mysql_0", "transform/dbi_resource_mysql_0", "transform/dbi_fix_start_time_mysql"}, processors)
 	assert.ElementsMatch(t, []string{"forward/opentelemetry"}, exporters)
-	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_mysql", "signaltometrics/dbi_topsql_mysql"}, connectors)
+	assert.ElementsMatch(t, []string{"forward/opentelemetry", "count/dbi_dbload_mysql_0", "signaltometrics/dbi_topsql_mysql_0"}, connectors)
 }
 
 func TestDbiTranslateServerLogs_FilelogConfig(t *testing.T) {

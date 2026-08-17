@@ -1,5 +1,5 @@
 connectors:
-    count/dbi_dbload_mysql:
+    count/dbi_dbload_mysql_0:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -69,7 +69,7 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql_mysql:
+    signaltometrics/dbi_topsql_mysql_0:
         logs:
             - attributes:
                 - key: db.system.name
@@ -1580,8 +1580,8 @@ service:
     pipelines:
         logs/dbi_mysql_0:
             exporters:
-                - count/dbi_dbload_mysql
-                - signaltometrics/dbi_topsql_mysql
+                - count/dbi_dbload_mysql_0
+                - signaltometrics/dbi_topsql_mysql_0
             processors:
                 - filter/dbi_exclude_monitor_mysql_0
             receivers:
@@ -1629,8 +1629,8 @@ service:
                 - transform/dbi_fix_start_time_mysql
             receivers:
                 - mysql/metrics_0
-                - count/dbi_dbload_mysql
-                - signaltometrics/dbi_topsql_mysql
+                - count/dbi_dbload_mysql_0
+                - signaltometrics/dbi_topsql_mysql_0
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
