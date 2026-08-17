@@ -1,5 +1,5 @@
 connectors:
-    count/dbi_dbload_postgresql:
+    count/dbi_dbload_postgresql_0:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -79,7 +79,7 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql_postgresql:
+    signaltometrics/dbi_topsql_postgresql_0:
         logs:
             - attributes:
                 - key: db.system.name
@@ -1225,8 +1225,8 @@ service:
     pipelines:
         logs/dbi_postgresql_0:
             exporters:
-                - count/dbi_dbload_postgresql
-                - signaltometrics/dbi_topsql_postgresql
+                - count/dbi_dbload_postgresql_0
+                - signaltometrics/dbi_topsql_postgresql_0
             processors:
                 - filter/dbi_exclude_monitor_postgresql_0
             receivers:
@@ -1275,8 +1275,8 @@ service:
             receivers:
                 - postgresql/metrics_0
                 - postgresql/metrics_perresource_0
-                - count/dbi_dbload_postgresql
-                - signaltometrics/dbi_topsql_postgresql
+                - count/dbi_dbload_postgresql_0
+                - signaltometrics/dbi_topsql_postgresql_0
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry

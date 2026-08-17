@@ -1,5 +1,5 @@
 connectors:
-    count/dbi_dbload_sqlserver:
+    count/dbi_dbload_sqlserver_0:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -77,7 +77,7 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql_sqlserver:
+    signaltometrics/dbi_topsql_sqlserver_0:
         logs:
             - attributes:
                 - key: db.system.name
@@ -1065,7 +1065,7 @@ receivers:
             sqlserver.database.name:
                 enabled: true
             sqlserver.instance.name:
-                enabled: false
+                enabled: true
         server: localhost
         timeout: 0s
         top_query_collection:
@@ -1267,7 +1267,7 @@ receivers:
             sqlserver.database.name:
                 enabled: true
             sqlserver.instance.name:
-                enabled: false
+                enabled: true
         server: localhost
         timeout: 0s
         top_query_collection:
@@ -1290,8 +1290,8 @@ service:
     pipelines:
         logs/dbi_sqlserver_0:
             exporters:
-                - count/dbi_dbload_sqlserver
-                - signaltometrics/dbi_topsql_sqlserver
+                - count/dbi_dbload_sqlserver_0
+                - signaltometrics/dbi_topsql_sqlserver_0
             processors:
                 - filter/dbi_exclude_monitor_sqlserver_0
             receivers:
@@ -1339,8 +1339,8 @@ service:
                 - transform/dbi_fix_start_time_sqlserver
             receivers:
                 - sqlserver/metrics_0
-                - count/dbi_dbload_sqlserver
-                - signaltometrics/dbi_topsql_sqlserver
+                - count/dbi_dbload_sqlserver_0
+                - signaltometrics/dbi_topsql_sqlserver_0
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry

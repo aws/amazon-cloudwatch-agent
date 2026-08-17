@@ -1,5 +1,5 @@
 connectors:
-    count/dbi_dbload_mysql:
+    count/dbi_dbload_mysql_0:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -68,7 +68,7 @@ connectors:
         spans:
             trace.span.count:
                 description: The number of spans observed.
-    count/dbi_dbload_postgresql:
+    count/dbi_dbload_postgresql_0:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -147,7 +147,7 @@ connectors:
         spans:
             trace.span.count:
                 description: The number of spans observed.
-    count/dbi_dbload_sqlserver:
+    count/dbi_dbload_sqlserver_0:
         datapoints:
             metric.datapoint.count:
                 description: The number of data points observed.
@@ -225,7 +225,7 @@ connectors:
             trace.span.count:
                 description: The number of spans observed.
     forward/opentelemetry: {}
-    signaltometrics/dbi_topsql_mysql:
+    signaltometrics/dbi_topsql_mysql_0:
         logs:
             - attributes:
                 - key: db.system.name
@@ -533,7 +533,7 @@ connectors:
               sum:
                 value: Int(attributes["mysql.events_statements_summary_by_digest.sum_sort_range"])
               unit: ""
-    signaltometrics/dbi_topsql_postgresql:
+    signaltometrics/dbi_topsql_postgresql_0:
         logs:
             - attributes:
                 - key: db.system.name
@@ -679,7 +679,7 @@ connectors:
               sum:
                 value: Int(attributes["postgresql.local_blks_read"])
               unit: ""
-    signaltometrics/dbi_topsql_sqlserver:
+    signaltometrics/dbi_topsql_sqlserver_0:
         logs:
             - attributes:
                 - key: db.system.name
@@ -3850,7 +3850,7 @@ receivers:
             sqlserver.database.name:
                 enabled: true
             sqlserver.instance.name:
-                enabled: false
+                enabled: true
         server: localhost
         timeout: 0s
         top_query_collection:
@@ -4052,7 +4052,7 @@ receivers:
             sqlserver.database.name:
                 enabled: true
             sqlserver.instance.name:
-                enabled: false
+                enabled: true
         server: localhost
         timeout: 0s
         top_query_collection:
@@ -4143,8 +4143,8 @@ service:
     pipelines:
         logs/dbi_mysql_0:
             exporters:
-                - count/dbi_dbload_mysql
-                - signaltometrics/dbi_topsql_mysql
+                - count/dbi_dbload_mysql_0
+                - signaltometrics/dbi_topsql_mysql_0
             processors:
                 - filter/dbi_exclude_monitor_mysql_0
             receivers:
@@ -4173,8 +4173,8 @@ service:
                 - filelog/mysql_0
         logs/dbi_postgresql_0:
             exporters:
-                - count/dbi_dbload_postgresql
-                - signaltometrics/dbi_topsql_postgresql
+                - count/dbi_dbload_postgresql_0
+                - signaltometrics/dbi_topsql_postgresql_0
             processors:
                 - filter/dbi_exclude_monitor_postgresql_0
             receivers:
@@ -4203,8 +4203,8 @@ service:
                 - filelog/postgresql_0
         logs/dbi_sqlserver_0:
             exporters:
-                - count/dbi_dbload_sqlserver
-                - signaltometrics/dbi_topsql_sqlserver
+                - count/dbi_dbload_sqlserver_0
+                - signaltometrics/dbi_topsql_sqlserver_0
             processors:
                 - filter/dbi_exclude_monitor_sqlserver_0
             receivers:
@@ -4438,8 +4438,8 @@ service:
                 - transform/dbi_fix_start_time_mysql
             receivers:
                 - mysql/metrics_0
-                - count/dbi_dbload_mysql
-                - signaltometrics/dbi_topsql_mysql
+                - count/dbi_dbload_mysql_0
+                - signaltometrics/dbi_topsql_mysql_0
         metrics/dbi_postgresql_0:
             exporters:
                 - forward/opentelemetry
@@ -4450,8 +4450,8 @@ service:
             receivers:
                 - postgresql/metrics_0
                 - postgresql/metrics_perresource_0
-                - count/dbi_dbload_postgresql
-                - signaltometrics/dbi_topsql_postgresql
+                - count/dbi_dbload_postgresql_0
+                - signaltometrics/dbi_topsql_postgresql_0
         metrics/dbi_sqlserver_0:
             exporters:
                 - forward/opentelemetry
@@ -4461,8 +4461,8 @@ service:
                 - transform/dbi_fix_start_time_sqlserver
             receivers:
                 - sqlserver/metrics_0
-                - count/dbi_dbload_sqlserver
-                - signaltometrics/dbi_topsql_sqlserver
+                - count/dbi_dbload_sqlserver_0
+                - signaltometrics/dbi_topsql_sqlserver_0
         metrics/host:
             exporters:
                 - awscloudwatch

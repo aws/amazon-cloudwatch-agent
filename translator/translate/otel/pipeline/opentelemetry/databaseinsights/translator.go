@@ -155,8 +155,8 @@ func (t *dbiTranslator) Translate(_ *confmap.Conf) (*common.ComponentTranslators
 func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error) {
 	idx := strconv.Itoa(t.instanceIndex)
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
-	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine, t.cfg.engine)
-	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine, t.cfg.engine)
+	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine+"_"+idx, t.cfg.engine)
+	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine+"_"+idx, t.cfg.engine)
 
 	var receivers []common.ComponentTranslator
 	if t.cfg.engine == common.PostgreSQLKey {
@@ -192,8 +192,9 @@ func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error)
 }
 
 func (t *dbiTranslator) translateLogToMetrics() (*common.ComponentTranslators, error) {
-	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine, t.cfg.engine)
-	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine, t.cfg.engine)
+	idx := strconv.Itoa(t.instanceIndex)
+	countConn := count.NewTranslator(common.DbiConnectorDbload+"_"+t.cfg.engine+"_"+idx, t.cfg.engine)
+	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql+"_"+t.cfg.engine+"_"+idx, t.cfg.engine)
 
 	var receiver common.ComponentTranslator
 	if t.cfg.engine == common.PostgreSQLKey {
