@@ -274,6 +274,9 @@ func TestTranslator(t *testing.T) {
 
 func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
 	t.Setenv("SYSTEM_METRICS_ENABLED", "false")
+	// Short-circuit cluster-name resolution so the metrics translator does not reach the live
+	// ec2:DescribeTags lookup, which hangs on retries and panics off a real EC2 host.
+	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
 	testutil.SetPrometheusRemoteWriteTestingEnv(t)
 	translator.SetTargetPlatform("linux")
 	oidcID := component.MustNewID("oidctoken")
