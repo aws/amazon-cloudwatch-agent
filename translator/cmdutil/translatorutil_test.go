@@ -14,13 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
 
-func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
-	jsonConfigValue := map[string]interface{}{
-		"agent": map[string]interface{}{
+func TestTranslateJSONMapToEnvConfigFile(t *testing.T) {
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
 			"user_agent":        "cwagent",
 			"debug":             true,
 			"aws_sdk_log_level": "loglevel",
@@ -29,18 +30,106 @@ func TestTranslateJsonMapToEnvConfigFile(t *testing.T) {
 	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
 	expectedFile := "testdata/env-config.json"
 
-	TranslateJsonMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
 
-	var actualJson map[string]interface{}
-	var expectedJson map[string]interface{}
+	var actualJSON map[string]any
+	var expectedJSON map[string]any
 	actual, _ := os.ReadFile(envConfigPath)
 	expected, _ := os.ReadFile(expectedFile)
-	json.Unmarshal(actual, actualJson)
-	json.Unmarshal(expected, expectedJson)
+	require.NoError(t, json.Unmarshal(actual, &actualJSON))
+	require.NoError(t, json.Unmarshal(expected, &expectedJSON))
 
-	assert.Equal(t, expectedJson[envconfig.CWAGENT_USER_AGENT], actualJson[envconfig.CWAGENT_USER_AGENT])
-	assert.Equal(t, expectedJson[envconfig.CWAGENT_LOG_LEVEL], actualJson[envconfig.CWAGENT_LOG_LEVEL])
-	assert.Equal(t, expectedJson[envconfig.AWS_SDK_LOG_LEVEL], actualJson[envconfig.AWS_SDK_LOG_LEVEL])
+	assert.Equal(t, expectedJSON[envconfig.CWAGENT_USER_AGENT], actualJSON[envconfig.CWAGENT_USER_AGENT])
+	assert.Equal(t, expectedJSON[envconfig.CWAGENT_LOG_LEVEL], actualJSON[envconfig.CWAGENT_LOG_LEVEL])
+	assert.Equal(t, expectedJSON[envconfig.AWS_SDK_LOG_LEVEL], actualJSON[envconfig.AWS_SDK_LOG_LEVEL])
+}
+
+func TestTranslateJSONMapToEnvConfigFile_RetainsExistingValues(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Pre-populate env-config.json with existing values
+	existing := map[string]string{
+		"MY_CUSTOM_VAR": "custom_value",
+		"ENV_REGION":    "us-west-2",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
+
+	// Translate with new values
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
+			"debug": true,
+		},
+	}
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	// Verify merged result
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	assert.Equal(t, "custom_value", result["MY_CUSTOM_VAR"])
+	assert.Equal(t, "us-west-2", result["ENV_REGION"])
+	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
+}
+
+func TestTranslateJSONMapToEnvConfigFile_NewValuesOverrideExisting(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Pre-populate with a value that translation will also produce
+	existing := map[string]string{
+		"CWAGENT_LOG_LEVEL": "WARN",
+		"MY_CUSTOM_VAR":     "keep_me",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
+
+	// Translate with debug=true which sets CWAGENT_LOG_LEVEL=DEBUG
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{
+			"debug": true,
+		},
+	}
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	assert.Equal(t, "DEBUG", result[envconfig.CWAGENT_LOG_LEVEL])
+	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
+}
+
+func TestTranslateJSONMapToEnvConfigFile_ClearsStaleTranslatorManagedKeys(t *testing.T) {
+	envConfigPath := filepath.Join(t.TempDir(), "env-config.json")
+
+	// Simulate a previous translation that set CWAGENT_USER_AGENT
+	existing := map[string]string{
+		envconfig.CWAGENT_USER_AGENT: "old-agent",
+		"MY_CUSTOM_VAR":              "keep_me",
+	}
+	existingBytes, err := json.MarshalIndent(existing, "", "\t")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(envConfigPath, existingBytes, 0600))
+
+	// Re-translate without user_agent so CWAGENT_USER_AGENT should be cleared
+	jsonConfigValue := map[string]any{
+		"agent": map[string]any{},
+	}
+	TranslateJSONMapToEnvConfigFile(jsonConfigValue, envConfigPath)
+
+	result := map[string]string{}
+	actual, err := os.ReadFile(envConfigPath)
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(actual, &result))
+
+	_, exists := result[envconfig.CWAGENT_USER_AGENT]
+	assert.False(t, exists)
+	assert.Equal(t, "keep_me", result["MY_CUSTOM_VAR"])
 }
 
 func TestAgentConfig(t *testing.T) {
@@ -340,6 +429,33 @@ func TestOpenTelemetryPrometheusSchemaValidation(t *testing.T) {
 
 func TestOpenTelemetryOtlpSchemaValidation(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryOtlp.json", true, map[string]int{})
+}
+
+func TestOpenTelemetryResourceAttributesSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryResourceAttributes.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryResourceAttributes.json", false, map[string]int{
+		"invalid_type": 1,
+	})
+}
+
+func TestDefaultOtelConfigSchemaValidation(t *testing.T) {
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
+	require.True(t, ok)
+	jsonMap, err := util.GetJsonMapFromJsonBytes([]byte(cfg))
+	require.NoError(t, err)
+	result, err := RunSchemaValidation(jsonMap)
+	require.NoError(t, err)
+	assert.True(t, result.Valid(), "default otel config must pass schema validation: %v", result.Errors())
+}
+
+func TestOpenTelemetryWindowsEventsSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/validOpenTelemetryWindowsEvents.json", true, map[string]int{})
+}
+
+func TestOpenTelemetryWindowsEventsInvalidSchemaValidation(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/opentelemetry/invalidOpenTelemetryWindowsEvents.json", false, map[string]int{
+		"enum": 1,
+	})
 }
 
 func TestCombinedV1V2SchemaValidation(t *testing.T) {

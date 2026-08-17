@@ -1,0 +1,10 @@
+{
+  "opentelemetry": {
+    "collect": {
+      "container_insights": {},
+      "otlp": {
+        "span_metrics_enabled": true
+      }
+    }
+  }
+}

@@ -113,7 +113,7 @@ extensions:
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         region: us-west-2
@@ -163,6 +163,14 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
+    batch/opentelemetry_logs:
+        metadata_cardinality_limit: 1000
+        metadata_keys:
+            - aws.log.group.name
+            - aws.log.stream.name
+        send_batch_max_size: 10000
+        send_batch_size: 10000
+        timeout: 30s
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
@@ -170,14 +178,6 @@ processors:
         timeout: 30s
     batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
-        send_batch_max_size: 10000
-        send_batch_size: 10000
-        timeout: 30s
-    batch/opentelemetry_logs:
-        metadata_cardinality_limit: 1000
-        metadata_keys:
-            - aws.log.group.name
-            - aws.log.stream.name
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
@@ -538,7 +538,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -563,6 +566,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
         metric_statements:
             - context: resource
               error_mode: ignore
@@ -579,7 +583,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -604,6 +611,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -620,7 +628,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -645,12 +656,13 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
@@ -674,11 +686,11 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/otlp_log_source:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
@@ -690,20 +702,38 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
+    transform/set_cluster_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
 receivers:
     otlp/grpc_127_0_0_1_4317:
         protocols:
@@ -743,6 +773,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - transform/logs_routing
                 - attributestocontext/opentelemetry
@@ -765,6 +796,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - batch/opentelemetry_metrics
             receivers:
@@ -783,6 +815,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - batch/opentelemetry_traces
             receivers:

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"go.opentelemetry.io/collector/component"
@@ -24,11 +23,8 @@ const (
 	pipelineName = "otel_prometheus"
 )
 
-var clusterNameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
-
 var prometheusKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.PrometheusKey)
 var configPathKey = common.ConfigKey(prometheusKey, "config_path")
-var clusterNameKey = common.ConfigKey(prometheusKey, "cluster_name")
 
 type translator struct{}
 
@@ -53,22 +49,8 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	processors.Set(transformprocessor.NewTranslatorWithName("prometheus_scope",
 		transformprocessor.WithErrorMode("ignore"),
-		transformprocessor.WithScopeStatements([]string{
-			`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
-			`set(attributes["cloudwatch.solution"], "otel-prometheus")`,
-		}),
+		transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-prometheus")),
 	))
-	if clusterName, ok := common.GetString(conf, clusterNameKey); ok && clusterName != "" {
-		if !clusterNameRegex.MatchString(clusterName) {
-			return nil, fmt.Errorf("cluster_name contains invalid characters: %q", clusterName)
-		}
-		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-			transformprocessor.WithMetricStatements([]string{
-				fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName),
-			}),
-		))
-	}
-
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](receiver),
 		Processors: processors,
@@ -106,18 +88,14 @@ func (t *prometheusReceiverTranslator) Translate(conf *confmap.Conf) (component.
 		return nil, fmt.Errorf("unable to read prometheus config from path %s: %w", configPath, err)
 	}
 
+	// Prevent OTel expandconverter from misinterpreting Prometheus regex backreferences.
+	escaped := common.EscapeDollarDigit(string(content))
 	var stringMap map[string]interface{}
-	if err := yaml.Unmarshal(content, &stringMap); err != nil {
+	if err := yaml.Unmarshal([]byte(escaped), &stringMap); err != nil {
 		return nil, fmt.Errorf("unable to parse prometheus config from %s: %w", configPath, err)
 	}
 
 	componentParser := confmap.NewFromStringMap(stringMap)
-	// NOTE: Prometheus relabel configs use $1, $2 for capture group references.
-	// The OTel confmap expandconverter interprets these as environment variable
-	// references (os.Expand), which can cause failures or empty replacements.
-	// This is a known limitation when prometheus configs with relabel_configs
-	// are loaded through the OTel config resolver pipeline.
-
 	var promCfg prometheusreceiver.PromConfig
 	if err := componentParser.Unmarshal(&promCfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal prometheus config from %s: %w", configPath, err)

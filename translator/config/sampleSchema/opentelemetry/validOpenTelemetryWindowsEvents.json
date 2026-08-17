@@ -1,0 +1,29 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "collect": {
+      "windows_events": {
+        "collect_list": [
+          {
+            "event_name": "System",
+            "event_levels": ["ERROR", "WARNING"],
+            "event_format": "xml",
+            "log_group_name": "/aws/windows/System"
+          },
+          {
+            "event_name": "Application",
+            "event_levels": ["INFORMATION"],
+            "log_group_name": "/aws/windows/Application",
+            "log_stream_name": "my-stream"
+          },
+          {
+            "event_name": "Security",
+            "event_ids": [4624, 4625]
+          }
+        ]
+      }
+    }
+  }
+}

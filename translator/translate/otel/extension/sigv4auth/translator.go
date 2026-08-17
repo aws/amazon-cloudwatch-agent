@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -25,6 +26,11 @@ type translator struct {
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
+// Type is the sigv4auth extension's component type.
+func Type() component.Type {
+	return sigv4authextension.NewFactory().Type()
+}
+
 func NewTranslator() common.ComponentTranslator {
 	return &translator{factory: sigv4authextension.NewFactory()}
 }
@@ -37,7 +43,7 @@ func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.service)
 }
 
-func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
+func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*sigv4authextension.Config)
 	cfg.Region = agent.Global_Config.Region
 	if t.service != "" {
@@ -54,7 +60,10 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
-		cfg.AssumeRole = sigv4authextension.AssumeRole{ARN: agent.Global_Config.Role_arn, STSRegion: agent.Global_Config.Region}
+		cfg.RoleARN = agent.Global_Config.Role_arn
+		if agent.IsAzureWebIdentity() {
+			cfg.WebIdentityTokenFile = paths.OIDCTokenPath
+		}
 	}
 
 	return cfg, nil

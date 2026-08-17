@@ -443,7 +443,7 @@ extensions:
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
         imds_retries: 1
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         region: us-west-2
@@ -640,6 +640,9 @@ processors:
             - k8s.pod.name
             - k8s.namespace.name
             - k8s.container.name
+    groupbyattrs/files:
+        keys:
+            - log.file.name
     k8sattributes/cw_k8s_ci_v0_node:
         auth_type: serviceAccount
         exclude:
@@ -1287,85 +1290,75 @@ processors:
                 - replace_match(datapoint.attributes["user.name"], "", "unknown")
         trace_statements: []
     transform/dbi_logs_raw-events_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
         metric_statements: []
         trace_statements: []
     transform/dbi_logs_server-logs_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
+            - context: log
+              error_mode: ignore
+              statements:
+                - delete_key(attributes, "timestamp")
+                - delete_key(attributes, "severity")
         metric_statements: []
         trace_statements: []
     transform/dbi_resource_0:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         metric_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         trace_statements: []
-    transform/dbi_scope_0:
+    transform/dbi_scope:
         error_mode: ignore
         flatten_data: false
         log_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-database-insights")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
+        trace_statements: []
     transform/host_metrics_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+        log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-host-metrics")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
+        trace_statements: []
     transform/identity:
         error_mode: ignore
         flatten_data: false
@@ -1385,7 +1378,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -1410,6 +1406,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
         metric_statements:
             - context: resource
               error_mode: ignore
@@ -1426,7 +1423,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -1451,6 +1451,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -1467,7 +1468,10 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
-                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.deployment.name"] != nil
                 - set(resource.attributes["k8s.workload.type"], "Deployment") where resource.attributes["k8s.deployment.name"] != nil and resource.attributes["k8s.workload.type"] == nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.statefulset.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.statefulset.name"] != nil
@@ -1492,12 +1496,13 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/instance")
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
+                - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
     transform/logs_cleanup:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
@@ -1521,11 +1526,11 @@ processors:
         metric_statements: []
         trace_statements: []
     transform/otlp_log_source:
-        error_mode: propagate
+        error_mode: ignore
         flatten_data: false
         log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
@@ -1537,51 +1542,49 @@ processors:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         metric_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         trace_statements:
             - context: scope
               error_mode: ignore
               statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-otlp")
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
     transform/prometheus_scope:
         error_mode: ignore
         flatten_data: false
-        log_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
-        metric_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
-        trace_statements:
-            - context: scope
-              error_mode: ignore
-              statements:
-                - set(attributes["cloudwatch.source"], "cloudwatch-agent")
-                - set(attributes["cloudwatch.solution"], "otel-prometheus")
-    transform/set_cluster_name:
-        error_mode: propagate
-        flatten_data: false
         log_statements: []
         metric_statements:
+            - context: scope
+              error_mode: ignore
+              statements:
+                - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
+                - set(scope.attributes["cloudwatch.solution"], "otel-prometheus")
+        trace_statements: []
+    transform/set_cluster_name:
+        error_mode: ignore
+        flatten_data: false
+        log_statements:
             - context: resource
-              error_mode: propagate
+              error_mode: ignore
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
-        trace_statements: []
+        metric_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        trace_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["k8s.cluster.name"], "TestCluster")
 receivers:
     awsefareceiver/cw_k8s_ci_v0:
         collection_interval: 30s
@@ -1603,25 +1606,42 @@ receivers:
         transport: udp
     filelog/postgresql_0:
         encoding: utf-8
-        exclude_older_than: 0s
-        fingerprint_size: 1000
-        force_flush_period: 500ms
-        id: file_input
         include:
             - /var/lib/pgsql/data/log/postgresql-*.log
-        include_file_name: true
-        initial_buffer_size: 16384
-        max_concurrent_files: 1024
-        max_log_size: 1048576
-        operators: []
-        poll_interval: 200ms
-        retry_on_failure:
-            enabled: false
-            initial_interval: 1s
-            max_elapsed_time: 5m0s
-            max_interval: 30s
+        multiline:
+            line_start_pattern: ^\d{4}-\d{2}-\d{2}
+        operators:
+            - regex: (?P<timestamp>\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2}\.(\d{1,9}) \w{3})
+              timestamp:
+                layout: 2006-1-_2 15:04:05.999999999 MST
+                layout_type: gotime
+                location: UTC
+                parse_from: attributes.timestamp
+              type: regex_parser
+            - on_error: send_quiet
+              regex: '\[\d+\]\s*(?P<severity>LOG|ERROR|WARNING|FATAL|PANIC|DEBUG\d?|INFO|NOTICE|STATEMENT):'
+              severity:
+                mapping:
+                    debug:
+                        - DEBUG
+                        - DEBUG1
+                        - DEBUG2
+                        - DEBUG3
+                        - DEBUG4
+                        - DEBUG5
+                    error: ERROR
+                    fatal:
+                        - FATAL
+                        - PANIC
+                    info:
+                        - LOG
+                        - INFO
+                        - NOTICE
+                        - STATEMENT
+                    warn: WARNING
+                parse_from: attributes.severity
+              type: regex_parser
         start_at: end
-        type: file_input
     hostmetrics/opentelemetry:
         collection_interval: 1m0s
         initial_delay: 1s
@@ -1757,59 +1777,59 @@ receivers:
         initial_delay: 1s
         metrics:
             postgresql.backends:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.buffers.allocated:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.buffers.writes:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.checkpoint.count:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.duration:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.maxwritten:
-                enabled: true
+                enabled: false
             postgresql.blks_hit:
                 enabled: false
             postgresql.blks_read:
                 enabled: false
             postgresql.blocks_read:
-                enabled: true
+                enabled: false
             postgresql.commits:
-                enabled: true
+                enabled: false
             postgresql.connection.max:
-                enabled: true
+                enabled: false
             postgresql.database.count:
-                enabled: true
+                enabled: false
             postgresql.database.locks:
                 enabled: false
             postgresql.db_size:
-                enabled: true
+                enabled: false
             postgresql.deadlocks:
                 enabled: false
             postgresql.function.calls:
                 enabled: false
             postgresql.index.scans:
-                enabled: true
+                enabled: false
             postgresql.index.size:
-                enabled: true
+                enabled: false
             postgresql.operations:
-                enabled: true
+                enabled: false
             postgresql.replication.data_delay:
-                enabled: true
+                enabled: false
             postgresql.rollbacks:
-                enabled: true
+                enabled: false
             postgresql.rows:
-                enabled: true
+                enabled: false
             postgresql.sequential_scans:
                 enabled: false
             postgresql.sessions:
                 enabled: false
             postgresql.table.count:
-                enabled: true
+                enabled: false
             postgresql.table.size:
-                enabled: true
+                enabled: false
             postgresql.table.vacuum.count:
-                enabled: true
+                enabled: false
             postgresql.temp.io:
                 enabled: false
             postgresql.temp_files:
@@ -1825,11 +1845,11 @@ receivers:
             postgresql.tup_updated:
                 enabled: false
             postgresql.wal.age:
-                enabled: true
+                enabled: false
             postgresql.wal.delay:
                 enabled: false
             postgresql.wal.lag:
-                enabled: true
+                enabled: false
         passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
             collection_interval: 1m0s
@@ -1852,7 +1872,7 @@ receivers:
             insecure_skip_verify: true
         top_query_collection:
             collection_interval: 1m0s
-            max_explain_each_interval: 0
+            max_explain_each_interval: 1000
             max_rows_per_query: 5000
             query_plan_cache_size: 1000
             query_plan_cache_ttl: 1h0m0s
@@ -1886,7 +1906,7 @@ receivers:
             postgresql.blks_read:
                 enabled: false
             postgresql.blocks_read:
-                enabled: true
+                enabled: false
             postgresql.commits:
                 enabled: true
             postgresql.connection.max:
@@ -1902,17 +1922,17 @@ receivers:
             postgresql.function.calls:
                 enabled: false
             postgresql.index.scans:
-                enabled: true
+                enabled: false
             postgresql.index.size:
-                enabled: true
+                enabled: false
             postgresql.operations:
-                enabled: true
+                enabled: false
             postgresql.replication.data_delay:
                 enabled: true
             postgresql.rollbacks:
                 enabled: true
             postgresql.rows:
-                enabled: true
+                enabled: false
             postgresql.sequential_scans:
                 enabled: false
             postgresql.sessions:
@@ -1920,9 +1940,9 @@ receivers:
             postgresql.table.count:
                 enabled: true
             postgresql.table.size:
-                enabled: true
+                enabled: false
             postgresql.table.vacuum.count:
-                enabled: true
+                enabled: false
             postgresql.temp.io:
                 enabled: false
             postgresql.temp_files:
@@ -1965,7 +1985,120 @@ receivers:
             insecure_skip_verify: true
         top_query_collection:
             collection_interval: 1m0s
-            max_explain_each_interval: 0
+            max_explain_each_interval: 1000
+            max_rows_per_query: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_n_query: 200
+        transport: tcp
+        username: cw_monitor
+    postgresql/metrics_perresource_0:
+        collection_interval: 1m0s
+        endpoint: localhost:5432
+        events:
+            db.server.query_sample:
+                enabled: false
+            db.server.top_query:
+                enabled: false
+        initial_delay: 1s
+        metrics:
+            postgresql.backends:
+                enabled: false
+            postgresql.bgwriter.buffers.allocated:
+                enabled: false
+            postgresql.bgwriter.buffers.writes:
+                enabled: false
+            postgresql.bgwriter.checkpoint.count:
+                enabled: false
+            postgresql.bgwriter.duration:
+                enabled: false
+            postgresql.bgwriter.maxwritten:
+                enabled: false
+            postgresql.blks_hit:
+                enabled: false
+            postgresql.blks_read:
+                enabled: false
+            postgresql.blocks_read:
+                enabled: true
+            postgresql.commits:
+                enabled: false
+            postgresql.connection.max:
+                enabled: false
+            postgresql.database.count:
+                enabled: false
+            postgresql.database.locks:
+                enabled: false
+            postgresql.db_size:
+                enabled: false
+            postgresql.deadlocks:
+                enabled: false
+            postgresql.function.calls:
+                enabled: false
+            postgresql.index.scans:
+                enabled: true
+            postgresql.index.size:
+                enabled: true
+            postgresql.operations:
+                enabled: true
+            postgresql.replication.data_delay:
+                enabled: false
+            postgresql.rollbacks:
+                enabled: false
+            postgresql.rows:
+                enabled: true
+            postgresql.sequential_scans:
+                enabled: false
+            postgresql.sessions:
+                enabled: false
+            postgresql.table.count:
+                enabled: false
+            postgresql.table.size:
+                enabled: true
+            postgresql.table.vacuum.count:
+                enabled: true
+            postgresql.temp.io:
+                enabled: false
+            postgresql.temp_files:
+                enabled: false
+            postgresql.tup_deleted:
+                enabled: false
+            postgresql.tup_fetched:
+                enabled: false
+            postgresql.tup_inserted:
+                enabled: false
+            postgresql.tup_returned:
+                enabled: false
+            postgresql.tup_updated:
+                enabled: false
+            postgresql.wal.age:
+                enabled: false
+            postgresql.wal.delay:
+                enabled: false
+            postgresql.wal.lag:
+                enabled: false
+        passfile: sampleConfig/opentelemetry/testdata/.pgpass
+        query_sample_collection:
+            collection_interval: 1s
+            enabled: true
+            max_rows_per_query: 500
+        resource_attributes:
+            postgresql.database.name:
+                enabled: true
+            postgresql.index.name:
+                enabled: true
+            postgresql.schema.name:
+                enabled: true
+            postgresql.table.name:
+                enabled: true
+            service.instance.id:
+                enabled: true
+        timeout: 0s
+        tls:
+            insecure: true
+            insecure_skip_verify: true
+        top_query_collection:
+            collection_interval: 1m0s
+            max_explain_each_interval: 1000
             max_rows_per_query: 5000
             query_plan_cache_size: 1000
             query_plan_cache_ttl: 1h0m0s
@@ -2106,6 +2239,21 @@ receivers:
                   honor_timestamps: true
                   job_name: test_app
                   metrics_path: /metrics
+                  relabel_configs:
+                    - action: replace
+                      regex: (.*)
+                      replacement: $$$$1
+                      separator: ;
+                      source_labels:
+                        - __meta_kubernetes_pod_name
+                      target_label: pod
+                    - action: replace
+                      regex: (.*)
+                      replacement: $$$${1}
+                      separator: ;
+                      source_labels:
+                        - __address__
+                      target_label: host
                   scheme: http
                   scrape_interval: 30s
                   scrape_protocols:
@@ -2212,7 +2360,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - filter/dbi_exclude_monitor_0
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - resourcedetection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
@@ -2222,8 +2370,9 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - resourcedetection/opentelemetry
+                - groupbyattrs/files
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
             receivers:
@@ -2241,6 +2390,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - transform/logs_routing
                 - attributestocontext/opentelemetry
@@ -2429,11 +2579,12 @@ service:
             exporters:
                 - forward/opentelemetry
             processors:
-                - transform/dbi_scope_0
+                - transform/dbi_scope
                 - transform/dbi_resource_0
                 - transform/dbi_fix_start_time
             receivers:
                 - postgresql/metrics_0
+                - postgresql/metrics_perresource_0
                 - count/dbi_dbload
                 - signaltometrics/dbi_topsql
         metrics/host:
@@ -2443,13 +2594,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_mem
-                - telegraf_processes
-                - telegraf_procstat/1917393364
-                - telegraf_cpu
-                - telegraf_swap
-                - telegraf_disk
                 - telegraf_netstat
+                - telegraf_cpu
+                - telegraf_processes
+                - telegraf_swap
+                - telegraf_mem
+                - telegraf_procstat/1917393364
+                - telegraf_disk
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -2464,8 +2615,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_statsd
                 - telegraf_socket_listener
+                - telegraf_statsd
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -2482,6 +2633,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - batch/opentelemetry_metrics
             receivers:
@@ -2491,7 +2643,6 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/prometheus_scope
-                - transform/set_cluster_name
             receivers:
                 - prometheus/opentelemetry
         metrics/otlp:
@@ -2508,6 +2659,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - k8sattributes/opentelemetry
+                - transform/set_cluster_name
                 - transform/identity
                 - batch/opentelemetry_traces
             receivers:

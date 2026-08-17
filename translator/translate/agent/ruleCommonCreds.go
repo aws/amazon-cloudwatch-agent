@@ -5,6 +5,7 @@ package agent
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 )
@@ -52,6 +53,19 @@ func (c *CommonCreds) ApplyRule(input interface{}) (returnKey string, returnVal 
 	Global_Config.Credentials = result
 
 	return
+}
+
+// HasSharedCredentials reports whether common-config.toml supplied a profile or credentials file.
+func HasSharedCredentials() bool {
+	_, hasProfile := Global_Config.Credentials[Profile_Key]
+	_, hasFile := Global_Config.Credentials[CredentialsFile_Key]
+	return hasProfile || hasFile
+}
+
+// IsAzureWebIdentity reports whether the oidctoken IMDS web-identity chain applies: plain Azure VM (not AKS, which uses the chart's projected SA token) with no common-config credentials.
+func IsAzureWebIdentity() bool {
+	ctx := context.CurrentContext()
+	return ctx.Mode() == config.ModeAzureVM && ctx.KubernetesMode() != config.ModeAKS && !HasSharedCredentials()
 }
 
 func init() {

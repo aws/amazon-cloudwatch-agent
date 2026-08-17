@@ -61,10 +61,7 @@ func (t *hostMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		Receivers: common.NewTranslatorMap[component.Config, component.ID](hostmetrics.NewTranslator(opts...)),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](transformprocessor.NewTranslatorWithName("host_metrics_scope",
 			transformprocessor.WithErrorMode("ignore"),
-			transformprocessor.WithScopeStatements([]string{
-				`set(attributes["cloudwatch.source"], "cloudwatch-agent")`,
-				`set(attributes["cloudwatch.solution"], "otel-host-metrics")`,
-			}),
+			transformprocessor.WithMetricScopeStatements(common.ScopeStatementsForSolution("otel-host-metrics")),
 		)),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),

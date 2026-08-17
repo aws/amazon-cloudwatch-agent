@@ -4,6 +4,7 @@
 package opentelemetry
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,16 +25,40 @@ func TestBaseMetricsTranslator(t *testing.T) {
 	}{
 		"WithNilConf": {
 			input:   nil,
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
 		},
 		"WithoutCollectKey": {
 			input:   map[string]interface{}{},
-			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: otelCollectKey},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
 		},
-		"WithCollectKey": {
+		"WithCollectKeyButNoMetricsSource": {
 			input: map[string]interface{}{
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{},
+				},
+			},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
+		},
+		"WithWindowsEventsOnlyNoMetrics": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"windows_events": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{"event_name": "System"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(otelMetricsKeys, " or ")},
+		},
+		"WithOtlpKey": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"otlp": map[string]interface{}{},
+					},
 				},
 			},
 		},
@@ -70,16 +95,88 @@ func TestBaseMetricsTranslator(t *testing.T) {
 	}
 }
 
+func TestBaseMetricsTranslatorResourceAttributes(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewBaseMetricsTranslator()
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"resource_attributes": map[string]interface{}{
+				"team": "cloudwatch",
+			},
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, 4, got.Processors.Len())
+	assert.Equal(t, "resource/opentelemetry", got.Processors.Keys()[0].String())
+	assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[1].String())
+	assert.Equal(t, "transform/identity", got.Processors.Keys()[2].String())
+	assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[3].String())
+}
+
 func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
 	agent.Global_Config.Region = ""
 	tt := NewBaseMetricsTranslator()
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
-			"collect": map[string]interface{}{},
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{},
+			},
 		},
 	})
 	got, err := tt.Translate(conf)
 	require.Error(t, err)
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "region is required")
+}
+
+func TestBaseMetricsTranslatorClusterName(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	tt := NewBaseMetricsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"host_metrics": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	// Verify set_cluster_name processor is present
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.Contains(t, keys, "transform/set_cluster_name")
+}
+
+func TestBaseMetricsTranslatorNoClusterName(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	tt := NewBaseMetricsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"host_metrics": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	// Verify set_cluster_name processor is NOT present
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.NotContains(t, keys, "transform/set_cluster_name")
 }

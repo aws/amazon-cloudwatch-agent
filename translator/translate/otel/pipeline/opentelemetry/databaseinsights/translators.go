@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/confmap"
@@ -20,13 +21,14 @@ import (
 var ottlSafeRegex = regexp.MustCompile(`^[a-zA-Z0-9._@/:\-]+$`)
 
 type dbiInstanceConfig struct {
-	endpoint     string
-	username     string
-	passfile     string
-	caFile       string
-	instanceName string
-	logFilePath  string
-	isLocalhost  bool
+	endpoint                      string
+	username                      string
+	passfile                      string
+	caFile                        string
+	instanceName                  string
+	logFilePath                   string
+	isLocalhost                   bool
+	perResourceCollectionInterval time.Duration
 }
 
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
@@ -48,12 +50,13 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 }
 
 type pgRawInstance struct {
-	Endpoint     string `mapstructure:"endpoint"`
-	Username     string `mapstructure:"username"`
-	PasswordFile string `mapstructure:"password_file"`
-	CAFile       string `mapstructure:"ca_file"`
-	InstanceName string `mapstructure:"instance_name"`
-	Logs         struct {
+	Endpoint                      string `mapstructure:"endpoint"`
+	Username                      string `mapstructure:"username"`
+	PasswordFile                  string `mapstructure:"password_file"`
+	CAFile                        string `mapstructure:"ca_file"`
+	InstanceName                  string `mapstructure:"instance_name"`
+	PerResourceCollectionInterval int    `mapstructure:"per_resource_collection_interval"`
+	Logs                          struct {
 		FilePath string `mapstructure:"file_path"`
 	} `mapstructure:"logs"`
 }
@@ -66,14 +69,19 @@ func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	}
 	instances := make([]dbiInstanceConfig, 0, len(raw))
 	for _, r := range raw {
+		perResourceInterval := 60 * time.Second
+		if r.PerResourceCollectionInterval > 0 {
+			perResourceInterval = time.Duration(r.PerResourceCollectionInterval) * time.Second
+		}
 		instances = append(instances, dbiInstanceConfig{
-			endpoint:     r.Endpoint,
-			username:     r.Username,
-			passfile:     r.PasswordFile,
-			caFile:       r.CAFile,
-			instanceName: r.InstanceName,
-			logFilePath:  r.Logs.FilePath,
-			isLocalhost:  isLocalhostEndpoint(r.Endpoint),
+			endpoint:                      r.Endpoint,
+			username:                      r.Username,
+			passfile:                      r.PasswordFile,
+			caFile:                        r.CAFile,
+			instanceName:                  r.InstanceName,
+			logFilePath:                   r.Logs.FilePath,
+			isLocalhost:                   isLocalhostEndpoint(r.Endpoint),
+			perResourceCollectionInterval: perResourceInterval,
 		})
 	}
 	return instances
@@ -92,5 +100,5 @@ func validateOttlSafe(field, value string) error {
 func isLocalhostEndpoint(endpoint string) bool {
 	return strings.HasPrefix(endpoint, "localhost") ||
 		strings.HasPrefix(endpoint, "127.0.0.1") ||
-		strings.HasPrefix(endpoint, "::1")
+		strings.HasPrefix(endpoint, "[::1]")
 }
