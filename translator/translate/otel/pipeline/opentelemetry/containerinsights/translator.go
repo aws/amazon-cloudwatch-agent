@@ -99,15 +99,9 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 
 		// Daemonset logs pipelines (gated by logs.enabled)
 		//
-		// Note on shared component IDs: the filelog pipelines define
-		// k8sattributes/cw_k8s_ci_v0_pod with the same ID as the metrics pipelines
-		// but a richer body (service.* annotations + extra metadata). Components are
-		// keyed by ID in a single map, so the definition registered LAST wins. Logs
-		// are registered after metrics here, so the richer logs definition wins for
-		// both — which is safe (metrics also get those attributes from the shared
-		// k8sattributes/opentelemetry, then identity deletes the transient ones).
-		// resourcedetection/cw_k8s_ci_v0 is kept identical across metrics and logs to
-		// avoid a meaningful conflict. Do not reorder registration without re-checking.
+		// filelog and metrics pipelines share component IDs (e.g. k8sattributes/cw_k8s_ci_v0_pod);
+		// last registration wins, so logs are registered after metrics to keep the richer
+		// logs definition. Keep shared defs compatible; don't reorder without re-checking.
 		if logsEnabled(conf) {
 			translators.Set(newYAMLPipeline("app", pipeline.SignalLogs, filelogAppYAML))
 			translators.Set(newYAMLPipeline("node", pipeline.SignalLogs, filelogNodeYAML))

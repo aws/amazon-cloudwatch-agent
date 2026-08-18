@@ -8,7 +8,7 @@ env:
   ECR_INTEGRATION_TEST_REPO: "cwagent-integration-test"
   CWA_GITHUB_TEST_REPO_NAME: "aws/amazon-cloudwatch-agent-test"
   CWA_GITHUB_TEST_REPO_URL: "https://github.com/aws/amazon-cloudwatch-agent-test.git"
-  CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  CWA_GITHUB_TEST_REPO_BRANCH: "mcommey/containerinsights-test"
   OPERATOR_GITHUB_REPO_NAME: "aws/amazon-cloudwatch-agent-operator"
 
 on:
@@ -172,7 +172,7 @@ jobs:
           echo "eks_e2e_jmx_matrix: $EKS_E2E_JMX_MATRIX"
           echo "eks_e2e_containerinsights_matrix: $EKS_E2E_CONTAINERINSIGHTS_MATRIX"
 
-  EKSE2EContainerInsightsTestHelm:
+  EKSE2EOTELContainerInsightsTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
     name: 'EKSE2EContainerInsightsTestHelm'
@@ -182,7 +182,7 @@ jobs:
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-containerinsights-test-helm
+      job_id: eks-e2e-otelcontainerinsights-test-helm
       test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_containerinsights_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
@@ -195,7 +195,7 @@ jobs:
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
       agent_config: resources/cwagent_configs_helm_chart/ci_node.json
-      sample_app: resources/keda_karpenter.yaml
+      sample_app: resources/sample_apps/nginx.yaml
       eks_installation_type: "HELM_CHART"
     secrets: inherit
 

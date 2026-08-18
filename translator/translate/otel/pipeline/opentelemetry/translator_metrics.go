@@ -82,9 +82,9 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
-	// Cluster-scoped Container Insights metrics (marked by transform/cw_k8s_ci_v0_mark_cluster)
-	// must not carry the scraper node's identity. resourcedetection re-adds host.*/AZ
-	// post-fanout, so strip them for marked records here, then drop the marker.Gated on container_insights so non-CI metrics goldens are unaffected.
+	// Cluster-scoped CI metrics must not carry the scraper node's identity.
+	// resourcedetection re-adds host.*/AZ post-fanout, so strip them for marked
+	// records, then drop the marker. Gated on container_insights.
 	if conf != nil && conf.IsSet(common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)) {
 		processors.Set(transformprocessor.NewTranslatorWithName("cluster_host_suppress",
 			transformprocessor.WithMetricResourceStatements([]string{
@@ -102,10 +102,8 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 				`set(resource.schema_url, "")`,
 			})))
 	}
-	// awsattributelimit caps combined resource+scope+datapoint attributes at the
-	// CloudWatch OTLP backend limit (150) after enrichment (resourcedetection,
-	// k8sattributes, identity). The backend rejects the whole datapoint over the
-	// limit, so this runs last (before batch) as a safety net.
+	// Cap attributes at the CloudWatch OTLP limit (150) after enrichment; the
+	// backend rejects datapoints over it. Runs last (before batch) as a safety net.
 	processors.Set(awsattributelimit.NewTranslator(common.WithName("opentelemetry_metrics")))
 	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.MetricsBatchTimeout)))
 

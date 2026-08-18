@@ -12,12 +12,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-// maxTotalAttributes is the CloudWatch OTLP backend hard limit. The endpoint
-// rejects the whole datapoint (HTTP 400) when resource+scope+datapoint
-// attributes exceed this. The shared metrics pipeline caps here after
-// enrichment as a pure safety net: it is a no-op under 150 and, when over,
-// the processor's built-in tier logic sheds low-value labels first while
-// protecting identity/cloud/host/datapoint attributes.
+// maxTotalAttributes is the CloudWatch OTLP backend hard limit: the endpoint
+// rejects datapoints that exceed it. Runs after enrichment as a safety net,
+// shedding low-value labels first when over.
 const maxTotalAttributes = 150
 
 type translator struct {
