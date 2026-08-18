@@ -67,3 +67,50 @@ func TestRefreshableSharedCredentialsProvider(t *testing.T) {
 	assert.Equal(t, "o1rLDaaaccc", got.SecretAccessKey)
 	assert.False(t, got.Expired(), "Expect new credentials not to be expired.")
 }
+
+// TestSharedCredentialsProvider_KeylessProfile verifies a profile that exists but
+// carries no static keys fails loudly instead of returning zero-value credentials.
+func TestSharedCredentialsProvider_KeylessProfile(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "credentials")
+	//nolint:gosec // G703: test-controlled temp file
+	require.NoError(t, os.WriteFile(tmp, []byte("[default]\nregion = us-west-2\n"), 0600))
+
+	p := SharedCredentialsProvider{Filename: tmp, Profile: "default"}
+	_, err := p.Retrieve(t.Context())
+	require.ErrorContains(t, err, "does not contain static credentials")
+}
+
+// TestSharedCredentialsProvider_EmptyFilenameHonorsEnvFile verifies an empty
+// Filename resolves via AWS_SHARED_CREDENTIALS_FILE like the v1 provider did.
+func TestSharedCredentialsProvider_EmptyFilenameHonorsEnvFile(t *testing.T) {
+	tmp := filepath.Join(t.TempDir(), "credentials")
+	//nolint:gosec // G101,G703: test-only fake credentials in a test-controlled temp file
+	require.NoError(t, os.WriteFile(tmp, []byte("[default]\naws_access_key_id = AKIDEXAMPLE\naws_secret_access_key = secretEXAMPLE\n"), 0600))
+	t.Setenv(envAwsSharedCredentialsFile, tmp)
+
+	p := SharedCredentialsProvider{}
+	got, err := p.Retrieve(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "AKIDEXAMPLE", got.AccessKeyID)
+}
+
+// TestSharedCredentialsProvider_IgnoresSharedConfigFile verifies the configured
+// credentials file is authoritative: a decoy ~/.aws/config-style file with a
+// different profile must not be merged in.
+func TestSharedCredentialsProvider_IgnoresSharedConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	decoy := filepath.Join(dir, "config")
+	//nolint:gosec // G101,G703: test-only fake credentials in a test-controlled temp file
+	require.NoError(t, os.WriteFile(decoy, []byte("[profile other]\naws_access_key_id = DECOY\naws_secret_access_key = decoySecret\n"), 0600))
+	t.Setenv(envAwsSharedConfigFile, decoy)
+
+	tmp := filepath.Join(dir, "credentials")
+	//nolint:gosec // G703: test-controlled temp file
+	require.NoError(t, os.WriteFile(tmp, []byte("[default]\nregion = us-west-2\n"), 0600))
+
+	// The profile exists only in the decoy config file; with isolation in place
+	// the credentials file is authoritative and resolution fails loudly.
+	p := SharedCredentialsProvider{Filename: tmp, Profile: "other"}
+	_, err := p.Retrieve(t.Context())
+	require.Error(t, err)
+}
