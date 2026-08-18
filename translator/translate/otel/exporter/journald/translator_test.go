@@ -84,6 +84,34 @@ func TestTranslator_Translate_WithCollectConfig(t *testing.T) {
 	assert.Equal(t, "us-east-1", cfg.Region)
 }
 
+func TestTranslator_Translate_NeverExpireRetention(t *testing.T) {
+	// Setup
+	resetGlobalConfig()
+	agent.Global_Config.Region = "us-east-1"
+
+	// The agent config schema uses -1 for "never expire"; the exporter's
+	// retention validator rejects -1 and expects 0 for the same meaning.
+	collectConfig := map[string]interface{}{
+		"retention_in_days": float64(-1),
+	}
+
+	translator := NewTranslatorWithConfig("journald_0", collectConfig)
+	conf := confmap.New()
+
+	// Execute
+	result, err := translator.Translate(conf)
+
+	// Verify
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
+	require.True(t, ok)
+
+	assert.Equal(t, int32(0), cfg.LogRetention)
+	require.NoError(t, cfg.Validate())
+}
+
 func TestTranslator_Translate_WithDefaultValues(t *testing.T) {
 	// Setup
 	resetGlobalConfig()
