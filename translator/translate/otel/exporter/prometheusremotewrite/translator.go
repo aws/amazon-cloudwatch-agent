@@ -48,8 +48,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*prometheusremotewriteexporter.Config)
 	cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))})
 	cfg.ResourceToTelemetrySettings = resourcetotelemetry.Settings{Enabled: true, ClearAfterCopy: true}
-	// Disable metric name type/unit suffixes (e.g. _total, _ratio) to preserve backward-compatible AMP metric names.
+	// Disable metric name type/unit suffixes (e.g. _total, _ratio) and otel_scope_* info labels to preserve backward-compatible AMP metrics.
 	cfg.AddMetricSuffixes = false
+	cfg.DisableScopeInfo = true
 	// ignoring bool return value since we are checking with isSet beforehand
 	value, _ := common.GetString(conf, common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))
 	domain := "amazonaws.com"
