@@ -355,9 +355,15 @@ func (t *dbiTranslator) pgReceiver(name string, extraOpts ...postgresql.Option) 
 
 func (t *dbiTranslator) excludeMonitorFilter() common.ComponentTranslator {
 	idx := strconv.Itoa(t.instanceIndex)
-	condition := fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
-	if t.cfg.engine == common.PostgreSQLKey {
+	var condition string
+	switch t.cfg.engine {
+	case common.PostgreSQLKey:
 		condition = fmt.Sprintf(`attributes["user.name"] == "%s" or attributes["postgresql.rolname"] == "%s"`, t.cfg.username, t.cfg.username)
+	case common.MySQLKey:
+		// For MySQL, only check user.name (MySQL receiver doesn't emit a separate role attribute like PostgreSQL)
+		condition = fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
+	default:
+		condition = fmt.Sprintf(`attributes["user.name"] == "%s"`, t.cfg.username)
 	}
 	return filterprocessor.NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_"+t.cfg.engine+"_"+idx, condition, common.OTTLErrorModePropagate)
 }
