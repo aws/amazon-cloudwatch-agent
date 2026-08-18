@@ -171,3 +171,16 @@ func TestDbiExcludeMonitor(t *testing.T) {
 	require.Len(t, fCfg.Logs.LogConditions, 1)
 	assert.Equal(t, condition, fCfg.Logs.LogConditions[0])
 }
+
+func TestDbiExcludeMonitorMySQL(t *testing.T) {
+	condition := `attributes["user.name"] == "cw_monitor"`
+	tr := NewTranslatorWithLogCondition(common.DbiFilterExcludeMonitor+"_mysql_0", condition, "propagate")
+	assert.Equal(t, "filter/dbi_exclude_monitor_mysql_0", tr.ID().String())
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	fCfg := cfg.(*filterprocessor.Config)
+	require.NotNil(t, fCfg.Logs)
+	require.Len(t, fCfg.Logs.LogConditions, 1)
+	assert.Equal(t, condition, fCfg.Logs.LogConditions[0])
+}
