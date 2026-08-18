@@ -19,6 +19,7 @@ import (
 	"github.com/prometheus/prometheus/discovery"
 	"github.com/prometheus/prometheus/scrape"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/receiver"
@@ -84,7 +85,7 @@ func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel
 		enabled:             false,
 		manager:             nil,
 		config:              nil,
-		host:                nil,
+		host:                componenttest.NewNopHost(),
 		sm:                  sm,
 		dm:                  dm,
 		shutdownCh:          make(chan struct{}, 1),
@@ -167,8 +168,33 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 	taCfg.TLS.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
 	return nil
 }
+
+// taStartTimeout bounds the target allocator's initial sync in Run: the upstream
+// manager retries it with backoff (up to ~15 minutes) on an unreachable target
+// allocator and only stops on context cancellation. On cancellation the manager
+// soft-fails and the periodic re-sync recovers once the allocator is reachable.
+var taStartTimeout = 2 * time.Minute
+
 func (tam *TargetAllocatorManager) Run() error {
-	err := tam.manager.Start(context.Background(), tam.host, tam.sm, tam.dm)
+	// The manager reuses this context for TLS-rotation client rebuilds, so keep
+	// it live after a successful Start; cancel only on a blocked start or Shutdown.
+	ctx, cancel := context.WithCancel(context.Background())
+	startDone := make(chan struct{})
+	go func() {
+		timer := time.NewTimer(taStartTimeout)
+		defer timer.Stop()
+		select {
+		case <-startDone:
+			<-tam.shutdownCh
+			cancel()
+		case <-timer.C:
+			cancel()
+		case <-tam.shutdownCh:
+			cancel()
+		}
+	}()
+	err := tam.manager.Start(ctx, tam.host, tam.sm, tam.dm)
+	close(startDone)
 	if err != nil {
 		return err
 	}
