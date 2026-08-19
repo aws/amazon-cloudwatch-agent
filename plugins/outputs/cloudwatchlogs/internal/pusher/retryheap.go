@@ -192,6 +192,15 @@ func (p *RetryHeapProcessor) processLoop() {
 
 // processReadyMessages checks the heap for ready batches and moves them back to sender queue
 func (p *RetryHeapProcessor) processReadyMessages() {
+	// A panic here would unwind processLoop via its deferred wg.Done() and permanently
+	// strand the retry heap, halting retries for every target. Recover so one bad batch
+	// cannot stop retries for all targets; the next tick continues normally.
+	defer func() {
+		if r := recover(); r != nil {
+			p.logger.Errorf("Recovered from panic while processing retry heap: %v", r)
+		}
+	}()
+
 	if p.stopped.Load() {
 		return
 	}
