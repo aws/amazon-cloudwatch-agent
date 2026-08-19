@@ -44,10 +44,15 @@
 #                                   for install)
 #     CWAGENT_AZURE_SUBSCRIPTION    Subscription ID or name the resource lives
 #                                   in (Cloud Shell's ambient default is used
-#                                   when unset)
+#                                   when unset). When combined with
+#                                   CWAGENT_AZURE_RESOURCE_ID, a GUID is
+#                                   checked against the ID up front; a name is
+#                                   verified after sign-in
 #     CWAGENT_AZURE_RESOURCE_ID     Full ARM resource ID of the VM / AKS
 #                                   cluster; supplies the subscription,
-#                                   resource group, and name in one value
+#                                   resource group, and name in one value.
+#                                   Individual CWAGENT_AZURE_* values that
+#                                   contradict it are rejected
 #     CWAGENT_AZURE_RESOURCE_GROUP  Resource group
 #     CWAGENT_EMIT_ENV              When set (1/true/yes/on), print eval-able KEY='value'
 #                                   lines on stdout and route all logging to stderr
@@ -67,6 +72,9 @@ RESOURCE_GROUP="${CWAGENT_AZURE_RESOURCE_GROUP:-}"
 VM_NAME="${CWAGENT_AZURE_VM_NAME:-}"
 CLUSTER_NAME="${CWAGENT_K8S_CLUSTER_NAME:-}"
 EMIT_ENV="${CWAGENT_EMIT_ENV:-}"
+# Set in main when CWAGENT_AZURE_SUBSCRIPTION is a display name and a resource
+# ID is also given; consumed by check_prerequisites for the deferred check.
+GIVEN_SUBSCRIPTION_NAME=""
 HELM_CHART_REPO="https://aws-observability.github.io/helm-charts"
 
 # Where the VM fetches the install payload (install.sh / install.ps1) from.
@@ -136,7 +144,8 @@ Environment variables:
     CWAGENT_AWS_ROLE_ARN          IAM role ARN; when set, install runs too
     CWAGENT_AWS_REGION            AWS region (required for install)
     CWAGENT_AZURE_SUBSCRIPTION    Subscription ID or name of the resource
-    CWAGENT_AZURE_RESOURCE_ID     Full ARM resource ID (subscription + group + name)
+    CWAGENT_AZURE_RESOURCE_ID     Full ARM resource ID (subscription + group + name);
+                                  conflicting individual values are rejected
     CWAGENT_AZURE_RESOURCE_GROUP  Resource group
     CWAGENT_EMIT_ENV              Print eval-able KEY='value' lines on stdout
   azure_vm:
@@ -270,20 +279,46 @@ interactive_setup() {
 
 # Split an ARM resource ID into subscription / resource group / name, and return
 # the provider type so the caller can reject an ID from the wrong platform.
-# [rR]esource[gG]roups handles both spellings ARM emits.
+# ARM treats resource IDs case-insensitively, so the structure is validated
+# against a lowercased copy (accepting any casing of the fixed segments), while
+# the extracted values keep the caller's original casing.
 parse_resource_id() {
-     _rest="$1"
-     case "${_rest}" in
-     /subscriptions/*/[rR]esource[gG]roups/*/providers/*/*/*) : ;;
+     _lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+     case "${_lower}" in
+     /subscriptions/*/resourcegroups/*/providers/*/*/*) : ;;
      *) die "not a valid Azure resource ID: $1" ;;
      esac
-     _rest="${_rest#/subscriptions/}"
-     SUBSCRIPTION="${_rest%%/*}"
-     _rest="${_rest#*[rR]esource[gG]roups/}"
-     RESOURCE_GROUP="${_rest%%/*}"
-     RESOURCE_NAME="${_rest##*/}"
-     _rest="${_rest%/*}"
-     RESOURCE_TYPE="${_rest##*/}"
+     # Field positions are fixed by the validation above. The last variable
+     # soaks up everything from the provider namespace on (type/name, plus any
+     # child-resource segments), of which the final two are the type and name.
+     IFS=/ read -r _ _ SUBSCRIPTION _ RESOURCE_GROUP _ _ _type_and_name <<EOF
+$1
+EOF
+     RESOURCE_NAME="${_type_and_name##*/}"
+     _type_and_name="${_type_and_name%/*}"
+     RESOURCE_TYPE="${_type_and_name##*/}"
+}
+
+# Die when an individually-supplied CWAGENT_AZURE_* value contradicts what
+# CWAGENT_AZURE_RESOURCE_ID resolves to. Matching or absent values are fine —
+# only a genuine conflict is an error, so existing single-variable and
+# ID-only invocations are unaffected. ARM treats these identifiers
+# case-insensitively, so the comparison does too.
+# $1 = variable name (for the message), $2 = given value, $3 = resolved value.
+check_resource_id_conflict() {
+     [ -n "$2" ] || return 0
+     _given=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
+     _resolved=$(printf '%s' "$3" | tr '[:upper:]' '[:lower:]')
+     [ "${_given}" = "${_resolved}" ] ||
+          die "$1='$2' conflicts with CWAGENT_AZURE_RESOURCE_ID (which resolves to '$3')
+Pass the resource ID or the individual values, not both with different targets."
+}
+
+# True when $1 is GUID-shaped (8-4-4-4-12 hex groups) — the only form the
+# subscription segment of an ARM resource ID can take. Used to tell a
+# subscription ID apart from a display name.
+is_guid() {
+     printf '%s' "$1" | grep -Eiq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 }
 
 check_prerequisites() {
@@ -311,6 +346,21 @@ Check 'az account list'; if it is in another tenant, run: az login --tenant <ten
      AZ_SUB=$(printf '%s' "${AZ_ACCOUNT}" | cut -f1)
      AZ_NAME=$(printf '%s' "${AZ_ACCOUNT}" | cut -f2)
      AZ_TENANT=$(printf '%s' "${AZ_ACCOUNT}" | cut -f3)
+     # Deferred conflict check: the subscription was given as a display name
+     # (or a non-canonical form) alongside a resource ID, so it could not be
+     # compared to the ID's GUID up front (see main). The account is now
+     # pinned to the ID's subscription; accept a match on either its id or
+     # its display name — the same lookup semantics az account set uses — so
+     # a misclassification by is_guid can never produce a false conflict.
+     if [ -n "${GIVEN_SUBSCRIPTION_NAME}" ]; then
+          _given_lower=$(printf '%s' "${GIVEN_SUBSCRIPTION_NAME}" | tr '[:upper:]' '[:lower:]')
+          _sub_lower=$(printf '%s' "${AZ_SUB}" | tr '[:upper:]' '[:lower:]')
+          _name_lower=$(printf '%s' "${AZ_NAME}" | tr '[:upper:]' '[:lower:]')
+          if [ "${_given_lower}" != "${_sub_lower}" ] && [ "${_given_lower}" != "${_name_lower}" ]; then
+               die "CWAGENT_AZURE_SUBSCRIPTION='${GIVEN_SUBSCRIPTION_NAME}' conflicts with CWAGENT_AZURE_RESOURCE_ID (which resolves to '${AZ_SUB}', name '${AZ_NAME}')
+Pass the resource ID or the individual values, not both with different targets."
+          fi
+     fi
      if [ -n "${AZ_NAME}" ]; then
           log "Azure subscription: ${AZ_SUB} (${AZ_NAME})"
      else
@@ -601,16 +651,37 @@ main() {
      fi
 
      # A full ARM resource ID carries the subscription, resource group, and name
-     # in one value; resolve it into the existing variables (taking precedence
-     # over the individual CWAGENT_AZURE_* values) so the rest of the script is
-     # untouched.
+     # in one value; resolve it into the existing variables so the rest of the
+     # script is untouched. Individually-supplied CWAGENT_AZURE_* values that
+     # contradict the ID fail loudly rather than being silently overridden.
      if [ -n "${RESOURCE_ID}" ]; then
+          _given_subscription="${SUBSCRIPTION}"
+          _given_resource_group="${RESOURCE_GROUP}"
+          _given_vm_name="${VM_NAME}"
+          _given_cluster_name="${CLUSTER_NAME}"
           parse_resource_id "${RESOURCE_ID}"
-          case "${PLATFORM}:${RESOURCE_TYPE}" in
-          azure_vm:virtualMachines) VM_NAME="${RESOURCE_NAME}" ;;
-          azure_aks:managedClusters) CLUSTER_NAME="${RESOURCE_NAME}" ;;
+          # ARM compares the type segment case-insensitively too; the original
+          # casing is kept for the mismatch message.
+          _resource_type_lower=$(printf '%s' "${RESOURCE_TYPE}" | tr '[:upper:]' '[:lower:]')
+          case "${PLATFORM}:${_resource_type_lower}" in
+          azure_vm:virtualmachines) VM_NAME="${RESOURCE_NAME}" ;;
+          azure_aks:managedclusters) CLUSTER_NAME="${RESOURCE_NAME}" ;;
           *) die "resource ID is a ${RESOURCE_TYPE}, which does not match CWAGENT_PLATFORM=${PLATFORM}" ;;
           esac
+          # The ID's subscription segment is always a GUID, but the user may
+          # have supplied CWAGENT_AZURE_SUBSCRIPTION as a display name (the
+          # documented "ID or name" contract). A name can only be compared
+          # after az resolves the account, so defer that case to
+          # check_prerequisites instead of failing on a guaranteed
+          # name-vs-GUID mismatch here.
+          if is_guid "${_given_subscription}" || [ -z "${_given_subscription}" ]; then
+               check_resource_id_conflict "CWAGENT_AZURE_SUBSCRIPTION" "${_given_subscription}" "${SUBSCRIPTION}"
+          else
+               GIVEN_SUBSCRIPTION_NAME="${_given_subscription}"
+          fi
+          check_resource_id_conflict "CWAGENT_AZURE_RESOURCE_GROUP" "${_given_resource_group}" "${RESOURCE_GROUP}"
+          check_resource_id_conflict "CWAGENT_AZURE_VM_NAME" "${_given_vm_name}" "${VM_NAME}"
+          check_resource_id_conflict "CWAGENT_K8S_CLUSTER_NAME" "${_given_cluster_name}" "${CLUSTER_NAME}"
      fi
 
      check_prerequisites
