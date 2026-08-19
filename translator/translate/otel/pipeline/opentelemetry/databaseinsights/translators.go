@@ -5,6 +5,7 @@ package databaseinsights
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 var ottlSafeRegex = regexp.MustCompile(`^[a-zA-Z0-9._@/:\-]+$`)
 
 type dbiInstanceConfig struct {
+	engine                        string
 	endpoint                      string
 	username                      string
 	passfile                      string
@@ -37,15 +39,22 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 		return translators
 	}
 
-	instances := parseDbiPostgresqlInstances(conf)
-	for i, cfg := range instances {
-		translators.Set(&dbiTranslator{pipelineType: dbiMetrics, instanceIndex: i, cfg: cfg})
-		translators.Set(&dbiTranslator{pipelineType: dbiLogToMetrics, instanceIndex: i, cfg: cfg})
-		translators.Set(&dbiTranslator{pipelineType: dbiRawEvents, instanceIndex: i, cfg: cfg})
-		if cfg.logFilePath != "" {
-			translators.Set(&dbiTranslator{pipelineType: dbiServerLogs, instanceIndex: i, cfg: cfg})
+	// Each engine is indexed independently; the engine name is part of every
+	// component ID, so PostgreSQL and MySQL instances never collide.
+	addInstances := func(instances []dbiInstanceConfig) {
+		for i, cfg := range instances {
+			translators.Set(&dbiTranslator{pipelineType: dbiMetrics, instanceIndex: i, cfg: cfg})
+			translators.Set(&dbiTranslator{pipelineType: dbiLogToMetrics, instanceIndex: i, cfg: cfg})
+			translators.Set(&dbiTranslator{pipelineType: dbiRawEvents, instanceIndex: i, cfg: cfg})
+			if cfg.logFilePath != "" {
+				translators.Set(&dbiTranslator{pipelineType: dbiServerLogs, instanceIndex: i, cfg: cfg})
+			}
 		}
 	}
+
+	addInstances(parseDbiPostgresqlInstances(conf))
+	addInstances(parseDbiMysqlInstances(conf))
+
 	return translators
 }
 
@@ -65,7 +74,9 @@ func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 	arr, _ := conf.Get(common.DatabaseInsightsPostgresKey).([]any)
 	var raw []pgRawInstance
 	if err := mapstructure.Decode(arr, &raw); err != nil {
-		return nil
+		// Log error but return empty slice to allow other database instances to be processed
+		fmt.Fprintf(os.Stderr, "failed to decode PostgreSQL database_insights config: %v\n", err)
+		return []dbiInstanceConfig{}
 	}
 	instances := make([]dbiInstanceConfig, 0, len(raw))
 	for _, r := range raw {
@@ -74,6 +85,7 @@ func parseDbiPostgresqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
 			perResourceInterval = time.Duration(r.PerResourceCollectionInterval) * time.Second
 		}
 		instances = append(instances, dbiInstanceConfig{
+			engine:                        common.PostgreSQLKey,
 			endpoint:                      r.Endpoint,
 			username:                      r.Username,
 			passfile:                      r.PasswordFile,
@@ -97,8 +109,43 @@ func validateOttlSafe(field, value string) error {
 	return nil
 }
 
+type mysqlRawInstance struct {
+	Endpoint     string `mapstructure:"endpoint"`
+	Username     string `mapstructure:"username"`
+	PasswordFile string `mapstructure:"password_file"`
+	InstanceName string `mapstructure:"instance_name"`
+	Logs         struct {
+		FilePath string `mapstructure:"file_path"`
+	} `mapstructure:"logs"`
+}
+
+func parseDbiMysqlInstances(conf *confmap.Conf) []dbiInstanceConfig {
+	arr, _ := conf.Get(common.DatabaseInsightsMysqlKey).([]any)
+	var raw []mysqlRawInstance
+	if err := mapstructure.Decode(arr, &raw); err != nil {
+		// Log error but return empty slice to allow other database instances to be processed
+		fmt.Fprintf(os.Stderr, "failed to decode MySQL database_insights config: %v\n", err)
+		return []dbiInstanceConfig{}
+	}
+	instances := make([]dbiInstanceConfig, 0, len(raw))
+	for _, r := range raw {
+		instances = append(instances, dbiInstanceConfig{
+			engine:                        common.MySQLKey,
+			endpoint:                      r.Endpoint,
+			username:                      r.Username,
+			passfile:                      r.PasswordFile,
+			instanceName:                  r.InstanceName,
+			logFilePath:                   r.Logs.FilePath,
+			isLocalhost:                   isLocalhostEndpoint(r.Endpoint),
+			perResourceCollectionInterval: 0, // MySQL doesn't have per-resource metrics
+		})
+	}
+	return instances
+}
+
 func isLocalhostEndpoint(endpoint string) bool {
 	return strings.HasPrefix(endpoint, "localhost") ||
 		strings.HasPrefix(endpoint, "127.0.0.1") ||
-		strings.HasPrefix(endpoint, "[::1]")
+		strings.HasPrefix(endpoint, "[::1]") ||
+		strings.HasPrefix(endpoint, "::1")
 }
