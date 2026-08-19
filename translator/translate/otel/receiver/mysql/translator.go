@@ -81,6 +81,8 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.MetricsBuilderConfig.Metrics.MysqlQueryCount.Enabled = true
 	cfg.MetricsBuilderConfig.Metrics.MysqlHistoryListLength.Enabled = true
 	cfg.MetricsBuilderConfig.Metrics.MysqlActiveTransactions.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlQueryClientCount.Enabled = true
+	cfg.MetricsBuilderConfig.Metrics.MysqlQuerySlowCount.Enabled = true
 
 	cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
 	cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true
