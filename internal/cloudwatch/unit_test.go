@@ -70,7 +70,11 @@ func TestScaledUnits(t *testing.T) {
 }
 
 func TestKnownNonStandardUnits(t *testing.T) {
-	testCases := []string{"errors", "{requests}"}
+	testCases := []string{
+		"errors", "{requests}",
+		// UCUM annotation units (Tomcat/JVM)
+		"{session}", "{error}", "{thread}", "{request}", "{class}", "{collection}",
+	}
 	for _, testCase := range testCases {
 		unit, scale, err := ToStandardUnit(testCase)
 		assert.NoError(t, err)
