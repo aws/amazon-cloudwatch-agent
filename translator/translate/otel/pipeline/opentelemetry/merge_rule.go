@@ -10,6 +10,8 @@ import (
 func init() {
 	otelRule := mergeJsonUtil.NewSectionMergeRule("opentelemetry", "/")
 	collectRule := mergeJsonUtil.NewSectionMergeRule("collect", otelRule.Path)
+	dbiRule := mergeJsonUtil.NewSectionMergeRule("database_insights", collectRule.Path)
+	collectRule.MergeMap[dbiRule.SectionKey] = dbiRule
 	otelRule.MergeMap[collectRule.SectionKey] = collectRule
 	mergeJsonUtil.MergeRuleMap[otelRule.SectionKey] = otelRule
 }

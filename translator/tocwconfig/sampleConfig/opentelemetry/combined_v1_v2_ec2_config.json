@@ -141,6 +141,17 @@
               "file_path": "/var/lib/pgsql/data/log/postgresql-*.log"
             }
           }
+        ],
+        "mysql": [
+          {
+            "endpoint": "localhost:3306",
+            "instance_name": "my-mysql",
+            "username": "cw_monitor",
+            "password_file": "sampleConfig/opentelemetry/testdata/.mysql_credentials",
+            "logs": {
+              "file_path": "/var/log/mysql/error.log"
+            }
+          }
         ]
       },
       "prometheus": {
