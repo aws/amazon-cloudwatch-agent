@@ -1767,11 +1767,11 @@ receivers:
                     - command
                 enabled: true
             mysql.query.client.count:
-                enabled: false
+                enabled: true
             mysql.query.count:
                 enabled: true
             mysql.query.slow.count:
-                enabled: false
+                enabled: true
             mysql.replica.sql_delay:
                 enabled: true
             mysql.replica.time_behind_source:
@@ -2045,11 +2045,11 @@ receivers:
                     - command
                 enabled: true
             mysql.query.client.count:
-                enabled: false
+                enabled: true
             mysql.query.count:
                 enabled: true
             mysql.query.slow.count:
-                enabled: false
+                enabled: true
             mysql.replica.sql_delay:
                 enabled: true
             mysql.replica.time_behind_source:
