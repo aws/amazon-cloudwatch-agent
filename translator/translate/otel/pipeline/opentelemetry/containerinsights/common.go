@@ -134,10 +134,10 @@ func solutionNamespace(conf *confmap.Conf, name, defaultNamespace string) string
 	return defaultNamespace
 }
 
-// watchReplicaSet returns container_insights.watch_replicaset (default true).
-// When false the k8sattributes ReplicaSet informer is not started.
+// watchReplicaSet reports whether the CI k8sattributes ReplicaSet informer runs (default true;
+// disabled by either watch_replicaset key — see common.WatchReplicaSet).
 func watchReplicaSet(conf *confmap.Conf) bool {
-	return common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "watch_replicaset"), true)
+	return common.WatchReplicaSet(conf)
 }
 
 // getRole resolves the container insights pipeline role using the following

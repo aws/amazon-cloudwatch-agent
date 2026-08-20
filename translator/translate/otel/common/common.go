@@ -36,6 +36,7 @@ const (
 	ResourceAttributesKey                          = "resource_attributes"
 	HostMetricsKey                                 = "host_metrics"
 	OtelContainerInsightsKey                       = "container_insights"
+	WatchReplicaSetKey                             = "watch_replicaset"
 	MetricsDestinationsKey                         = "metrics_destinations"
 	ECSKey                                         = "ecs"
 	KubernetesKey                                  = "kubernetes"
@@ -433,6 +434,17 @@ func GetOrDefaultBool(conf *confmap.Conf, key string, defaultVal bool) bool {
 		}
 	}
 	return defaultVal
+}
+
+// WatchReplicaSet reports whether the cluster-wide ReplicaSet informer (sets k8s.deployment.name) runs.
+// Default true; disabled when the collect-level or container_insights-level watch_replicaset key is false.
+func WatchReplicaSet(conf *confmap.Conf) bool {
+	if conf == nil {
+		return true
+	}
+	collectKey := ConfigKey(OpenTelemetryKey, CollectKey, WatchReplicaSetKey)
+	ciKey := ConfigKey(OpenTelemetryKey, CollectKey, OtelContainerInsightsKey, WatchReplicaSetKey)
+	return GetOrDefaultBool(conf, collectKey, true) && GetOrDefaultBool(conf, ciKey, true)
 }
 
 // GetNumber gets the number value for the key. The switch works through

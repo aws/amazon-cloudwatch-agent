@@ -75,3 +75,22 @@ func TestTranslateWatchReplicaSetDisabled(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, onCfg.(*k8sattributesprocessor.Config).Extract.Metadata, "k8s.deployment.name")
 }
+
+// TestTranslateWatchReplicaSetCollectLevel is the decoupling contract: the collect-level key stops the
+// ReplicaSet informer with no container_insights key (which would otherwise activate CI on bare presence).
+func TestTranslateWatchReplicaSetCollectLevel(t *testing.T) {
+	off := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"watch_replicaset": false,
+			},
+		},
+	})
+	cfg, err := NewTranslator("otlp").Translate(off)
+	require.NoError(t, err)
+	k8sCfg := cfg.(*k8sattributesprocessor.Config)
+	assert.NotContains(t, k8sCfg.Extract.Metadata, "k8s.deployment.name")
+	assert.Contains(t, k8sCfg.Extract.Metadata, "k8s.replicaset.name")
+	// No container_insights key was set, so the CI pipelines are never activated by this toggle.
+	assert.NotContains(t, off.AllKeys(), "opentelemetry::collect::container_insights")
+}

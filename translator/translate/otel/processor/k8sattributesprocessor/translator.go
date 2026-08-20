@@ -52,12 +52,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		"k8s.pod.start_time",
 		"k8s.container.name",
 	}
-	// container_insights.watch_replicaset is on by default; false drops k8s.deployment.name,
-	// which stops this processor's cluster-wide ReplicaSet informer (the pod->RS->Deployment
-	// walk). k8s.replicaset.name stays (pod ownerRef, no informer). App Signals is unaffected
-	// (it never uses this processor). Only co-enabled raw OTLP telemetry loses deployment.name.
-	watchRSKey := common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey, "watch_replicaset")
-	if conf != nil && !common.GetOrDefaultBool(conf, watchRSKey, true) {
+	// watch_replicaset (default true) drops k8s.deployment.name when false, stopping the cluster-wide
+	// ReplicaSet informer; common.WatchReplicaSet resolves the collect-level and container_insights keys.
+	if !common.WatchReplicaSet(conf) {
 		metadata = removeString(metadata, "k8s.deployment.name")
 	}
 
