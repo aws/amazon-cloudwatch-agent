@@ -17,7 +17,9 @@ import (
 )
 
 func TestBaseLogsTranslatorActivatedByContainerInsightsLogs(t *testing.T) {
+	prevRegion := agent.Global_Config.Region
 	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { agent.Global_Config.Region = prevRegion })
 	tt := NewBaseLogsTranslator()
 	// container_insights logs.enabled must activate the base logs pipeline so the
 	// forward/opentelemetry connector fed by CI log pipelines has a consumer.
