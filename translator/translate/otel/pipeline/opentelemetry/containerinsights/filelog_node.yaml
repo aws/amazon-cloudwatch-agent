@@ -16,7 +16,7 @@ processors:
       statements:
       - set(attributes["k8s.cluster.name"], "{{.ClusterName}}")
       - set(attributes["k8s.node.name"], "{{.NodeName}}")
-      - set(attributes["aws.cloudwatch.log_type"], "host")
+      - set(attributes["_tmp.log_type"], "host")
   resourcedetection/cw_k8s_ci_v0:
     detectors: [eks, env, ec2]
     override: false

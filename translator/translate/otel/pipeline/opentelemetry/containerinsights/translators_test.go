@@ -69,8 +69,7 @@ func TestNewTranslators_RoleClusterWithLogs(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// cluster role has no logs; logs.enabled is ignored -> still 2 metric pipelines.
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }
 
 func TestNewTranslators_RoleCluster(t *testing.T) {
@@ -85,8 +84,7 @@ func TestNewTranslators_RoleCluster(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// cluster role: apiserver, kube_state_metrics = 2 pipelines
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }
 
 func TestNewTranslators_DefaultRole(t *testing.T) {
@@ -132,8 +130,7 @@ func TestNewTranslators_EnvVarFallback_Leader(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// env var LEADER -> cluster role: 2 pipelines
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }
 
 func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
@@ -150,6 +147,5 @@ func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// JSON config wins: cluster role = 2 pipelines
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }

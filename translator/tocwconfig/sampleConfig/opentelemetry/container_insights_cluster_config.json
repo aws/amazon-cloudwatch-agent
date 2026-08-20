@@ -11,7 +11,7 @@
         "solutions": {
           "karpenter": {
             "enabled": true,
-            "namespace": "karpenter"
+            "namespace": "kube-system"
           },
           "keda": {
             "enabled": true,
