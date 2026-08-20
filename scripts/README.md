@@ -28,11 +28,11 @@ network, so it needs `curl` and outbound access.
 
 ```sh
 # AWS EKS
-curl -fsSL https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/setup-scripts/scripts/setup.sh \
+curl -fsSL https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/main/scripts/setup.sh \
   | CWAGENT_PLATFORM=aws_eks CWAGENT_K8S_CLUSTER_NAME=my-cluster CWAGENT_AWS_REGION=us-east-1 sh
 
 # Azure AKS (from a shell with both the Azure and AWS CLIs)
-curl -fsSL https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/setup-scripts/scripts/setup.sh \
+curl -fsSL https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/main/scripts/setup.sh \
   | CWAGENT_PLATFORM=azure_aks CWAGENT_AZURE_RESOURCE_GROUP=my-rg CWAGENT_K8S_CLUSTER_NAME=my-cluster CWAGENT_AWS_REGION=us-east-1 sh
 ```
 

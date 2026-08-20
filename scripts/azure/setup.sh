@@ -75,7 +75,7 @@ GIVEN_SUBSCRIPTION_NAME=""
 HELM_CHART_REPO="https://aws-observability.github.io/helm-charts"
 
 # Where the VM fetches the install payload (install.sh / install.ps1) from.
-SCRIPT_BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/setup-scripts/scripts"
+SCRIPT_BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/main/scripts"
 K8S_NAMESPACE="amazon-cloudwatch"
 
 # True when a flag is an affirmative value (1, true, yes, on, case-insensitive).

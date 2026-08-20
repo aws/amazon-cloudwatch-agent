@@ -82,7 +82,7 @@ OIDC_ISSUER="${CWAGENT_AZURE_OIDC_ISSUER:-}"
 ROLE_ARN="${CWAGENT_AWS_ROLE_ARN:-}"
 
 # Where the setup scripts are fetched from and what the paste commands point at.
-BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/setup-scripts/scripts"
+BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/main/scripts"
 
 # =============================================================================
 # Output helpers

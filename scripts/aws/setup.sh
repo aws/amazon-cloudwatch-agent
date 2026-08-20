@@ -69,7 +69,7 @@ EMIT_ENV="${CWAGENT_EMIT_ENV:-}"
 ECS_LAUNCH_TYPE="${CWAGENT_AWS_ECS_LAUNCH_TYPE:-}"
 
 # Where the target fetches the install payload (install.sh / install.ps1) from.
-SCRIPT_BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/setup-scripts/scripts"
+SCRIPT_BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/main/scripts"
 # The agent's namespace is fixed: the EKS add-on always installs into
 # amazon-cloudwatch, and the operator/chart centers on it, so it is not settable.
 K8S_NAMESPACE="amazon-cloudwatch"
