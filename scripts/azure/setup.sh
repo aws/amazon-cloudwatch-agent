@@ -44,10 +44,7 @@
 #                                   for install)
 #     CWAGENT_AZURE_SUBSCRIPTION    Subscription ID or name the resource lives
 #                                   in (Cloud Shell's ambient default is used
-#                                   when unset). When combined with
-#                                   CWAGENT_AZURE_RESOURCE_ID, a GUID is
-#                                   checked against the ID up front; a name is
-#                                   verified after sign-in
+#                                   when unset)
 #     CWAGENT_AZURE_RESOURCE_ID     Full ARM resource ID of the VM / AKS
 #                                   cluster; supplies the subscription,
 #                                   resource group, and name in one value.
@@ -96,8 +93,7 @@ is_true() {
 # Under CWAGENT_EMIT_ENV stdout carries only the eval-able KEY='value' lines the
 # parent shell captures and evaluates, so readable output (including the install
 # transcript) goes to fd 3 (redirected to stderr here, stdout otherwise) and
-# every command must keep its own output off plain stdout. A stray line that
-# looks like an assignment is indistinguishable from a real one.
+# every command must keep its own output off plain stdout.
 # =============================================================================
 
 if is_true "${EMIT_ENV}"; then
@@ -264,6 +260,12 @@ interactive_setup() {
      *) die "invalid platform: ${choice}" ;;
      esac
 
+     # A resource ID already carries the group and name (resolved in main), so
+     # only prompt for them when one was not supplied.
+     if [ -n "${RESOURCE_ID}" ]; then
+          return
+     fi
+
      printf '\n' >&3
      case "${PLATFORM}" in
      azure_vm)
@@ -300,10 +302,8 @@ EOF
 }
 
 # Die when an individually-supplied CWAGENT_AZURE_* value contradicts what
-# CWAGENT_AZURE_RESOURCE_ID resolves to. Matching or absent values are fine —
-# only a genuine conflict is an error, so existing single-variable and
-# ID-only invocations are unaffected. ARM treats these identifiers
-# case-insensitively, so the comparison does too.
+# CWAGENT_AZURE_RESOURCE_ID resolves to. Matching or absent values are fine.
+# ARM treats these identifiers case-insensitively, so the comparison does too.
 # $1 = variable name (for the message), $2 = given value, $3 = resolved value.
 check_resource_id_conflict() {
      [ -n "$2" ] || return 0
@@ -321,37 +321,34 @@ is_guid() {
      printf '%s' "$1" | grep -Eiq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 }
 
+# Pin az to the target subscription without az account set mutating the user's
+# persistent default.
+az_scoped() {
+     if [ -n "${SUBSCRIPTION}" ]; then
+          az "$@" --subscription "${SUBSCRIPTION}"
+     else
+          az "$@"
+     fi
+}
+
 check_prerequisites() {
      command -v az >/dev/null 2>&1 || die "Azure CLI is required but not installed"
      AZ_CLI_VERSION=$(az version --query '"azure-cli"' -o tsv 2>/dev/null || echo "0.0.0")
      if ! version_ge "${AZ_CLI_VERSION}" "2.47.0"; then
           logwarn "Azure CLI ${AZ_CLI_VERSION} detected (2.47+ recommended for full functionality)"
      fi
-     # Pin every subsequent az call to the resource's subscription; without this
-     # they all resolve against Cloud Shell's ambient default, and ARM answers
-     # for a resource in another subscription with an AuthorizationFailed that
-     # is indistinguishable from a genuine RBAC gap.
-     if [ -n "${SUBSCRIPTION}" ]; then
-          az_err=$(az account set --subscription "${SUBSCRIPTION}" 2>&1) ||
-               die "cannot select subscription ${SUBSCRIPTION}: ${az_err}
-Check 'az account list'; if it is in another tenant, run: az login --tenant <tenant-id>"
-          log "Subscription: ${SUBSCRIPTION}"
-     fi
-     # One az account show for the liveness check, subscription id/name, and
-     # tenant id (used later for the azure_vm identity emit).
-     # The nested [[...]] makes -o tsv emit one tab-separated row; a flat
-     # [...] array would print one value per line, breaking the cut parsing.
-     AZ_ACCOUNT=$(az account show --query "[[id, name, tenantId]]" -o tsv 2>/dev/null) ||
-          die "Azure CLI not logged in (run 'az login')"
+     # Scoped account show doubles as the liveness + access check and fills
+     # AZ_SUB/AZ_NAME/AZ_TENANT from the target subscription (used by the
+     # deferred conflict check and the azure_vm identity emit). The nested
+     # [[...]] makes -o tsv emit one tab-separated row instead of one per line.
+     AZ_ACCOUNT=$(az_scoped account show --query "[[id, name, tenantId]]" -o tsv 2>/dev/null) ||
+          die "cannot access ${SUBSCRIPTION:-the default subscription} (run 'az login'; check 'az account list'; if it is in another tenant, run: az login --tenant <tenant-id>)"
      AZ_SUB=$(printf '%s' "${AZ_ACCOUNT}" | cut -f1)
      AZ_NAME=$(printf '%s' "${AZ_ACCOUNT}" | cut -f2)
      AZ_TENANT=$(printf '%s' "${AZ_ACCOUNT}" | cut -f3)
-     # Deferred conflict check: the subscription was given as a display name
-     # (or a non-canonical form) alongside a resource ID, so it could not be
-     # compared to the ID's GUID up front (see main). The account is now
-     # pinned to the ID's subscription; accept a match on either its id or
-     # its display name — the same lookup semantics az account set uses — so
-     # a misclassification by is_guid can never produce a false conflict.
+     # Deferred conflict check: a subscription given as a display name alongside
+     # a resource ID couldn't be compared to the ID's GUID up front (see main).
+     # The scoped account show resolved it, so match on either its id or name.
      if [ -n "${GIVEN_SUBSCRIPTION_NAME}" ]; then
           _given_lower=$(printf '%s' "${GIVEN_SUBSCRIPTION_NAME}" | tr '[:upper:]' '[:lower:]')
           _sub_lower=$(printf '%s' "${AZ_SUB}" | tr '[:upper:]' '[:lower:]')
@@ -398,7 +395,7 @@ run_via_az() {
      RUN_MESSAGE=""
 
      logaction "Running install via az vm run-command"
-     RUN_RESULT=$(az vm run-command invoke \
+     RUN_RESULT=$(az_scoped vm run-command invoke \
           --resource-group "${RESOURCE_GROUP}" \
           --name "${VM_NAME}" \
           --command-id "${az_command_id}" \
@@ -451,14 +448,10 @@ setup_azure_vm() {
 
      section "Configuring Azure VM identity..."
 
-     # One az vm show for both fields: the identity (to decide whether to assign
-     # one) and the OS type (to pick the install payload). A tsv list projection
-     # returns them tab-separated on one line, in query order.
-     # The nested [[...]] makes -o tsv emit one tab-separated row (null
-     # renders as "None"); a flat [...] array would print one value per line,
-     # making cut return both lines and IDENTITY test truthy for a VM with no
-     # identity at all.
-     VM_INFO=$(az vm show \
+     # One az vm show for the identity (whether to assign one) and the OS type
+     # (which install payload). The nested [[...]] emits one tab-separated row
+     # (null renders "None"); a flat [...] would print one value per line.
+     VM_INFO=$(az_scoped vm show \
           --resource-group "${RESOURCE_GROUP}" \
           --name "${VM_NAME}" \
           --query "[[identity.principalId, storageProfile.osDisk.osType]]" -o tsv 2>/dev/null || true)
@@ -469,7 +462,7 @@ setup_azure_vm() {
           log "Managed identity enabled on ${VM_NAME}"
      else
           logaction "Enabling managed identity (this may take a few minutes)"
-          az vm identity assign \
+          az_scoped vm identity assign \
                --resource-group "${RESOURCE_GROUP}" \
                --name "${VM_NAME}" \
                --output none
@@ -532,7 +525,7 @@ setup_azure_aks() {
      # enables the OIDC issuer at creation by default, but never workload
      # identity, so keying on the issuer alone would skip the update and leave
      # workload identity off.
-     AKS_INFO=$(az aks show \
+     AKS_INFO=$(az_scoped aks show \
           --resource-group "${RESOURCE_GROUP}" \
           --name "${CLUSTER_NAME}" \
           --query "[[oidcIssuerProfile.enabled, securityProfile.workloadIdentity.enabled, oidcIssuerProfile.issuerUrl]]" -o tsv 2>/dev/null || true)
@@ -542,11 +535,13 @@ setup_azure_aks() {
 
      # az -o tsv renders a JSON boolean via Python str(), i.e. "True"/"False",
      # so match case-insensitively rather than against a lowercase "true".
-     if [ "$(printf '%s%s' "${OIDC_ENABLED}" "${WI_ENABLED}" | tr '[:upper:]' '[:lower:]')" = "truetrue" ]; then
+     _oidc_lower=$(printf '%s' "${OIDC_ENABLED}" | tr '[:upper:]' '[:lower:]')
+     _wi_lower=$(printf '%s' "${WI_ENABLED}" | tr '[:upper:]' '[:lower:]')
+     if [ "${_oidc_lower}" = "true" ] && [ "${_wi_lower}" = "true" ]; then
           log "OIDC issuer and workload identity enabled"
      else
           logaction "Enabling OIDC issuer and workload identity (this may take a few minutes)"
-          az aks update \
+          az_scoped aks update \
                --resource-group "${RESOURCE_GROUP}" \
                --name "${CLUSTER_NAME}" \
                --enable-oidc-issuer \
@@ -555,7 +550,7 @@ setup_azure_aks() {
           # Re-fetch the now-populated issuer URL. No "|| true" here (unlike the
           # probe above): we just changed cluster state, so a failure should
           # surface loudly rather than leave OIDC_ISSUER empty.
-          OIDC_ISSUER=$(az aks show \
+          OIDC_ISSUER=$(az_scoped aks show \
                --resource-group "${RESOURCE_GROUP}" \
                --name "${CLUSTER_NAME}" \
                --query "oidcIssuerProfile.issuerUrl" -o tsv)
@@ -577,7 +572,7 @@ setup_azure_aks() {
      if command -v helm >/dev/null 2>&1 && command -v kubectl >/dev/null 2>&1; then
           section "Installing CloudWatch Observability Helm chart on ${CLUSTER_NAME}..."
           logaction "Configuring kubeconfig for ${CLUSTER_NAME}"
-          az aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --overwrite-existing >&3
+          az_scoped aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --overwrite-existing >&3
 
           logaction "Installing via Helm"
           # --force-update surfaces (not swallows) a stale-URL conflict if the
@@ -668,12 +663,9 @@ main() {
           azure_aks:managedclusters) CLUSTER_NAME="${RESOURCE_NAME}" ;;
           *) die "resource ID is a ${RESOURCE_TYPE}, which does not match CWAGENT_PLATFORM=${PLATFORM}" ;;
           esac
-          # The ID's subscription segment is always a GUID, but the user may
-          # have supplied CWAGENT_AZURE_SUBSCRIPTION as a display name (the
-          # documented "ID or name" contract). A name can only be compared
-          # after az resolves the account, so defer that case to
-          # check_prerequisites instead of failing on a guaranteed
-          # name-vs-GUID mismatch here.
+          # The ID's subscription segment is a GUID, but CWAGENT_AZURE_SUBSCRIPTION
+          # may be a display name. A name can only be compared after az resolves
+          # the account, so defer that case to check_prerequisites.
           if is_guid "${_given_subscription}" || [ -z "${_given_subscription}" ]; then
                check_resource_id_conflict "CWAGENT_AZURE_SUBSCRIPTION" "${_given_subscription}" "${SUBSCRIPTION}"
           else

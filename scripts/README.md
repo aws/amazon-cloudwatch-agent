@@ -95,8 +95,10 @@ CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_ROLE_ARN=arn:aws:iam::123456789012:role/C
 | `CWAGENT_AWS_UPDATE_INSTANCE_ROLE` | `aws_ec2`               | When set (`1`/`true`/`yes`/`on`), attach the policy to the role already on the instance |
 | `CWAGENT_AWS_ECS_LAUNCH_TYPE`      | `aws_ecs`               | `fargate` \| `ec2` (default: `fargate`)                                                 |
 | `CWAGENT_K8S_CLUSTER_NAME`         | `aws_eks`, `azure_aks`  | Cluster name                                                                            |
-| `CWAGENT_AZURE_RESOURCE_GROUP`     | `azure_vm`, `azure_aks` | Resource group                                                                          |
-| `CWAGENT_AZURE_VM_NAME`            | `azure_vm`              | VM name                                                                                 |
+| `CWAGENT_AZURE_RESOURCE_ID`        | `azure_vm`, `azure_aks` | Full ARM resource ID (subscription + group + name in one value); recommended            |
+| `CWAGENT_AZURE_SUBSCRIPTION`       | `azure_vm`, `azure_aks` | Subscription ID or name (Cloud Shell's default is used when unset)                      |
+| `CWAGENT_AZURE_RESOURCE_GROUP`     | `azure_vm`, `azure_aks` | Resource group (not needed when `CWAGENT_AZURE_RESOURCE_ID` is set)                     |
+| `CWAGENT_AZURE_VM_NAME`            | `azure_vm`              | VM name (not needed when `CWAGENT_AZURE_RESOURCE_ID` is set)                            |
 | `CWAGENT_AWS_ROLE_ARN`             | `azure_vm`, `azure_aks` | IAM role ARN; when set, `azure/setup.sh` also installs                                  |
 | `CWAGENT_AZURE_TENANT_ID`          | `azure_vm`              | Azure tenant ID (produced by `azure/setup.sh`, consumed by `aws/setup.sh`)              |
 | `CWAGENT_AZURE_OIDC_ISSUER`        | `azure_aks`             | AKS OIDC issuer URL (produced by `azure/setup.sh`, consumed by `aws/setup.sh`)          |

@@ -48,6 +48,12 @@
 #   CWAGENT_AWS_ECS_LAUNCH_TYPE           fargate | ec2
 #
 #   Azure:
+#   CWAGENT_AZURE_RESOURCE_ID             Full ARM resource ID of the VM / AKS
+#                                         cluster (subscription + group + name in
+#                                         one value); the recommended way to
+#                                         identify the resource
+#   CWAGENT_AZURE_SUBSCRIPTION            Subscription ID or name (Cloud Shell's
+#                                         default is used when unset)
 #   CWAGENT_AZURE_RESOURCE_GROUP          Resource group
 #   CWAGENT_AZURE_VM_NAME                 VM name (azure_vm only)
 #
@@ -63,6 +69,8 @@ INSTANCE_ID="${CWAGENT_AWS_INSTANCE_ID:-}"
 UPDATE_INSTANCE_ROLE="${CWAGENT_AWS_UPDATE_INSTANCE_ROLE:-}"
 ENABLE_TXN_SEARCH="${CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH:-}"
 CLUSTER_NAME="${CWAGENT_K8S_CLUSTER_NAME:-}"
+RESOURCE_ID="${CWAGENT_AZURE_RESOURCE_ID:-}"
+SUBSCRIPTION="${CWAGENT_AZURE_SUBSCRIPTION:-}"
 RESOURCE_GROUP="${CWAGENT_AZURE_RESOURCE_GROUP:-}"
 VM_NAME="${CWAGENT_AZURE_VM_NAME:-}"
 ECS_LAUNCH_TYPE="${CWAGENT_AWS_ECS_LAUNCH_TYPE:-}"
@@ -119,6 +127,8 @@ Environment variables:
   CWAGENT_AWS_ECS_LAUNCH_TYPE             fargate | ec2
 
   Azure:
+  CWAGENT_AZURE_RESOURCE_ID               Full ARM resource ID (subscription + group + name)
+  CWAGENT_AZURE_SUBSCRIPTION              Subscription ID or name
   CWAGENT_AZURE_RESOURCE_GROUP            Resource group
   CWAGENT_AZURE_VM_NAME                   VM name (azure_vm only)
 
@@ -179,12 +189,18 @@ interactive_setup() {
           prompt CLUSTER_NAME "Cluster name"
           ;;
      azure_vm)
-          prompt RESOURCE_GROUP "Resource group"
-          prompt VM_NAME "VM name"
+          # A resource ID already carries the group and name, so only prompt for
+          # them when one was not supplied.
+          if [ -z "${RESOURCE_ID}" ]; then
+               prompt RESOURCE_GROUP "Resource group"
+               prompt VM_NAME "VM name"
+          fi
           ;;
      azure_aks)
-          prompt RESOURCE_GROUP "Resource group"
-          prompt CLUSTER_NAME "Cluster name"
+          if [ -z "${RESOURCE_ID}" ]; then
+               prompt RESOURCE_GROUP "Resource group"
+               prompt CLUSTER_NAME "Cluster name"
+          fi
           ;;
      *) die "invalid platform: ${PLATFORM}" ;;
      esac
@@ -214,6 +230,8 @@ export_env() {
      export CWAGENT_AWS_UPDATE_INSTANCE_ROLE="${UPDATE_INSTANCE_ROLE}"
      export CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH="${ENABLE_TXN_SEARCH}"
      export CWAGENT_K8S_CLUSTER_NAME="${CLUSTER_NAME}"
+     export CWAGENT_AZURE_RESOURCE_ID="${RESOURCE_ID}"
+     export CWAGENT_AZURE_SUBSCRIPTION="${SUBSCRIPTION}"
      export CWAGENT_AZURE_RESOURCE_GROUP="${RESOURCE_GROUP}"
      export CWAGENT_AZURE_VM_NAME="${VM_NAME}"
      export CWAGENT_AWS_ECS_LAUNCH_TYPE="${ECS_LAUNCH_TYPE}"
@@ -303,6 +321,8 @@ print_resume() {
      add_kv CWAGENT_AZURE_TENANT_ID "${TENANT_ID}"
      add_kv CWAGENT_AZURE_OIDC_ISSUER "${OIDC_ISSUER}"
      add_kv CWAGENT_AWS_ROLE_ARN "${ROLE_ARN}"
+     add_kv CWAGENT_AZURE_RESOURCE_ID "${RESOURCE_ID}"
+     add_kv CWAGENT_AZURE_SUBSCRIPTION "${SUBSCRIPTION}"
      add_kv CWAGENT_AZURE_RESOURCE_GROUP "${RESOURCE_GROUP}"
      add_kv CWAGENT_AZURE_VM_NAME "${VM_NAME}"
      add_kv CWAGENT_K8S_CLUSTER_NAME "${CLUSTER_NAME}"
