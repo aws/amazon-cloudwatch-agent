@@ -155,7 +155,7 @@ processors:
     metric_statements:
     - context: resource
       statements:
-      - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil
+      - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil and attributes["cloud.platform"] == "aws_eks"
   # Marks records as cluster-scoped so the shared pipeline strips the scraper node's
   # host.*/cloud.availability_zone after resourcedetection re-adds them (Helm parity).
   transform/cw_k8s_ci_v0_mark_cluster:

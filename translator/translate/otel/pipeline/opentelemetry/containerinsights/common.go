@@ -21,7 +21,7 @@ const (
 	defaultCollectionInterval = 30 * time.Second
 	roleNode                  = "node"
 	roleCluster               = "cluster"
-	defaultKarpenterNamespace = "karpenter"
+	defaultKarpenterNamespace = "kube-system"
 	defaultKedaNamespace      = "keda"
 )
 
@@ -109,12 +109,15 @@ func NodeLogsEnabled(conf *confmap.Conf) bool {
 	return logsEnabled(conf) && getRole(conf) == roleNode
 }
 
-// solutionEnabled reports whether container_insights.solutions.<name>.enabled is true.
+// solutions.<name>.enabled defaults to true; either being false disables it.
 func solutionEnabled(conf *confmap.Conf, name string) bool {
 	if conf == nil {
 		return false
 	}
-	return common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", name, "enabled"), false)
+	if !common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", "enabled"), true) {
+		return false
+	}
+	return common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", name, "enabled"), true)
 }
 
 // solutionNamespace returns container_insights.solutions.<name>.namespace or the default.

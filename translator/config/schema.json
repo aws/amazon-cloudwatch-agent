@@ -1892,15 +1892,21 @@
                   "description": "Optional add-on solution scrapers for Karpenter and KEDA operator metrics",
                   "type": "object",
                   "properties": {
+                    "enabled": {
+                      "description": "Default toggle(true) for solutions; when false, no solutions run even.",
+                      "type": "boolean",
+                      "default": true
+                    },
                     "karpenter": {
                       "type": "object",
                       "properties": {
                         "enabled": {
-                          "description": "Whether to scrape Karpenter metrics",
-                          "type": "boolean"
+                          "description": "Whether to scrape Karpenter metrics (default: true)",
+                          "type": "boolean",
+                          "default": true
                         },
                         "namespace": {
-                          "description": "Namespace where the Karpenter operator runs (default: karpenter)",
+                          "description": "Namespace where the Karpenter operator runs (default: kube-system)",
                           "type": "string"
                         }
                       },
@@ -1910,8 +1916,9 @@
                       "type": "object",
                       "properties": {
                         "enabled": {
-                          "description": "Whether to scrape KEDA operator metrics.",
-                          "type": "boolean"
+                          "description": "Whether to scrape KEDA operator metrics (default: true).",
+                          "type": "boolean",
+                          "default": true
                         },
                         "namespace": {
                           "description": "Namespace where the KEDA operator runs (default: keda)",

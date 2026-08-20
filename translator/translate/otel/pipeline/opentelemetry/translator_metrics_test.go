@@ -186,7 +186,9 @@ func TestBaseMetricsTranslatorNoClusterName(t *testing.T) {
 }
 
 func TestBaseMetricsBatch1000In10s(t *testing.T) {
+	prevRegion := agent.Global_Config.Region
 	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { agent.Global_Config.Region = prevRegion })
 	tt := NewBaseMetricsTranslator()
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
