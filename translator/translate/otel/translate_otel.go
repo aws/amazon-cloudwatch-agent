@@ -42,6 +42,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -209,7 +210,16 @@ func getSelfTelemetryResource(conf *confmap.Conf) map[string]*string {
 	if !selftelemetry.Enabled(conf) {
 		return nil
 	}
+	// NodeName = per-host identity: K8s uses the K8S_NODE_NAME env ref; off-K8s the EC2 {instance_id},
+	// falling back to {hostname} when not on EC2 so non-EC2 hosts don't collide on i-UNKNOWN.
 	nodeName := selftelemetry.NodeNameEnvRef
+	if context.CurrentContext().KubernetesMode() == "" {
+		md := translateutil.GetMetadataInfo(translateutil.Ec2MetadataInfoProvider)
+		nodeName = translateutil.ResolvePlaceholder("{instance_id}", md)
+		if nodeName == translateutil.UnknownInstanceID {
+			nodeName = translateutil.ResolvePlaceholder("{hostname}", md)
+		}
+	}
 	return map[string]*string{selftelemetry.NodeNameLabel: &nodeName}
 }
 
