@@ -1893,7 +1893,7 @@
                   "type": "object",
                   "properties": {
                     "enabled": {
-                      "description": "Default toggle(true) for solutions; when false, no solutions run even.",
+                      "description": "Master toggle for all solutions (default: true); overrides individual solution enabled flags, false disables all",
                       "type": "boolean",
                       "default": true
                     },
