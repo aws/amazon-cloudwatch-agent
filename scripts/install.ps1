@@ -20,6 +20,7 @@
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 $DownloadBase = "https://amazoncloudwatch-agent.s3.amazonaws.com"
 $Cloud = if ($Env:CWAGENT_CLOUD) { $Env:CWAGENT_CLOUD } else { 'aws' }

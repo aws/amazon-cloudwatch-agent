@@ -126,11 +126,11 @@ usage() {
      [ "${rc}" = "0" ] && out=1
      cat >&${out} <<EOF
 Usage:
-  CWAGENT_PLATFORM=aws_eks   CWAGENT_K8S_CLUSTER_NAME=<cluster>  $0
-  CWAGENT_PLATFORM=aws_ec2   CWAGENT_AWS_INSTANCE_ID=i-123       $0
-  CWAGENT_PLATFORM=aws_ecs                                       $0
-  CWAGENT_PLATFORM=azure_aks CWAGENT_AZURE_OIDC_ISSUER=https://... $0
-  CWAGENT_PLATFORM=azure_vm  CWAGENT_AZURE_TENANT_ID=<tenant>    $0
+  CWAGENT_PLATFORM=aws_eks   CWAGENT_AWS_REGION=us-east-1 CWAGENT_K8S_CLUSTER_NAME=<cluster>    $0
+  CWAGENT_PLATFORM=aws_ec2   CWAGENT_AWS_REGION=us-east-1 CWAGENT_AWS_INSTANCE_ID=i-123         $0
+  CWAGENT_PLATFORM=aws_ecs   CWAGENT_AWS_REGION=us-east-1                                       $0
+  CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_OIDC_ISSUER=https://... $0
+  CWAGENT_PLATFORM=azure_vm  CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_TENANT_ID=<tenant>      $0
 
 Environment variables:
   Common:
@@ -732,14 +732,20 @@ EOF
 # =============================================================================
 
 # Emit the one-line command that fetches install.sh and runs it on a Linux target.
+# SSM RunCommand sets AWS_SHARED_CREDENTIALS_FILE to the DHMC role's credentials,
+# which the SDK prefers over the instance profile we just attached; unset it so
+# config-downloader uses the instance profile (which has CloudWatchAgentServerPolicy).
+# No-op on non-DHMC instances, where the variable is not set.
 linux_install_cmd() {
-     printf 'curl -fsSL %s/install.sh | sh' "${SCRIPT_BASE_URL}"
+     printf 'unset AWS_SHARED_CREDENTIALS_FILE; curl -fsSL %s/install.sh | sh' "${SCRIPT_BASE_URL}"
 }
 
 # Windows counterpart. The fetch is wrapped into one -EncodedCommand base64
 # payload (UTF-16LE) so the outer command needs no quoting through SSM.
+# Remove-Item Env:AWS_SHARED_CREDENTIALS_FILE for the same reason as the Linux
+# path: SSM sets it to the DHMC role's creds, which shadow the instance profile.
 windows_install_cmd() {
-     ps_script="Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\cwagent-install.ps1; & \$env:TEMP\\cwagent-install.ps1"
+     ps_script="Remove-Item Env:AWS_SHARED_CREDENTIALS_FILE -ErrorAction SilentlyContinue; Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\cwagent-install.ps1; & \$env:TEMP\\cwagent-install.ps1"
      encoded=$(printf '%s' "${ps_script}" | iconv -f utf-8 -t utf-16le 2>/dev/null | base64 | tr -d '\n')
      [ -n "${encoded}" ] || return 1
      printf 'powershell -NoProfile -EncodedCommand %s' "${encoded}"

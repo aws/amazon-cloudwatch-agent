@@ -84,7 +84,7 @@ CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_ROLE_ARN=arn:aws:iam::123456789012:role/C
 |-----------------------------------------|--------------------------------------------------------------------------|
 | `CWAGENT_PLATFORM`                      | `aws_ec2` \| `aws_ecs` \| `aws_eks` \| `azure_vm` \| `azure_aks`         |
 | `CWAGENT_AWS_ROLE_NAME`                 | IAM role name (default: `CloudWatchAgentServerRole`)                     |
-| `CWAGENT_AWS_REGION`                    | AWS region telemetry is sent to                                          |
+| `CWAGENT_AWS_REGION`                    | AWS region telemetry is sent to (required)                               |
 | `CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH` | When set (`1`/`true`/`yes`/`on`), enable Transaction Search if it is off |
 
 ### Per platform
