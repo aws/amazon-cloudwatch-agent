@@ -72,6 +72,12 @@ var apiserverYAML string
 //go:embed kube_state_metrics.yaml
 var kubeStateMetricsYAML string
 
+//go:embed karpenter.yaml
+var karpenterYAML string
+
+//go:embed keda.yaml
+var kedaYAML string
+
 // NewTranslators returns all container insights pipeline translators.
 // The pipelines generated depend on the resolved role (see getRole for priority):
 //   - "node": daemonset pipelines (per-node metrics + logs)
@@ -112,6 +118,14 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	if role == roleCluster {
 		translators.Set(newYAMLPipeline("apiserver", pipeline.SignalMetrics, apiserverYAML))
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
+		// Solution pipelines (cluster-role only): the operator is a single deployment
+		// scraped cluster-wide, so it belongs on the leader collector, not per-node.
+		if solutionEnabled(conf, "karpenter") {
+			translators.Set(newYAMLPipeline("karpenter", pipeline.SignalMetrics, karpenterYAML))
+		}
+		if solutionEnabled(conf, "keda") {
+			translators.Set(newYAMLPipeline("keda", pipeline.SignalMetrics, kedaYAML))
+		}
 	}
 
 	return translators
@@ -161,6 +175,8 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		AppLogStream:       envOrPlaceholder("K8S_NODE_NAME") + "-application",
 		NodeLogGroup:       fmt.Sprintf("/aws/otel/containerinsights/%s/host", clusterName),
 		NodeLogStream:      envOrPlaceholder("K8S_NODE_NAME") + "-host",
+		KarpenterNamespace: solutionNamespace(conf, "karpenter", defaultKarpenterNamespace),
+		KedaNamespace:      solutionNamespace(conf, "keda", defaultKedaNamespace),
 	}
 
 	// Execute template

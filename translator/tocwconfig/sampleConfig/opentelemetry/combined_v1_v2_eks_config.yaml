@@ -589,9 +589,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -1396,7 +1396,7 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.job.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.job.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
-                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["aws.cloudwatch.log_type"] != "host"
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["_tmp.log_type"] != "host"
                 - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
                 - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
                 - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
@@ -1417,7 +1417,7 @@ processors:
                 - set(resource.attributes["service.instance.id"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["k8s.pod.name"], resource.attributes["k8s.container.name"]], "/")) where resource.attributes["service.instance.id"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.version"], resource.attributes["resource.opentelemetry.io/service.version"]) where resource.attributes["service.version"] == nil and resource.attributes["resource.opentelemetry.io/service.version"] != nil
                 - set(resource.attributes["service.version"], resource.attributes["app.kubernetes.io/version"]) where resource.attributes["service.version"] == nil and resource.attributes["app.kubernetes.io/version"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["aws.cloudwatch.log_type"] != "host"
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["_tmp.log_type"] != "host"
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.namespace")
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.name")
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.instance.id")
@@ -1426,7 +1426,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
                 - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
-                - delete_key(resource.attributes, "aws.cloudwatch.log_type")
+                - delete_key(resource.attributes, "_tmp.log_type")
         metric_statements:
             - context: resource
               error_mode: ignore
@@ -1442,7 +1442,7 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.job.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.job.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
-                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["aws.cloudwatch.log_type"] != "host"
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["_tmp.log_type"] != "host"
                 - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
                 - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
                 - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
@@ -1463,7 +1463,7 @@ processors:
                 - set(resource.attributes["service.instance.id"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["k8s.pod.name"], resource.attributes["k8s.container.name"]], "/")) where resource.attributes["service.instance.id"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.version"], resource.attributes["resource.opentelemetry.io/service.version"]) where resource.attributes["service.version"] == nil and resource.attributes["resource.opentelemetry.io/service.version"] != nil
                 - set(resource.attributes["service.version"], resource.attributes["app.kubernetes.io/version"]) where resource.attributes["service.version"] == nil and resource.attributes["app.kubernetes.io/version"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["aws.cloudwatch.log_type"] != "host"
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["_tmp.log_type"] != "host"
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.namespace")
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.name")
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.instance.id")
@@ -1472,7 +1472,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
                 - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
-                - delete_key(resource.attributes, "aws.cloudwatch.log_type")
+                - delete_key(resource.attributes, "_tmp.log_type")
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -1488,7 +1488,7 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.job.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.job.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.pod.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
-                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["aws.cloudwatch.log_type"] != "host"
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["_tmp.log_type"] != "host"
                 - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
                 - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
                 - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
@@ -1509,7 +1509,7 @@ processors:
                 - set(resource.attributes["service.instance.id"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["k8s.pod.name"], resource.attributes["k8s.container.name"]], "/")) where resource.attributes["service.instance.id"] == nil and resource.attributes["k8s.pod.name"] != nil
                 - set(resource.attributes["service.version"], resource.attributes["resource.opentelemetry.io/service.version"]) where resource.attributes["service.version"] == nil and resource.attributes["resource.opentelemetry.io/service.version"] != nil
                 - set(resource.attributes["service.version"], resource.attributes["app.kubernetes.io/version"]) where resource.attributes["service.version"] == nil and resource.attributes["app.kubernetes.io/version"] != nil
-                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["aws.cloudwatch.log_type"] != "host"
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], Concat([resource.attributes["k8s.cluster.name"], resource.attributes["k8s.namespace.name"]], "/")], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["_tmp.log_type"] != "host"
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.namespace")
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.name")
                 - delete_key(resource.attributes, "resource.opentelemetry.io/service.instance.id")
@@ -1518,7 +1518,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/name")
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
                 - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
-                - delete_key(resource.attributes, "aws.cloudwatch.log_type")
+                - delete_key(resource.attributes, "_tmp.log_type")
     transform/logs_cleanup:
         error_mode: ignore
         flatten_data: false
@@ -2619,13 +2619,13 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
-                - telegraf_disk
-                - telegraf_processes
-                - telegraf_procstat/1917393364
-                - telegraf_mem
                 - telegraf_netstat
+                - telegraf_processes
+                - telegraf_disk
+                - telegraf_cpu
                 - telegraf_swap
+                - telegraf_mem
+                - telegraf_procstat/1917393364
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry

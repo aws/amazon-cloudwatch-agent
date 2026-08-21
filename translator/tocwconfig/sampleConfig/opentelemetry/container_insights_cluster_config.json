@@ -7,7 +7,17 @@
     "collect": {
       "container_insights": {
         "role": "cluster",
-        "collection_interval": 30
+        "collection_interval": 30,
+        "solutions": {
+          "karpenter": {
+            "enabled": true,
+            "namespace": "kube-system"
+          },
+          "keda": {
+            "enabled": true,
+            "namespace": "keda"
+          }
+        }
       }
     }
   }
