@@ -52,11 +52,13 @@ extensions:
         service: monitoring
         web_identity_token_file: /opt/aws/amazon-cloudwatch-agent/etc/.oidc-token
 processors:
+    awsattributelimit/opentelemetry_metrics:
+        max_total_attributes: 150
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 30s
+        timeout: 10s
     resourcedetection/opentelemetry:
         aks:
             resource_attributes:
@@ -427,6 +429,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - transform/identity
+                - awsattributelimit/opentelemetry_metrics
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry

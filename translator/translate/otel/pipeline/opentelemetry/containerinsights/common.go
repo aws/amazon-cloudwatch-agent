@@ -21,6 +21,8 @@ const (
 	defaultCollectionInterval = 30 * time.Second
 	roleNode                  = "node"
 	roleCluster               = "cluster"
+	defaultKarpenterNamespace = "kube-system"
+	defaultKedaNamespace      = "keda"
 )
 
 var ciConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)
@@ -37,6 +39,8 @@ type templateData struct {
 	AppLogStream       string
 	NodeLogGroup       string
 	NodeLogStream      string
+	KarpenterNamespace string
+	KedaNamespace      string
 }
 
 // rawMapConfig wraps a raw config map and passes it through serialization unchanged.
@@ -98,6 +102,32 @@ func logsEnabled(conf *confmap.Conf) bool {
 	}
 	key := common.ConfigKey(ciConfigKey, "logs", "enabled")
 	return common.GetOrDefaultBool(conf, key, false)
+}
+
+// NodeLogsEnabled reports when Container Insights node-role log pipelines are enabled
+func NodeLogsEnabled(conf *confmap.Conf) bool {
+	return logsEnabled(conf) && getRole(conf) == roleNode
+}
+
+// solutions.<name>.enabled defaults to true; either being false disables it.
+func solutionEnabled(conf *confmap.Conf, name string) bool {
+	if conf == nil {
+		return false
+	}
+	if !common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", "enabled"), true) {
+		return false
+	}
+	return common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", name, "enabled"), true)
+}
+
+// solutionNamespace returns container_insights.solutions.<name>.namespace or the default.
+func solutionNamespace(conf *confmap.Conf, name, defaultNamespace string) string {
+	if conf != nil {
+		if v, ok := common.GetString(conf, common.ConfigKey(ciConfigKey, "solutions", name, "namespace")); ok && v != "" {
+			return v
+		}
+	}
+	return defaultNamespace
 }
 
 // getRole resolves the container insights pipeline role using the following

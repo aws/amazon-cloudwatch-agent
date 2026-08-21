@@ -6,7 +6,11 @@
     "cluster_name": "TestCluster",
     "collect": {
       "container_insights": {
-        "collection_interval": 30
+        "role": "node",
+        "collection_interval": 30,
+        "logs": {
+          "enabled": true
+        }
       }
     }
   }

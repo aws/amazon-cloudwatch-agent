@@ -36,30 +36,13 @@ processors:
       statements:
       - set(attributes["k8s.cluster.name"], "{{.ClusterName}}")
       - set(attributes["k8s.node.name"], "{{.NodeName}}")
+  # Standard CI resourcedetection (same as metrics sources) — the shared pipeline
+  # stamps cloud/host attributes anyway; kept identical across pipelines to avoid
+  # a same-ID definition conflict when metrics and logs coexist.
   resourcedetection/cw_k8s_ci_v0:
-    detectors:
-    - eks
-    - ec2
-    ec2:
-      resource_attributes:
-        cloud.account.id:
-          enabled: true
-        cloud.availability_zone:
-          enabled: true
-        cloud.platform:
-          enabled: true
-        cloud.provider:
-          enabled: true
-        cloud.region:
-          enabled: true
-        host.id:
-          enabled: true
-        host.image.id:
-          enabled: true
-        host.name:
-          enabled: true
-        host.type:
-          enabled: true
+    detectors: [eks, env, ec2]
+    override: false
+    timeout: 2s
   transform/cw_k8s_ci_v0_logs_set_cloud_resource_id:
     error_mode: ignore
     log_statements:
@@ -135,19 +118,13 @@ processors:
       - set(attributes["cloudwatch.source"], "cloudwatch-agent")
       - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
       - set(attributes["cloudwatch.pipeline"], "application-logs")
-  transform/cw_k8s_ci_v0_logs_clear_schema_url:
-    error_mode: ignore
-    log_statements:
-    - context: resource
-      statements:
-      - set(resource.schema_url, "")
   transform/cw_k8s_ci_v0_logs_set_workload:
     error_mode: ignore
     log_statements:
     - context: resource
       statements:
-      - set(attributes["k8s.workload.name"], attributes["k8s.deployment.name"]) where attributes["k8s.deployment.name"] != nil
-      - set(attributes["k8s.workload.type"], "Deployment") where attributes["k8s.deployment.name"] != nil
+      - set(attributes["k8s.workload.name"], attributes["k8s.deployment.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.deployment.name"] != nil
+      - set(attributes["k8s.workload.type"], "Deployment") where attributes["k8s.deployment.name"] != nil and attributes["k8s.workload.type"] == nil
       - set(attributes["k8s.workload.name"], attributes["k8s.statefulset.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.statefulset.name"] != nil
       - set(attributes["k8s.workload.type"], "StatefulSet") where attributes["k8s.statefulset.name"] != nil and attributes["k8s.workload.type"] == nil
       - set(attributes["k8s.workload.name"], attributes["k8s.daemonset.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.daemonset.name"] != nil
@@ -159,6 +136,7 @@ processors:
       - set(attributes["k8s.workload.name"], attributes["k8s.replicaset.name"]) where attributes["k8s.workload.name"] == nil and attributes["k8s.replicaset.name"] != nil
       - set(attributes["k8s.workload.type"], "ReplicaSet") where attributes["k8s.replicaset.name"] != nil and attributes["k8s.workload.type"] == nil
       - set(attributes["service.name"], attributes["k8s.workload.name"]) where attributes["service.name"] == nil and attributes["k8s.workload.name"] != nil
+  # Sets the CI log group/stream directly; shared logs_routing is a no-op when already set.
   transform/cw_k8s_ci_v0_app_logs_set_log_destination:
     error_mode: ignore
     log_statements:
@@ -166,55 +144,9 @@ processors:
       statements:
       - set(attributes["aws.log.group.name"], "{{.AppLogGroup}}")
       - set(attributes["aws.log.stream.name"], "{{.AppLogStream}}")
-  attributestocontext/cw_k8s_ci_v0:
-    actions:
-    - key: aws.log.group.name
-      from_resource_attribute: aws.log.group.name
-    - key: aws.log.stream.name
-      from_resource_attribute: aws.log.stream.name
-  transform/cw_k8s_ci_v0_app_logs_cleanup:
-    error_mode: ignore
-    log_statements:
-    - context: resource
-      statements:
-      - delete_key(attributes, "aws.log.group.name")
-      - delete_key(attributes, "aws.log.stream.name")
-  batch/cw_k8s_ci_v0_logs_dest:
-    send_batch_max_size: 500
-    send_batch_size: 500
-    timeout: 5s
-exporters:
-  otlphttp/cw_k8s_ci_v0_app_logs_dest:
-    auth:
-      authenticator: headers_setter/cw_k8s_ci_v0_app_logs
-    compression: none
-    endpoint: https://logs.{{.Region}}.amazonaws.com:443
-    sending_queue:
-      num_consumers: 10
-      queue_size: 500
-    tls:
-      insecure: false
-extensions:
-  sigv4auth/cw_k8s_ci_v0_logs_dest:
-    region: {{.Region}}
-    service: logs
-  awscloudwatchlogsprovisioner/cw_k8s_ci_v0_logs:
-    additional_auth: sigv4auth/cw_k8s_ci_v0_logs_dest
-    region: {{.Region}}
-  headers_setter/cw_k8s_ci_v0_app_logs:
-    additional_auth: awscloudwatchlogsprovisioner/cw_k8s_ci_v0_logs
-    headers:
-    - key: x-aws-log-group
-      from_context: aws.log.group.name
-      action: upsert
-    - key: x-aws-log-stream
-      from_context: aws.log.stream.name
-      action: upsert
+connectors:
+  forward/opentelemetry: {}
 service:
-  extensions:
-  - sigv4auth/cw_k8s_ci_v0_logs_dest
-  - awscloudwatchlogsprovisioner/cw_k8s_ci_v0_logs
-  - headers_setter/cw_k8s_ci_v0_app_logs
   pipelines:
     logs/cw_k8s_ci_v0_app:
       receivers:
@@ -226,11 +158,7 @@ service:
       - k8sattributes/cw_k8s_ci_v0_node
       - k8sattributes/cw_k8s_ci_v0_pod
       - transform/cw_k8s_ci_v0_logs_set_scope_app
-      - transform/cw_k8s_ci_v0_logs_clear_schema_url
       - transform/cw_k8s_ci_v0_logs_set_workload
       - transform/cw_k8s_ci_v0_app_logs_set_log_destination
-      - attributestocontext/cw_k8s_ci_v0
-      - transform/cw_k8s_ci_v0_app_logs_cleanup
-      - batch/cw_k8s_ci_v0_logs_dest
       exporters:
-      - otlphttp/cw_k8s_ci_v0_app_logs_dest
+      - forward/opentelemetry

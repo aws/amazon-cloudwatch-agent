@@ -1887,6 +1887,48 @@
                     }
                   },
                   "additionalProperties": false
+                },
+                "solutions": {
+                  "description": "Optional add-on solution scrapers for Karpenter and KEDA operator metrics",
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Master toggle for all solutions (default: true); overrides individual solution enabled flags, false disables all",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "karpenter": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape Karpenter metrics (default: true)",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "namespace": {
+                          "description": "Namespace where the Karpenter operator runs (default: kube-system)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "keda": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape KEDA operator metrics (default: true).",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "namespace": {
+                          "description": "Namespace where the KEDA operator runs (default: keda)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
                 }
               },
               "additionalProperties": false
