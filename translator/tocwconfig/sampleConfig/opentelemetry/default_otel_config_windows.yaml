@@ -181,11 +181,13 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
+    awsattributelimit/opentelemetry_metrics:
+        max_total_attributes: 150
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 30s
+        timeout: 10s
     batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 10000
@@ -731,6 +733,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - transform/identity
+                - awsattributelimit/opentelemetry_metrics
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry

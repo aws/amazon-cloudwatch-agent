@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsattributelimit"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
@@ -81,7 +82,27 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 		))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
-	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
+	// Cluster-scoped CI metrics must not carry the scraper node's identity.
+	// resourcedetection re-adds host.*/AZ post-fanout, so strip them for marked
+	// records, then drop the marker. Gated on container_insights.
+	if conf != nil && conf.IsSet(common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)) {
+		processors.Set(transformprocessor.NewTranslatorWithName("cluster_host_suppress",
+			transformprocessor.WithMetricResourceStatements([]string{
+				`delete_matching_keys(resource.attributes, "^host.") where resource.attributes["_tmp.cluster_scoped"] == true`,
+				`delete_key(resource.attributes, "cloud.availability_zone") where resource.attributes["_tmp.cluster_scoped"] == true`,
+				`delete_matching_keys(resource.attributes, "^ec2.tag.") where resource.attributes["_tmp.cluster_scoped"] == true`,
+				`delete_key(resource.attributes, "_tmp.cluster_scoped")`,
+			})))
+		// resourcedetection/opentelemetry re-stamps schema_url post-fan-in; clear it here for CI.
+		processors.Set(transformprocessor.NewTranslatorWithName("clear_schema_url",
+			transformprocessor.WithMetricResourceStatements([]string{
+				`set(resource.schema_url, "")`,
+			})))
+	}
+	// Cap attributes at the CloudWatch OTLP limit (150) after enrichment; the
+	// backend rejects datapoints over it. Runs last (before batch) as a safety net.
+	processors.Set(awsattributelimit.NewTranslator(common.WithName("opentelemetry_metrics")))
+	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_metrics"), batchprocessor.WithSendBatchSize(common.MaxMetricsPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxMetricsPerRequest), batchprocessor.WithTimeout(common.MetricsBatchTimeout)))
 
 	receivers := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)
 	connectors := common.NewTranslatorMap[component.Config, component.ID](fwdConnector)

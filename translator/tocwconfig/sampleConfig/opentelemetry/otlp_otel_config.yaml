@@ -158,6 +158,8 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
+    awsattributelimit/opentelemetry_metrics:
+        max_total_attributes: 150
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -170,7 +172,7 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 30s
+        timeout: 10s
     batch/opentelemetry_traces:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 10000
@@ -623,6 +625,7 @@ service:
                 - resource/opentelemetry
                 - resourcedetection/opentelemetry
                 - transform/identity
+                - awsattributelimit/opentelemetry_metrics
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry

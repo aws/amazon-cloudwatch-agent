@@ -79,10 +79,11 @@ func TestBaseMetricsTranslator(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, 1, got.Receivers.Len())
-				assert.Equal(t, 3, got.Processors.Len())
+				assert.Equal(t, 4, got.Processors.Len())
 				assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[0].String())
 				assert.Equal(t, "transform/identity", got.Processors.Keys()[1].String())
-				assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[2].String())
+				assert.Equal(t, "awsattributelimit/opentelemetry_metrics", got.Processors.Keys()[2].String())
+				assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[3].String())
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 2, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
@@ -111,11 +112,12 @@ func TestBaseMetricsTranslatorResourceAttributes(t *testing.T) {
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
 	require.NotNil(t, got)
-	assert.Equal(t, 4, got.Processors.Len())
+	assert.Equal(t, 5, got.Processors.Len())
 	assert.Equal(t, "resource/opentelemetry", got.Processors.Keys()[0].String())
 	assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[1].String())
 	assert.Equal(t, "transform/identity", got.Processors.Keys()[2].String())
-	assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[3].String())
+	assert.Equal(t, "awsattributelimit/opentelemetry_metrics", got.Processors.Keys()[3].String())
+	assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[4].String())
 }
 
 func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {

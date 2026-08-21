@@ -56,10 +56,9 @@ var ebsCsiYAML string
 //go:embed lis_csi.yaml
 var lisCsiYAML string
 
-// CI logs pipelines are self-contained with dedicated exporters (compression: none)
-// to match the helm chart behavior for FluentBit migration parity. They cannot share
-// the base logs/opentelemetry exporter which uses gzip compression. See:
-// https://github.com/aws-observability/helm-charts/blob/main/charts/amazon-cloudwatch-observability/templates/linux/_otel-container-insights-config.tpl
+// CI logs pipelines feed the shared logs/opentelemetry pipeline via the
+// forward/opentelemetry connector (same pattern as CI metrics). The shared
+// pipeline handles routing, batching, and export.
 
 //go:embed filelog_app.yaml
 var filelogAppYAML string
@@ -99,6 +98,10 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 		translators.Set(newYAMLPipeline("lis_csi_node", pipeline.SignalMetrics, lisCsiYAML))
 
 		// Daemonset logs pipelines (gated by logs.enabled)
+		//
+		// filelog and metrics pipelines share component IDs (e.g. k8sattributes/cw_k8s_ci_v0_pod);
+		// last registration wins, so logs are registered after metrics to keep the richer
+		// logs definition. Keep shared defs compatible; don't reorder without re-checking.
 		if logsEnabled(conf) {
 			translators.Set(newYAMLPipeline("app", pipeline.SignalLogs, filelogAppYAML))
 			translators.Set(newYAMLPipeline("node", pipeline.SignalLogs, filelogNodeYAML))
