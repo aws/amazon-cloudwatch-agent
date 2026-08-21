@@ -177,6 +177,7 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		NodeLogStream:      envOrPlaceholder("K8S_NODE_NAME") + "-host",
 		KarpenterNamespace: solutionNamespace(conf, "karpenter", defaultKarpenterNamespace),
 		KedaNamespace:      solutionNamespace(conf, "keda", defaultKedaNamespace),
+		WatchReplicaSet:    watchReplicaSet(conf),
 	}
 
 	// Execute template

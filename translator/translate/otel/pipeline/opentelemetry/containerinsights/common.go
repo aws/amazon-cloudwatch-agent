@@ -41,6 +41,10 @@ type templateData struct {
 	NodeLogStream      string
 	KarpenterNamespace string
 	KedaNamespace      string
+	// WatchReplicaSet gates k8s.deployment.name in the k8sattributes metadata.
+	// When false the pod->RS->Deployment owner walk (and its cluster-wide
+	// ReplicaSet informer) is not started. Default true.
+	WatchReplicaSet bool
 }
 
 // rawMapConfig wraps a raw config map and passes it through serialization unchanged.
@@ -128,6 +132,12 @@ func solutionNamespace(conf *confmap.Conf, name, defaultNamespace string) string
 		}
 	}
 	return defaultNamespace
+}
+
+// watchReplicaSet reports whether the CI k8sattributes ReplicaSet informer runs (default true;
+// disabled by either watch_replicaset key — see common.WatchReplicaSet).
+func watchReplicaSet(conf *confmap.Conf) bool {
+	return common.WatchReplicaSet(conf)
 }
 
 // getRole resolves the container insights pipeline role using the following

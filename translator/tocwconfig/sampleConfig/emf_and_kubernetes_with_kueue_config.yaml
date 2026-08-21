@@ -929,6 +929,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        skip_replicaset_watch: false
     awscontainerinsightskueuereceiver:
         cluster_name: TestCluster
         collection_interval: 1m0s

@@ -1,0 +1,19 @@
+{
+  "agent": {
+    "region": "us-east-1",
+    "self_telemetry": {
+      "enabled": true,
+      "port": 28888
+    }
+  },
+  "metrics": {
+    "metrics_collected": {
+      "cpu": {
+        "measurement": ["usage_active"]
+      },
+      "mem": {
+        "measurement": ["mem_used_percent"]
+      }
+    }
+  }
+}
