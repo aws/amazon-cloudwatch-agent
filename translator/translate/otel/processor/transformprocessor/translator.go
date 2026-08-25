@@ -38,6 +38,9 @@ var transformIdentityEC2Config string
 //go:embed transform_identity_azure_vm.yaml
 var transformIdentityAzureVMConfig string
 
+//go:embed transform_identity_gce.yaml
+var transformIdentityGCEConfig string
+
 //go:embed transform_identity_ecs.yaml
 var transformIdentityECSConfig string
 
@@ -209,6 +212,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		switch context.CurrentContext().Mode() {
 		case config.ModeAzureVM:
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityAzureVMConfig)
+		case config.ModeGCE:
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityGCEConfig)
 		default:
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityEC2Config)
 		}

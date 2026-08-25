@@ -344,9 +344,11 @@ func TestIdentityTransformSemconvValues(t *testing.T) {
 	assert.Equal(t, "aws_eks", semconv.AttributeCloudPlatformAWSEKS)
 	assert.Equal(t, "azure_vm", semconv.AttributeCloudPlatformAzureVM)
 	assert.Equal(t, "azure_aks", semconv.AttributeCloudPlatformAzureAKS)
+	assert.Equal(t, "gcp_compute_engine", semconv.AttributeCloudPlatformGCPComputeEngine)
 
 	// Resource attribute keys used in OTTL statements
 	assert.Equal(t, "cloud.account.id", semconv.AttributeCloudAccountID)
+	assert.Equal(t, "cloud.availability_zone", semconv.AttributeCloudAvailabilityZone)
 	assert.Equal(t, "cloud.region", semconv.AttributeCloudRegion)
 	assert.Equal(t, "cloud.platform", semconv.AttributeCloudPlatform)
 	assert.Equal(t, "host.id", semconv.AttributeHostID)
@@ -380,6 +382,24 @@ func TestAKSClusterResourceIDDerivation(t *testing.T) {
 		assert.Contains(t, transformIdentityK8sConfig,
 			fmt.Sprintf(`resource.attributes[%q] != nil`, attr),
 			"AKS resource_id statement must guard %q", attr)
+	}
+}
+
+// TestGCEResourceIDDerivation guards the GCE cloud.resource_id: it must build the AIP-122 full
+// resource name //compute.googleapis.com/projects/<project>/zones/<zone>/instances/<name> from the
+// instance NAME (host.name), not the numeric host.id, and nil-guard every %s arg.
+func TestGCEResourceIDDerivation(t *testing.T) {
+	assert.Contains(t, transformIdentityGCEConfig,
+		`Format("//compute.googleapis.com/projects/%s/zones/%s/instances/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.availability_zone"], resource.attributes["host.name"]])`,
+		"GCE resource_id must be the full resource name built from project id, zone, and instance name")
+	assert.NotContains(t, transformIdentityGCEConfig, `resource.attributes["host.id"]`,
+		"GCE resource_id must use the instance name (host.name), not the numeric host.id")
+
+	// Every %s in the Format is nil-guarded (a nil arg would render a corrupt %!s(<nil>) ID).
+	for _, attr := range []string{"cloud.account.id", "cloud.availability_zone", "host.name"} {
+		assert.Contains(t, transformIdentityGCEConfig,
+			fmt.Sprintf(`resource.attributes[%q] != nil`, attr),
+			"GCE resource_id statement must guard %q", attr)
 	}
 }
 

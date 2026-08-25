@@ -212,8 +212,8 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsprox
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsproxy v0.0.0-20260806162807-5cc6f180ecb6/go.mod h1:tAN1C96iJCDwxl9qMnno54d6sQwxHAVSYdpDJjc6bbY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260806162807-5cc6f180ecb6 h1:5yYzZzehqMwm9mpYBe2l2nEZO6jU1Nlkf6Uj61lp1v8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/headerssetterextension v0.0.0-20260806162807-5cc6f180ecb6/go.mod h1:2JFFL30N2NI5N8LbjcLWXYTsoDMDYbwItyZ9ntp8++E=
-github.com/amazon-contributing/opentelemetry-collector-contrib/extension/oidctokenextension v0.0.0-20260806162807-5cc6f180ecb6 h1:IX0usvT/sQygyBoa2MIE7GMMbFTKlEky9bcDKJfjRQ0=
-github.com/amazon-contributing/opentelemetry-collector-contrib/extension/oidctokenextension v0.0.0-20260806162807-5cc6f180ecb6/go.mod h1:TE6yrCGcu1zdBdOa/8yMLWSNr8cMGGFht6S/bml2FuY=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/oidctokenextension v0.0.0-20260825230156-934249b22666 h1:DPSdNSZDGeyangIxczkJH5gu496mj2hNQZsRVW+gOlU=
+github.com/amazon-contributing/opentelemetry-collector-contrib/extension/oidctokenextension v0.0.0-20260825230156-934249b22666/go.mod h1:uTepQM993Yk/IcVph4OysY4WzLjmIqKyLd/lRVgvyhA=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/sigv4authextension v0.0.0-20260806162807-5cc6f180ecb6 h1:LrESDzkbsO0Ks5m9EHOucrBDoKsiHvEdWglGpCQAeR8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/extension/sigv4authextension v0.0.0-20260806162807-5cc6f180ecb6/go.mod h1:2USGxxrkXR5LUQV490ThZzu8oxPIZBtOBbfp0xP8pH0=
 github.com/amazon-contributing/opentelemetry-collector-contrib/internal/aws/awsutil v0.0.0-20260806162807-5cc6f180ecb6 h1:lm5uiho+V77bcFg4mo71Qi++XgM3gZunpq6L6t4MNMw=

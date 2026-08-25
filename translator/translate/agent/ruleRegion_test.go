@@ -69,6 +69,21 @@ func TestRegionRule(t *testing.T) {
 			wantRegion:         "us-west-2",
 			wantRegionType:     config.RegionTypeCredsMap,
 		},
+		"WithMissingRegion/GCE": {
+			input:              `{}`,
+			mode:               config.ModeGCE,
+			detectedRegionType: config.RegionTypeNotFound,
+			wantRegion:         "${AWS_REGION}",
+			wantRegionType:     config.RegionTypeNotFound,
+		},
+		"WithDetectedRegion/GCE": {
+			input:              `{}`,
+			mode:               config.ModeGCE,
+			detectedRegion:     "us-west-2",
+			detectedRegionType: config.RegionTypeCredsMap,
+			wantRegion:         "us-west-2",
+			wantRegionType:     config.RegionTypeCredsMap,
+		},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
