@@ -439,7 +439,7 @@ jobs:
       region: cn-north-1
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-      github_sha: ${{github.sha}}
+      github_sha: ${{ inputs.build_id }}
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
@@ -1922,3 +1922,267 @@ jobs:
               cd terraform/eks/addon/gpu
             fi
             terraform destroy -auto-approve
+
+  AzureVMIntegrationTest:
+    needs: [OutputEnvVariables]
+    if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel
+    runs-on: ubuntu-latest
+    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: [{ wip: false }]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Download pre-built agent .deb
+        env:
+          DEB_S3_URI: "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb"
+        run: |
+          if ! aws s3 ls "$DEB_S3_URI" >/dev/null 2>&1; then
+            echo "::error::No agent .deb at $DEB_S3_URI"
+            exit 1
+          fi
+          aws s3 cp "$DEB_S3_URI" "${{ github.workspace }}/amazon-cloudwatch-agent.deb" --no-progress
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: |
+          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
+            exit 1
+          fi
+          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.0
+
+      - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
+        timeout-minutes: 45
+        working-directory: terraform/azure/vm
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          BUILD_ID: ${{ inputs.build_id }}
+          AGENT_DEB_PATH: ${{ github.workspace }}/amazon-cloudwatch-agent.deb
+          TEST_REPO_URL: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
+          TEST_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_OIDC_PROVIDER_ARN: ${{ vars.AZURE_OIDC_PROVIDER_ARN }}
+          AZURE_TOKEN_AUDIENCE: ${{ vars.AZURE_TOKEN_AUDIENCE }}
+        run: |
+          terraform init
+          terraform apply --auto-approve \
+            -var="region=us-east-2" \
+            -var="runner_ip=$RUNNER_IP" \
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="agent_deb_path=$AGENT_DEB_PATH" \
+            -var="github_test_repo=$TEST_REPO_URL" \
+            -var="github_test_repo_branch=$TEST_REPO_BRANCH" \
+            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+            -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            -var="azure_oidc_provider_arn=$AZURE_OIDC_PROVIDER_ARN" \
+            -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
+
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
+      # Only the vars destroy actually resolves: runner_ip has no default, and the vnet/subnet
+      # and OIDC-provider data sources are read during the destroy plan. The build/test-repo
+      # vars feed provisioners only, which do not run on destroy.
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          AZURE_OIDC_PROVIDER_ARN: ${{ vars.AZURE_OIDC_PROVIDER_ARN }}
+          AZURE_TOKEN_AUDIENCE: ${{ vars.AZURE_TOKEN_AUDIENCE }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/azure/vm
+            terraform destroy --auto-approve \
+              -var="region=us-east-2" \
+              -var="runner_ip=$RUNNER_IP" \
+              -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+              -var="azure_vnet_name=$AZURE_VNET_NAME" \
+              -var="azure_oidc_provider_arn=$AZURE_OIDC_PROVIDER_ARN" \
+              -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
+
+  AKSIntegrationTest:
+    needs: [OutputEnvVariables]
+    if: contains(inputs.test_dir_filter, './test/azure/aks') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AKS-default-otel
+    runs-on: ubuntu-latest
+    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: [{ wip: false }]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+      # Fail fast if the build hasn't published the image yet, before the ~60-min
+      # cluster provision (mirrors the VM job's .deb pre-check). The build publishes
+      # to us-west-2 only, so query there rather than this job's us-east-2 credentials.
+      - name: Verify agent image exists
+        env:
+          IMAGE_TAG: ${{ inputs.build_id }}
+          ECR_REGION: us-west-2
+        run: |
+          if ! aws ecr describe-images \
+            --region "$ECR_REGION" \
+            --repository-name "${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "::error::No agent image ${{ env.ECR_INTEGRATION_TEST_REPO }}:$IMAGE_TAG in $ECR_REGION ECR (build job not finished or failed?)"
+            exit 1
+          fi
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: |
+          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
+            exit 1
+          fi
+          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.0
+          terraform_wrapper: false
+
+      - name: Setup Go
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        with:
+          go-version: ~1.26.4
+          cache: false
+
+      - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
+        timeout-minutes: 60
+        working-directory: terraform/azure/aks
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          BUILD_ID: ${{ inputs.build_id }}
+          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+        run: |
+          terraform init
+          terraform apply --auto-approve \
+            -var="region=us-east-2" \
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
+            -var="cwagent_image_tag=$BUILD_ID" \
+            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+            -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            -var="runner_ip=$RUNNER_IP"
+
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
+      # cwagent_image_repo/_tag have no defaults, so destroy still has to resolve them.
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          BUILD_ID: ${{ inputs.build_id }}
+          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/azure/aks
+            terraform destroy --auto-approve \
+              -var="region=us-east-2" \
+              -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
+              -var="cwagent_image_tag=$BUILD_ID" \
+              -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
+              -var="azure_vnet_name=$AZURE_VNET_NAME" \
+              -var="runner_ip=$RUNNER_IP"
