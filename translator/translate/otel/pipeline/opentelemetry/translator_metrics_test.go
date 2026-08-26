@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor/batchprocessor"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
@@ -140,6 +142,9 @@ func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
 
 func TestBaseMetricsTranslatorClusterName(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
+	// Cluster name is only applied in a Kubernetes environment.
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
 	tt := NewBaseMetricsTranslator()
 
 	conf := confmap.NewFromStringMap(map[string]interface{}{
@@ -160,6 +165,33 @@ func TestBaseMetricsTranslatorClusterName(t *testing.T) {
 		keys = append(keys, k.String())
 	}
 	assert.Contains(t, keys, "transform/set_cluster_name")
+}
+
+// TestClusterNameSkippedNonK8s verifies the cluster name
+//  is gated on Kubernetes mode
+func TestClusterNameSkippedNonK8s(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	context.CurrentContext().SetKubernetesMode("") // non-Kubernetes (EC2 host)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseMetricsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"host_metrics": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.NotContains(t, keys, "transform/set_cluster_name")
 }
 
 func TestBaseMetricsTranslatorNoClusterName(t *testing.T) {
