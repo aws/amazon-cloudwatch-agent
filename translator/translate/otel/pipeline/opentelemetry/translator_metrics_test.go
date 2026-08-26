@@ -167,8 +167,7 @@ func TestBaseMetricsTranslatorClusterName(t *testing.T) {
 	assert.Contains(t, keys, "transform/set_cluster_name")
 }
 
-// TestClusterNameSkippedNonK8s verifies the cluster name
-//  is gated on Kubernetes mode
+// TestClusterNameSkippedNonK8s verifies the cluster name is gated on Kubernetes mode
 func TestClusterNameSkippedNonK8s(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 	context.CurrentContext().SetKubernetesMode("") // non-Kubernetes (EC2 host)
