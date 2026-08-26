@@ -211,21 +211,34 @@ func (p *RetryHeapProcessor) processReadyMessages() {
 // flushReadyBatches pops ready batches from the heap and sends them.
 // Called by both processReadyMessages and Stop.
 func (p *RetryHeapProcessor) flushReadyBatches() {
-	readyBatches := p.retryHeap.PopReady()
-
-	for _, batch := range readyBatches {
-		// Check if batch has expired
-		if batch.isExpired() {
-			p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
-			// Permanent give-up: persist state and clear the breaker, but do not
-			// report these events as delivered.
-			batch.drop()
-			continue
-		}
-
-		// Submit the batch back to the sender pool (blocks if full)
-		p.senderPool.Send(batch)
-		p.logger.Debugf("Moved batch from retry heap back to sender pool for %v/%v",
-			batch.Group, batch.Stream)
+	for _, batch := range p.retryHeap.PopReady() {
+		p.flushBatch(batch)
 	}
+}
+
+// flushBatch finalizes or resubmits a single batch. Recovery is scoped per batch because
+// PopReady has already removed every ready batch from the heap: a panic unwinding the whole
+// loop would silently lose the batches queued behind the failing one, and Stop's flush has
+// no outer recover at all.
+func (p *RetryHeapProcessor) flushBatch(batch *logEventBatch) {
+	defer func() {
+		if r := recover(); r != nil {
+			p.logger.Errorf("Recovered from panic while processing retry batch for %v/%v: %v",
+				batch.Group, batch.Stream, r)
+		}
+	}()
+
+	// Check if batch has expired
+	if batch.isExpired() {
+		p.logger.Errorf("Dropping expired batch for %v/%v", batch.Group, batch.Stream)
+		// Permanent give-up: persist state and clear the breaker, but do not
+		// report these events as delivered.
+		batch.drop()
+		return
+	}
+
+	// Submit the batch back to the sender pool (blocks if full)
+	p.senderPool.Send(batch)
+	p.logger.Debugf("Moved batch from retry heap back to sender pool for %v/%v",
+		batch.Group, batch.Stream)
 }

@@ -92,8 +92,10 @@ func TestRebaseSeamStructUnion(t *testing.T) {
 		require.NotNil(t, c.workerPool, "poison-pill workerPool lost in the rebase")
 		require.NotNil(t, c.retryHeap, "poison-pill retryHeap lost in the rebase")
 		require.NotNil(t, c.retryHeapProcessor, "poison-pill processor lost in the rebase")
-		require.NotSame(t, c.sharedRetryer, c.retryHeapProcessor,
-			"processor must not share the TargetManager's retryer")
+		// Not asserted: that the processor's retryer differs from the TargetManager's
+		// sharedRetryer. The processor does not expose its retryer, so there is nothing
+		// observable to compare -- a NotSame against the processor itself compares two
+		// different types and can never fail.
 		c.Close()
 	})
 
