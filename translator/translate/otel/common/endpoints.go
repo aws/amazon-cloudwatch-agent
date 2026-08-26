@@ -17,6 +17,9 @@ const (
 	MaxLogsPerRequest    = 10000
 	MaxSpansPerRequest   = 10000
 	BatchTimeout         = 30 * time.Second
+	// MetricsBatchTimeout is the batch flush interval for the shared opentelemetry
+	// metrics pipeline.
+	MetricsBatchTimeout = 10 * time.Second
 )
 
 func ServiceEndpoint(service, region, path string) string {

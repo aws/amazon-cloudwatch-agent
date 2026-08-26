@@ -729,7 +729,8 @@ processors:
                   aggregation_type: sum
                   experimental_scale: 0
                   label: ""
-                  label_set: []
+                  label_set:
+                    - name
                   label_value: ""
                   new_label: ""
                   new_value: ""
@@ -751,7 +752,8 @@ processors:
                   aggregation_type: sum
                   experimental_scale: 0
                   label: ""
-                  label_set: []
+                  label_set:
+                    - name
                   label_value: ""
                   new_label: ""
                   new_value: ""
@@ -1663,6 +1665,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
+        skip_replicaset_watch: false
     otlp/grpc_0_0_0_0_4315:
         protocols:
             grpc:

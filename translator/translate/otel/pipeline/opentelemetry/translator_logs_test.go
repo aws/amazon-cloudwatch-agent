@@ -16,6 +16,28 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+func TestBaseLogsTranslatorActivatedByContainerInsightsLogs(t *testing.T) {
+	prevRegion := agent.Global_Config.Region
+	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { agent.Global_Config.Region = prevRegion })
+	tt := NewBaseLogsTranslator()
+	// container_insights logs.enabled must activate the base logs pipeline so the
+	// forward/opentelemetry connector fed by CI log pipelines has a consumer.
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{
+					"logs": map[string]interface{}{"enabled": true},
+				},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
+}
+
 func TestBaseLogsTranslator(t *testing.T) {
 	tt := NewBaseLogsTranslator()
 	assert.EqualValues(t, "logs/opentelemetry", tt.ID().String())
