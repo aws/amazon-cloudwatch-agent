@@ -339,6 +339,8 @@ processors:
               key: aws.log.group.name
             - from_resource_attribute: aws.log.stream.name
               key: aws.log.stream.name
+    awsattributelimit/opentelemetry_metrics:
+        max_total_attributes: 150
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -351,7 +353,7 @@ processors:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
         send_batch_size: 1000
-        timeout: 30s
+        timeout: 10s
     filter/dbi_exclude_monitor_0:
         error_mode: propagate
         logs:
@@ -884,59 +886,59 @@ receivers:
         initial_delay: 1s
         metrics:
             postgresql.backends:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.buffers.allocated:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.buffers.writes:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.checkpoint.count:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.duration:
-                enabled: true
+                enabled: false
             postgresql.bgwriter.maxwritten:
-                enabled: true
+                enabled: false
             postgresql.blks_hit:
                 enabled: false
             postgresql.blks_read:
                 enabled: false
             postgresql.blocks_read:
-                enabled: true
+                enabled: false
             postgresql.commits:
-                enabled: true
+                enabled: false
             postgresql.connection.max:
-                enabled: true
+                enabled: false
             postgresql.database.count:
-                enabled: true
+                enabled: false
             postgresql.database.locks:
                 enabled: false
             postgresql.db_size:
-                enabled: true
+                enabled: false
             postgresql.deadlocks:
                 enabled: false
             postgresql.function.calls:
                 enabled: false
             postgresql.index.scans:
-                enabled: true
+                enabled: false
             postgresql.index.size:
-                enabled: true
+                enabled: false
             postgresql.operations:
-                enabled: true
+                enabled: false
             postgresql.replication.data_delay:
-                enabled: true
+                enabled: false
             postgresql.rollbacks:
-                enabled: true
+                enabled: false
             postgresql.rows:
-                enabled: true
+                enabled: false
             postgresql.sequential_scans:
                 enabled: false
             postgresql.sessions:
                 enabled: false
             postgresql.table.count:
-                enabled: true
+                enabled: false
             postgresql.table.size:
-                enabled: true
+                enabled: false
             postgresql.table.vacuum.count:
-                enabled: true
+                enabled: false
             postgresql.temp.io:
                 enabled: false
             postgresql.temp_files:
@@ -952,11 +954,11 @@ receivers:
             postgresql.tup_updated:
                 enabled: false
             postgresql.wal.age:
-                enabled: true
+                enabled: false
             postgresql.wal.delay:
                 enabled: false
             postgresql.wal.lag:
-                enabled: true
+                enabled: false
         passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
             collection_interval: 1m0s
@@ -1013,7 +1015,7 @@ receivers:
             postgresql.blks_read:
                 enabled: false
             postgresql.blocks_read:
-                enabled: true
+                enabled: false
             postgresql.commits:
                 enabled: true
             postgresql.connection.max:
@@ -1029,17 +1031,17 @@ receivers:
             postgresql.function.calls:
                 enabled: false
             postgresql.index.scans:
-                enabled: true
+                enabled: false
             postgresql.index.size:
-                enabled: true
+                enabled: false
             postgresql.operations:
-                enabled: true
+                enabled: false
             postgresql.replication.data_delay:
                 enabled: true
             postgresql.rollbacks:
                 enabled: true
             postgresql.rows:
-                enabled: true
+                enabled: false
             postgresql.sequential_scans:
                 enabled: false
             postgresql.sessions:
@@ -1047,9 +1049,9 @@ receivers:
             postgresql.table.count:
                 enabled: true
             postgresql.table.size:
-                enabled: true
+                enabled: false
             postgresql.table.vacuum.count:
-                enabled: true
+                enabled: false
             postgresql.temp.io:
                 enabled: false
             postgresql.temp_files:
@@ -1070,6 +1072,119 @@ receivers:
                 enabled: false
             postgresql.wal.lag:
                 enabled: true
+        passfile: sampleConfig/opentelemetry/testdata/.pgpass
+        query_sample_collection:
+            collection_interval: 1s
+            enabled: true
+            max_rows_per_query: 500
+        resource_attributes:
+            postgresql.database.name:
+                enabled: true
+            postgresql.index.name:
+                enabled: true
+            postgresql.schema.name:
+                enabled: true
+            postgresql.table.name:
+                enabled: true
+            service.instance.id:
+                enabled: true
+        timeout: 0s
+        tls:
+            insecure: true
+            insecure_skip_verify: true
+        top_query_collection:
+            collection_interval: 1m0s
+            max_explain_each_interval: 1000
+            max_rows_per_query: 5000
+            query_plan_cache_size: 1000
+            query_plan_cache_ttl: 1h0m0s
+            top_n_query: 200
+        transport: tcp
+        username: cw_monitor
+    postgresql/metrics_perresource_0:
+        collection_interval: 1m0s
+        endpoint: localhost:5432
+        events:
+            db.server.query_sample:
+                enabled: false
+            db.server.top_query:
+                enabled: false
+        initial_delay: 1s
+        metrics:
+            postgresql.backends:
+                enabled: false
+            postgresql.bgwriter.buffers.allocated:
+                enabled: false
+            postgresql.bgwriter.buffers.writes:
+                enabled: false
+            postgresql.bgwriter.checkpoint.count:
+                enabled: false
+            postgresql.bgwriter.duration:
+                enabled: false
+            postgresql.bgwriter.maxwritten:
+                enabled: false
+            postgresql.blks_hit:
+                enabled: false
+            postgresql.blks_read:
+                enabled: false
+            postgresql.blocks_read:
+                enabled: true
+            postgresql.commits:
+                enabled: false
+            postgresql.connection.max:
+                enabled: false
+            postgresql.database.count:
+                enabled: false
+            postgresql.database.locks:
+                enabled: false
+            postgresql.db_size:
+                enabled: false
+            postgresql.deadlocks:
+                enabled: false
+            postgresql.function.calls:
+                enabled: false
+            postgresql.index.scans:
+                enabled: true
+            postgresql.index.size:
+                enabled: true
+            postgresql.operations:
+                enabled: true
+            postgresql.replication.data_delay:
+                enabled: false
+            postgresql.rollbacks:
+                enabled: false
+            postgresql.rows:
+                enabled: true
+            postgresql.sequential_scans:
+                enabled: false
+            postgresql.sessions:
+                enabled: false
+            postgresql.table.count:
+                enabled: false
+            postgresql.table.size:
+                enabled: true
+            postgresql.table.vacuum.count:
+                enabled: true
+            postgresql.temp.io:
+                enabled: false
+            postgresql.temp_files:
+                enabled: false
+            postgresql.tup_deleted:
+                enabled: false
+            postgresql.tup_fetched:
+                enabled: false
+            postgresql.tup_inserted:
+                enabled: false
+            postgresql.tup_returned:
+                enabled: false
+            postgresql.tup_updated:
+                enabled: false
+            postgresql.wal.age:
+                enabled: false
+            postgresql.wal.delay:
+                enabled: false
+            postgresql.wal.lag:
+                enabled: false
         passfile: sampleConfig/opentelemetry/testdata/.pgpass
         query_sample_collection:
             collection_interval: 1s
@@ -1159,6 +1274,7 @@ service:
                 - transform/dbi_fix_start_time
             receivers:
                 - postgresql/metrics_0
+                - postgresql/metrics_perresource_0
                 - count/dbi_dbload
                 - signaltometrics/dbi_topsql
         metrics/host_metrics:
@@ -1174,6 +1290,7 @@ service:
             processors:
                 - resourcedetection/opentelemetry
                 - transform/identity
+                - awsattributelimit/opentelemetry_metrics
                 - batch/opentelemetry_metrics
             receivers:
                 - forward/opentelemetry

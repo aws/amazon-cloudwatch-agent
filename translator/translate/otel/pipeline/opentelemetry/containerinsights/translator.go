@@ -56,10 +56,9 @@ var ebsCsiYAML string
 //go:embed lis_csi.yaml
 var lisCsiYAML string
 
-// CI logs pipelines are self-contained with dedicated exporters (compression: none)
-// to match the helm chart behavior for FluentBit migration parity. They cannot share
-// the base logs/opentelemetry exporter which uses gzip compression. See:
-// https://github.com/aws-observability/helm-charts/blob/main/charts/amazon-cloudwatch-observability/templates/linux/_otel-container-insights-config.tpl
+// CI logs pipelines feed the shared logs/opentelemetry pipeline via the
+// forward/opentelemetry connector (same pattern as CI metrics). The shared
+// pipeline handles routing, batching, and export.
 
 //go:embed filelog_app.yaml
 var filelogAppYAML string
@@ -72,6 +71,12 @@ var apiserverYAML string
 
 //go:embed kube_state_metrics.yaml
 var kubeStateMetricsYAML string
+
+//go:embed karpenter.yaml
+var karpenterYAML string
+
+//go:embed keda.yaml
+var kedaYAML string
 
 // NewTranslators returns all container insights pipeline translators.
 // The pipelines generated depend on the resolved role (see getRole for priority):
@@ -99,6 +104,10 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 		translators.Set(newYAMLPipeline("lis_csi_node", pipeline.SignalMetrics, lisCsiYAML))
 
 		// Daemonset logs pipelines (gated by logs.enabled)
+		//
+		// filelog and metrics pipelines share component IDs (e.g. k8sattributes/cw_k8s_ci_v0_pod);
+		// last registration wins, so logs are registered after metrics to keep the richer
+		// logs definition. Keep shared defs compatible; don't reorder without re-checking.
 		if logsEnabled(conf) {
 			translators.Set(newYAMLPipeline("app", pipeline.SignalLogs, filelogAppYAML))
 			translators.Set(newYAMLPipeline("node", pipeline.SignalLogs, filelogNodeYAML))
@@ -109,6 +118,14 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	if role == roleCluster {
 		translators.Set(newYAMLPipeline("apiserver", pipeline.SignalMetrics, apiserverYAML))
 		translators.Set(newYAMLPipeline("kube_state_metrics", pipeline.SignalMetrics, kubeStateMetricsYAML))
+		// Solution pipelines (cluster-role only): the operator is a single deployment
+		// scraped cluster-wide, so it belongs on the leader collector, not per-node.
+		if solutionEnabled(conf, "karpenter") {
+			translators.Set(newYAMLPipeline("karpenter", pipeline.SignalMetrics, karpenterYAML))
+		}
+		if solutionEnabled(conf, "keda") {
+			translators.Set(newYAMLPipeline("keda", pipeline.SignalMetrics, kedaYAML))
+		}
 	}
 
 	return translators
@@ -158,6 +175,9 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		AppLogStream:       envOrPlaceholder("K8S_NODE_NAME") + "-application",
 		NodeLogGroup:       fmt.Sprintf("/aws/otel/containerinsights/%s/host", clusterName),
 		NodeLogStream:      envOrPlaceholder("K8S_NODE_NAME") + "-host",
+		KarpenterNamespace: solutionNamespace(conf, "karpenter", defaultKarpenterNamespace),
+		KedaNamespace:      solutionNamespace(conf, "keda", defaultKedaNamespace),
+		WatchReplicaSet:    watchReplicaSet(conf),
 	}
 
 	// Execute template

@@ -6,10 +6,12 @@ package opentelemetry
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/processor/batchprocessor"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -79,10 +81,11 @@ func TestBaseMetricsTranslator(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, got)
 				assert.Equal(t, 1, got.Receivers.Len())
-				assert.Equal(t, 3, got.Processors.Len())
+				assert.Equal(t, 4, got.Processors.Len())
 				assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[0].String())
 				assert.Equal(t, "transform/identity", got.Processors.Keys()[1].String())
-				assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[2].String())
+				assert.Equal(t, "awsattributelimit/opentelemetry_metrics", got.Processors.Keys()[2].String())
+				assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[3].String())
 				assert.Equal(t, 1, got.Exporters.Len())
 				assert.Equal(t, 2, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
@@ -111,11 +114,12 @@ func TestBaseMetricsTranslatorResourceAttributes(t *testing.T) {
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
 	require.NotNil(t, got)
-	assert.Equal(t, 4, got.Processors.Len())
+	assert.Equal(t, 5, got.Processors.Len())
 	assert.Equal(t, "resource/opentelemetry", got.Processors.Keys()[0].String())
 	assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[1].String())
 	assert.Equal(t, "transform/identity", got.Processors.Keys()[2].String())
-	assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[3].String())
+	assert.Equal(t, "awsattributelimit/opentelemetry_metrics", got.Processors.Keys()[3].String())
+	assert.Equal(t, "batch/opentelemetry_metrics", got.Processors.Keys()[4].String())
 }
 
 func TestBaseMetricsTranslatorEmptyRegion(t *testing.T) {
@@ -179,4 +183,32 @@ func TestBaseMetricsTranslatorNoClusterName(t *testing.T) {
 		keys = append(keys, k.String())
 	}
 	assert.NotContains(t, keys, "transform/set_cluster_name")
+}
+
+func TestBaseMetricsBatch1000In10s(t *testing.T) {
+	prevRegion := agent.Global_Config.Region
+	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { agent.Global_Config.Region = prevRegion })
+	tt := NewBaseMetricsTranslator()
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{"otlp": map[string]interface{}{}},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	var batchT common.ComponentTranslator
+	for _, id := range got.Processors.Keys() {
+		if id.String() == "batch/opentelemetry_metrics" {
+			batchT, _ = got.Processors.Get(id)
+		}
+	}
+	require.NotNil(t, batchT)
+	cfg, err := batchT.Translate(conf)
+	require.NoError(t, err)
+	bcfg := cfg.(*batchprocessor.Config)
+	assert.Equal(t, 10*time.Second, bcfg.Timeout)
+	assert.EqualValues(t, 1000, bcfg.SendBatchSize)
+	assert.EqualValues(t, 1000, bcfg.SendBatchMaxSize)
 }

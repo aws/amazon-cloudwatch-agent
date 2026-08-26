@@ -81,6 +81,30 @@ func TestBaseContainerInsightsConfig(t *testing.T) {
 	checkTranslation(t, "base_container_insights_config", "darwin", nil, "")
 }
 
+func TestSelfTelemetryConfig(t *testing.T) {
+	resetContext(t)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	// Kubernetes (EKS) DaemonSet: self_telemetry adds the loopback metrics reader + bridge extension
+	// and stamps the NodeName resource label (K8S_NODE_NAME, operator-injected in Kubernetes).
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	checkTranslation(t, "self_telemetry_config", "linux", nil, "")
+}
+
+func TestSelfTelemetryEC2Config(t *testing.T) {
+	resetContext(t)
+	t.Setenv(config.HOST_NAME, "host_name_from_env")
+	t.Setenv(config.HOST_IP, "127.0.0.1")
+	// EC2 host (no Kubernetes): NodeName resolves from the {instance_id} placeholder, not the
+	// K8S_NODE_NAME env ref. Stub the metadata so {instance_id} is deterministic.
+	original := translateutil.Ec2MetadataInfoProvider
+	translateutil.Ec2MetadataInfoProvider = func() *translateutil.Metadata {
+		return &translateutil.Metadata{InstanceID: "i-1234567890abcdef0"}
+	}
+	t.Cleanup(func() { translateutil.Ec2MetadataInfoProvider = original })
+	checkTranslation(t, "self_telemetry_ec2_config", "linux", nil, "")
+}
+
 func TestGenericAppSignalsConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetRunInContainer(false)
@@ -339,38 +363,48 @@ func TestHostMetricsConfig(t *testing.T) {
 }
 
 func TestContainerInsightsConfig(t *testing.T) {
-	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeEC2)
-	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
-
 	// Cannot use checkTranslation here because the container_insights prometheus
 	// receiver references /var/run/secrets/kubernetes.io/serviceaccount/token
 	// which only exists inside K8s pods. Translate without collector validation.
-	agent.Global_Config = *new(agent.Agent)
-	translator.SetTargetPlatform("linux")
-	var input interface{}
-	blob, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_config.json")
-	require.NoError(t, err)
-	require.NoError(t, json.Unmarshal(blob, &input))
-	_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
+	//
+	// Covers: node role with logs (filelog app/node + shared logs pipeline) and
+	// cluster role (metrics-only, no logs).
+	for _, name := range []string{
+		"container_insights_node_config",
+		"container_insights_cluster_config",
+	} {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
-	var expected interface{}
-	bs, err := os.ReadFile("./sampleConfig/opentelemetry/container_insights_config.yaml")
-	require.NoError(t, err)
-	require.NoError(t, yaml.Unmarshal(bs, &expected))
+			agent.Global_Config = *new(agent.Agent)
+			translator.SetTargetPlatform("linux")
+			var input interface{}
+			blob, err := os.ReadFile("./sampleConfig/opentelemetry/" + name + ".json")
+			require.NoError(t, err)
+			require.NoError(t, json.Unmarshal(blob, &input))
+			_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
 
-	var actual interface{}
-	cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
-	require.NoError(t, err)
-	yamlConfig, err := mapstructure.Marshal(cfg)
-	require.NoError(t, err)
-	yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
-	require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+			var expected interface{}
+			bs, err := os.ReadFile("./sampleConfig/opentelemetry/" + name + ".yaml")
+			require.NoError(t, err)
+			require.NoError(t, yaml.Unmarshal(bs, &expected))
 
-	opt := cmpopts.SortSlices(func(x, y interface{}) bool {
-		return pretty.Sprint(x) < pretty.Sprint(y)
-	})
-	require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+			var actual interface{}
+			cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+			require.NoError(t, err)
+			yamlConfig, err := mapstructure.Marshal(cfg)
+			require.NoError(t, err)
+			yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+			require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+			opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+				return pretty.Sprint(x) < pretty.Sprint(y)
+			})
+			require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+		})
+	}
 }
 
 func TestPrometheusOtelPipelineConfig(t *testing.T) {

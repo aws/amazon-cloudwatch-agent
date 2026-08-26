@@ -129,6 +129,7 @@ func TestComponents(t *testing.T) {
 		"nodemetadatacache",
 		"oidctoken",
 		"pprof",
+		"selftelemetry",
 		"server",
 		"sigv4auth",
 		"zpages",
