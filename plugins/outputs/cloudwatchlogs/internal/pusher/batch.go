@@ -129,6 +129,11 @@ type logEventBatch struct {
 	nextRetryTime   time.Time // When this batch should be retried next
 	expireAfter     time.Time // When this batch expires and should be dropped
 	lastError       error     // Last error encountered
+
+	// service is the client that first sent this batch. Retries must reuse it: the EMF
+	// x-amzn-logs-format header that switchToEMF installs is per-client state, so
+	// re-sending through the retry processor's own client would silently drop it.
+	service cloudWatchLogsService
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {

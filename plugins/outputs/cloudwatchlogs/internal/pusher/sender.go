@@ -65,8 +65,15 @@ func (s *sender) Send(batch *logEventBatch) {
 	batch.initializeStartTime()
 	input := batch.build()
 
+	// Pin the batch to the client that first sent it so retries keep any per-destination
+	// client state, then always send through that client.
+	if batch.service == nil {
+		batch.service = s.service
+	}
+	service := batch.service
+
 	for {
-		output, err := s.service.PutLogEvents(input)
+		output, err := service.PutLogEvents(input)
 		if err == nil {
 			if output.RejectedLogEventsInfo != nil {
 				info := output.RejectedLogEventsInfo
