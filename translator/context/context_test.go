@@ -20,6 +20,15 @@ func TestSetMode_Azure(t *testing.T) {
 	assert.Equal(t, config.ShortModeAzureVM, ctx.ShortMode())
 }
 
+func TestSetMode_GCE(t *testing.T) {
+	ResetContext()
+	ctx := CurrentContext()
+
+	ctx.SetMode(config.ModeGCE)
+	assert.Equal(t, config.ModeGCE, ctx.Mode())
+	assert.Equal(t, config.ShortModeGCE, ctx.ShortMode())
+}
+
 func TestSetMode_ExistingModesUnchanged(t *testing.T) {
 	cases := map[string]struct {
 		mode      string

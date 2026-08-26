@@ -295,9 +295,11 @@ func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
 		wantOIDC bool
 		wantErr  string
 	}{
-		// Azure VM/AKS reaches AWS only via the oidctoken web-identity chain, so role_arn is mandatory.
+		// Azure VM and GCE reach AWS only via the oidctoken web-identity chain, so role_arn is mandatory.
 		"AzureVMWithRoleARN":    {mode: config.ModeAzureVM, roleARN: "arn:aws:iam::123456789012:role/AzureVMRole", wantOIDC: true},
 		"AzureVMMissingRoleARN": {mode: config.ModeAzureVM, roleARN: "", wantErr: "role_arn is required"},
+		"GCEWithRoleARN":        {mode: config.ModeGCE, roleARN: "arn:aws:iam::123456789012:role/GCERole", wantOIDC: true},
+		"GCEMissingRoleARN":     {mode: config.ModeGCE, roleARN: "", wantErr: "role_arn is required"},
 		"EC2NoOIDC":             {mode: config.ModeEC2, roleARN: "", wantOIDC: false},
 	}
 

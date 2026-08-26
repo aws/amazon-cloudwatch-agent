@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/gcpdetector"
 )
 
 const (
@@ -34,6 +35,9 @@ var IsEKS = isEKS
 // IsAKS/IsAzureVM are overridable detection hooks; tests override these vars.
 var IsAKS = azuredetector.IsAKS
 var IsAzureVM = azuredetector.IsAzureVM
+
+// IsGCE is an overridable detection hook; tests override this var.
+var IsGCE = gcpdetector.IsGCE
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -68,10 +72,16 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeAzureVM
 	}
 
-	// Last resort: IMDS probe (~2s worst-case one-time cost on a black-holed host).
+	// Last resort for Azure: IMDS probe (~2s worst-case one-time cost on a black-holed host).
 	if IsAzureVM() {
 		fmt.Println("I! Detected the instance is Azure VM")
 		return config.ModeAzureVM
+	}
+
+	// GCP is checked after Azure: metadata-server probe (cached by the SDK).
+	if IsGCE() {
+		fmt.Println("I! Detected the instance is GCE")
+		return config.ModeGCE
 	}
 
 	fmt.Println("I! Detected the instance is OnPremise")

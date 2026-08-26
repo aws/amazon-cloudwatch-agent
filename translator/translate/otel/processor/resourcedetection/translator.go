@@ -34,6 +34,9 @@ var azureVMResourceDetectionConfig string
 //go:embed configs/aks_config.yaml
 var aksResourceDetectionConfig string
 
+//go:embed configs/gcp_config.yaml
+var gcpResourceDetectionConfig string
+
 type translator struct {
 	name    string
 	signal  pipeline.Signal
@@ -104,6 +107,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return common.GetYamlFileToYamlConfig(cfg, aksResourceDetectionConfig)
 	case config.ModeAzureVM:
 		return common.GetYamlFileToYamlConfig(cfg, azureVMResourceDetectionConfig)
+	case config.ModeGCE:
+		return common.GetYamlFileToYamlConfig(cfg, gcpResourceDetectionConfig)
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)
 	}

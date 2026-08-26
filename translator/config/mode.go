@@ -26,6 +26,11 @@ const (
 	ModeAKS     = "AKS"
 )
 
+// ModeGCE is the GCP host-level mode (like ModeEC2).
+const (
+	ModeGCE = "GCE"
+)
+
 const (
 	ShortModeEC2       = "EC2"
 	ShortModeOnPrem    = "OP"
@@ -35,4 +40,12 @@ const (
 	ShortModeK8sOnPrem = "K8OP"
 	ShortModeAzureVM   = "AZVM"
 	ShortModeAKS       = "AKS"
+	ShortModeGCE       = "GCE"
 )
+
+// ModeDefersRegion reports whether the mode has no AWS region source at translation time and instead resolves
+// the region from the AWS_REGION environment variable at runtime. This is true for non-AWS cloud hosts (Azure
+// VM, GCE), which have no AWS IMDS to detect a region from.
+func ModeDefersRegion(mode string) bool {
+	return mode == ModeAzureVM || mode == ModeGCE
+}

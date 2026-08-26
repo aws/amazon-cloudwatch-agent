@@ -34,3 +34,20 @@ func TestTranslator(t *testing.T) {
 	assert.Equal(t, paths.OIDCTokenPath, cfg.OutputTokenFile)
 	assert.NoError(t, cfg.Validate())
 }
+
+func TestTranslatorGCP(t *testing.T) {
+	t.Cleanup(context.ResetContext)
+	context.ResetContext()
+	context.CurrentContext().SetMode(config.ModeGCE)
+
+	tt := NewTranslator()
+	got, err := tt.Translate(confmap.New())
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	cfg, ok := got.(*oidctokenextension.Config)
+	require.True(t, ok)
+	assert.Equal(t, oidctokenextension.ProviderGCP, cfg.Provider)
+	assert.Equal(t, paths.OIDCTokenPath, cfg.OutputTokenFile)
+	assert.NoError(t, cfg.Validate())
+}
