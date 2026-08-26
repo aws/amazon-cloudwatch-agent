@@ -120,9 +120,9 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 	}
 
 	// Emit oidctoken only when a sigv4auth extension consumes it; that web-identity path needs role_arn.
-	if agent.IsAzureWebIdentity() && hasSigv4auth(pipelines.Translators.Extensions) {
+	if agent.RequiresOIDCToken() && hasSigv4auth(pipelines.Translators.Extensions) {
 		if agent.Global_Config.Role_arn == "" {
-			return nil, errors.New("credentials.role_arn is required on Azure VM for the oidctoken web-identity credential chain")
+			return nil, errors.New("credentials.role_arn is required on Azure VM / GCE for the oidctoken web-identity credential chain")
 		}
 		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
 	}

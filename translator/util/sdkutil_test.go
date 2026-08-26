@@ -17,9 +17,11 @@ import (
 func restoreDetectionHooks(t *testing.T) {
 	t.Helper()
 	origIsEKS, origIsAKS, origIsAzureVM := IsEKS, IsAKS, IsAzureVM
+	origIsGCE := IsGCE
 	origRunInAws, origEC2, origECS := runInAws, DefaultEC2Region, DefaultECSRegion
 	t.Cleanup(func() {
 		IsEKS, IsAKS, IsAzureVM = origIsEKS, origIsAKS, origIsAzureVM
+		IsGCE = origIsGCE
 		runInAws, DefaultEC2Region, DefaultECSRegion = origRunInAws, origEC2, origECS
 	})
 }
@@ -33,16 +35,20 @@ func TestDetectAgentModeAuto(t *testing.T) {
 		ecsRegion string
 		isAKS     bool
 		isAzureVM bool
+		isGCE     bool
 		wantMode  string
 	}{
-		// AWS detection must win: the Azure signals are intentionally true here and must NOT override it.
-		"WithRunInAWS":  {runInAws: config.RUN_IN_AWS_TRUE, isAKS: true, isAzureVM: true, wantMode: config.ModeEC2},
-		"WithEC2Region": {ec2Region: "us-east-1", isAKS: true, isAzureVM: true, wantMode: config.ModeEC2},
-		"WithECSRegion": {ecsRegion: "us-east-1", isAKS: true, isAzureVM: true, wantMode: config.ModeEC2},
+		// AWS detection must win: the Azure/GCP signals are intentionally true here and must NOT override it.
+		"WithRunInAWS":  {runInAws: config.RUN_IN_AWS_TRUE, isAKS: true, isAzureVM: true, isGCE: true, wantMode: config.ModeEC2},
+		"WithEC2Region": {ec2Region: "us-east-1", isAKS: true, isAzureVM: true, isGCE: true, wantMode: config.ModeEC2},
+		"WithECSRegion": {ecsRegion: "us-east-1", isAKS: true, isAzureVM: true, isGCE: true, wantMode: config.ModeEC2},
 		// AKS nodes are Azure VMs, so the host mode resolves to AzureVM.
-		"AzureHostWhenAKS":       {isAKS: true, isAzureVM: false, wantMode: config.ModeAzureVM},
-		"AzureVMWhenNoAWS":       {isAzureVM: true, wantMode: config.ModeAzureVM},
-		"OnPremWhenNoAWSNoAzure": {isAzureVM: false, wantMode: config.ModeOnPrem},
+		"AzureHostWhenAKS": {isAKS: true, isAzureVM: false, wantMode: config.ModeAzureVM},
+		"AzureVMWhenNoAWS": {isAzureVM: true, wantMode: config.ModeAzureVM},
+		"GCEWhenNoAWS":     {isGCE: true, wantMode: config.ModeGCE},
+		// Azure is probed before GCP, so it wins when both report true.
+		"AzureWinsOverGCP":       {isAzureVM: true, isGCE: true, wantMode: config.ModeAzureVM},
+		"OnPremWhenNoAWSNoCloud": {isAzureVM: false, isGCE: false, wantMode: config.ModeOnPrem},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -51,6 +57,7 @@ func TestDetectAgentModeAuto(t *testing.T) {
 			DefaultECSRegion = func() string { return testCase.ecsRegion }
 			IsAKS = func() bool { return testCase.isAKS }
 			IsAzureVM = func() bool { return testCase.isAzureVM }
+			IsGCE = func() bool { return testCase.isGCE }
 			require.Equal(t, testCase.wantMode, DetectAgentMode("auto"))
 		})
 	}

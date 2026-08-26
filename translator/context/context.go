@@ -132,8 +132,11 @@ func (ctx *Context) SetMode(mode string) {
 	case config.ModeAzureVM:
 		ctx.mode = config.ModeAzureVM
 		ctx.shortMode = config.ShortModeAzureVM
+	case config.ModeGCE:
+		ctx.mode = config.ModeGCE
+		ctx.shortMode = config.ShortModeGCE
 	default:
-		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s, %s, and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA, config.ModeAzureVM)
+		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s, %s, %s, and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA, config.ModeAzureVM, config.ModeGCE)
 	}
 }
 
