@@ -290,10 +290,11 @@ func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		mode     string
-		roleARN  string
-		wantOIDC bool
-		wantErr  string
+		mode           string
+		kubernetesMode string
+		roleARN        string
+		wantOIDC       bool
+		wantErr        string
 	}{
 		// Azure VM and GCE reach AWS only via the oidctoken web-identity chain, so role_arn is mandatory.
 		"AzureVMWithRoleARN":    {mode: config.ModeAzureVM, roleARN: "arn:aws:iam::123456789012:role/AzureVMRole", wantOIDC: true},
@@ -301,6 +302,10 @@ func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
 		"GCEWithRoleARN":        {mode: config.ModeGCE, roleARN: "arn:aws:iam::123456789012:role/GCERole", wantOIDC: true},
 		"GCEMissingRoleARN":     {mode: config.ModeGCE, roleARN: "", wantErr: "role_arn is required"},
 		"EC2NoOIDC":             {mode: config.ModeEC2, roleARN: "", wantOIDC: false},
+		// AKS and GKE use the chart's projected SA token (the default web-identity chain), not the oidctoken
+		// extension, so no oidctoken is emitted and role_arn is not required.
+		"AKSNoOIDC": {mode: config.ModeAzureVM, kubernetesMode: config.ModeAKS, roleARN: "", wantOIDC: false},
+		"GKENoOIDC": {mode: config.ModeGCE, kubernetesMode: config.ModeGKE, roleARN: "", wantOIDC: false},
 	}
 
 	for name, tc := range testCases {
@@ -308,6 +313,10 @@ func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
 			context.ResetContext()
 			t.Cleanup(context.ResetContext)
 			context.CurrentContext().SetMode(tc.mode)
+			if tc.kubernetesMode != "" {
+				context.CurrentContext().SetKubernetesMode(tc.kubernetesMode)
+				context.CurrentContext().SetRunInContainer(true)
+			}
 			agent.Global_Config.Region = "us-west-2"
 			agent.Global_Config.Role_arn = tc.roleARN
 			t.Cleanup(func() { agent.Global_Config.Region = ""; agent.Global_Config.Role_arn = "" })

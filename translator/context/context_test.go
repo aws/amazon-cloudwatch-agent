@@ -58,6 +58,15 @@ func TestSetKubernetesMode_AKS(t *testing.T) {
 	assert.Equal(t, config.ShortModeAKS, ctx.ShortMode())
 }
 
+func TestSetKubernetesMode_GKE(t *testing.T) {
+	ResetContext()
+	ctx := CurrentContext()
+
+	ctx.SetKubernetesMode(config.ModeGKE)
+	assert.Equal(t, config.ModeGKE, ctx.KubernetesMode())
+	assert.Equal(t, config.ShortModeGKE, ctx.ShortMode())
+}
+
 func TestSetKubernetesMode_ExistingModesUnchanged(t *testing.T) {
 	cases := map[string]struct {
 		mode      string

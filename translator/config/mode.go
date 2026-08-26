@@ -26,9 +26,10 @@ const (
 	ModeAKS     = "AKS"
 )
 
-// ModeGCE is the GCP host-level mode (like ModeEC2).
+// GCP platform modes: ModeGCE is host-level (like ModeEC2), ModeGKE is Kubernetes-level (like ModeEKS).
 const (
 	ModeGCE = "GCE"
+	ModeGKE = "GKE"
 )
 
 const (
@@ -41,6 +42,7 @@ const (
 	ShortModeAzureVM   = "AZVM"
 	ShortModeAKS       = "AKS"
 	ShortModeGCE       = "GCE"
+	ShortModeGKE       = "GKE"
 )
 
 // ModeDefersRegion reports whether the mode has no AWS region source at translation time and instead resolves
