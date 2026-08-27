@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 func TestBaseLogsTranslatorActivatedByContainerInsightsLogs(t *testing.T) {
@@ -217,6 +219,17 @@ func TestLogsClusterNameSkippedNonK8s(t *testing.T) {
 
 func TestBaseLogsTranslatorNoClusterName(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
+	// Force the ec2 tag lookup with no network to return no cluster name.
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tagutil.SetEC2APIProviderForTesting(func() interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	} {
+		return noTagsEC2Client{}
+	})
+	t.Cleanup(tagutil.ResetEC2APIProvider)
+	t.Cleanup(tagutil.ResetTagsCache)
+
 	tt := NewBaseLogsTranslator()
 
 	conf := confmap.NewFromStringMap(map[string]interface{}{
@@ -230,7 +243,6 @@ func TestBaseLogsTranslatorNoClusterName(t *testing.T) {
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
 
-	// Verify set_cluster_name processor is NOT present
 	keys := make([]string, 0, got.Processors.Len())
 	for _, k := range got.Processors.Keys() {
 		keys = append(keys, k.String())
