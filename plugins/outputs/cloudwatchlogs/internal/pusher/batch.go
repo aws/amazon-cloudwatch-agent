@@ -268,12 +268,15 @@ func (b *logEventBatch) resume() {
 // delivery (per-event LogEvent.Done plus the queue's success bookkeeping). The count of
 // dropped events is tracked so operators can monitor data loss (see droppedLogEvents).
 func (b *logEventBatch) drop() {
+	// Deferred so a panic in a state callback still clears the breaker: updateState runs
+	// arbitrary callbacks, and skipping resume() would wedge this target permanently.
+	defer b.resume()
+
 	dropped := int64(len(b.events))
 	droppedLogEvents.Add(dropped)
 	// Per-target visibility, matching the existing emfMetricDrop stat convention.
 	profiler.Profiler.AddStats([]string{"cloudwatchlogs", b.Group, "logEventsDropped"}, float64(dropped))
 	b.updateState()
-	b.resume()
 }
 
 // abandon finalizes a batch dropped for a transient reason, such as the retry heap

@@ -150,6 +150,8 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		select {
 		case <-s.stopCh:
+			// drop(), not abandon(): #1789 deliberately persists state here so the batch is
+			// not reprocessed after restart, trading loss for no duplication on shutdown.
 			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.drop()
 			return
