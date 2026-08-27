@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
+	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
 // M1 (swarm major): senderPool.Send submits sender.Send into the worker pool, and
@@ -69,6 +70,69 @@ type panicSender struct{}
 
 func (panicSender) Send(*logEventBatch) { panic("send boom") }
 func (panicSender) Stop()               {}
+
+// Iteration-3 major: AddEvent was made stop-aware but AddEventNonBlocking (the EMF path)
+// was not. startNonBlockCh is UNBUFFERED and its only receiver is the merge loop, which
+// exits on stopCh -- so the first EMF event published after shutdown blocks forever while
+// cwDest.Publish holds the destination lock, reinstating the deadlock on the EMF path.
+func TestAddEventNonBlockingIsStopAware(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var wg sync.WaitGroup
+	q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1},
+		time.Hour, nil, &stubSender{}, &wg)
+
+	q.Stop() // merge loop exits; nothing will ever receive on startNonBlockCh
+
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		q.AddEventNonBlocking(newStubLogEvent("MSG", time.Now()))
+	}()
+
+	select {
+	case <-returned:
+		// Returned: the EMF publish path cannot wedge shutdown.
+	case <-time.After(15 * time.Second):
+		t.Fatal("AddEventNonBlocking blocked after Stop: the unbuffered startNonBlockCh send " +
+			"has no receiver once the merge loop exits, so Publish wedges holding cd.Lock")
+	}
+}
+
+// Iteration-3 major: Submit holds stopLock.RLock while blocking on the task channel, and
+// Stop needs stopLock.Lock to close stopCh. The write lock waits for that reader, so Stop
+// can never release the blocked Submit -- the pool deadlocks on a saturated shutdown.
+func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
+	pool := NewWorkerPool(1) // tasks buffer = 2
+	release := make(chan struct{})
+
+	// Occupy the worker and fill the buffer.
+	pool.Submit(func() { <-release })
+	pool.Submit(func() { <-release })
+	pool.Submit(func() { <-release })
+
+	blocked := make(chan struct{})
+	go func() {
+		defer close(blocked)
+		pool.Submit(func() {}) // parks: worker busy and buffer full
+	}()
+	time.Sleep(200 * time.Millisecond) // let it park inside Submit
+
+	// Stop itself still waits on the deliberately-hung worker via wg.Wait(), which is
+	// correct. The property under test is that Stop RELEASES the parked Submit: pre-fix
+	// Submit held stopLock.RLock, so Stop could not take the write lock to close stopCh
+	// and the Submit was stuck forever.
+	go pool.Stop()
+
+	select {
+	case <-blocked:
+		// Submit returned once stopCh closed.
+	case <-time.After(15 * time.Second):
+		close(release)
+		t.Fatal("Stop() did not release the parked Submit: it held stopLock.RLock, so Stop's " +
+			"write lock could never be acquired to close stopCh")
+	}
+	close(release)
+}
 
 // M3 (swarm major): RetryHeapProcessor.Stop() flushes ready batches through
 // senderPool.Send -> workerPool.Submit, which blocks while the pool is saturated. The

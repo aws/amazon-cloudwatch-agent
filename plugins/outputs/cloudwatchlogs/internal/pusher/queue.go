@@ -106,7 +106,13 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 
 	q.initNonBlockingChOnce.Do(func() {
 		q.nonBlockingEventsCh = make(chan logs.LogEvent, reqEventsLimit*2)
-		q.startNonBlockCh <- struct{}{} // Unblock the select loop to recognize the channel merge
+		// Stop-aware: startNonBlockCh is unbuffered and its only receiver is the merge loop,
+		// which exits on stopCh. Without this, the first EMF event after shutdown blocks
+		// forever while cwDest.Publish holds the destination lock.
+		select {
+		case q.startNonBlockCh <- struct{}{}: // let the select loop pick up the merged channel
+		case <-q.stopCh:
+		}
 	})
 
 	// Drain the channel until new event can be added

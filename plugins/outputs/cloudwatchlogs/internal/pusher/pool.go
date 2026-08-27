@@ -21,7 +21,7 @@ type workerPool struct {
 	workerCount atomic.Int32
 	wg          sync.WaitGroup
 	stopCh      chan struct{}
-	stopLock    sync.RWMutex
+	stopOnce    sync.Once
 }
 
 // NewWorkerPool creates a pool of workers of the specified size.
@@ -49,8 +49,22 @@ func (p *workerPool) worker() {
 		p.workerCount.Add(-1)
 		p.wg.Done()
 	}()
-	for task := range p.tasks {
-		runTask(task)
+	for {
+		select {
+		case task := <-p.tasks:
+			runTask(task)
+		case <-p.stopCh:
+			// Drain what is already queued so a shutdown does not silently discard
+			// submitted sends, then exit.
+			for {
+				select {
+				case task := <-p.tasks:
+					runTask(task)
+				default:
+					return
+				}
+			}
+		}
 	}
 }
 
@@ -66,18 +80,15 @@ func runTask(task func()) {
 }
 
 // Submit adds a task to the pool. Blocks until a worker is available to receive the task or the pool is stopped.
+//
+// Deliberately lock-free: holding a read lock across this blocking send meant Stop's write
+// lock could never be acquired, so Stop could not close stopCh to release a Submit parked
+// on a saturated pool -- the pool deadlocked on shutdown. Safe without the lock because
+// Stop no longer closes p.tasks, only stopCh.
 func (p *workerPool) Submit(task func()) {
-	p.stopLock.RLock()
-	defer p.stopLock.RUnlock()
 	select {
+	case p.tasks <- task:
 	case <-p.stopCh:
-		return
-	default:
-		select {
-		case p.tasks <- task:
-		case <-p.stopCh:
-			return
-		}
 	}
 }
 
@@ -87,17 +98,14 @@ func (p *workerPool) WorkerCount() int32 {
 }
 
 // Stop closes the channels and waits for the workers to stop.
+// Stop signals the workers and waits for them to drain and exit. p.tasks is deliberately
+// NOT closed: a concurrent Submit would panic on a closed channel, and avoiding the close
+// is what lets Submit run lock-free.
 func (p *workerPool) Stop() {
-	p.stopLock.Lock()
-	defer p.stopLock.Unlock()
-	select {
-	case <-p.stopCh:
-		return
-	default:
+	p.stopOnce.Do(func() {
 		close(p.stopCh)
-		close(p.tasks)
 		p.wg.Wait()
-	}
+	})
 }
 
 // senderPool wraps a Sender with a WorkerPool for concurrent sending.
