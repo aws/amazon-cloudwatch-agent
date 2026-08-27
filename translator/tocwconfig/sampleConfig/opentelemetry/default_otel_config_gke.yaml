@@ -113,7 +113,7 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: AKS
+                mode: GKE
                 region_type: RNF
     agenthealth/opentelemetry_metrics:
         additional_auth: sigv4auth/monitoring
@@ -122,7 +122,7 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: AKS
+                mode: GKE
                 region_type: RNF
     agenthealth/opentelemetry_traces:
         additional_auth: sigv4auth/xray
@@ -131,7 +131,7 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: AKS
+                mode: GKE
                 region_type: RNF
     awscloudwatchlogsprovisioner:
         additional_auth: sigv4auth/logs
@@ -438,8 +438,7 @@ processors:
             token_file: ""
         detectors:
             - env
-            - aks
-            - azure
+            - gcp
         docker:
             resource_attributes:
                 host.name:

@@ -36,8 +36,9 @@ var IsEKS = isEKS
 var IsAKS = azuredetector.IsAKS
 var IsAzureVM = azuredetector.IsAzureVM
 
-// IsGCE is an overridable detection hook; tests override this var.
+// IsGCE/IsGKE are overridable detection hooks; tests override these vars.
 var IsGCE = gcpdetector.IsGCE
+var IsGKE = gcpdetector.IsGKE
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -99,6 +100,11 @@ func DetectKubernetesMode(configuredMode string) string {
 	// RUN_IN_AKS is an explicit env signal (no I/O), so short-circuit before the EKS in-cluster probe.
 	if IsAKS() {
 		return config.ModeAKS
+	}
+
+	// RUN_IN_GKE is likewise an explicit env signal (no I/O).
+	if IsGKE() {
+		return config.ModeGKE
 	}
 
 	isEKS := IsEKS()

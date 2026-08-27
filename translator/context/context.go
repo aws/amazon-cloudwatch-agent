@@ -154,6 +154,9 @@ func (ctx *Context) SetKubernetesMode(mode string) {
 	case config.ModeAKS:
 		ctx.kubernetesMode = config.ModeAKS
 		ctx.shortMode = config.ShortModeAKS
+	case config.ModeGKE:
+		ctx.kubernetesMode = config.ModeGKE
+		ctx.shortMode = config.ShortModeGKE
 	default:
 		ctx.kubernetesMode = ""
 	}

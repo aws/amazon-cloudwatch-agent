@@ -17,11 +17,11 @@ import (
 func restoreDetectionHooks(t *testing.T) {
 	t.Helper()
 	origIsEKS, origIsAKS, origIsAzureVM := IsEKS, IsAKS, IsAzureVM
-	origIsGCE := IsGCE
+	origIsGCE, origIsGKE := IsGCE, IsGKE
 	origRunInAws, origEC2, origECS := runInAws, DefaultEC2Region, DefaultECSRegion
 	t.Cleanup(func() {
 		IsEKS, IsAKS, IsAzureVM = origIsEKS, origIsAKS, origIsAzureVM
-		IsGCE = origIsGCE
+		IsGCE, IsGKE = origIsGCE, origIsGKE
 		runInAws, DefaultEC2Region, DefaultECSRegion = origRunInAws, origEC2, origECS
 	})
 }
@@ -70,17 +70,22 @@ func TestDetectKubernetesMode(t *testing.T) {
 		isEKS              bool
 		isEKSErr           error
 		isAKS              bool
+		isGKE              bool
 		configuredMode     string
 		wantKubernetesMode string
 	}{
-		"EKS":           {isEKS: true, isEKSErr: nil, isAKS: false, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeEKS},
-		"K8sEC2":        {isEKS: false, isEKSErr: nil, isAKS: false, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeK8sEC2},
-		"K8sOnPrem":     {isEKS: false, isEKSErr: nil, isAKS: false, configuredMode: config.ModeOnPrem, wantKubernetesMode: config.ModeK8sOnPrem},
-		"NotKubernetes": {isEKS: false, isEKSErr: fmt.Errorf("error"), isAKS: false, configuredMode: config.ModeEC2, wantKubernetesMode: ""},
+		"EKS":           {isEKS: true, isEKSErr: nil, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeEKS},
+		"K8sEC2":        {isEKS: false, isEKSErr: nil, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeK8sEC2},
+		"K8sOnPrem":     {isEKS: false, isEKSErr: nil, configuredMode: config.ModeOnPrem, wantKubernetesMode: config.ModeK8sOnPrem},
+		"NotKubernetes": {isEKS: false, isEKSErr: fmt.Errorf("error"), configuredMode: config.ModeEC2, wantKubernetesMode: ""},
 		// RUN_IN_AKS short-circuits to AKS without the EKS probe, regardless of what EKS detection would report.
 		"AKS":            {isEKS: false, isEKSErr: nil, isAKS: true, configuredMode: config.ModeAzureVM, wantKubernetesMode: config.ModeAKS},
 		"AKSWhenEKSErr":  {isEKS: false, isEKSErr: fmt.Errorf("error"), isAKS: true, configuredMode: config.ModeAzureVM, wantKubernetesMode: config.ModeAKS},
 		"AKSWinsOverEKS": {isEKS: true, isEKSErr: nil, isAKS: true, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeAKS},
+		// RUN_IN_GKE likewise short-circuits to GKE without the EKS probe.
+		"GKE":            {isEKS: false, isEKSErr: nil, isGKE: true, configuredMode: config.ModeGCE, wantKubernetesMode: config.ModeGKE},
+		"GKEWhenEKSErr":  {isEKS: false, isEKSErr: fmt.Errorf("error"), isGKE: true, configuredMode: config.ModeGCE, wantKubernetesMode: config.ModeGKE},
+		"GKEWinsOverEKS": {isEKS: true, isEKSErr: nil, isGKE: true, configuredMode: config.ModeEC2, wantKubernetesMode: config.ModeGKE},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -88,6 +93,7 @@ func TestDetectKubernetesMode(t *testing.T) {
 				return eksdetector.IsEKSCache{Value: testCase.isEKS, Err: testCase.isEKSErr}
 			}
 			IsAKS = func() bool { return testCase.isAKS }
+			IsGKE = func() bool { return testCase.isGKE }
 			require.Equal(t, testCase.wantKubernetesMode, DetectKubernetesMode(testCase.configuredMode))
 		})
 	}
