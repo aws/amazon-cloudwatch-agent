@@ -233,7 +233,15 @@ func (q *queue) manageFlushTimer() {
 	for {
 		select {
 		case <-q.flushTimer.C:
-			q.flushCh <- struct{}{}
+			// Stop-aware: start() is the only receiver, and it can be parked in
+			// waitIfHalted. A bare send would then block here and never observe stopCh,
+			// leaking this goroutine and its timer once start() returns.
+			select {
+			case q.flushCh <- struct{}{}:
+			case <-q.stopCh:
+				q.stopFlushTimer()
+				return
+			}
 		case <-q.resetTimerCh:
 			q.stopFlushTimer()
 			if flushTimeout, ok := q.flushTimeout.Load().(time.Duration); ok {

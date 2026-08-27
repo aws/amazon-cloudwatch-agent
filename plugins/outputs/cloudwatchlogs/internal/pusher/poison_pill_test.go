@@ -34,7 +34,7 @@ func TestRetryHeapProcessorDoesNotStarveAllowedTarget(t *testing.T) {
 
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
-	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
+	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
 	accessDeniedErr := &cloudwatchlogs.AccessDeniedException{
 		Message_: aws.String("User is not authorized to perform: logs:PutLogEvents with an explicit deny"),
@@ -172,7 +172,7 @@ func TestSingleDeniedLogGroup(t *testing.T) {
 
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
-	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
+	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
 	accessDeniedErr := &cloudwatchlogs.AccessDeniedException{
 		Message_: aws.String("Access denied"),

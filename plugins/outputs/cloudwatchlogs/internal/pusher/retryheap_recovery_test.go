@@ -41,7 +41,7 @@ func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
 	mockTargetManager := &mockTargetManager{}
-	mockTargetManager.On("EnsureTargetExists", mock.Anything).Return(nil)
+	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
 	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
 
