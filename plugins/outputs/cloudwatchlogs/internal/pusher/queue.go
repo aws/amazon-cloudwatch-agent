@@ -14,9 +14,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
-// maxHaltWait bounds how long a send waits on a halted circuit breaker. See waitIfHalted.
-const maxHaltWait = 5 * time.Second
-
 type Queue interface {
 	AddEvent(e logs.LogEvent)
 	AddEventNonBlocking(e logs.LogEvent)
@@ -39,6 +36,7 @@ type queue struct {
 	flushTimer   *time.Timer
 	flushTimeout atomic.Value
 	stopCh       chan struct{}
+	stopOnce     sync.Once
 	stopped      bool
 	lastSentTime atomic.Value
 
@@ -90,7 +88,12 @@ func (q *queue) AddEvent(e logs.LogEvent) {
 		q.logger.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", q.target.Group, q.target.Stream, e.Time(), time.Now())
 		return
 	}
-	q.eventsCh <- e
+	// Stop-aware: cwDest.Publish holds the destination lock across this call, so a producer
+	// that blocked here forever would keep cwDest.Stop from ever acquiring that lock.
+	select {
+	case q.eventsCh <- e:
+	case <-q.stopCh:
+	}
 }
 
 // AddEventNonBlocking adds an event to the queue without blocking. If the queue is full, drops the oldest event in
@@ -119,12 +122,13 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 }
 
 // Stop stops all goroutines associated with this queue instance.
+// Stop is idempotent: it is signalled once before destination locks are taken (see
+// cwDest.signalStop) and again on the normal Stop path.
 func (q *queue) Stop() {
-	if q.stopped {
-		return
-	}
-	close(q.stopCh)
-	q.stopped = true
+	q.stopOnce.Do(func() {
+		close(q.stopCh)
+		q.stopped = true
+	})
 }
 
 // start is the main loop for processing events and managing the queue.
@@ -268,13 +272,12 @@ func hasValidTime(e logs.LogEvent) bool {
 	return true
 }
 
-// waitIfHalted blocks until the queue is unhalted, stopped, or maxHaltWait elapses.
+// waitIfHalted blocks until the queue is unhalted or stopped.
 //
-// The timeout is load-bearing. An unbounded wait parks this send loop, which stops
-// draining eventsCh; once that fills, AddEvent blocks and cwDest.Publish blocks while
-// holding the destination lock, so cwDest.Stop can never acquire it to close stopCh --
-// deadlocking shutdown on a persistently failing target. Bounded, a broken target is
-// throttled to roughly one batch per interval instead of frozen.
+// Deliberately unbounded: this is the backpressure that keeps a broken target to roughly
+// one batch in flight, which is what bounds retry-heap memory. Timing it out would let a
+// permanently failing target push a fresh batch onto the unbounded heap every interval.
+// Shutdown liveness comes from stopCh instead -- see AddEvent and cwDest.signalStop.
 func (q *queue) waitIfHalted() {
 	q.haltMu.Lock()
 	if !q.halted {
@@ -283,12 +286,9 @@ func (q *queue) waitIfHalted() {
 	}
 	ch := q.haltCh
 	q.haltMu.Unlock()
-	timer := time.NewTimer(maxHaltWait)
-	defer timer.Stop()
 	select {
 	case <-ch:
 	case <-q.stopCh:
-	case <-timer.C:
 	}
 }
 

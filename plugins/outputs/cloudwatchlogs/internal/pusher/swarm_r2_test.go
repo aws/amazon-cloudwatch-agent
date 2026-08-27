@@ -38,6 +38,38 @@ func TestWorkerPoolSurvivesPanickingTask(t *testing.T) {
 			"panic is unrecovered and the agent process exits")
 }
 
+// Iteration-2 major: runTask's recover keeps the worker alive but has no access to the
+// batch, so a panic mid-send left the batch unfinalized -- breaker halted forever and file
+// offsets never advanced. senderPool.Send now recovers where the batch is in scope and
+// abandons it (clears the breaker, does NOT persist offsets).
+func TestSenderPoolAbandonsBatchOnPanic(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	pool := NewWorkerPool(1)
+	defer pool.Stop()
+
+	var resumed, stateRuns atomic.Int32
+	sp := newSenderPool(pool, panicSender{}, logger)
+
+	b := readyBatch("g", nil, func() { stateRuns.Add(1) })
+	b.addResumeCallback(func() { resumed.Add(1) })
+	sp.Send(b)
+
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) && resumed.Load() == 0 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	require.Equal(t, 1, int(resumed.Load()),
+		"a panic mid-send must still clear the target's circuit breaker via abandon()")
+	require.Zero(t, stateRuns.Load(),
+		"abandon() must NOT persist offsets: the events were never delivered")
+}
+
+// panicSender panics inside Send to simulate a panic in the API call or a callback.
+type panicSender struct{}
+
+func (panicSender) Send(*logEventBatch) { panic("send boom") }
+func (panicSender) Stop()               {}
+
 // M3 (swarm major): RetryHeapProcessor.Stop() flushes ready batches through
 // senderPool.Send -> workerPool.Submit, which blocks while the pool is saturated. The
 // pool is still running at that point (Close stops the processor BEFORE the pool), so

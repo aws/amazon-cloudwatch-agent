@@ -139,7 +139,7 @@ func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service c
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
 	sender := newSender(logger, service, targetManager, retryHeap)
-	senderPool := newSenderPool(workerPool, sender)
+	senderPool := newSenderPool(workerPool, sender, logger)
 
 	return &RetryHeapProcessor{
 		retryHeap:  retryHeap,

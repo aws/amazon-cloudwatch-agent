@@ -7,6 +7,8 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+
+	"github.com/influxdata/telegraf"
 )
 
 type WorkerPool interface {
@@ -102,20 +104,33 @@ func (p *workerPool) Stop() {
 type senderPool struct {
 	workerPool WorkerPool
 	sender     Sender
+	logger     telegraf.Logger
 }
 
 var _ Sender = (*senderPool)(nil)
 
-func newSenderPool(workerPool WorkerPool, sender Sender) Sender {
+func newSenderPool(workerPool WorkerPool, sender Sender, logger telegraf.Logger) Sender {
 	return &senderPool{
 		workerPool: workerPool,
 		sender:     sender,
+		logger:     logger,
 	}
 }
 
 // Send submits a send task to the worker pool.
 func (s *senderPool) Send(batch *logEventBatch) {
 	s.workerPool.Submit(func() {
+		// Recover here, where the batch is in scope, and abandon it. runTask's recover keeps
+		// the worker alive but cannot finalize the batch, which would leave the target's
+		// breaker halted and its file offsets never advanced. abandon() clears the breaker
+		// without persisting offsets, so the events are re-read after restart.
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.Errorf("Recovered from panic sending batch for %v/%v; abandoning it (will be re-read after restart): %v",
+					batch.Group, batch.Stream, r)
+				batch.abandon()
+			}
+		}()
 		s.sender.Send(batch)
 	})
 }

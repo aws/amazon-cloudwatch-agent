@@ -66,5 +66,5 @@ func createSender(
 	if workerPool == nil {
 		return s
 	}
-	return newSenderPool(workerPool, s)
+	return newSenderPool(workerPool, s, logger)
 }

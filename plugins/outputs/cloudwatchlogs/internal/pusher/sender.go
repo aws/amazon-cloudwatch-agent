@@ -5,6 +5,7 @@ package pusher
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -32,6 +33,7 @@ type sender struct {
 	logger        telegraf.Logger
 	stopCh        chan struct{}
 	stopped       bool
+	stopOnce      sync.Once
 	retryHeap     RetryHeap
 }
 
@@ -160,10 +162,11 @@ func (s *sender) Send(batch *logEventBatch) {
 	}
 }
 
+// Stop is idempotent: shutdown signals the pusher once before destination locks are taken
+// (see cwDest.signalStop) and again on the normal Stop path.
 func (s *sender) Stop() {
-	if s.stopped {
-		return
-	}
-	close(s.stopCh)
-	s.stopped = true
+	s.stopOnce.Do(func() {
+		close(s.stopCh)
+		s.stopped = true
+	})
 }

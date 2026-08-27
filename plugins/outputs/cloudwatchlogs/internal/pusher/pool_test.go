@@ -109,7 +109,7 @@ func TestSenderPool(t *testing.T) {
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
 	s := newSender(logger, mockService, nil, nil)
 	p := NewWorkerPool(12)
-	sp := newSenderPool(p, s)
+	sp := newSenderPool(p, s, testutil.NewNopLogger())
 
 	var completed atomic.Int32
 	var evts []*logEvent

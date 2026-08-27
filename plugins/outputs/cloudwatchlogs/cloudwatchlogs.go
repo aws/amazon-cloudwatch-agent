@@ -101,6 +101,16 @@ func (c *CloudWatchLogs) Close() error {
 	// 4. Stop WorkerPool (drain in-flight sends while the heap still accepts retries)
 	// 5. Stop RetryHeap (no more pushes accepted after this point)
 
+	// Signal the pushers BEFORE taking any destination lock. Publish holds cd.Lock across
+	// AddEvent, so a producer blocked on a halted target would otherwise keep d.Stop() from
+	// ever acquiring that lock -- and closing the queue's stopCh is what releases it.
+	c.cwDests.Range(func(_, value interface{}) bool {
+		if d, ok := value.(*cwDest); ok {
+			d.signalStop()
+		}
+		return true
+	})
+
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
 			d.Stop()
@@ -326,6 +336,13 @@ func (cd *cwDest) Stop() {
 	cd.Lock()
 	defer cd.Unlock()
 	cd.stop()
+}
+
+// signalStop stops the pusher WITHOUT taking the destination lock, releasing any Publish
+// blocked in AddEvent so the subsequent locked Stop() can proceed. Pusher.Stop is
+// idempotent, so the normal stop path still runs it.
+func (cd *cwDest) signalStop() {
+	cd.pusher.Stop()
 }
 
 func (cd *cwDest) stop() {
