@@ -44,6 +44,24 @@ func (h *retryHeapImpl) Pop() interface{} {
 // stopFlushTimeout bounds the shutdown flush so a saturated worker pool cannot hang Stop.
 const stopFlushTimeout = 5 * time.Second
 
+// stopWaitTimeout bounds the wait for the process loop, which may be parked in Submit.
+const stopWaitTimeout = 5 * time.Second
+
+// waitTimeout reports whether wg finished within d.
+func waitTimeout(wg *sync.WaitGroup, d time.Duration) bool {
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return true
+	case <-time.After(d):
+		return false
+	}
+}
+
 // RetryHeap manages failed batches during their retry wait periods
 type RetryHeap interface {
 	Push(batch *logEventBatch) error
@@ -180,7 +198,15 @@ func (p *RetryHeapProcessor) Stop() {
 		// that window parks the loop on the lock, so it never observes stopCh.
 		p.stopped.Store(true)
 		close(p.stopCh)
-		p.wg.Wait()
+
+		// Bounded too: processLoop may already be parked in workerPool.Submit on a saturated
+		// pool, and the plugin stops that pool only AFTER this returns, so an unbounded wait
+		// deadlocks. Returning lets Close reach workerPool.Stop, which releases the Submit;
+		// the loop then observes stopCh and exits.
+		if !waitTimeout(&p.wg, stopWaitTimeout) {
+			p.logger.Warnf("Retry-heap process loop still running after %v; continuing shutdown "+
+				"(it exits once the worker pool is stopped)", stopWaitTimeout)
+		}
 
 		// Downstream stops only once the producer loop is confirmed dead.
 		if p.retryer != nil {

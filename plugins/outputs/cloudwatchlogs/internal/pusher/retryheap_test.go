@@ -472,3 +472,41 @@ func TestRetryHeapProcessorStopDoesNotBlockOnSaturatedPool(t *testing.T) {
 	close(release)
 	wg.Wait()
 }
+
+// Stop must not hang when the periodic processLoop is already parked inside
+// workerPool.Submit on a saturated pool. Stop's own flush is time-bounded, but wg.Wait()
+// waits for processLoop, and the plugin stops the worker pool only AFTER this returns
+// (cloudwatchlogs.go: processor at :124, pool at :128) -- so nothing releases that Submit.
+func TestProcessorStopWhenProcessLoopBlockedInSubmit(t *testing.T) {
+	logger := &testutil.Logger{}
+	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+
+	pool := NewWorkerPool(1) // task buffer = 2
+	defer pool.Stop()
+	release := make(chan struct{})
+	pool.Submit(func() { <-release }) // occupy the worker
+	pool.Submit(func() { <-release }) // fill buffer
+	pool.Submit(func() { <-release }) // fill buffer
+
+	heap := NewRetryHeap(logger)
+	defer heap.Stop()
+	p := NewRetryHeapProcessor(heap, pool, svc, NewTargetManager(logger, svc), logger, nil)
+	require.NoError(t, heap.Push(readyBatch("g", nil, nil)))
+
+	p.Start()
+	time.Sleep(500 * time.Millisecond) // let a tick park processLoop inside Submit
+
+	stopped := make(chan struct{})
+	go func() { p.Stop(); close(stopped) }()
+
+	select {
+	case <-stopped:
+	case <-time.After(25 * time.Second):
+		close(release)
+		t.Fatal("RetryHeapProcessor.Stop() hung: processLoop is parked in workerPool.Submit " +
+			"and the pool is only stopped after Stop() returns, so nothing releases it")
+	}
+	close(release)
+}
