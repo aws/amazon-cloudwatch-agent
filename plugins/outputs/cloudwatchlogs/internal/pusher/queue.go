@@ -14,6 +14,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
+// maxHaltWait bounds how long a send waits on a halted circuit breaker. See waitIfHalted.
+const maxHaltWait = 5 * time.Second
+
 type Queue interface {
 	AddEvent(e logs.LogEvent)
 	AddEventNonBlocking(e logs.LogEvent)
@@ -265,7 +268,13 @@ func hasValidTime(e logs.LogEvent) bool {
 	return true
 }
 
-// waitIfHalted blocks until the queue is unhalted or stopped.
+// waitIfHalted blocks until the queue is unhalted, stopped, or maxHaltWait elapses.
+//
+// The timeout is load-bearing. An unbounded wait parks this send loop, which stops
+// draining eventsCh; once that fills, AddEvent blocks and cwDest.Publish blocks while
+// holding the destination lock, so cwDest.Stop can never acquire it to close stopCh --
+// deadlocking shutdown on a persistently failing target. Bounded, a broken target is
+// throttled to roughly one batch per interval instead of frozen.
 func (q *queue) waitIfHalted() {
 	q.haltMu.Lock()
 	if !q.halted {
@@ -274,9 +283,12 @@ func (q *queue) waitIfHalted() {
 	}
 	ch := q.haltCh
 	q.haltMu.Unlock()
+	timer := time.NewTimer(maxHaltWait)
+	defer timer.Stop()
 	select {
 	case <-ch:
 	case <-q.stopCh:
+	case <-timer.C:
 	}
 }
 

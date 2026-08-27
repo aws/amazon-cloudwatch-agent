@@ -41,6 +41,9 @@ func (h *retryHeapImpl) Pop() interface{} {
 	return item
 }
 
+// stopFlushTimeout bounds the shutdown flush so a saturated worker pool cannot hang Stop.
+const stopFlushTimeout = 5 * time.Second
+
 // RetryHeap manages failed batches during their retry wait periods
 type RetryHeap interface {
 	Push(batch *logEventBatch) error
@@ -156,8 +159,21 @@ func (p *RetryHeapProcessor) Start() {
 // Stop stops the retry heap processor
 func (p *RetryHeapProcessor) Stop() {
 	p.stopOnce.Do(func() {
-		// Flush remaining ready batches before marking as stopped.
-		p.flushReadyBatches()
+		// Best-effort flush of remaining ready batches, but bounded: the flush submits into
+		// the worker pool, which blocks while the pool is saturated. The pool is stopped
+		// after this processor, and Submit falls through on the pool's stopCh, so a flush
+		// still in flight unblocks there instead of hanging shutdown here.
+		flushed := make(chan struct{})
+		go func() {
+			defer close(flushed)
+			p.flushReadyBatches()
+		}()
+		select {
+		case <-flushed:
+		case <-time.After(stopFlushTimeout):
+			p.logger.Warnf("Retry-heap flush did not finish within %v; continuing shutdown "+
+				"(unflushed batches are re-read after restart)", stopFlushTimeout)
+		}
 
 		// Release the process loop BEFORE waiting on it. Holding a lock that
 		// processReadyMessages also takes across wg.Wait() deadlocks: a tick landing in

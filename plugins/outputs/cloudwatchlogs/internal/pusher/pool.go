@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -47,8 +48,19 @@ func (p *workerPool) worker() {
 		p.wg.Done()
 	}()
 	for task := range p.tasks {
-		task()
+		runTask(task)
 	}
+}
+
+// runTask isolates a panic to the one task that raised it. Sends run here, so without
+// this an unrecovered panic in a worker goroutine terminates the whole agent process.
+func runTask(task func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("E! [cloudwatchlogs] Recovered from panic in worker task: %v", r)
+		}
+	}()
+	task()
 }
 
 // Submit adds a task to the pool. Blocks until a worker is available to receive the task or the pool is stopped.
