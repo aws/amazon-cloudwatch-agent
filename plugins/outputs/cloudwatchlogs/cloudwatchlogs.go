@@ -118,6 +118,9 @@ func (c *CloudWatchLogs) Close() error {
 		return true
 	})
 
+	// Deliberately unbounded. A queue send parked in workerPool.Submit is released when the
+	// pool is stopped below; bounding here would only move the wait to workerPool.Stop, which
+	// must wait for in-flight sends anyway. See the shutdown note in pool.go.
 	c.pusherWaitGroup.Wait()
 
 	if c.retryHeapProcessor != nil {

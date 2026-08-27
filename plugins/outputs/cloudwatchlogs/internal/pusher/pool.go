@@ -111,6 +111,12 @@ func (p *workerPool) WorkerCount() int32 {
 // Stop signals the workers and waits for them to drain and exit. p.tasks is deliberately
 // NOT closed: a concurrent Submit would panic on a closed channel, and avoiding the close
 // is what lets Submit run lock-free.
+//
+// This wait is unbounded by design, and it is the one place shutdown genuinely blocks on
+// in-flight work: a worker mid-PutLogEvents must be allowed to finish. Callers upstream
+// (pusherWaitGroup.Wait) therefore do not bound their own waits either -- doing so only
+// relocates the wait here. A worker that never returns (an HTTP call that never times out)
+// would stall shutdown; that is bounded in practice by the client's timeouts, not by us.
 func (p *workerPool) Stop() {
 	p.stopOnce.Do(func() {
 		p.stopping.Store(true) // stop accepting before signalling, so Submit answers definitively
