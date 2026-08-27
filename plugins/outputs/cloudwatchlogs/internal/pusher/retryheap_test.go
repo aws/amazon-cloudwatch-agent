@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
@@ -319,4 +321,154 @@ func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
 
 	// Verify processor is marked as stopped
 	assert.True(t, processor.stopped.Load())
+}
+
+// RetryHeapProcessor.Stop() takes stopMu with a deferred Unlock and holds it
+// across wg.Wait(). processLoop's ticker path calls processReadyMessages(), which takes
+// the same stopMu. If a tick lands while Stop() holds the lock, processLoop never returns
+// to its select, never observes stopCh, and never calls wg.Done() -- so Stop() waits
+// forever holding the lock processLoop needs.
+//
+// The window is made deterministic here: Stop() flushes while holding the lock, and the
+// flush blocks in workerPool.Submit until the test releases the sends.
+func TestRetryHeapProcessorStopDoesNotDeadlock(t *testing.T) {
+	logger := &testutil.Logger{}
+
+	release := make(chan struct{})
+	var inFlight atomic.Int32
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		inFlight.Add(1)
+		<-release
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+
+	workerPool := NewWorkerPool(1) // 1 worker + task buffer 2 -> Submit blocks on the 4th batch
+	retryHeap := NewRetryHeap(logger)
+
+	// Saturate the pool first: the processor's own ticker drains these and parks on release.
+	for i := 0; i < 3; i++ {
+		require.NoError(t, retryHeap.Push(readyBatch("g", nil, nil)))
+	}
+
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p.Start()
+	require.Eventually(t, func() bool { return inFlight.Load() > 0 }, 5*time.Second, 10*time.Millisecond,
+		"test setup: expected the worker pool to be saturated")
+
+	// Now give Stop()'s own flush something to do, so IT is the caller that blocks in
+	// Submit while holding stopMu (the tick path releases stopMu before flushing).
+	for i := 0; i < 5; i++ {
+		require.NoError(t, retryHeap.Push(readyBatch("g", nil, nil)))
+	}
+
+	stopped := make(chan struct{})
+	go func() { p.Stop(); close(stopped) }()
+
+	// Stop() is now blocked inside flushReadyBatches -> Submit while holding stopMu.
+	// Give the 100ms ticker time to fire and park processLoop on the same lock.
+	time.Sleep(400 * time.Millisecond)
+	close(release)
+
+	select {
+	case <-stopped:
+	case <-time.After(15 * time.Second):
+		t.Fatal("Stop() deadlocked: stopMu is held across wg.Wait() while processLoop's " +
+			"ticker path blocks acquiring the same stopMu")
+	}
+	workerPool.Stop()
+}
+
+// N1: Stop() must be idempotent and safe under concurrent callers. The fix replaced a mutex
+// with sync.Once; a regression here would double-close stopCh and panic.
+func TestProcessorStopIsIdempotentAndConcurrencySafe(t *testing.T) {
+	logger := &testutil.Logger{}
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+	workerPool := NewWorkerPool(2)
+	defer workerPool.Stop()
+	retryHeap := NewRetryHeap(logger)
+
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p.Start()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() { defer wg.Done(); p.Stop() }()
+	}
+	finished := make(chan struct{})
+	go func() { wg.Wait(); close(finished) }()
+
+	select {
+	case <-finished:
+	case <-time.After(20 * time.Second):
+		t.Fatal("concurrent Stop() calls deadlocked")
+	}
+	assert.True(t, p.stopped.Load(), "processor should be marked stopped")
+	p.Stop() // once more, after the fact
+}
+
+// N2: pushing to a closed heap must fail cleanly so the caller can abandon rather than block
+// or panic. This is the path sender.Send() takes during shutdown.
+func TestHeapPushAfterStopFailsCleanly(t *testing.T) {
+	logger := &testutil.Logger{}
+	h := NewRetryHeap(logger)
+	require.NoError(t, h.Push(readyBatch("g", nil, nil)))
+	h.Stop()
+
+	err := h.Push(readyBatch("g", nil, nil))
+	require.Error(t, err, "push after Stop must report failure, not silently succeed")
+	assert.Contains(t, err.Error(), "stopped")
+	h.Stop() // idempotent
+}
+
+// RetryHeapProcessor.Stop() flushes ready batches through
+// senderPool.Send -> workerPool.Submit, which blocks while the pool is saturated. The
+// pool is still running at that point (Close stops the processor BEFORE the pool), so
+// Submit has no stopCh to fall through and shutdown can hang unbounded.
+func TestRetryHeapProcessorStopDoesNotBlockOnSaturatedPool(t *testing.T) {
+	logger := &testutil.Logger{}
+	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+
+	pool := NewWorkerPool(1) // tasks buffer = size*2 = 2
+	defer pool.Stop()
+
+	// Occupy the single worker and fill the task buffer so any further Submit blocks.
+	release := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	pool.Submit(func() { defer wg.Done(); <-release })
+	pool.Submit(func() { <-release })
+	pool.Submit(func() { <-release })
+
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Stop()
+	p := NewRetryHeapProcessor(retryHeap, pool, svc, NewTargetManager(logger, svc), logger, nil)
+
+	// Ready batches force Stop()'s flush to Submit into the saturated pool.
+	for i := 0; i < 3; i++ {
+		require.NoError(t, retryHeap.Push(readyBatch("g", nil, nil)))
+	}
+
+	stopped := make(chan struct{})
+	go func() {
+		p.Stop()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+		// Stop returned: shutdown is bounded even with a saturated pool.
+	case <-time.After(20 * time.Second):
+		close(release)
+		wg.Wait()
+		t.Fatal("RetryHeapProcessor.Stop() blocked >20s flushing into a saturated worker " +
+			"pool; shutdown must be bounded")
+	}
+
+	close(release)
+	wg.Wait()
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
@@ -226,4 +227,89 @@ func createBatch(target Target, eventCount int) *logEventBatch {
 		}
 	}
 	return batch
+}
+
+// N6: every target failing at once must not deadlock or grow without bound.
+func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
+	logger := &testutil.Logger{}
+	var calls atomic.Int32
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		calls.Add(1)
+		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+	})
+	workerPool := NewWorkerPool(4)
+	retryHeap := NewRetryHeap(logger)
+	tm := NewTargetManager(logger, service)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	p.Start()
+
+	var wg sync.WaitGroup
+	pushers := make([]*Pusher, 0, 6)
+	for i := 0; i < 6; i++ {
+		grp := "failing-" + string(rune('a'+i))
+		pushers = append(pushers, NewPusher(logger, Target{Group: grp, Stream: "s"}, service, tm, nil,
+			workerPool, 20*time.Millisecond, &wg, retryHeap))
+	}
+	for _, ps := range pushers {
+		for i := 0; i < 10; i++ {
+			ps.AddEvent(newStubLogEvent("fail", time.Now()))
+		}
+	}
+	require.Eventually(t, func() bool { return calls.Load() > 0 }, 10*time.Second, 50*time.Millisecond)
+	time.Sleep(2 * time.Second)
+
+	// breaker caps each failing target at roughly one in-flight batch
+	assert.LessOrEqual(t, retryHeap.Size(), 24, "heap grew beyond one batch per target: %d", retryHeap.Size())
+
+	done := make(chan struct{})
+	go func() {
+		for _, ps := range pushers {
+			ps.Stop()
+		}
+		p.Stop()
+		workerPool.Stop()
+		retryHeap.Stop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(40 * time.Second):
+		t.Fatal("shutdown deadlocked with all targets failing")
+	}
+}
+
+// N7: destinations churning while the service throttles exercises the #2190 seam -- the
+// TargetManager's shared retryer must outlive individual destination stops.
+func TestChurnWhileThrottledDoesNotWedge(t *testing.T) {
+	logger := &testutil.Logger{}
+	var calls atomic.Int32
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		if calls.Add(1)%3 == 0 {
+			return &cloudwatchlogs.PutLogEventsOutput{}, nil
+		}
+		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+	})
+	workerPool := NewWorkerPool(4)
+	retryHeap := NewRetryHeap(logger)
+	tm := NewTargetManager(logger, service)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	p.Start()
+
+	var wg sync.WaitGroup
+	for round := 0; round < 8; round++ {
+		grp := "churn-" + string(rune('a'+round))
+		ps := NewPusher(logger, Target{Group: grp, Stream: "s"}, service, tm, nil,
+			workerPool, 20*time.Millisecond, &wg, retryHeap)
+		ps.AddEvent(newStubLogEvent("churn", time.Now()))
+		time.Sleep(120 * time.Millisecond)
+		ps.Stop() // destination goes away mid-flight
+	}
+
+	// the shared TargetManager must still work after all those stops
+	require.NoError(t, tm.InitTarget(Target{Group: "after-churn", Stream: "s"}),
+		"TargetManager broke after destination churn: the #2190 shared retryer was tied to a stopped dest")
+
+	p.Stop()
+	workerPool.Stop()
+	retryHeap.Stop()
 }

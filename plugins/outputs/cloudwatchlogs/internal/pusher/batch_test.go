@@ -5,16 +5,19 @@ package pusher
 
 import (
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 type mockEntityProvider struct {
@@ -469,4 +472,120 @@ func TestBatchInitializeStartTimeIdempotent(t *testing.T) {
 	batch.initializeStartTime()
 	assert.Equal(t, firstStartTime, batch.startTime, "startTime should not change on third call")
 	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on third call")
+}
+
+// A batch dropped because the retry heap is already stopped (shutdown in
+// progress) must not fire done callbacks. done() runs updateState() AND every
+// doneCallback -- per-event LogEvent.Done() plus the queue's onSuccessCallback -- which
+// marks never-delivered events as delivered and advances file offsets past them, so the
+// events are neither shipped nor re-read after restart.
+func TestHeapStoppedDropDoesNotSignalSuccess(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, &cloudwatchlogs.ServiceUnavailableException{}
+	})
+
+	retryHeap := NewRetryHeap(logger)
+	retryHeap.Stop() // shutdown already closed the heap
+
+	var delivered, offsetsAdvanced atomic.Int32
+	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsetsAdvanced.Add(1) })
+
+	newSender(logger, service, NewTargetManager(logger, service), retryHeap).Send(batch)
+
+	assert.Zero(t, delivered.Load(),
+		"undelivered batch dropped at shutdown fired done callbacks: events are reported delivered")
+	assert.Zero(t, offsetsAdvanced.Load(),
+		"undelivered batch dropped at shutdown advanced file offsets: events are lost across restart")
+}
+
+// Second site: the same false-success signal on the expired-batch drop
+// inside flushReadyBatches. Expiry is a permanent give-up, so offsets SHOULD advance --
+// but done callbacks must not fire, because nothing was delivered.
+func TestExpiredBatchDropDoesNotSignalSuccess(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+
+	workerPool := NewWorkerPool(1)
+	defer workerPool.Stop()
+	retryHeap := NewRetryHeap(logger)
+
+	var delivered, offsetsAdvanced atomic.Int32
+	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsetsAdvanced.Add(1) })
+	batch.expireAfter = time.Now().Add(-time.Hour) // already past its expiry window
+	require.NoError(t, retryHeap.Push(batch))
+
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p.flushReadyBatches()
+
+	require.True(t, batch.isExpired(), "test setup: batch must be expired to exercise the drop path")
+	assert.Zero(t, delivered.Load(),
+		"expired batch fired done callbacks: never-delivered events are reported delivered")
+	assert.Equal(t, int32(1), offsetsAdvanced.Load(),
+		"expired batch is a permanent give-up, so offsets should advance exactly once")
+}
+
+// drop() must track undelivered events via an atomic counter so
+// data loss is observable. Every event in a dropped batch counts.
+func TestDropIncrementsDroppedLogEvents(t *testing.T) {
+	before := DroppedLogEvents()
+
+	b := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
+	b.append(newLogEvent(time.Now(), "a", func() {}))
+	b.append(newLogEvent(time.Now(), "b", func() {}))
+	b.drop()
+
+	require.Equal(t, before+2, DroppedLogEvents(),
+		"drop() must add every undelivered event in the batch to the dropped counter")
+}
+
+// N5: a permanently invalid batch must advance offsets so it is not re-read forever (its own
+// poison pill), while still clearing the breaker.
+func TestInvalidBatchAdvancesOffsetsAndResumes(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, &cloudwatchlogs.InvalidParameterException{}
+	})
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Stop()
+
+	var delivered, offsets, resumed atomic.Int32
+	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsets.Add(1) })
+	batch.addResumeCallback(func() { resumed.Add(1) })
+
+	newSender(logger, service, NewTargetManager(logger, service), retryHeap).Send(batch)
+
+	assert.Zero(t, delivered.Load(), "an invalid batch was never delivered")
+	assert.Equal(t, int32(1), offsets.Load(), "offsets must advance so the batch is not re-read forever")
+	assert.Equal(t, int32(1), resumed.Load(), "the circuit breaker must be cleared")
+}
+
+// drop() runs updateState() BEFORE resume(). A panic raised by a state
+// callback therefore skips resume(), leaving that target's circuit breaker latched forever.
+// The per-batch recover added for the retry heap stops one panic from stranding OTHER
+// batches, but it does not un-wedge the panicking batch's own target.
+func TestPanicInStateCallbackStillClearsCircuitBreaker(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var resumed atomic.Int32
+
+	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+	workerPool := NewWorkerPool(1)
+	defer workerPool.Stop()
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Stop()
+	p := NewRetryHeapProcessor(retryHeap, workerPool, svc, NewTargetManager(logger, svc), logger, nil)
+
+	b := readyBatch("g", nil, func() { panic("state callback boom") })
+	b.addResumeCallback(func() { resumed.Add(1) })
+	b.expireAfter = time.Now().Add(-time.Hour) // force the expired -> drop() path
+	require.NoError(t, retryHeap.Push(b))
+
+	require.NotPanics(t, func() { p.processReadyMessages() })
+	require.Equal(t, 1, int(resumed.Load()),
+		"a panic in a state callback must still clear the target's circuit breaker, "+
+			"otherwise that log group is permanently wedged")
 }

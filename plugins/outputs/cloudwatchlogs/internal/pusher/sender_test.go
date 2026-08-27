@@ -5,6 +5,7 @@ package pusher
 
 import (
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -342,4 +344,44 @@ func TestSenderConcurrencyFallbackToSync(t *testing.T) {
 
 	assert.True(t, doneCalled, "Done callback should be called")
 	mockService.AssertExpectations(t)
+}
+
+// NOT A BUG -- intentional upstream behaviour. On the synchronous path
+// (concurrency <= 1, retryHeap == nil) a send interrupted by shutdown calls batch.drop(),
+// persisting file offsets for events that never reached CloudWatch.
+//
+// This looks like the data loss abandon() was introduced to prevent, but it is deliberate:
+// commit 2da9c430 ("Update state when batch dropped", #1789) added batch.updateState() to
+// exactly this stop path, stating the goal is "to prevent reprocessing the same batch after
+// restart" -- upstream chose loss over duplication here. sender_test.go's
+// TestSender/StopChannelClosed asserts the state callback DOES run on stop.
+//
+// Changing it would reverse #1789, so this test pins the intentional behavior instead. If
+// the trade is ever revisited, this is the test to flip (with #1789's owner in the loop).
+func TestSynchronousShutdownPersistsOffsetsByDesign(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var stateRuns, doneRuns atomic.Int32
+
+	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, awserr.New("OperationAbortedException", "forced by test", nil)
+	})
+	// nil retryHeap => synchronous sleep-retry path.
+	s := newSender(logger, svc, NewTargetManager(logger, svc), nil)
+
+	b := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
+	b.append(newLogEvent(time.Now(), "payload", func() { doneRuns.Add(1) }))
+	b.addStateCallback(func() { stateRuns.Add(1) })
+
+	// Interrupt while the sender is parked in its backoff select.
+	go func() {
+		time.Sleep(75 * time.Millisecond)
+		s.Stop()
+	}()
+	s.Send(b)
+
+	require.Zero(t, doneRuns.Load(),
+		"shutdown must never report undelivered events as delivered")
+	require.Equal(t, 1, int(stateRuns.Load()),
+		"offsets ARE persisted on synchronous shutdown, by #1789's design; flipping this "+
+			"assertion means deliberately reversing that trade")
 }

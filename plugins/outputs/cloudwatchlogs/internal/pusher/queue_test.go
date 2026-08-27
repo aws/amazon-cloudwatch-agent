@@ -976,3 +976,30 @@ func TestQueueStopWhileHalted(t *testing.T) {
 		t.Fatal("Stop() deadlocked on halted queue")
 	}
 }
+
+// AddEvent was made stop-aware but AddEventNonBlocking (the EMF path)
+// was not. startNonBlockCh is UNBUFFERED and its only receiver is the merge loop, which
+// exits on stopCh -- so the first EMF event published after shutdown blocks forever while
+// cwDest.Publish holds the destination lock, reinstating the deadlock on the EMF path.
+func TestAddEventNonBlockingIsStopAware(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var wg sync.WaitGroup
+	q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1},
+		time.Hour, nil, &stubSender{}, &wg)
+
+	q.Stop() // merge loop exits; nothing will ever receive on startNonBlockCh
+
+	returned := make(chan struct{})
+	go func() {
+		defer close(returned)
+		q.AddEventNonBlocking(newStubLogEvent("MSG", time.Now()))
+	}()
+
+	select {
+	case <-returned:
+		// Returned: the EMF publish path cannot wedge shutdown.
+	case <-time.After(15 * time.Second):
+		t.Fatal("AddEventNonBlocking blocked after Stop: the unbuffered startNonBlockCh send " +
+			"has no receiver once the merge loop exits, so Publish wedges holding cd.Lock")
+	}
+}

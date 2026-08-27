@@ -210,3 +210,22 @@ func TestRetryWaitLong(t *testing.T) {
 		})
 	}
 }
+
+// P9: main's caller-supplied retryDuration was replaced by a fixed ceiling when the RetryHeap
+// landed (pool.go lost SetRetryDuration/RetryDuration). Verify the ceiling is actually applied,
+// since nothing else now bounds how long a batch is retried.
+func TestRetryCeilingIsApplied(t *testing.T) {
+	b := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
+	b.append(newLogEvent(time.Now(), "payload", func() {}))
+
+	require.True(t, b.expireAfter.IsZero(), "expiry should not be set before the first send")
+	b.initializeStartTime()
+	require.False(t, b.expireAfter.IsZero(), "expiry must be stamped on the first send")
+
+	assert.Equal(t, maxRetryTimeout, b.expireAfter.Sub(b.startTime),
+		"retry ceiling must equal maxRetryTimeout now that retryDuration is gone")
+	assert.False(t, b.isExpired(), "a fresh batch must not be expired")
+
+	b.expireAfter = time.Now().Add(-time.Second)
+	assert.True(t, b.isExpired(), "a batch past its ceiling must expire")
+}

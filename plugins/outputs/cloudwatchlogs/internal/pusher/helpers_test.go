@@ -1,0 +1,54 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package pusher
+
+import (
+	"sync/atomic"
+	"time"
+
+	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+)
+
+func okStubService(ple func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)) *stubLogsService {
+	return &stubLogsService{
+		ple: ple,
+		cls: func(*cloudwatchlogs.CreateLogStreamInput) (*cloudwatchlogs.CreateLogStreamOutput, error) {
+			return &cloudwatchlogs.CreateLogStreamOutput{}, nil
+		},
+		clg: func(*cloudwatchlogs.CreateLogGroupInput) (*cloudwatchlogs.CreateLogGroupOutput, error) {
+			return &cloudwatchlogs.CreateLogGroupOutput{}, nil
+		},
+		dlg: func(*cloudwatchlogs.DescribeLogGroupsInput) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
+			return &cloudwatchlogs.DescribeLogGroupsOutput{}, nil
+		},
+	}
+}
+
+// readyBatch returns a batch already past its retry time so PopReady picks it up.
+func readyBatch(group string, done, state func()) *logEventBatch {
+	b := newLogEventBatch(Target{Group: group, Stream: "stream"}, nil)
+	b.append(newLogEvent(time.Now(), "payload", func() {}))
+	if done != nil {
+		b.addDoneCallback(done)
+	}
+	if state != nil {
+		b.addStateCallback(state)
+	}
+	b.nextRetryTime = time.Now().Add(-time.Second)
+	return b
+}
+
+// stubSender is a no-op Sender for breaker-level tests.
+type stubSender struct{ sent atomic.Int32 }
+
+func (s *stubSender) Send(*logEventBatch) { s.sent.Add(1) }
+
+func (s *stubSender) Stop() {}
+
+// panicSender panics inside Send to simulate a panic in the API call or a callback.
+type panicSender struct{}
+
+func (panicSender) Send(*logEventBatch) { panic("send boom") }
+
+func (panicSender) Stop() {}

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal"
@@ -21,7 +22,48 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
-// C1 (swarm critical): a persistently failing target latches the per-target circuit
+// Shutdown must never acknowledge events that were never delivered -- finding #4's
+// abandon()/drop() semantics at plugin scope. Every send fails, so Close() finalizes in-flight
+// batches through those paths rather than done().
+//
+// SCOPE LIMIT: this does NOT verify the Close() ordering (processor -> pool -> heap). Established
+// by mutation testing -- reverting to the pre-fix order still passes, because at Close() time the
+// batch is mid-backoff, the final flush finds nothing ready, and no push-against-a-closed-heap
+// occurs. The ordering only matters when a batch is ready for retry at the exact instant of
+// shutdown, and that state cannot be forced from this package (logEventBatch is unexported in
+// pusher). The ordering change is defense-in-depth with no automated coverage.
+func TestCloseDoesNotAckUndeliveredEvents(t *testing.T) {
+	var puts atomic.Int32
+	srv := cwlServer(&puts, "ServiceUnavailableException") // every send fails
+	defer srv.Close()
+
+	c := newPlugin(srv.URL, 4)
+	dest := c.CreateDest("G", "S", -1, util.StandardLogGroupClass, nil)
+
+	var doneCount atomic.Int32
+	events := make([]logs.LogEvent, 0, 20)
+	for i := 0; i < 20; i++ {
+		events = append(events, &countingEvent{msg: "undelivered", ts: time.Now(), done: &doneCount})
+	}
+	require.NoError(t, dest.Publish(events))
+
+	require.Eventually(t, func() bool { return puts.Load() > 0 }, 10*time.Second, 50*time.Millisecond,
+		"test setup: expected at least one failed send attempt")
+
+	closed := make(chan struct{})
+	go func() { c.Close(); close(closed) }()
+	select {
+	case <-closed:
+	case <-time.After(30 * time.Second):
+		t.Fatal("Close() hung: shutdown ordering regression")
+	}
+
+	assert.Zero(t, doneCount.Load(),
+		"Close() acknowledged %d events that never reached CloudWatch -- file offsets would "+
+			"advance past them and they would be lost across restart", doneCount.Load())
+}
+
+// A persistently failing target latches the per-target circuit
 // breaker, which parks the queue's send loop in waitIfHalted. That loop drains eventsCh,
 // so eventsCh (cap 100) fills, AddEvent's blocking send blocks, and Publish blocks while
 // holding cd.Lock(). Close() -> cwDest.Stop() then needs the same cd.Lock(), so it can
