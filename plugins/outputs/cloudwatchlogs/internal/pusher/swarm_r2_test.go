@@ -134,6 +134,34 @@ func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
 	close(release)
 }
 
+// Iteration-4 major: Submit's select is random when stopCh is closed AND the task buffer
+// still has room, so a task could be enqueued after Stop and never run -- leaving its
+// batch unfinalized (breaker halted, offsets never advanced). Submit must answer
+// definitively so senderPool can abandon the batch instead.
+func TestSubmitRejectsAfterStopAndSenderPoolAbandons(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	pool := NewWorkerPool(2) // buffer has room, so the race is reachable
+	pool.Stop()
+
+	// Submit must refuse deterministically, even with buffer space free.
+	for i := 0; i < 50; i++ {
+		require.False(t, pool.Submit(func() {}),
+			"Submit must refuse tasks once the pool is stopping, even with buffer room")
+	}
+
+	// And senderPool must finalize the batch it could not hand off.
+	var resumed, stateRuns atomic.Int32
+	sp := newSenderPool(pool, &stubSender{}, logger)
+	b := readyBatch("g", nil, func() { stateRuns.Add(1) })
+	b.addResumeCallback(func() { resumed.Add(1) })
+	sp.Send(b)
+
+	require.Equal(t, 1, int(resumed.Load()),
+		"a batch that could not be submitted must be abandoned so the breaker clears")
+	require.Zero(t, stateRuns.Load(),
+		"abandon() must not persist offsets for events that were never sent")
+}
+
 // M3 (swarm major): RetryHeapProcessor.Stop() flushes ready batches through
 // senderPool.Send -> workerPool.Submit, which blocks while the pool is saturated. The
 // pool is still running at that point (Close stops the processor BEFORE the pool), so

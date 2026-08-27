@@ -12,7 +12,9 @@ import (
 )
 
 type WorkerPool interface {
-	Submit(task func())
+	// Submit reports whether the task was accepted. False means the pool is shutting down
+	// and the task will never run, so the caller must finalize whatever it owns.
+	Submit(task func()) bool
 	Stop()
 }
 
@@ -22,6 +24,7 @@ type workerPool struct {
 	wg          sync.WaitGroup
 	stopCh      chan struct{}
 	stopOnce    sync.Once
+	stopping    atomic.Bool
 }
 
 // NewWorkerPool creates a pool of workers of the specified size.
@@ -85,10 +88,17 @@ func runTask(task func()) {
 // lock could never be acquired, so Stop could not close stopCh to release a Submit parked
 // on a saturated pool -- the pool deadlocked on shutdown. Safe without the lock because
 // Stop no longer closes p.tasks, only stopCh.
-func (p *workerPool) Submit(task func()) {
+func (p *workerPool) Submit(task func()) bool {
+	// Check stopping first: select is random when both cases are ready, so without this a
+	// task could be enqueued after Stop and never run, leaving its batch unfinalized.
+	if p.stopping.Load() {
+		return false
+	}
 	select {
 	case p.tasks <- task:
+		return true
 	case <-p.stopCh:
+		return false
 	}
 }
 
@@ -103,6 +113,7 @@ func (p *workerPool) WorkerCount() int32 {
 // is what lets Submit run lock-free.
 func (p *workerPool) Stop() {
 	p.stopOnce.Do(func() {
+		p.stopping.Store(true) // stop accepting before signalling, so Submit answers definitively
 		close(p.stopCh)
 		p.wg.Wait()
 	})
@@ -127,7 +138,7 @@ func newSenderPool(workerPool WorkerPool, sender Sender, logger telegraf.Logger)
 
 // Send submits a send task to the worker pool.
 func (s *senderPool) Send(batch *logEventBatch) {
-	s.workerPool.Submit(func() {
+	accepted := s.workerPool.Submit(func() {
 		// Recover here, where the batch is in scope, and abandon it. runTask's recover keeps
 		// the worker alive but cannot finalize the batch, which would leave the target's
 		// breaker halted and its file offsets never advanced. abandon() clears the breaker
@@ -141,6 +152,13 @@ func (s *senderPool) Send(batch *logEventBatch) {
 		}()
 		s.sender.Send(batch)
 	})
+	if !accepted {
+		// The pool is shutting down and will never run this task, so finalize the batch here
+		// rather than leaving the target's breaker halted with its offsets never advanced.
+		s.logger.Warnf("Worker pool stopped, abandoning batch for %v/%v (will be re-read after restart)",
+			batch.Group, batch.Stream)
+		batch.abandon()
+	}
 }
 
 func (s *senderPool) Stop() {
