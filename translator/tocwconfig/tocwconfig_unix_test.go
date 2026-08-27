@@ -265,8 +265,35 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
-	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.conf")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_k8s.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.yaml")
+}
+
+func TestDefaultOtelConfigGKETranslation(t *testing.T) {
+	resetContext(t)
+	t.Cleanup(func() { resetContext(t) })
+	// GKE nodes are GCE VMs, so DetectAgentMode resolves host mode to GCE; mirror that here.
+	context.CurrentContext().SetMode(config.ModeGCE)
+	context.CurrentContext().SetKubernetesMode(config.ModeGKE)
+	context.CurrentContext().SetRunInContainer(true)
+	// container_insights has no cluster_name in the default config, so it falls
+	// back to the K8S_CLUSTER_NAME env var (there is no EC2 tagger on GCP).
+	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
+	// No AWS region source exists on GCP at translation time, so region
+	// detection returns empty and the translator falls back to ${AWS_REGION}.
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "", ""
+	}
+
+	cfg, ok := config.DefaultJSONConfigFor("otel", true, false)
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_k8s.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_gke.yaml")
 }
 
 func TestDefaultOtelConfigGCETranslation(t *testing.T) {

@@ -107,7 +107,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return common.GetYamlFileToYamlConfig(cfg, aksResourceDetectionConfig)
 	case config.ModeAzureVM:
 		return common.GetYamlFileToYamlConfig(cfg, azureVMResourceDetectionConfig)
-	case config.ModeGCE:
+	case config.ModeGCE, config.ModeGKE:
 		return common.GetYamlFileToYamlConfig(cfg, gcpResourceDetectionConfig)
 	default:
 		return common.GetYamlFileToYamlConfig(cfg, appSignalsDefaultResourceDetectionConfig)

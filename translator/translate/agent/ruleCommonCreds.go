@@ -68,10 +68,10 @@ func IsAzureWebIdentity() bool {
 	return ctx.Mode() == config.ModeAzureVM && ctx.KubernetesMode() != config.ModeAKS && !HasSharedCredentials()
 }
 
-// IsGCPWebIdentity reports whether the oidctoken metadata web-identity chain applies: a GCE instance with no common-config credentials.
+// IsGCPWebIdentity reports whether the oidctoken metadata web-identity chain applies: a plain GCE instance (not GKE, which uses the chart's projected SA token) with no common-config credentials.
 func IsGCPWebIdentity() bool {
 	ctx := context.CurrentContext()
-	return ctx.Mode() == config.ModeGCE && !HasSharedCredentials()
+	return ctx.Mode() == config.ModeGCE && ctx.KubernetesMode() != config.ModeGKE && !HasSharedCredentials()
 }
 
 // RequiresOIDCToken reports whether the oidctoken extension is needed to source a web-identity token from a cloud metadata server (Azure VM or GCE).
