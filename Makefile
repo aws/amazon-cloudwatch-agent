@@ -178,7 +178,7 @@ install-goimports:
 	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
 
 install-shfmt:
-	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@latest
+	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.0
 
 install-impi:
 	GOBIN=$(TOOLS_BIN_DIR) go install github.com/pavius/impi/cmd/impi@v0.0.3
