@@ -421,3 +421,50 @@ func TestResolveK8sIdentityConfig(t *testing.T) {
 	assert.NotContains(t, got, "%CLUSTER_NAME%")
 	assert.Contains(t, got, `"^MC_(.+)_my_cluster_[^_]+$"`, "cluster name must be injected into the regex literal")
 }
+
+// TestFallbackIdentityConfig asserts the on-prem / fallback identity defaults the environment to
+// generic:default and never builds a cloud.resource_id (there is no cloud identity on-prem).
+func TestFallbackIdentityConfig(t *testing.T) {
+	assert.Contains(t, transformIdentityFallbackConfig,
+		`set(resource.attributes["deployment.environment.name"], "generic:default")`,
+		"fallback identity must default deployment.environment.name to generic:default")
+	assert.Contains(t, transformIdentityFallbackConfig,
+		`set(resource.attributes["service.name"], "unknown_service")`,
+		"fallback identity must still set the default service.name")
+	assert.NotContains(t, transformIdentityFallbackConfig, "cloud.resource_id",
+		"on-prem has no cloud identity, so the fallback must not build a cloud.resource_id")
+}
+
+// TestIdentityConfigSelectionByMode asserts the host-mode switch routes on-prem (and any unrecognized
+// mode) to the fallback identity, while EC2 keeps its dedicated identity with the EC2 ARN.
+func TestIdentityConfigSelectionByMode(t *testing.T) {
+	ctx := translatorcontext.CurrentContext()
+	origMode, origK8sMode := ctx.Mode(), ctx.KubernetesMode()
+	t.Cleanup(func() {
+		ctx.SetMode(origMode)
+		ctx.SetKubernetesMode(origK8sMode)
+	})
+	ctx.SetKubernetesMode("")
+
+	transl := NewTranslatorWithName(common.Identity).(*translator)
+	conf := confmap.New()
+
+	ctx.SetMode(translatorconfig.ModeOnPremise)
+	cfg, err := transl.Translate(conf)
+	require.NoError(t, err)
+	onprem, ok := cfg.(*transformprocessor.Config)
+	require.True(t, ok)
+	require.NotEmpty(t, onprem.MetricStatements)
+	onpremStmts := strings.Join(onprem.MetricStatements[0].Statements, "\n")
+	assert.Contains(t, onpremStmts, `"generic:default"`, "on-prem must fall back to generic:default")
+	assert.NotContains(t, onpremStmts, "cloud.resource_id", "on-prem fallback must not build a cloud.resource_id")
+
+	ctx.SetMode(translatorconfig.ModeEC2)
+	cfg, err = transl.Translate(conf)
+	require.NoError(t, err)
+	ec2, ok := cfg.(*transformprocessor.Config)
+	require.True(t, ok)
+	require.NotEmpty(t, ec2.MetricStatements)
+	ec2Stmts := strings.Join(ec2.MetricStatements[0].Statements, "\n")
+	assert.Contains(t, ec2Stmts, "arn:aws:ec2", "EC2 must keep its dedicated identity with the EC2 ARN")
+}
