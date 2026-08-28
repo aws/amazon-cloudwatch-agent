@@ -152,7 +152,7 @@ func (ct *ConfigTranslator) Translate() (err error) {
 	}
 
 	envConfigPath := filepath.Join(tomlConfigDir, envConfigFileName)
-	cmdutil.TranslateJsonMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
+	cmdutil.TranslateJSONMapToEnvConfigFile(mergedJSONConfigMap, envConfigPath)
 
 	return nil
 }

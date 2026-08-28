@@ -35,10 +35,12 @@ func TestComponents(t *testing.T) {
 		"nop",
 		"otlp",
 		"prometheus",
+		"postgresql",
 		"statsd",
 		"systemmetrics",
 		"tcplog",
 		"udplog",
+		"windowseventlog",
 		"zipkin",
 	}
 	gotReceivers := collections.MapSlice(maps.Keys(factories.Receivers), component.Type.String)
@@ -102,7 +104,11 @@ func TestComponents(t *testing.T) {
 	}
 
 	wantConnectors := []string{
+		"count",
+		"forward",
 		"routing",
+		"signaltometrics",
+		"spanmetrics",
 	}
 	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
 	assert.Equal(t, len(wantConnectors), len(gotConnectors))
@@ -121,7 +127,9 @@ func TestComponents(t *testing.T) {
 		"health_check",
 		"k8smetadata",
 		"nodemetadatacache",
+		"oidctoken",
 		"pprof",
+		"selftelemetry",
 		"server",
 		"sigv4auth",
 		"zpages",

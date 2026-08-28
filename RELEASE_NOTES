@@ -1,4 +1,50 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300072.0 (2026-08-11)
+========================================================================
+New Features:
+* [DatabaseInsights] Enable PostgreSQL execution plan collection
+* [DatabaseInsights] Add workload detection for PostgreSQL database servers
+
+Enhancements:
+* [ApplicationSignals] Preserve jvm.gc.name attribute in GC runtime metrics to differentiate collector types
+* [DatabaseInsights] Split PostgreSQL per-resource metrics to a dedicated 60s receiver to reduce collection overhead
+* [OpenTelemetry] Update OTel fork components
+* [Agent] Bump grpc and golang.org/x/net dependencies
+
+Bug Fixes:
+* [Agent] Fix AKS cloud.resource_id derivation to use the cluster resource group
+
+========================================================================
+Amazon CloudWatch Agent 1.300071.0 (2026-07-22)
+========================================================================
+New Features:
+* [OpenTelemetry] Add file tailing and Windows Events support
+* [OpenTelemetry] Add resource_attributes support
+* [Agent] Add set-env ctl action to persist agent environment variables
+* [Agent] Add platform-aware default configs for OpenTelemetry (host, Kubernetes, ECS)
+* [Agent] Add Microsoft Azure support for VMs and AKS
+
+Enhancements:
+* [OpenTelemetry] Add root-level cluster_name and standardize collection_interval
+* [Agent] Retain custom environment variables in env-config.json between translation
+
+Bug Fixes:
+* [DatabaseInsights] Add severity parsing and fix multiline/timestamp for PostgreSQL server logs
+* [Logs] Fix throttling deadlock in cloudwatchlogs output plugin when destinations are removed
+* [Logs] Fix force-flush timer permanently stalling on low-volume log streams
+
+========================================================================
+Amazon CloudWatch Agent 1.300070.0 (2026-06-19)
+========================================================================
+New Features:
+* [Logs] Add journald log collection support
+* [OpenTelemetry] Add new opentelemetry section in JSON configuration to support sending telemetry to CloudWatch OTLP endpoints
+* [DatabaseInsights] Add support for self-managed PostgreSQL metrics and logs collection
+
+Bug Fixes:
+* [ApplicationSignals] Fix Service Events logs and metrics pipelines to use shared AWS credential chain
+
+========================================================================
 Amazon CloudWatch Agent 1.300069.0 (2026-05-28)
 ========================================================================
 Enhancements:

@@ -14,6 +14,9 @@
     },
     "traces": {
       "$ref": "#/definitions/tracesDefinition"
+    },
+    "opentelemetry": {
+      "$ref": "#/definitions/opentelemetryDefinition"
     }
   },
   "additionalProperties": true,
@@ -22,6 +25,10 @@
       "type": "object",
       "description": "General configuration for Amazon CloudWatch Agent",
       "properties": {
+        "self_telemetry": {
+          "description": "Serves the agent's own metrics on a loopback prometheus endpoint for a prometheus receiver on the same host to scrape",
+          "$ref": "#/definitions/selfTelemetryDefinition"
+        },
         "metrics_collection_interval": {
           "description": "How often the metrics defined will be collected",
           "$ref": "#/definitions/timeIntervalDefinition"
@@ -1424,7 +1431,10 @@
         "role_arn": {
           "description": "The target IAM role with which agent can access aws resources",
           "type": "string",
-          "minLength": 20,
+          "anyOf": [
+            { "minLength": 20 },
+            { "pattern": "^\\$\\{.+\\}$" }
+          ],
           "maxLength": 2048
         }
       },
@@ -1796,6 +1806,312 @@
           "additionalProperties": false
         }
       }
+    },
+    "selfTelemetryDefinition": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "port": {
+          "description": "Loopback port to bind. The endpoint is always on 127.0.0.1",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false
+    },
+    "opentelemetryDefinition": {
+      "type": "object",
+      "properties": {
+        "cluster_name": {
+          "description": "The name of the K8s cluster. Applied to all telemetry collected under opentelemetry.",
+          "type": "string"
+        },
+        "resource_attributes": {
+          "type": "object",
+          "description": "Additional resource attributes to add to every metric, log, and trace exported by the opentelemetry section. Applied via a resource processor at the front of each export pipeline. Attributes are added before resource detection, so for keys the agent auto-detects (e.g. cloud.region, host.id, cloud.provider) the detected value takes precedence over the configured one; use this for attributes the agent does not detect. Keys managed internally for log routing (aws.log.group.name, aws.log.stream.name, aws.log.source) are reserved and rejected.",
+          "maxProperties": 30,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "collect": {
+          "type": "object",
+          "properties": {
+            "watch_replicaset": {
+              "description": "Whether to watch ReplicaSets cluster-wide to attribute pods to their Deployment (sets k8s.deployment.name) for the k8sattributes enrichment shared by all opentelemetry.collect pipelines. Set to false to stop the ReplicaSet watch without enabling Container Insights; k8s.replicaset.name is unaffected. Default true.",
+              "type": "boolean"
+            },
+            "database_insights": {
+              "type": "object",
+              "properties": {
+                "postgresql": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": { "type": "string" },
+                      "instance_name": { "type": "string" },
+                      "username": { "type": "string" },
+                      "password_file": { "type": "string" },
+                      "ca_file": { "type": "string" },
+                      "per_resource_collection_interval": {
+                        "description": "How often per-resource (table/index) metrics are collected, in seconds. Defaults to 60 if omitted.",
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "logs": {
+                        "type": "object",
+                        "properties": {
+                          "file_path": { "type": "string" }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": ["endpoint", "instance_name", "username", "password_file"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "host_metrics": {
+              "type": "object",
+              "properties": {
+                "collection_interval": {
+                  "description": "How often the metrics defined will be collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                }
+              },
+              "additionalProperties": false
+            },
+            "container_insights": {
+              "type": "object",
+              "properties": {
+                "collection_interval": {
+                  "description": "How often metrics are collected",
+                  "$ref": "#/definitions/timeIntervalDefinition"
+                },
+                "role": {
+                  "description": "Pipeline role: node (daemonset), cluster (deployment). If omitted, falls back to CWAGENT_ROLE env var",
+                  "type": "string",
+                  "enum": ["node", "cluster"]
+                },
+                "watch_replicaset": {
+                  "description": "Whether to watch ReplicaSets cluster-wide to attribute pods to their Deployment (sets k8s.deployment.name). Set to false to stop the ReplicaSet watch; k8s.replicaset.name is unaffected. Default true.",
+                  "type": "boolean"
+                },
+                "logs": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Whether to collect container and host logs",
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "solutions": {
+                  "description": "Optional add-on solution scrapers for Karpenter and KEDA operator metrics",
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Master toggle for all solutions (default: true); overrides individual solution enabled flags, false disables all",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "karpenter": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape Karpenter metrics (default: true)",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "namespace": {
+                          "description": "Namespace where the Karpenter operator runs (default: kube-system)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "keda": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape KEDA operator metrics (default: true).",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "namespace": {
+                          "description": "Namespace where the KEDA operator runs (default: keda)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "prometheus": {
+              "type": "object",
+              "properties": {
+                "config_path": {
+                  "description": "Path to the Prometheus scrape configuration file",
+                  "type": "string"
+                }
+              },
+              "required": ["config_path"],
+              "additionalProperties": false
+            },
+            "otlp": {
+              "type": "object",
+              "properties": {
+                "grpc_endpoint": {
+                  "description": "OTLP gRPC receiver endpoint",
+                  "type": "string"
+                },
+                "http_endpoint": {
+                  "description": "OTLP HTTP receiver endpoint",
+                  "type": "string"
+                },
+                "span_metrics_enabled": {
+                  "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "windows_events": {
+              "type": "object",
+              "properties": {
+                "collect_list": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "event_name": {
+                        "description": "The Windows Event Log channel to collect from",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "event_levels": {
+                        "description": "Event severity levels to collect",
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": ["CRITICAL", "ERROR", "WARNING", "INFORMATION", "VERBOSE"]
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "event_ids": {
+                        "description": "Specific event IDs to collect",
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 65535
+                        },
+                        "minItems": 1,
+                        "uniqueItems": true
+                      },
+                      "event_format": {
+                        "description": "Output format: xml (raw XML) or text (structured)",
+                        "type": "string",
+                        "enum": ["text", "xml"]
+                      },
+                      "log_group_name": {
+                        "description": "CloudWatch Logs group name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "log_stream_name": {
+                        "description": "CloudWatch Logs stream name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      }
+                    },
+                    "required": ["event_name"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["collect_list"],
+              "additionalProperties": false
+            },
+            "files": {
+              "type": "object",
+              "properties": {
+                "collect_list": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "file_path": {
+                        "description": "File path or glob pattern to tail",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      },
+                      "log_group_name": {
+                        "description": "CloudWatch Logs group name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "log_stream_name": {
+                        "description": "CloudWatch Logs stream name override",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 512
+                      },
+                      "multi_line_start_pattern": {
+                        "description": "Regex pattern that marks the start of a new log entry. Use {timestamp_format} to derive from timestamp_format.",
+                        "type": "string"
+                      },
+                      "timestamp_format": {
+                        "description": "Strftime format for parsing timestamps from log lines (e.g. %Y-%m-%d %H:%M:%S)",
+                        "type": "string"
+                      },
+                      "timezone": {
+                        "description": "Timezone for timestamp parsing",
+                        "type": "string",
+                        "enum": ["UTC", "Local", "LOCAL"]
+                      },
+                      "encoding": {
+                        "description": "File encoding (default: utf-8)",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["file_path"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["collect_list"],
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

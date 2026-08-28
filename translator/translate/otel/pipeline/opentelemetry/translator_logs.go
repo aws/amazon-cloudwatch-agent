@@ -1,0 +1,156 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package opentelemetry
+
+import (
+	"fmt"
+	"runtime"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
+	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/pipeline"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awscloudwatchlogsprovisioner"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	ci "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/containerinsights"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributestocontext"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
+)
+
+type baseLogsTranslator struct{}
+
+var _ common.PipelineTranslator = (*baseLogsTranslator)(nil)
+
+func NewBaseLogsTranslator() common.PipelineTranslator {
+	return &baseLogsTranslator{}
+}
+
+func (t *baseLogsTranslator) ID() pipeline.ID {
+	return pipeline.NewIDWithName(pipeline.SignalLogs, common.OpenTelemetryKey)
+}
+
+// otelLogsKeys are the config keys that activate the base opentelemetry logs pipeline.
+var otelLogsKeys = []string{
+	common.OtelCollectLogsConfigKey,
+	common.DatabaseInsightsConfigKey,
+	common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey),
+	common.FilesConfigKey,
+}
+
+func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	// Container Insights node-role logs forward into this pipeline, so activate it.
+	ciLogsEnabled := ci.NodeLogsEnabled(conf)
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil && !ciLogsEnabled {
+		return nil, err
+	}
+
+	region := agent.Global_Config.Region
+	if region == "" {
+		return nil, fmt.Errorf("region is required for %s logs pipeline", common.OpenTelemetryKey)
+	}
+
+	logsEndpoint := common.ServiceEndpoint("logs", region, "/v1/logs")
+
+	// Extensions
+	sigv4Ext := sigv4auth.NewTranslatorWithService("logs")
+	provisionerExt := awscloudwatchlogsprovisioner.NewTranslator(sigv4Ext.ID())
+	headersExt := headerssetter.NewTranslatorWithName("logs",
+		headerssetter.WithAdditionalAuth(provisionerExt.ID()),
+		headerssetter.WithHeaders([]headerssetter.HeaderMapping{
+			{HeaderName: "x-aws-log-group", ContextKey: "aws.log.group.name"},
+			{HeaderName: "x-aws-log-stream", ContextKey: "aws.log.stream.name"},
+		}),
+	)
+
+	// Connector
+	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
+
+	// Agent health
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelLogsName, []string{"*"}, agenthealth.WithAdditionalAuth(headersExt.ID()))
+
+	// Processors
+	attrCtx := attributestocontext.NewTranslatorWithName(common.OpenTelemetryKey, []attributestocontextprocessor.ActionKeyValue{
+		{Key: "aws.log.group.name", FromResourceAttribute: "aws.log.group.name"},
+		{Key: "aws.log.stream.name", FromResourceAttribute: "aws.log.stream.name"},
+	})
+	cleanupStmts := []string{
+		`delete_key(resource.attributes, "aws.log.group.name")`,
+		`delete_key(resource.attributes, "aws.log.stream.name")`,
+		`delete_key(resource.attributes, "aws.log.source")`,
+	}
+	if runtime.GOOS == "windows" && conf != nil && conf.IsSet(common.WindowsEventsConfigKey) {
+		cleanupStmts = append(cleanupStmts, `delete_key(resource.attributes, "aws.log.channel")`)
+	}
+	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
+		transformprocessor.WithLogResourceStatements(cleanupStmts),
+	)
+	batch := batchprocessor.NewTranslator(
+		common.WithName("opentelemetry_logs"),
+		batchprocessor.WithSendBatchSize(common.MaxLogsPerRequest),
+		batchprocessor.WithSendBatchMaxSize(common.MaxLogsPerRequest),
+		batchprocessor.WithTimeout(common.BatchTimeout),
+		batchprocessor.WithMetadataKeys([]string{"aws.log.group.name", "aws.log.stream.name"}),
+	)
+
+	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)
+	logsRouting := transformprocessor.NewTranslatorWithName(common.LogsRouting)
+
+	processors := common.NewTranslatorMap[component.Config, component.ID]()
+	if resourceAttrs := resourceAttributesProcessor(conf); resourceAttrs != nil {
+		processors.Set(resourceAttrs)
+	}
+	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
+	if context.CurrentContext().KubernetesMode() != "" {
+		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
+		// Apply root-level cluster name if set
+		clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
+		if clusterName != "" {
+			if err := common.ValidateClusterName(clusterName); err != nil {
+				return nil, err
+			}
+			stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+				transformprocessor.WithMetricResourceStatements([]string{stmt}),
+				transformprocessor.WithLogResourceStatements([]string{stmt}),
+				transformprocessor.WithTraceResourceStatements([]string{stmt}),
+			))
+		}
+	}
+	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
+	// resourcedetection/opentelemetry re-stamps schema_url post-fan-in; clear it here for CI.
+	// Distinct name from the metrics clear to avoid same-ID collision.
+	if conf != nil && conf.IsSet(common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)) {
+		processors.Set(transformprocessor.NewTranslatorWithName("logs_clear_schema_url",
+			transformprocessor.WithLogResourceStatements([]string{
+				`set(resource.schema_url, "")`,
+			})))
+	}
+	processors.Set(logsRouting)
+	processors.Set(attrCtx)
+	processors.Set(logsCleanup)
+	processors.Set(batch)
+
+	return &common.ComponentTranslators{
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
+		Processors: processors,
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
+		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, provisionerExt, headersExt, agentHealthExt),
+		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
+	}, nil
+}

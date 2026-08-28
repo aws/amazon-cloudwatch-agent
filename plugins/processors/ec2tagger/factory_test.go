@@ -26,6 +26,8 @@ func TestCreateDefaultConfig(t *testing.T) {
 }
 
 func TestCreateProcessor(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 	factory := NewFactory()
 	require.NotNil(t, factory)
 

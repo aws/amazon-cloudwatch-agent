@@ -508,8 +508,8 @@ processors:
         trace_statements: []
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: true
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: true
         add_container_name_metric_label: false
         add_full_pod_name_metric_label: false
         add_service_as_attribute: true
@@ -539,6 +539,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
+        skip_replicaset_watch: false
     otlp/http_0_0_0_0_4314:
         protocols:
             http:

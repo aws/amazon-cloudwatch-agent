@@ -1,0 +1,66 @@
+logs:
+  postgresql.active_sessions.by_wait:
+    description: "Active sessions by wait event"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.wait_event_type
+      - key: postgresql.wait_event
+      - key: db.namespace
+  postgresql.active_sessions.by_user:
+    description: "Active sessions by user"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: user.name
+      - key: db.namespace
+  postgresql.active_sessions.by_db:
+    description: "Active sessions by database"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: db.namespace
+  postgresql.active_sessions.by_sql:
+    description: "Active sessions by query"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.query_id
+      - key: db.namespace
+  postgresql.active_sessions.by_sql_wait:
+    description: "Active sessions by query and wait"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.query_id
+      - key: postgresql.wait_event_type
+      - key: postgresql.wait_event
+      - key: db.namespace
+  postgresql.active_sessions.by_app:
+    description: "Active sessions by application"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.application_name
+      - key: db.namespace
+  postgresql.active_sessions.by_host:
+    description: "Active sessions by host"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: network.peer.address
+      - key: db.namespace
+  postgresql.active_sessions.count:
+    description: "Total active sessions"
+    conditions:
+      - attributes["postgresql.state"] == "active"
+    attributes:
+      - key: db.system.name
+      - key: db.namespace

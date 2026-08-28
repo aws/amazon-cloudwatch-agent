@@ -712,6 +712,8 @@ func TestWriteToCloudWatchEntity(t *testing.T) {
 }
 
 func TestUserAgentFeatureFlags(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
 	testCases := []struct {
 		name               string
 		metricNames        []string

@@ -1,0 +1,17 @@
+error_mode: ignore
+log_statements:
+  - error_mode: ignore
+    context: resource
+    statements:
+      # Log group: /aws/cwagent/{cluster}/{source} or /aws/cwagent/{cluster}/default or /aws/cwagent/default
+      - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["k8s.cluster.name"], resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["aws.log.source"] != nil
+      - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["k8s.cluster.name"], "default"], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["k8s.cluster.name"] != nil
+      - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
+      # Log stream: namespace/service.namespace/service.name (first match wins)
+      - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["service.namespace"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["service.namespace"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+      # namespace/service.name
+      - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["k8s.namespace.name"], resource.attributes["service.name"]], "/")) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil and resource.attributes["service.name"] != nil and resource.attributes["service.name"] != "unknown_service"
+      # namespace only
+      - set(resource.attributes["aws.log.stream.name"], resource.attributes["k8s.namespace.name"]) where resource.attributes["aws.log.stream.name"] == nil and resource.attributes["k8s.namespace.name"] != nil
+      # fallback
+      - set(resource.attributes["aws.log.stream.name"], "default") where resource.attributes["aws.log.stream.name"] == nil

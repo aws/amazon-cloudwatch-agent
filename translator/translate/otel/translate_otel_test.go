@@ -8,11 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/registerrules"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -265,6 +268,69 @@ func TestTranslator(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotNil(t, got)
 			}
+		})
+	}
+}
+
+func TestOIDCTokenGatedOnAzureMode(t *testing.T) {
+	t.Setenv("SYSTEM_METRICS_ENABLED", "false")
+	// Short-circuit cluster-name resolution so the metrics translator does not reach the live
+	// ec2:DescribeTags lookup, which hangs on retries and panics off a real EC2 host.
+	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
+	testutil.SetPrometheusRemoteWriteTestingEnv(t)
+	translator.SetTargetPlatform("linux")
+	oidcID := component.MustNewID("oidctoken")
+
+	input := map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"host_metrics": map[string]interface{}{"metrics_collection_interval": 10},
+			},
+		},
+	}
+
+	testCases := map[string]struct {
+		mode           string
+		kubernetesMode string
+		roleARN        string
+		wantOIDC       bool
+		wantErr        string
+	}{
+		// Azure VM and GCE reach AWS only via the oidctoken web-identity chain, so role_arn is mandatory.
+		"AzureVMWithRoleARN":    {mode: config.ModeAzureVM, roleARN: "arn:aws:iam::123456789012:role/AzureVMRole", wantOIDC: true},
+		"AzureVMMissingRoleARN": {mode: config.ModeAzureVM, roleARN: "", wantErr: "role_arn is required"},
+		"GCEWithRoleARN":        {mode: config.ModeGCE, roleARN: "arn:aws:iam::123456789012:role/GCERole", wantOIDC: true},
+		"GCEMissingRoleARN":     {mode: config.ModeGCE, roleARN: "", wantErr: "role_arn is required"},
+		"EC2NoOIDC":             {mode: config.ModeEC2, roleARN: "", wantOIDC: false},
+		// AKS and GKE use the chart's projected SA token (the default web-identity chain), not the oidctoken
+		// extension, so no oidctoken is emitted and role_arn is not required.
+		"AKSNoOIDC": {mode: config.ModeAzureVM, kubernetesMode: config.ModeAKS, roleARN: "", wantOIDC: false},
+		"GKENoOIDC": {mode: config.ModeGCE, kubernetesMode: config.ModeGKE, roleARN: "", wantOIDC: false},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			context.ResetContext()
+			t.Cleanup(context.ResetContext)
+			context.CurrentContext().SetMode(tc.mode)
+			if tc.kubernetesMode != "" {
+				context.CurrentContext().SetKubernetesMode(tc.kubernetesMode)
+				context.CurrentContext().SetRunInContainer(true)
+			}
+			agent.Global_Config.Region = "us-west-2"
+			agent.Global_Config.Role_arn = tc.roleARN
+			t.Cleanup(func() { agent.Global_Config.Region = ""; agent.Global_Config.Role_arn = "" })
+
+			got, err := TranslateWithoutValidation(input, "linux")
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				assert.ErrorContains(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			_, hasOIDC := got.Extensions[oidcID]
+			assert.Equal(t, tc.wantOIDC, hasOIDC)
 		})
 	}
 }

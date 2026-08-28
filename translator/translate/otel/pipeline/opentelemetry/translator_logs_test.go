@@ -1,0 +1,251 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT
+
+package opentelemetry
+
+import (
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
+)
+
+func TestBaseLogsTranslatorActivatedByContainerInsightsLogs(t *testing.T) {
+	prevRegion := agent.Global_Config.Region
+	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { agent.Global_Config.Region = prevRegion })
+	tt := NewBaseLogsTranslator()
+	// container_insights logs.enabled must activate the base logs pipeline so the
+	// forward/opentelemetry connector fed by CI log pipelines has a consumer.
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{
+					"logs": map[string]interface{}{"enabled": true},
+				},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
+}
+
+func TestBaseLogsTranslator(t *testing.T) {
+	tt := NewBaseLogsTranslator()
+	assert.EqualValues(t, "logs/opentelemetry", tt.ID().String())
+
+	keys := otelLogsKeys
+	if runtime.GOOS == "windows" {
+		keys = append(keys, common.WindowsEventsConfigKey)
+	}
+	missingErr := &common.MissingKeyError{ID: tt.ID(), JsonKey: strings.Join(keys, " or ")}
+	testCases := map[string]struct {
+		input   map[string]interface{}
+		wantErr error
+	}{
+		"WithNilConf": {
+			input:   nil,
+			wantErr: missingErr,
+		},
+		"WithoutCollectKey": {
+			input:   map[string]interface{}{},
+			wantErr: missingErr,
+		},
+		"WithCollectKeyButNoLogs": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{},
+				},
+			},
+			wantErr: missingErr,
+		},
+		"WithCollectLogsKey": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"logs": map[string]interface{}{},
+					},
+				},
+			},
+		},
+		"WithDbiOnly": {
+			input: map[string]interface{}{
+				"opentelemetry": map[string]interface{}{
+					"collect": map[string]interface{}{
+						"database_insights": map[string]interface{}{
+							"postgresql": []any{map[string]any{"endpoint": "localhost:5432"}},
+						},
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			agent.Global_Config.Region = "us-west-2"
+			var conf *confmap.Conf
+			if tc.input != nil {
+				conf = confmap.NewFromStringMap(tc.input)
+			}
+			got, err := tt.Translate(conf)
+			if tc.wantErr != nil {
+				require.Error(t, err)
+				assert.Equal(t, tc.wantErr, err)
+				assert.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, got)
+				assert.Equal(t, 1, got.Receivers.Len())
+				assert.Equal(t, 6, got.Processors.Len())
+				assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[0].String())
+				assert.Equal(t, "transform/identity", got.Processors.Keys()[1].String())
+				assert.Equal(t, "transform/logs_routing", got.Processors.Keys()[2].String())
+				assert.Equal(t, "attributestocontext/opentelemetry", got.Processors.Keys()[3].String())
+				assert.Equal(t, "transform/logs_cleanup", got.Processors.Keys()[4].String())
+				assert.Equal(t, "batch/opentelemetry_logs", got.Processors.Keys()[5].String())
+				assert.Equal(t, 1, got.Exporters.Len())
+				assert.Equal(t, 4, got.Extensions.Len())
+				assert.Equal(t, 1, got.Connectors.Len())
+				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
+				assert.Equal(t, "otlphttp/logs", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
+			}
+		})
+	}
+}
+
+func TestBaseLogsTranslatorResourceAttributes(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	tt := NewBaseLogsTranslator()
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"resource_attributes": map[string]interface{}{
+				"team": "cloudwatch",
+			},
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, 7, got.Processors.Len())
+	assert.Equal(t, "resource/opentelemetry", got.Processors.Keys()[0].String())
+	assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[1].String())
+	assert.Equal(t, "batch/opentelemetry_logs", got.Processors.Keys()[6].String())
+}
+
+func TestBaseLogsTranslatorEmptyRegion(t *testing.T) {
+	agent.Global_Config.Region = ""
+	tt := NewBaseLogsTranslator()
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "region is required")
+}
+
+func TestBaseLogsTranslatorClusterName(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	// Cluster name is only applied in a Kubernetes environment.
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseLogsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	// Verify set_cluster_name processor is present
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.Contains(t, keys, "transform/set_cluster_name")
+}
+
+// TestLogsClusterNameSkippedNonK8s verifies the cluster name is gated on Kubernetes mode
+func TestLogsClusterNameSkippedNonK8s(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	context.CurrentContext().SetKubernetesMode("")
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseLogsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.NotContains(t, keys, "transform/set_cluster_name")
+}
+
+func TestBaseLogsTranslatorNoClusterName(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	// Force the ec2 tag lookup with no network to return no cluster name.
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tagutil.SetEC2APIProviderForTesting(func() interface {
+		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
+	} {
+		return noTagsEC2Client{}
+	})
+	t.Cleanup(tagutil.ResetEC2APIProvider)
+	t.Cleanup(tagutil.ResetTagsCache)
+
+	tt := NewBaseLogsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.NotContains(t, keys, "transform/set_cluster_name")
+}

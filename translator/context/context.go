@@ -129,8 +129,14 @@ func (ctx *Context) SetMode(mode string) {
 	case config.ModeWithIRSA:
 		ctx.mode = config.ModeWithIRSA
 		ctx.shortMode = config.ShortModeWithIRSA
+	case config.ModeAzureVM:
+		ctx.mode = config.ModeAzureVM
+		ctx.shortMode = config.ShortModeAzureVM
+	case config.ModeGCE:
+		ctx.mode = config.ModeGCE
+		ctx.shortMode = config.ShortModeGCE
 	default:
-		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s, and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA)
+		log.Panicf("Invalid mode %s. Valid mode values are %s, %s, %s, %s, %s, and %s.", mode, config.ModeEC2, config.ModeOnPrem, config.ModeOnPremise, config.ModeWithIRSA, config.ModeAzureVM, config.ModeGCE)
 	}
 }
 
@@ -145,6 +151,12 @@ func (ctx *Context) SetKubernetesMode(mode string) {
 	case config.ModeK8sOnPrem:
 		ctx.kubernetesMode = config.ModeK8sOnPrem
 		ctx.shortMode = config.ShortModeK8sOnPrem
+	case config.ModeAKS:
+		ctx.kubernetesMode = config.ModeAKS
+		ctx.shortMode = config.ShortModeAKS
+	case config.ModeGKE:
+		ctx.kubernetesMode = config.ModeGKE
+		ctx.shortMode = config.ShortModeGKE
 	default:
 		ctx.kubernetesMode = ""
 	}

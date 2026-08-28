@@ -1,0 +1,101 @@
+logs:
+  - name: postgresql.calls
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "SQL execution count"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+      - key: postgresql.rolname
+    conditions:
+      - attributes["postgresql.calls"] != nil
+    sum:
+      value: 'Int(attributes["postgresql.calls"])'
+  - name: postgresql.total_exec_time
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total execution time in ms"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+      - key: postgresql.rolname
+    conditions:
+      - attributes["postgresql.total_exec_time"] != nil
+    sum:
+      value: 'Double(attributes["postgresql.total_exec_time"])'
+  - name: postgresql.total_plan_time
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Total plan time in ms"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+      - key: postgresql.rolname
+    conditions:
+      - attributes["postgresql.total_plan_time"] != nil
+    sum:
+      value: 'Double(attributes["postgresql.total_plan_time"])'
+  - name: postgresql.rows
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Rows affected"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+      - key: postgresql.rolname
+    conditions:
+      - attributes["postgresql.rows"] != nil
+    sum:
+      value: 'Int(attributes["postgresql.rows"])'
+  - name: postgresql.shared_blks_hit
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Shared blocks hit"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+    conditions:
+      - attributes["postgresql.shared_blks_hit"] != nil
+    sum:
+      value: 'Int(attributes["postgresql.shared_blks_hit"])'
+  - name: postgresql.shared_blks_read
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Shared blocks read"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+    conditions:
+      - attributes["postgresql.shared_blks_read"] != nil
+    sum:
+      value: 'Int(attributes["postgresql.shared_blks_read"])'
+  - name: postgresql.local_blks_hit
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Local blocks hit"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+    conditions:
+      - attributes["postgresql.local_blks_hit"] != nil
+    sum:
+      value: 'Int(attributes["postgresql.local_blks_hit"])'
+  - name: postgresql.local_blks_read
+    include_resource_attributes:
+      - key: service.instance.id
+    description: "Local blocks read"
+    attributes:
+      - key: db.system.name
+      - key: postgresql.queryid
+      - key: db.namespace
+    conditions:
+      - attributes["postgresql.local_blks_read"] != nil
+    sum:
+      value: 'Int(attributes["postgresql.local_blks_read"])'

@@ -1,0 +1,7 @@
+{
+  "opentelemetry": {
+    "collect": {
+      "invalid_field": {}
+    }
+  }
+}

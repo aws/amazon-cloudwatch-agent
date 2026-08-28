@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -159,7 +158,7 @@ func reloadLoop(
 					select {
 					case <-ticker.C:
 						if info, err := os.Stat(envConfigPath); err == nil && info.ModTime().After(previousModTime) {
-							if err := loadEnvironmentVariables(envConfigPath); err != nil {
+							if err := envconfig.LoadFile(envConfigPath); err != nil {
 								log.Printf("E! Unable to load env variables: %v\n", err)
 							}
 							// Sets the log level based on environment variable
@@ -198,30 +197,6 @@ func reloadLoop(
 	}
 }
 
-// loadEnvironmentVariables updates OS ENV vars with key/val from the given JSON file.
-// The "config-translator" program populates that file.
-func loadEnvironmentVariables(path string) error {
-	if path == "" {
-		return fmt.Errorf("no env config file specified")
-	}
-
-	bytes, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("cannot read env config file %s due to: %s", path, err.Error())
-	}
-	envVars := map[string]string{}
-	err = json.Unmarshal(bytes, &envVars)
-	if err != nil {
-		return fmt.Errorf("cannot create env config due to: %s", err.Error())
-	}
-
-	for key, val := range envVars {
-		os.Setenv(key, val)
-		log.Printf("I! %s is set to \"%s\"\n", key, val)
-	}
-	return nil
-}
-
 func getEnvConfigPath(configPath, envConfigPath string) (string, error) {
 	if configPath == "" {
 		return "", fmt.Errorf("no config file specified")
@@ -242,7 +217,7 @@ func runAgent(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	err = loadEnvironmentVariables(envConfigPath)
+	err = envconfig.LoadFile(envConfigPath)
 	if err != nil && !*fSchemaTest {
 		log.Printf("W! Failed to load environment variables due to %s\n", err.Error())
 	}
@@ -608,21 +583,7 @@ func main() {
 		if *fEnvConfig != "" {
 			parts := strings.SplitN(*fSetEnv, "=", 2)
 			if len(parts) == 2 {
-				bytes, err := os.ReadFile(*fEnvConfig)
-				if err != nil {
-					log.Fatalf("E! Failed to read env config: %v", err)
-				}
-				envVars := map[string]string{}
-				err = json.Unmarshal(bytes, &envVars)
-				if err != nil {
-					log.Fatalf("E! Failed to unmarshal env config: %v", err)
-				}
-				envVars[parts[0]] = parts[1]
-				bytes, err = json.MarshalIndent(envVars, "", "\t")
-				if err != nil {
-					log.Fatalf("E! Failed to marshal env config: %v", err)
-				}
-				if err = os.WriteFile(*fEnvConfig, bytes, 0644); err != nil {
+				if err := envconfig.MergeFile(*fEnvConfig, map[string]string{parts[0]: parts[1]}); err != nil {
 					log.Fatalf("E! Failed to update env config: %v", err)
 				}
 			}

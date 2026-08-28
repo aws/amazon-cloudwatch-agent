@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "opentelemetry": {
+    "cluster_name": "TestCluster",
+    "collect": {
+      "container_insights": {
+        "role": "node",
+        "collection_interval": 30,
+        "logs": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}

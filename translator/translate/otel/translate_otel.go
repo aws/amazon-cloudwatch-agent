@@ -17,13 +17,18 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
 	"go.opentelemetry.io/collector/service/telemetry"
+	otelconfig "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/oidctoken"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/applicationsignals"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/containerinsights"
@@ -33,9 +38,11 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/jmx"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/journald"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -49,6 +56,16 @@ func RegisterPipeline(translators ...pipelinetranslator.Translator) {
 
 // Translate converts a JSON config into an OTEL config.
 func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	return translateInternal(jsonConfig, os, true)
+}
+
+// TranslateWithoutValidation is like Translate but skips config validation.
+// Use in tests where filesystem-dependent validation (e.g. token files) would fail.
+func TranslateWithoutValidation(jsonConfig interface{}, os string) (*otelcol.Config, error) {
+	return translateInternal(jsonConfig, os, false)
+}
+
+func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelcol.Config, error) {
 	m, ok := jsonConfig.(map[string]interface{})
 	if !ok {
 		return nil, errors.New("invalid json config")
@@ -82,6 +99,7 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Set(systemmetrics.NewTranslator())
+	translators.Merge(opentelemetry.NewTranslators(conf))
 	translators.Merge(journald.NewTranslators(conf))
 	translators.Merge(registry)
 	pipelines, err := pipelinetranslator.NewTranslator(translators).Translate(conf)
@@ -92,12 +110,25 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 			return nil, err
 		}
 	}
-	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms
-	if !ecsutil.GetECSUtilSingleton().IsECS() {
+	// ECS is not in scope for entity association, so we only add the entity store in non ECS platforms.
+	// Only add entitystore when pipelines that use the awsentity processor are present.
+	if !ecsutil.GetECSUtilSingleton().IsECS() && (conf.IsSet(common.MetricsKey) || conf.IsSet(common.LogsKey) || conf.IsSet(common.TracesKey)) {
 		pipelines.Translators.Extensions.Set(entitystore.NewTranslator())
 	}
 	if context.CurrentContext().KubernetesMode() != "" {
 		pipelines.Translators.Extensions.Set(server.NewTranslator())
+	}
+
+	// Emit oidctoken only when a sigv4auth extension consumes it; that web-identity path needs role_arn.
+	if agent.RequiresOIDCToken() && hasSigv4auth(pipelines.Translators.Extensions) {
+		if agent.Global_Config.Role_arn == "" {
+			return nil, errors.New("credentials.role_arn is required on Azure VM / GCE for the oidctoken web-identity credential chain")
+		}
+		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
+	}
+
+	if selftelemetry.Enabled(conf) {
+		pipelines.Translators.Extensions.Set(selftelemetry.NewTranslator())
 	}
 
 	cfg := &otelcol.Config{
@@ -108,9 +139,10 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 		Extensions: map[component.ID]component.Config{},
 		Service: service.Config{
 			Telemetry: telemetry.Config{
-				Logs:    getLoggingConfig(conf),
-				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
-				Traces:  telemetry.TracesConfig{Level: configtelemetry.LevelNone},
+				Logs:     getLoggingConfig(conf),
+				Metrics:  getSelfTelemetryConfig(conf),
+				Traces:   telemetry.TracesConfig{Level: configtelemetry.LevelNone},
+				Resource: getSelfTelemetryResource(conf),
 			},
 			Pipelines:  pipelines.Pipelines,
 			Extensions: pipelines.Translators.Extensions.Keys(),
@@ -119,10 +151,76 @@ func Translate(jsonConfig interface{}, os string) (*otelcol.Config, error) {
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
 	}
-	if err = xconfmap.Validate(cfg); err != nil {
-		return nil, fmt.Errorf("invalid otel config: %w", err)
+	if validate {
+		if err = xconfmap.Validate(cfg); err != nil {
+			return nil, fmt.Errorf("invalid otel config: %w", err)
+		}
 	}
 	return cfg, nil
+}
+
+// hasSigv4auth reports whether a sigv4auth extension is present, i.e. some pipeline will consume the oidctoken file.
+func hasSigv4auth(extensions common.ComponentTranslatorMap) bool {
+	for _, id := range extensions.Keys() {
+		if id.Type() == sigv4auth.Type() {
+			return true
+		}
+	}
+	return false
+}
+
+// getSelfTelemetryConfig turns the root self_telemetry block into the collector's own metrics reader.
+// The suffix and scope options are off so prometheus names survive the round trip through the SDK,
+// keeping series such as prometheus_target_scrape_pool_targets recognizable to a scraper.
+func getSelfTelemetryConfig(conf *confmap.Conf) telemetry.MetricsConfig {
+	if !selftelemetry.Enabled(conf) {
+		return telemetry.MetricsConfig{Level: configtelemetry.LevelNone}
+	}
+	host, port := selftelemetry.Host, selftelemetry.Port(conf)
+	without := true
+	return telemetry.MetricsConfig{
+		Level: configtelemetry.LevelBasic,
+		MeterProvider: otelconfig.MeterProvider{
+			Readers: []otelconfig.MetricReader{{
+				Pull: &otelconfig.PullMetricReader{
+					Exporter: otelconfig.PullMetricExporter{
+						Prometheus: &otelconfig.Prometheus{
+							Host:              &host,
+							Port:              &port,
+							WithoutScopeInfo:  &without,
+							WithoutTypeSuffix: &without,
+							WithoutUnits:      &without,
+							// Promote the node resource attribute onto every series as a constant label,
+							// so a DaemonSet's identical series stay distinct per node.
+							WithResourceConstantLabels: &otelconfig.IncludeExclude{
+								Included: []string{selftelemetry.NodeNameLabel},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+}
+
+// getSelfTelemetryResource tags all self telemetry with the node name via the collector's own
+// resource mechanism. The env ref is expanded per pod by the config provider's expandconverter, so
+// the same generated config yields a distinct node label on every node with no per-pod rendering.
+func getSelfTelemetryResource(conf *confmap.Conf) map[string]*string {
+	if !selftelemetry.Enabled(conf) {
+		return nil
+	}
+	// NodeName = per-host identity: K8s uses the K8S_NODE_NAME env ref; off-K8s the EC2 {instance_id},
+	// falling back to {hostname} when not on EC2 so non-EC2 hosts don't collide on i-UNKNOWN.
+	nodeName := selftelemetry.NodeNameEnvRef
+	if context.CurrentContext().KubernetesMode() == "" {
+		md := translateutil.GetMetadataInfo(translateutil.Ec2MetadataInfoProvider)
+		nodeName = translateutil.ResolvePlaceholder("{instance_id}", md)
+		if nodeName == translateutil.UnknownInstanceID {
+			nodeName = translateutil.ResolvePlaceholder("{hostname}", md)
+		}
+	}
+	return map[string]*string{selftelemetry.NodeNameLabel: &nodeName}
 }
 
 // parseAgentLogLevel returns the logging level from the JSON config, or the

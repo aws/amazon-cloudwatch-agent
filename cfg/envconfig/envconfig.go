@@ -26,6 +26,8 @@ const (
 	RunInContainer              = "RUN_IN_CONTAINER"
 	RunAsHostProcessContainer   = "RUN_AS_HOST_PROCESS_CONTAINER"
 	RunInAWS                    = "RUN_IN_AWS"
+	RunInAKS                    = "RUN_IN_AKS"
+	RunInGKE                    = "RUN_IN_GKE"
 	RunWithIRSA                 = "RUN_WITH_IRSA"
 	RunWithSELinux              = "RUN_WITH_SELINUX"
 	RunInROSA                   = "RUN_IN_ROSA"
@@ -87,6 +89,16 @@ func IsSelinuxEnabled() bool {
 
 func IsRunningInROSA() bool {
 	return os.Getenv(RunInROSA) == TrueValue
+}
+
+// IsRunningInAKS reports whether RUN_IN_AKS is set (by the AKS Helm chart) so AKS is detected without a metadata probe.
+func IsRunningInAKS() bool {
+	return os.Getenv(RunInAKS) == TrueValue
+}
+
+// IsRunningInGKE reports whether RUN_IN_GKE is set (by the GKE Helm chart) so GKE is detected without a metadata probe.
+func IsRunningInGKE() bool {
+	return os.Getenv(RunInGKE) == TrueValue
 }
 
 func GetLogsBackpressureMode() string {

@@ -4,7 +4,10 @@
 package defaultcomponents
 
 import (
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/signaltometricsconnector"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/spanmetricsconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
@@ -14,6 +17,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/ecsobserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/oidctokenextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/pprofextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/storage/filestorage"
@@ -51,12 +55,15 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
 	"go.opentelemetry.io/collector/connector"
+	"go.opentelemetry.io/collector/connector/forwardconnector"
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/debugexporter"
 	"go.opentelemetry.io/collector/exporter/nopexporter"
@@ -75,6 +82,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/extension/nodemetadatacache"
+	"github.com/aws/amazon-cloudwatch-agent/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
@@ -112,10 +120,12 @@ func Factories() (otelcol.Factories, error) {
 		nopreceiver.NewFactory(),
 		otlpreceiver.NewFactory(),
 		prometheusreceiver.NewFactory(),
+		postgresqlreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
 		systemmetricsreceiver.NewFactory(),
 		tcplogreceiver.NewFactory(),
 		udplogreceiver.NewFactory(),
+		windowseventlogreceiver.NewFactory(),
 		zipkinreceiver.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
@@ -177,10 +187,12 @@ func Factories() (otelcol.Factories, error) {
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
 		nodemetadatacache.NewFactory(),
+		selftelemetry.NewFactory(),
 		server.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),
 		healthcheckextension.NewFactory(),
+		oidctokenextension.NewFactory(),
 		pprofextension.NewFactory(),
 		sigv4authextension.NewFactory(),
 		zpagesextension.NewFactory(),
@@ -189,7 +201,11 @@ func Factories() (otelcol.Factories, error) {
 	}
 
 	if factories.Connectors, err = otelcol.MakeFactoryMap[connector.Factory](
+		countconnector.NewFactory(),
+		forwardconnector.NewFactory(),
 		routingconnector.NewFactory(),
+		signaltometricsconnector.NewFactory(),
+		spanmetricsconnector.NewFactory(),
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
