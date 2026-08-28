@@ -5,10 +5,16 @@ package volume
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+)
+
+const (
+	// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+	possibleAttachmentDevicePrefix = "/dev/"
 )
 
 type describeVolumesProvider struct {
@@ -38,7 +44,7 @@ func (p *describeVolumesProvider) DeviceToSerialMap() (map[string]string, error)
 		for _, volume := range output.Volumes {
 			for _, attachment := range volume.Attachments {
 				if attachment.Device != nil && attachment.VolumeId != nil {
-					result[aws.StringValue(attachment.Device)] = aws.StringValue(attachment.VolumeId)
+					result[strings.TrimPrefix(aws.StringValue(attachment.Device), possibleAttachmentDevicePrefix)] = aws.StringValue(attachment.VolumeId)
 				}
 			}
 		}
