@@ -15,7 +15,12 @@ ifndef CWAGENT_BUILD_MODE
 CWAGENT_BUILD_MODE=default
 endif
 
+ifdef SOURCE_DATE_EPOCH
+BUILD := $(shell date -u -d @$(SOURCE_DATE_EPOCH) +"%Y-%m-%dT%H:%M:%SZ")
+else
 BUILD := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+endif
+
 LDFLAGS = -s -w
 NPROCS := 4
 MAKEFLAGS += -j$(NPROCS)
