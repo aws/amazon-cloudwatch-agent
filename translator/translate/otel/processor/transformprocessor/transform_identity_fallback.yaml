@@ -1,0 +1,16 @@
+error_mode: ignore
+trace_statements:
+  - error_mode: ignore
+    context: resource
+    statements: &identity_statements
+      - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+      # deployment.environment.name: on-prem has no detected cloud platform, so fall back to generic:default.
+      - set(resource.attributes["deployment.environment.name"], "generic:default") where resource.attributes["deployment.environment.name"] == nil
+metric_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements
+log_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements
