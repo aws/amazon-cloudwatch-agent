@@ -57,26 +57,30 @@ func isPodNameAvailable() bool {
 	}
 	return true
 }
-func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, error) {
+
+// loadConfigFromFilename reads and parses the prometheus config file.
+// Returns the config, whether a target_allocator section was present, and any error.
+func loadConfigFromFilename(filename string) (*otelpromreceiver.Config, bool, error) {
 	yamlFile, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, err
+		return nil, true, err // can't determine; default to warn
 	}
 	var stringMap map[string]interface{}
 	err = yaml.Unmarshal(yamlFile, &stringMap)
 	if err != nil {
-		return nil, err
+		return nil, true, err // can't determine; default to warn
 	}
+	_, hasTA := stringMap["target_allocator"]
 	componentParser := confmap.NewFromStringMap(stringMap)
 	if componentParser == nil {
-		return nil, fmt.Errorf("unable to parse config from filename %s", filename)
+		return nil, hasTA, fmt.Errorf("unable to parse config from filename %s", filename)
 	}
 	var cfg otelpromreceiver.Config
 	err = componentParser.Unmarshal(&cfg)
 	if err != nil {
-		return nil, err
+		return nil, hasTA, err
 	}
-	return &cfg, nil
+	return &cfg, hasTA, nil
 }
 
 func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel *promslog.AllowedLevel, sm *scrape.Manager, dm *discovery.Manager) *TargetAllocatorManager {
@@ -92,9 +96,13 @@ func createTargetAllocatorManager(filename string, logger *slog.Logger, logLevel
 		reloadConfigHandler: nil,
 		logger:              logger,
 	}
-	err := tam.loadConfig(filename)
+	hasTA, err := tam.loadConfig(filename)
 	if err != nil {
-		logger.Warn("Could not load config for target allocator from file", "filename", filename, "err", err)
+		if hasTA {
+			logger.Warn("Could not load config for target allocator from file", "filename", filename, "err", err)
+		} else {
+			logger.Debug("Target allocator not configured; skipping target allocator config load", "filename", filename, "err", err)
+		}
 		return &tam
 	}
 	if tam.config == nil {
@@ -142,21 +150,21 @@ func createZapLogger(level *promslog.AllowedLevel) (*zap.Logger, error) {
 	return zapLogger, err
 }
 
-func (tam *TargetAllocatorManager) loadConfig(filename string) error {
-	config, err := loadConfigFromFilename(filename)
+func (tam *TargetAllocatorManager) loadConfig(filename string) (bool, error) {
+	config, hasTA, err := loadConfigFromFilename(filename)
 	if err != nil {
-		return err
+		return hasTA, err
 	}
 	tam.config = config
 	if tam.config.TargetAllocator == nil {
-		return nil // no target allocator return
+		return hasTA, nil // no target allocator return
 	}
 	//has target allocator
 	tam.config.TargetAllocator.TLSSetting.CAFile = DefaultTLSCaFilePath
 	tam.config.TargetAllocator.TLSSetting.CertFile = DefaultTLSCertFilePath
 	tam.config.TargetAllocator.TLSSetting.KeyFile = DefaultTLSKeyFilePath
 	tam.config.TargetAllocator.TLSSetting.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
-	return nil
+	return hasTA, nil
 }
 func (tam *TargetAllocatorManager) Run() error {
 	err := tam.manager.Start(context.Background(), tam.host, tam.sm, tam.dm)
