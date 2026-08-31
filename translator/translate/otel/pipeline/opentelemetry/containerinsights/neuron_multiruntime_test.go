@@ -1,22 +1,19 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
 
-// Per-core Neuron data loss on multi-runtime nodes.
+// Per-core Neuron attribution on multi-runtime nodes.
 //
-// The shipped neuron.yaml is run for real here -- groupbyattrs then the promote
-// transform, built from the embedded template -- against synthetic metrics in the
-// shape neuron-monitor emits when two Neuron runtimes share a node: every core
-// reported by every runtime, with the non-owning pairs at zero.
+// Invariant: when several Neuron runtimes share a node, every (core, runtime)
+// reading must reach the exporter under its own identity. neuron-monitor reports
+// every core from every runtime -- the owning pair real, the rest zero -- so
+// runtime_tag is the only attribute separating a core's real reading from another
+// runtime's zero for that same core. Stop separating them and two datapoints share
+// an identity, the last write wins, and for one core that is a plausible-looking 0.
 //
-// The defect: the promote ran in `context: datapoint` while writing
-// resource.attributes. Resource attributes are per-ResourceMetrics, so the
-// statement ran once per datapoint and the last write won; it then deleted
-// runtime_tag from the datapoint, the only attribute separating one runtime's real
-// reading for a core from another runtime's zero for that same core. Two datapoints
-// collapsed onto one identity and a core pinned at 75% reported 0.
-//
-// TestNeuronMultiRuntimePreFixConfigLosesData pins that failure mode, so the
-// assertions below are known to discriminate rather than merely pass.
+// These run the shipped neuron.yaml -- groupbyattrs then the promote transform,
+// rendered from the embedded template rather than restated, so a config change that
+// breaks the invariant fails here. TestNeuronMultiRuntimeCollapsedConfigLosesData
+// runs a config that violates it, proving the assertions discriminate.
 
 package containerinsights
 
@@ -54,8 +51,6 @@ const (
 )
 
 // renderedNeuronProcessors returns the processors block of the shipped neuron.yaml.
-// Read from the embedded template rather than restated, so reverting the config
-// fails this test.
 func renderedNeuronProcessors(t *testing.T) map[string]any {
 	t.Helper()
 	tmpl, err := template.New("neuron").Parse(neuronYAML)
@@ -115,8 +110,8 @@ func (componenttestNopHost) GetExtensions() map[component.ID]component.Component
 
 // multiRuntimeMetrics is what neuron-monitor emits for 2 cores x 2 runtimes on one
 // node: the owning pair real, the other zero. Pod identity is identical across all
-// four, which is the collapse-prone case -- one pod holding both cores, as measured
-// on solstice-gpu-test.
+// four -- one pod holding both cores, which occurs in practice and is the
+// collapse-prone case, since pod identity alone cannot separate the datapoints.
 func multiRuntimeMetrics() pmetric.Metrics {
 	md := pmetric.NewMetrics()
 	sm := md.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty()
@@ -176,8 +171,8 @@ func consume(t *testing.T, chain processor.Metrics, md pmetric.Metrics) {
 	require.NoError(t, chain.ConsumeMetrics(context.Background(), md))
 }
 
-// TestNeuronMultiRuntimeKeepsEveryCorePerRuntime runs the SHIPPED config and
-// requires all four (core, runtime) readings to survive with their real values.
+// TestNeuronMultiRuntimeKeepsEveryCorePerRuntime requires all four (core, runtime)
+// readings to survive the shipped config with their real values.
 func TestNeuronMultiRuntimeKeepsEveryCorePerRuntime(t *testing.T) {
 	processors := renderedNeuronProcessors(t)
 	chain, sink := buildChain(t,
@@ -192,7 +187,7 @@ func TestNeuronMultiRuntimeKeepsEveryCorePerRuntime(t *testing.T) {
 		"core=1 tag=burn-core1 value=75.3",
 	}, observed(t, sink),
 		"both busy cores must survive with their own runtime tag; a missing 75.x "+
-			"reading is the per-core data-loss defect")
+			"reading means one runtime's datapoint was shadowed by another's zero")
 }
 
 // TestNeuronMultiRuntimeSeparatesRuntimesIntoResources pins the mechanism: one
@@ -219,9 +214,9 @@ func TestNeuronMultiRuntimeSeparatesRuntimesIntoResources(t *testing.T) {
 	assert.Equal(t, map[string]int{tagA: 1, tagB: 1}, tags)
 }
 
-// TestNeuronMultiRuntimePromotesPodIdentity guards the six promote statements
-// removed by the fix: groupbyattrs already moves pod/namespace/container to the
-// resource and deletes the datapoint copies, so dropping them changed nothing.
+// TestNeuronMultiRuntimePromotesPodIdentity requires pod identity to land on the
+// resource and NOT remain on the datapoint. groupbyattrs moves its grouping keys
+// rather than copying them, so nothing downstream needs to re-promote them.
 func TestNeuronMultiRuntimePromotesPodIdentity(t *testing.T) {
 	processors := renderedNeuronProcessors(t)
 	chain, sink := buildChain(t,
@@ -262,16 +257,22 @@ func TestNeuronMultiRuntimePromotesPodIdentity(t *testing.T) {
 	}
 }
 
-// TestNeuronMultiRuntimePreFixConfigLosesData is the negative control. It runs the
-// PRE-FIX config -- groupbyattrs without the runtime_tag key, promote in
-// `context: datapoint` -- and asserts the loss, so the tests above are known to
-// discriminate. If this ever starts passing the collapse has stopped reproducing
-// and these assertions no longer prove anything.
-func TestNeuronMultiRuntimePreFixConfigLosesData(t *testing.T) {
-	preFixGBA := map[string]any{
+// TestNeuronMultiRuntimeCollapsedConfigLosesData is the negative control: it runs a
+// config that drops the runtime dimension and asserts the loss, so the tests above
+// are known to discriminate rather than merely pass. If it ever starts passing, the
+// collapse has stopped reproducing and those assertions prove nothing.
+//
+// The collapse needs both halves. groupbyattrs omits the runtime_tag key, so the
+// runtimes are not split into separate resources; the promote then runs in
+// `context: datapoint` while writing resource.attributes, which are
+// per-ResourceMetrics -- so the statement executes once per datapoint and the last
+// write wins -- and deletes runtime_tag from the datapoint. This is the shape the
+// agent shipped with.
+func TestNeuronMultiRuntimeCollapsedConfigLosesData(t *testing.T) {
+	collapsedGBA := map[string]any{
 		"keys": []any{"k8s.pod.name", "k8s.namespace.name", "k8s.container.name"},
 	}
-	preFixPromote := map[string]any{
+	collapsedPromote := map[string]any{
 		"error_mode": "ignore",
 		"metric_statements": []any{
 			map[string]any{
@@ -290,7 +291,7 @@ func TestNeuronMultiRuntimePreFixConfigLosesData(t *testing.T) {
 		},
 	}
 
-	chain, sink := buildChain(t, preFixGBA, preFixPromote)
+	chain, sink := buildChain(t, collapsedGBA, collapsedPromote)
 	consume(t, chain, multiRuntimeMetrics())
 	got := observed(t, sink)
 
