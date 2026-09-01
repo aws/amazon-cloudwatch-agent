@@ -408,29 +408,15 @@ jobs:
     steps:
       - name: Check Job Status
         env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
+          # toJSON(needs) carries every job's outputs and can exceed the argument size limit,
+          # so gate on the results alone.
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          failed_jobs=()
-          successful_jobs=()
-
-          # Loop through all jobs in needs context
-          for job in $(echo "$NEEDS_JSON" | jq -r 'keys[]'); do
-            result=$(echo "$NEEDS_JSON" | jq -r ".[\"$job\"].result")
-
-            if [[ "$result" == "failure" ]]; then
-              failed_jobs+=("$job")
-            elif [[ "$result" == "success" ]]; then
-              successful_jobs+=("$job")
+          echo "Job results: ${RESULTS}"
+          for result in ${RESULTS}; do
+            if [ "${result}" = "failure" ]; then
+              echo "One or more required jobs failed."
+              exit 1
             fi
           done
-
-          echo "Successfully validated jobs:"
-          printf '%s\n' "${successful_jobs[@]}"
-
-          if [ ${#failed_jobs[@]} -ne 0 ]; then
-            echo -e "\nFailed jobs:"
-            printf '%s\n' "${failed_jobs[@]}"
-            exit 1
-          fi
-
-          echo -e "\nAll required jobs completed without failures!"
+          echo "All required jobs completed without failures!"
