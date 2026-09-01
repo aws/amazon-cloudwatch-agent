@@ -293,16 +293,23 @@ func hasValidTime(e logs.LogEvent) bool {
 // permanently failing target push a fresh batch onto the unbounded heap every interval.
 // Shutdown liveness comes from stopCh instead -- see AddEvent and cwDest.signalStop.
 func (q *queue) waitIfHalted() {
-	q.haltMu.Lock()
-	if !q.halted {
+	for {
+		q.haltMu.Lock()
+		if !q.halted {
+			q.haltMu.Unlock()
+			return
+		}
+		ch := q.haltCh
 		q.haltMu.Unlock()
-		return
-	}
-	ch := q.haltCh
-	q.haltMu.Unlock()
-	select {
-	case <-ch:
-	case <-q.stopCh:
+		select {
+		case <-ch:
+			// Loop instead of returning: resume() closes ch, but a halt() re-engaged
+			// before this wakeup leaves q.halted true, so re-check rather than let the
+			// send proceed on a still-halted queue. Still unbounded (see the doc above);
+			// stopCh remains the only liveness escape.
+		case <-q.stopCh:
+			return
+		}
 	}
 }
 

@@ -385,3 +385,37 @@ func TestSynchronousShutdownPersistsOffsetsByDesign(t *testing.T) {
 		"offsets ARE persisted on synchronous shutdown, by #1789's design; flipping this "+
 			"assertion means deliberately reversing that trade")
 }
+
+// TestRetriedBatchIgnoresSenderService confirms why the retry-heap processor's client
+// (cloudwatchlogs.go) was logically dead. sender.Send pins batch.service to its own client
+// only when the batch has none yet -- the first, per-destination send -- and always sends
+// through batch.service thereafter. A batch reaching the retry heap was already sent once,
+// so its service is pinned to the per-destination client and the retry-heap sender's own
+// client never issues a PutLogEvents. Reusing the shared client there is therefore safe.
+func TestRetriedBatchIgnoresSenderService(t *testing.T) {
+	var pinnedCalls, senderCalls atomic.Int32
+	pinnedClient := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		pinnedCalls.Add(1)
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+	senderClient := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		senderCalls.Add(1)
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+
+	logger := testutil.NewNopLogger()
+	// nil retryHeap => synchronous send path, so Send issues PutLogEvents directly.
+	s := newSender(logger, senderClient, NewTargetManager(logger, senderClient), nil)
+
+	batch := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
+	batch.append(newLogEvent(time.Now(), "payload", func() {}))
+	batch.service = pinnedClient // already pinned by the first send before it reached the heap
+
+	s.Send(batch)
+
+	assert.Equal(t, int32(1), pinnedCalls.Load(),
+		"a retried batch must be sent through the client pinned on its first send")
+	assert.Equal(t, int32(0), senderCalls.Load(),
+		"the sender's own client must never issue PutLogEvents for a pre-pinned batch -- "+
+			"this is why the retry-heap processor's dedicated client was dead code")
+}

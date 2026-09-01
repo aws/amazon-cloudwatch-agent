@@ -223,3 +223,65 @@ func TestBreakerIsClearedByAnyBatchResume_KnownLimitation(t *testing.T) {
 			"target even though batch #1 is still failed. If this ever becomes true, the "+
 			"breaker was made per-batch -- update the bounded-memory reasoning accordingly.")
 }
+
+// TestWaitIfHaltedDoesNotReturnWhileHalted pins the for-loop re-check in waitIfHalted.
+//
+// resume() closes the current haltCh and installs a fresh one. If halt() re-engages before
+// a parked waiter wakes, the closed channel still fires -- but q.halted is true again. The
+// single-check (pre-fix) waiter returns anyway, so send() ships a batch on a halted queue.
+// The looping waiter re-checks q.halted after each wakeup and re-parks on the new channel.
+func TestWaitIfHaltedDoesNotReturnWhileHalted(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var wg sync.WaitGroup
+	mockSender := &stubSender{}
+	q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1},
+		time.Hour, nil, mockSender, &wg).(*queue)
+	defer q.Stop()
+
+	// Engage the breaker and capture the exact channel the waiter must park on.
+	q.halt()
+	q.haltMu.Lock()
+	oldCh := q.haltCh
+	q.haltMu.Unlock()
+
+	returned := make(chan bool, 1) // carries q.halted observed at the moment of return
+	go func() {
+		q.waitIfHalted()
+		q.haltMu.Lock()
+		h := q.halted
+		q.haltMu.Unlock()
+		returned <- h
+	}()
+
+	// No production seam exposes "parked", so give the waiter time to pass the mutex and
+	// block on oldCh before we swap the channel underneath it.
+	time.Sleep(150 * time.Millisecond)
+
+	// Simulate resume()-then-re-halt() atomically, exactly as the waiter observes it: the
+	// old channel closes (waking the waiter) while q.halted is left true on a fresh channel.
+	q.haltMu.Lock()
+	require.Equal(t, oldCh, q.haltCh, "waiter must still be parked on the original channel")
+	close(oldCh)
+	q.haltCh = make(chan struct{})
+	q.halted = true
+	q.haltMu.Unlock()
+
+	// FIXED: the waiter re-checks q.halted and re-parks, so it must NOT return while halted.
+	// UNFIXED: it woke on the closed channel and returned immediately -- the bug.
+	select {
+	case h := <-returned:
+		t.Fatalf("waitIfHalted returned while the queue was still halted (halted=%v): the "+
+			"single-check waiter woke on the closed channel and would let send() proceed on "+
+			"a halted queue", h)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	// A genuine resume() must release the waiter promptly, with halted observed false.
+	q.resume()
+	select {
+	case h := <-returned:
+		require.False(t, h, "waitIfHalted returned but the queue was still halted")
+	case <-time.After(2 * time.Second):
+		t.Fatal("waitIfHalted did not return after a genuine resume()")
+	}
+}

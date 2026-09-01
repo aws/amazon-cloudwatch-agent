@@ -197,9 +197,13 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
 			c.retryHeap = pusher.NewRetryHeap(c.Log)
 
-			retryHeapProcessorRetryer := retryer.NewLogThrottleRetryer(c.Log)
-			retryHeapProcessorClient := c.createClient(retryHeapProcessorRetryer)
-			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, retryHeapProcessorClient, c.targetManager, c.Log, retryHeapProcessorRetryer)
+			// The retry-heap sender reads its client only as the batch.service nil-fallback
+			// (sender.go), but every batch reaching the heap was already pinned to its
+			// per-destination client by the first send, so that fallback never fires and a
+			// dedicated client here would never issue a PutLogEvents. Reuse the shared client
+			// (already non-nil, so the fallback can never nil-deref) instead of standing up a
+			// dedicated client and LogThrottleRetryer that would only leak a goroutine.
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, c.sharedClient, c.targetManager, c.Log, nil)
 			c.retryHeapProcessor.Start()
 		}
 	})
