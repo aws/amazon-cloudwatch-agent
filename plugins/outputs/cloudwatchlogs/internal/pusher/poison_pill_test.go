@@ -229,7 +229,7 @@ func createBatch(target Target, eventCount int) *logEventBatch {
 	return batch
 }
 
-// N6: every target failing at once must not deadlock or grow without bound.
+// Every target failing at once must not deadlock or grow without bound.
 func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
 	logger := &testutil.Logger{}
 	var calls atomic.Int32
@@ -278,8 +278,8 @@ func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
 	}
 }
 
-// N7: destinations churning while the service throttles exercises the #2190 seam -- the
-// TargetManager's shared retryer must outlive individual destination stops.
+// Destinations churning while the service throttles must not wedge: the TargetManager's
+// shared retryer must outlive individual destination stops.
 func TestChurnWhileThrottledDoesNotWedge(t *testing.T) {
 	logger := &testutil.Logger{}
 	var calls atomic.Int32
@@ -307,7 +307,7 @@ func TestChurnWhileThrottledDoesNotWedge(t *testing.T) {
 
 	// the shared TargetManager must still work after all those stops
 	require.NoError(t, tm.InitTarget(Target{Group: "after-churn", Stream: "s"}),
-		"TargetManager broke after destination churn: the #2190 shared retryer was tied to a stopped dest")
+		"TargetManager broke after destination churn: the shared retryer was tied to a stopped dest")
 
 	p.Stop()
 	workerPool.Stop()

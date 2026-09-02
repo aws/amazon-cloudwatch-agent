@@ -73,7 +73,6 @@ type RetryHeap interface {
 type retryHeap struct {
 	heap    retryHeapImpl
 	mutex   sync.RWMutex
-	stopCh  chan struct{}
 	stopped bool
 	logger  telegraf.Logger
 }
@@ -84,7 +83,6 @@ var _ RetryHeap = (*retryHeap)(nil)
 func NewRetryHeap(logger telegraf.Logger) RetryHeap {
 	rh := &retryHeap{
 		heap:   make(retryHeapImpl, 0),
-		stopCh: make(chan struct{}),
 		logger: logger,
 	}
 	heap.Init(&rh.heap)
@@ -136,7 +134,6 @@ func (rh *retryHeap) Stop() {
 	if rh.stopped {
 		return
 	}
-	close(rh.stopCh)
 	rh.stopped = true
 }
 

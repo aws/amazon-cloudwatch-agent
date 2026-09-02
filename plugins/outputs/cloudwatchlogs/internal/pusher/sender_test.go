@@ -346,18 +346,11 @@ func TestSenderConcurrencyFallbackToSync(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
-// NOT A BUG -- intentional upstream behaviour. On the synchronous path
-// (concurrency <= 1, retryHeap == nil) a send interrupted by shutdown calls batch.drop(),
-// persisting file offsets for events that never reached CloudWatch.
-//
-// This looks like the data loss abandon() was introduced to prevent, but it is deliberate:
-// commit 2da9c430 ("Update state when batch dropped", #1789) added batch.updateState() to
-// exactly this stop path, stating the goal is "to prevent reprocessing the same batch after
-// restart" -- upstream chose loss over duplication here. sender_test.go's
-// TestSender/StopChannelClosed asserts the state callback DOES run on stop.
-//
-// Changing it would reverse #1789, so this test pins the intentional behavior instead. If
-// the trade is ever revisited, this is the test to flip (with #1789's owner in the loop).
+// NOT A BUG -- intentional upstream behaviour. On the synchronous path (concurrency <= 1,
+// retryHeap == nil) a send interrupted by shutdown calls batch.drop(), persisting file
+// offsets for events that never reached CloudWatch. Upstream chose loss over duplication:
+// updateState() runs on this stop path deliberately, to avoid reprocessing the batch after
+// restart. This test pins that trade-off; flip it only if the trade is revisited.
 func TestSynchronousShutdownPersistsOffsetsByDesign(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	var stateRuns, doneRuns atomic.Int32
@@ -382,7 +375,7 @@ func TestSynchronousShutdownPersistsOffsetsByDesign(t *testing.T) {
 	require.Zero(t, doneRuns.Load(),
 		"shutdown must never report undelivered events as delivered")
 	require.Equal(t, 1, int(stateRuns.Load()),
-		"offsets ARE persisted on synchronous shutdown, by #1789's design; flipping this "+
+		"offsets ARE persisted on synchronous shutdown by design; flipping this "+
 			"assertion means deliberately reversing that trade")
 }
 

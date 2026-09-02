@@ -37,7 +37,6 @@ type queue struct {
 	flushTimeout atomic.Value
 	stopCh       chan struct{}
 	stopOnce     sync.Once
-	stopped      bool
 	lastSentTime atomic.Value
 
 	initNonBlockingChOnce sync.Once
@@ -133,7 +132,6 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 func (q *queue) Stop() {
 	q.stopOnce.Do(func() {
 		close(q.stopCh)
-		q.stopped = true
 	})
 }
 
@@ -200,10 +198,8 @@ func (q *queue) send() {
 		// reported as delivered. Without this, halt() latches until the next done().
 		q.batch.addResumeCallback(q.resume)
 
-		// In synchronous mode (no retryHeap), halt() is never called because
-		// sender only calls batch.fail() when retryHeap != nil. So waitIfHalted
-		// is a no-op. The lock acquisition is negligible overhead (~20ns) on
-		// the uncontended path.
+		// In synchronous mode (no retryHeap) halt() is never called, so waitIfHalted is a
+		// no-op guard on the uncontended send path.
 		q.waitIfHalted()
 
 		q.sender.Send(q.batch)

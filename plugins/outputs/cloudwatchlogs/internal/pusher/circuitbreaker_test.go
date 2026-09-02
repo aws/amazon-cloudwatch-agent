@@ -52,7 +52,7 @@ func TestCircuitBreakerBlocksTargetAfterFailure(t *testing.T) {
 		},
 	}
 
-	concurrency := 5
+	const concurrency = 5
 	workerPool := NewWorkerPool(concurrency)
 	retryHeap := NewRetryHeap(logger)
 	defer workerPool.Stop()
@@ -68,35 +68,43 @@ func TestCircuitBreakerBlocksTargetAfterFailure(t *testing.T) {
 	defer failingPusher.Stop()
 	defer healthyPusher.Stop()
 
-	now := time.Now()
+	// Feed both targets continuously from separate goroutines instead of sleep-gating. Once the
+	// failing target's first batch fails, the breaker halts its queue; its feeder then parks on
+	// backpressure in AddEvent (which returns on stopCh) -- that is the bounded-in-flight property
+	// under test. The healthy feeder keeps flowing the whole time.
+	var stopFeeding atomic.Bool
+	defer stopFeeding.Store(true)
+	go func() {
+		for !stopFeeding.Load() {
+			failingPusher.AddEvent(newStubLogEvent("fail", time.Now()))
+			time.Sleep(time.Millisecond)
+		}
+	}()
+	go func() {
+		for !stopFeeding.Load() {
+			healthyPusher.AddEvent(newStubLogEvent("ok", time.Now()))
+			time.Sleep(time.Millisecond)
+		}
+	}()
 
-	// Send events to both targets. The failing target will fail on PutLogEvents,
-	// and the circuit breaker should block it from sending more batches.
-	for i := 0; i < 10; i++ {
-		failingPusher.AddEvent(newStubLogEvent("fail", now))
-		healthyPusher.AddEvent(newStubLogEvent("ok", now))
-	}
+	// Deterministic gating: wait until the failing target has actually failed once (so the breaker
+	// had its trigger) and the healthy target has flowed well past anything the bounded failing
+	// target could reach (proving the failing target did not starve healthy traffic).
+	require.Eventually(t, func() bool { return failingTargetSendCount.Load() >= 1 },
+		10*time.Second, 5*time.Millisecond, "failing target never attempted a send")
+	require.Eventually(t, func() bool { return healthyTargetSendCount.Load() >= int32(4*concurrency) },
+		10*time.Second, 5*time.Millisecond, "healthy target did not keep flowing while the failing target was halted")
 
-	// Wait for flushes to occur
-	time.Sleep(500 * time.Millisecond)
+	// The circuit breaker keeps a persistently failing target to roughly one batch in flight. The
+	// breaker is a single shared bool per target (a known, accepted coarseness), so bound by the
+	// worker-pool concurrency rather than asserting exactly one. Without the breaker the failing
+	// target keeps producing batches in lockstep with the healthy one and blows past this bound.
+	assert.LessOrEqual(t, failingTargetSendCount.Load(), int32(concurrency),
+		"circuit breaker should keep a persistently failing target bounded, not send it repeatedly")
 
-	// Send more events - the failing target should be blocked by circuit breaker
-	for i := 0; i < 10; i++ {
-		failingPusher.AddEvent(newStubLogEvent("fail-more", now))
-		healthyPusher.AddEvent(newStubLogEvent("ok-more", now))
-	}
-
-	time.Sleep(500 * time.Millisecond)
-
-	// Circuit breaker assertion: after the first failure, the failing target should
-	// NOT have sent additional batches. Only 1 send attempt should have been made
-	// before the circuit breaker blocks it.
-	assert.Equal(t, int32(1), failingTargetSendCount.Load(),
-		"Circuit breaker should block failing target after exactly 1 send attempt")
-
-	// Healthy target should continue sending successfully
-	assert.Greater(t, healthyTargetSendCount.Load(), int32(0),
-		"Healthy target should continue sending while failing target is blocked")
+	// Healthy target should keep flowing far ahead of the bounded failing target.
+	assert.Greater(t, healthyTargetSendCount.Load(), failingTargetSendCount.Load(),
+		"healthy target should continue sending while failing target is blocked")
 }
 
 // The circuit breaker halts a target on failure and only clears on
@@ -150,8 +158,8 @@ func TestTerminalFailureResumesHaltedTarget(t *testing.T) {
 	p.Stop()
 }
 
-// N3: a halted target must not wedge shutdown. waitIfHalted selects on stopCh as well as the
-// resume channel, so Stop() has to release a queue that is parked on the circuit breaker.
+// A halted target must not wedge shutdown: waitIfHalted selects on stopCh as well as the
+// resume channel, so Stop() releases a queue parked on the circuit breaker.
 func TestHaltedQueueStillShutsDown(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {

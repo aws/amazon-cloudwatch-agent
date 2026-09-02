@@ -22,9 +22,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
-// Shutdown must never acknowledge events that were never delivered -- finding #4's
-// abandon()/drop() semantics at plugin scope. Every send fails, so Close() finalizes in-flight
-// batches through those paths rather than done().
+// Shutdown must never acknowledge events that were never delivered: abandon()/drop()
+// semantics at plugin scope. Every send fails, so Close() finalizes in-flight batches
+// through those paths rather than done().
 //
 // SCOPE LIMIT: this does NOT verify the Close() ordering (processor -> pool -> heap). Established
 // by mutation testing -- reverting to the pre-fix order still passes, because at Close() time the

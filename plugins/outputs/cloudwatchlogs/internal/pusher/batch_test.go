@@ -541,8 +541,8 @@ func TestDropIncrementsDroppedLogEvents(t *testing.T) {
 		"drop() must add every undelivered event in the batch to the dropped counter")
 }
 
-// N5: a permanently invalid batch must advance offsets so it is not re-read forever (its own
-// poison pill), while still clearing the breaker.
+// A permanently invalid batch must advance offsets so it is not re-read forever, while still
+// clearing the breaker.
 func TestInvalidBatchAdvancesOffsetsAndResumes(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {

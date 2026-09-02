@@ -133,7 +133,7 @@ func TestSenderPool(t *testing.T) {
 	assert.Equal(t, int32(200), completed.Load())
 }
 
-// N4: the worker pool must behave across the concurrency values operators actually set,
+// The worker pool must behave across the concurrency values operators actually set,
 // including more workers than CPUs.
 func TestWorkerPoolConcurrencyMatrix(t *testing.T) {
 	for _, size := range []int{1, 2, 8, runtime.NumCPU() * 4} {
@@ -207,9 +207,8 @@ func TestSenderPoolAbandonsBatchOnPanic(t *testing.T) {
 		"abandon() must NOT persist offsets: the events were never delivered")
 }
 
-// Submit holds stopLock.RLock while blocking on the task channel, and
-// Stop needs stopLock.Lock to close stopCh. The write lock waits for that reader, so Stop
-// can never release the blocked Submit -- the pool deadlocks on a saturated shutdown.
+// Stop must release a Submit parked on a saturated pool: Submit selects on stopCh, so
+// closing stopCh wakes it. A lock-guarded Submit would instead deadlock against Stop.
 func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
 	pool := NewWorkerPool(1) // tasks buffer = 2
 	release := make(chan struct{})
@@ -226,10 +225,8 @@ func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
 	}()
 	time.Sleep(200 * time.Millisecond) // let it park inside Submit
 
-	// Stop itself still waits on the deliberately-hung worker via wg.Wait(), which is
-	// correct. The property under test is that Stop RELEASES the parked Submit: pre-fix
-	// Submit held stopLock.RLock, so Stop could not take the write lock to close stopCh
-	// and the Submit was stuck forever.
+	// Stop still waits on the hung worker via wg.Wait() (correct); the property under test
+	// is that Stop RELEASES the parked Submit by closing stopCh.
 	go pool.Stop()
 
 	select {
@@ -237,8 +234,7 @@ func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
 		// Submit returned once stopCh closed.
 	case <-time.After(15 * time.Second):
 		close(release)
-		t.Fatal("Stop() did not release the parked Submit: it held stopLock.RLock, so Stop's " +
-			"write lock could never be acquired to close stopCh")
+		t.Fatal("Stop() did not release the parked Submit by closing stopCh")
 	}
 	close(release)
 }

@@ -323,14 +323,12 @@ func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
 	assert.True(t, processor.stopped.Load())
 }
 
-// RetryHeapProcessor.Stop() takes stopMu with a deferred Unlock and holds it
-// across wg.Wait(). processLoop's ticker path calls processReadyMessages(), which takes
-// the same stopMu. If a tick lands while Stop() holds the lock, processLoop never returns
-// to its select, never observes stopCh, and never calls wg.Done() -- so Stop() waits
-// forever holding the lock processLoop needs.
+// Stop() must not hang when its own flush blocks in workerPool.Submit on a saturated pool.
+// Stop bounds the flush with stopFlushTimeout and the process-loop wait with stopWaitTimeout,
+// so shutdown proceeds even while a tick is mid-flush.
 //
-// The window is made deterministic here: Stop() flushes while holding the lock, and the
-// flush blocks in workerPool.Submit until the test releases the sends.
+// The window is made deterministic here: Stop()'s flush blocks in workerPool.Submit until
+// the test releases the sends.
 func TestRetryHeapProcessorStopDoesNotDeadlock(t *testing.T) {
 	logger := &testutil.Logger{}
 
@@ -355,8 +353,7 @@ func TestRetryHeapProcessorStopDoesNotDeadlock(t *testing.T) {
 	require.Eventually(t, func() bool { return inFlight.Load() > 0 }, 5*time.Second, 10*time.Millisecond,
 		"test setup: expected the worker pool to be saturated")
 
-	// Now give Stop()'s own flush something to do, so IT is the caller that blocks in
-	// Submit while holding stopMu (the tick path releases stopMu before flushing).
+	// Give Stop()'s own flush something to do, so it is the caller that blocks in Submit.
 	for i := 0; i < 5; i++ {
 		require.NoError(t, retryHeap.Push(readyBatch("g", nil, nil)))
 	}
@@ -364,22 +361,21 @@ func TestRetryHeapProcessorStopDoesNotDeadlock(t *testing.T) {
 	stopped := make(chan struct{})
 	go func() { p.Stop(); close(stopped) }()
 
-	// Stop() is now blocked inside flushReadyBatches -> Submit while holding stopMu.
-	// Give the 100ms ticker time to fire and park processLoop on the same lock.
+	// Stop()'s flush is now blocked inside flushReadyBatches -> Submit; let the 100ms ticker
+	// fire concurrently to confirm neither path wedges shutdown.
 	time.Sleep(400 * time.Millisecond)
 	close(release)
 
 	select {
 	case <-stopped:
 	case <-time.After(15 * time.Second):
-		t.Fatal("Stop() deadlocked: stopMu is held across wg.Wait() while processLoop's " +
-			"ticker path blocks acquiring the same stopMu")
+		t.Fatal("Stop() deadlocked: flush or process-loop wait was not bounded on a saturated pool")
 	}
 	workerPool.Stop()
 }
 
-// N1: Stop() must be idempotent and safe under concurrent callers. The fix replaced a mutex
-// with sync.Once; a regression here would double-close stopCh and panic.
+// Stop() must be idempotent and safe under concurrent callers: it uses sync.Once, so a
+// regression to a plain flag would double-close stopCh and panic.
 func TestProcessorStopIsIdempotentAndConcurrencySafe(t *testing.T) {
 	logger := &testutil.Logger{}
 	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
@@ -409,8 +405,8 @@ func TestProcessorStopIsIdempotentAndConcurrencySafe(t *testing.T) {
 	p.Stop() // once more, after the fact
 }
 
-// N2: pushing to a closed heap must fail cleanly so the caller can abandon rather than block
-// or panic. This is the path sender.Send() takes during shutdown.
+// Pushing to a closed heap must fail cleanly so the caller can abandon rather than block or
+// panic -- the path sender.Send() takes during shutdown.
 func TestHeapPushAfterStopFailsCleanly(t *testing.T) {
 	logger := &testutil.Logger{}
 	h := NewRetryHeap(logger)

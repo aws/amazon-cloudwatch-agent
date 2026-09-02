@@ -953,7 +953,6 @@ func TestQueueStopWhileHalted(t *testing.T) {
 		batch := args.Get(0).(*logEventBatch)
 		batch.fail() // Halt the queue
 	}).Return()
-	mockSender.On("Stop").Return()
 
 	var wg sync.WaitGroup
 	q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1}, 10*time.Millisecond, nil, mockSender, &wg)

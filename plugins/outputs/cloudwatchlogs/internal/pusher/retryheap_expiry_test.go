@@ -19,10 +19,8 @@ import (
 func TestRetryHeapProcessorExpiredBatchShouldResume(t *testing.T) {
 	logger := testutil.NewNopLogger()
 
-	var sendAttempts atomic.Int32
 	mockService := &stubLogsService{
 		ple: func(_ *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-			sendAttempts.Add(1)
 			// Always fail to simulate a problematic target
 			return nil, &cloudwatchlogs.ServiceUnavailableException{}
 		},

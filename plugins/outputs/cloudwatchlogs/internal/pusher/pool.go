@@ -107,7 +107,6 @@ func (p *workerPool) WorkerCount() int32 {
 	return p.workerCount.Load()
 }
 
-// Stop closes the channels and waits for the workers to stop.
 // Stop signals the workers and waits for them to drain and exit. p.tasks is deliberately
 // NOT closed: a concurrent Submit would panic on a closed channel, and avoiding the close
 // is what lets Submit run lock-free.

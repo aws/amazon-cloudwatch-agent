@@ -22,9 +22,9 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
-// R2: the collapse rebase unioned #2190's sharedRetryer/sharedClient with the poison-pill
-// retryHeap/retryHeapProcessor in one struct. Both sets must be wired, and the shared pair
-// must exist even when concurrency is disabled -- it is not gated on the retry heap.
+// Both component sets must be wired: the shared retryer/client and the concurrent
+// retry-heap components. The shared pair must exist even when concurrency is disabled --
+// it is not gated on the retry heap.
 func TestConcurrencyComponentsAllWired(t *testing.T) {
 	var puts atomic.Int32
 	srv := cwlServer(&puts, "")
@@ -33,26 +33,24 @@ func TestConcurrencyComponentsAllWired(t *testing.T) {
 	t.Run("ConcurrencyEnabled", func(t *testing.T) {
 		c := newPlugin(srv.URL, 4)
 		c.CreateDest("G", "S", -1, util.StandardLogGroupClass, nil)
-		// #2190 half
-		require.NotNil(t, c.sharedRetryer, "#2190 sharedRetryer lost in the rebase")
-		require.NotNil(t, c.sharedClient, "#2190 sharedClient lost in the rebase")
+		// shared retryer/client
+		require.NotNil(t, c.sharedRetryer, "sharedRetryer must be wired")
+		require.NotNil(t, c.sharedClient, "sharedClient must be wired")
 		require.NotNil(t, c.targetManager)
-		// poison-pill half
-		require.NotNil(t, c.workerPool, "poison-pill workerPool lost in the rebase")
-		require.NotNil(t, c.retryHeap, "poison-pill retryHeap lost in the rebase")
-		require.NotNil(t, c.retryHeapProcessor, "poison-pill processor lost in the rebase")
-		// Not asserted: that the processor's retryer differs from the TargetManager's
-		// sharedRetryer. The processor does not expose its retryer, so there is nothing
-		// observable to compare -- a NotSame against the processor itself compares two
-		// different types and can never fail.
+		// concurrent retry-heap components
+		require.NotNil(t, c.workerPool, "workerPool must be wired")
+		require.NotNil(t, c.retryHeap, "retryHeap must be wired")
+		require.NotNil(t, c.retryHeapProcessor, "processor must be wired")
+		// Not asserted: the processor's retryer vs the TargetManager's sharedRetryer. The
+		// processor does not expose its retryer, so there is nothing observable to compare.
 		c.Close()
 	})
 
 	t.Run("ConcurrencyDisabled", func(t *testing.T) {
 		c := newPlugin(srv.URL, 1)
 		c.CreateDest("G", "S", -1, util.StandardLogGroupClass, nil)
-		// #2190 must still apply with the retry heap switched off
-		require.NotNil(t, c.sharedRetryer, "#2190 fix must not be gated on concurrency")
+		// shared retryer/client must exist even with the retry heap switched off
+		require.NotNil(t, c.sharedRetryer, "sharedRetryer must not be gated on concurrency")
 		require.NotNil(t, c.sharedClient)
 		require.NotNil(t, c.targetManager)
 		assert.Nil(t, c.workerPool)
@@ -62,9 +60,9 @@ func TestConcurrencyComponentsAllWired(t *testing.T) {
 	})
 }
 
-// P8: concurrency <= 1 leaves retryHeap nil and the sender falls back to the synchronous
-// path. main's default concurrency is 0, so this is the path existing installs run -- it must
-// deliver and shut down cleanly with no nil dereference from the poison-pill wiring.
+// Concurrency <= 1 leaves retryHeap nil and the sender falls back to the synchronous path.
+// main's default concurrency is 0, so this is the path existing installs run -- it must
+// deliver and shut down cleanly with no nil dereference from the retry-heap wiring.
 func TestSyncModeDefaultConcurrencyDelivers(t *testing.T) {
 	for _, conc := range []int{0, 1} {
 		t.Run("Concurrency"+strconv.Itoa(conc), func(t *testing.T) {

@@ -211,9 +211,8 @@ func TestRetryWaitLong(t *testing.T) {
 	}
 }
 
-// P9: main's caller-supplied retryDuration was replaced by a fixed ceiling when the RetryHeap
-// landed (pool.go lost SetRetryDuration/RetryDuration). Verify the ceiling is actually applied,
-// since nothing else now bounds how long a batch is retried.
+// The caller-supplied retryDuration was replaced by a fixed ceiling (maxRetryTimeout) when
+// the RetryHeap landed; verify the ceiling is applied, since nothing else bounds retry time.
 func TestRetryCeilingIsApplied(t *testing.T) {
 	b := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
 	b.append(newLogEvent(time.Now(), "payload", func() {}))

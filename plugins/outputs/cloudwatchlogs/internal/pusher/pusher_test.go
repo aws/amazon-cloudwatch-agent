@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -154,8 +155,15 @@ func TestPusherRetryHeap(t *testing.T) {
 	assert.NotNil(t, pusher)
 	assert.Equal(t, target, pusher.Target)
 
-	// Verify pusher has retryHeap when concurrency enabled
-	// (RetryHeap is now passed to the underlying sender, not senderPool)
+	// The point of this pusher variant: the retryHeap passed to NewPusher must be wired into
+	// the underlying sender so failed batches go to the shared heap instead of busy-waiting.
+	sp, ok := pusher.Sender.(*senderPool)
+	require.True(t, ok, "with a worker pool the pusher's Sender must be a *senderPool")
+	inner, ok := sp.sender.(*sender)
+	require.True(t, ok, "senderPool must wrap the concrete *sender")
+	require.NotNil(t, inner.retryHeap, "NewPusher must wire a retry heap into the underlying sender")
+	assert.Same(t, retryHeap, inner.retryHeap,
+		"NewPusher must wire the passed retry heap into the underlying sender")
 
 	mockManager.AssertCalled(t, "PutRetentionPolicy", target)
 }

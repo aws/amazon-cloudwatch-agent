@@ -32,7 +32,6 @@ type sender struct {
 	targetManager TargetManager
 	logger        telegraf.Logger
 	stopCh        chan struct{}
-	stopped       bool
 	stopOnce      sync.Once
 	retryHeap     RetryHeap
 }
@@ -50,14 +49,13 @@ func newSender(
 		service:       service,
 		targetManager: targetManager,
 		stopCh:        make(chan struct{}),
-		stopped:       false,
 		retryHeap:     retryHeap,
 	}
 	return s
 }
 
-// Send attempts to send a batch of log events to CloudWatch Logs. Will retry failed attempts until it reaches the
-// RetryDuration or an unretryable error.
+// Send attempts to send a batch of log events to CloudWatch Logs. Retries failed attempts until the batch
+// expires (batch.isExpired, governed by expireAfter) or an unretryable error is returned.
 func (s *sender) Send(batch *logEventBatch) {
 	if len(batch.events) == 0 {
 		return
@@ -152,8 +150,8 @@ func (s *sender) Send(batch *logEventBatch) {
 
 		select {
 		case <-s.stopCh:
-			// drop(), not abandon(): #1789 deliberately persists state here so the batch is
-			// not reprocessed after restart, trading loss for no duplication on shutdown.
+			// drop(), not abandon(): persisting state here is deliberate so the batch is not
+			// reprocessed after restart, trading loss for no duplication on shutdown.
 			s.logger.Errorf("Stop requested after %v retries to %v/%v failed for PutLogEvents, request dropped.", totalRetries, batch.Group, batch.Stream)
 			batch.drop()
 			return
@@ -167,6 +165,5 @@ func (s *sender) Send(batch *logEventBatch) {
 func (s *sender) Stop() {
 	s.stopOnce.Do(func() {
 		close(s.stopCh)
-		s.stopped = true
 	})
 }
