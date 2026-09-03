@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
-	"github.com/aws/amazon-cloudwatch-agent/sdk/endpoints/awsrulesfn"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -231,7 +230,7 @@ func (t *translator) translateMetricsRouteToOtlp(_ *confmap.Conf) (*common.Compo
 	connectorTranslator := newMetricsRoutingConnectorTranslator()
 	sigv4Ext := sigv4auth.NewTranslatorWithService("monitoring")
 	metricsEndpoint := otlphttp.EndpointConfig{
-		MetricsEndpoint: serviceEndpoint("monitoring", region, "/v1/metrics"),
+		MetricsEndpoint: common.ServiceEndpoint("monitoring", region, "/v1/metrics"),
 	}
 
 	translators := &common.ComponentTranslators{
@@ -344,7 +343,7 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	sigv4Ext := sigv4auth.NewTranslatorWithService("logs")
 	provisionerExt := awscloudwatchlogsprovisioner.NewTranslator(sigv4Ext.ID())
 	logsEndpoint := otlphttp.EndpointConfig{
-		LogsEndpoint: serviceEndpoint("logs", region, "/v1/logs"),
+		LogsEndpoint: common.ServiceEndpoint("logs", region, "/v1/logs"),
 	}
 
 	logGroupHasPlaceholders := hasPlaceholders(logGroupTemplate)
@@ -523,12 +522,4 @@ func setVariant(variant string) common.TranslatorOption {
 			t.variant = variant
 		}
 	}
-}
-
-func serviceEndpoint(service, region, path string) string {
-	dnsSuffix := "amazonaws.com"
-	if partition := awsrulesfn.GetPartition(region); partition != nil && partition.DnsSuffix != "" {
-		dnsSuffix = partition.DnsSuffix
-	}
-	return fmt.Sprintf("https://%s.%s.%s%s", service, region, dnsSuffix, path)
 }

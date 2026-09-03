@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -20,26 +21,24 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-func TestGetFallbackRegion(t *testing.T) {
+func TestPartitionPrimaryRegion(t *testing.T) {
 	testCases := []struct {
 		region string
 		want   string
 	}{
-		{region: "us-east-1", want: classicFallbackRegion},
-		{region: "us-west-2", want: classicFallbackRegion},
-		{region: "eu-west-1", want: classicFallbackRegion},
-		{region: "cn-north-1", want: bjsFallbackRegion},
-		{region: "cn-northwest-1", want: bjsFallbackRegion},
-		{region: "us-gov-east-1", want: pdtFallbackRegion},
-		{region: "us-gov-west-1", want: pdtFallbackRegion},
-		{region: "us-iso-east-1", want: dcaFallbackRegion},
-		{region: "us-isob-east-1", want: lckFallbackRegion},
-		{region: "unknown-region", want: classicFallbackRegion},
+		{region: "us-east-1", want: "us-east-1"},
+		{region: "us-west-2", want: "us-east-1"},
+		{region: "cn-northwest-1", want: "cn-north-1"},
+		{region: "us-gov-east-1", want: "us-gov-west-1"},
+		{region: "us-isob-east-1", want: "us-isob-east-1"},
+		{region: "unknown-region", want: "us-east-1"},
+		{region: "", want: "us-east-1"},
 	}
 
 	for _, testCase := range testCases {
-		got := getFallbackRegion(testCase.region)
-		assert.Equal(t, testCase.want, got)
+		t.Run(testCase.region, func(t *testing.T) {
+			assert.Equal(t, testCase.want, override.GetPartitionPrimaryRegion(testCase.region))
+		})
 	}
 }
 
@@ -101,6 +100,20 @@ func TestStsCredentialsProvider_Retrieve(t *testing.T) {
 
 		regional.AssertExpectations(t)
 		partitional.AssertExpectations(t)
+	})
+	t.Run("Fallback/RegionDisabledException/NoPartitional", func(t *testing.T) {
+		// Without a partitional provider, the regional error surfaces instead of
+		// retrying in another partition.
+		regional := new(mockCredentialsProvider)
+		regional.On("Retrieve", t.Context()).Return(aws.Credentials{}, &types.RegionDisabledException{}).Once()
+
+		provider := &stsCredentialsProvider{regional: regional}
+
+		_, err := provider.Retrieve(t.Context())
+		var rde *types.RegionDisabledException
+		assert.ErrorAs(t, err, &rde)
+		assert.Nil(t, provider.fallback)
+		regional.AssertExpectations(t)
 	})
 }
 
