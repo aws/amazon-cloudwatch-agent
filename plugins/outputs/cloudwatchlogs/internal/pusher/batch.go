@@ -5,7 +5,6 @@ package pusher
 
 import (
 	"sort"
-	"sync/atomic"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -16,17 +15,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
-
-// droppedLogEvents is the cumulative count of log events dropped without delivery after a
-// terminal send failure or retry-timeout expiry. It is incremented in drop() and can be
-// read via DroppedLogEvents() so data loss can be tracked without scraping per-batch logs.
-var droppedLogEvents atomic.Int64
-
-// DroppedLogEvents returns the cumulative number of log events permanently dropped
-// (never delivered) across all targets since process start.
-func DroppedLogEvents() int64 {
-	return droppedLogEvents.Load()
-}
 
 // CloudWatch Logs PutLogEvents API limits
 // Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
@@ -265,14 +253,13 @@ func (b *logEventBatch) resume() {
 // persists state so the events are not reprocessed on restart and clears the circuit
 // breaker, but deliberately does NOT run doneCallbacks: those signal successful
 // delivery (per-event LogEvent.Done plus the queue's success bookkeeping). The count of
-// dropped events is tracked so operators can monitor data loss (see droppedLogEvents).
+// dropped events is published as a per-target profiler stat so operators can monitor data loss.
 func (b *logEventBatch) drop() {
 	// Deferred so a panic in a state callback still clears the breaker: updateState runs
 	// arbitrary callbacks, and skipping resume() would wedge this target permanently.
 	defer b.resume()
 
 	dropped := int64(len(b.events))
-	droppedLogEvents.Add(dropped)
 	// Per-target visibility, matching the existing emfMetricDrop stat convention.
 	profiler.Profiler.AddStats([]string{"cloudwatchlogs", b.Group, "logEventsDropped"}, float64(dropped))
 	b.updateState()

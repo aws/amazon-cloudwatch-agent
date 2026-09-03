@@ -465,20 +465,6 @@ func TestBatchInitializeStartTimeIdempotent(t *testing.T) {
 	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on third call")
 }
 
-// drop() must track undelivered events via an atomic counter so
-// data loss is observable. Every event in a dropped batch counts.
-func TestDropIncrementsDroppedLogEvents(t *testing.T) {
-	before := DroppedLogEvents()
-
-	b := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
-	b.append(newLogEvent(time.Now(), "a", func() {}))
-	b.append(newLogEvent(time.Now(), "b", func() {}))
-	b.drop()
-
-	require.Equal(t, before+2, DroppedLogEvents(),
-		"drop() must add every undelivered event in the batch to the dropped counter")
-}
-
 // A permanently invalid batch must advance offsets so it is not re-read forever, while still
 // clearing the breaker.
 func TestInvalidBatchAdvancesOffsetsAndResumes(t *testing.T) {

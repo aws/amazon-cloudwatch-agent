@@ -4,7 +4,6 @@
 package pusher
 
 import (
-	"sync/atomic"
 	"time"
 
 	"github.com/stretchr/testify/mock"
@@ -67,11 +66,11 @@ func readyBatch(group string, done, state func()) *logEventBatch {
 }
 
 // stubSender is a no-op Sender for breaker-level tests.
-type stubSender struct{ sent atomic.Int32 }
+type stubSender struct{}
 
-func (s *stubSender) Send(*logEventBatch) { s.sent.Add(1) }
+func (*stubSender) Send(*logEventBatch) {}
 
-func (s *stubSender) Stop() {}
+func (*stubSender) Stop() {}
 
 // panicSender panics inside Send to simulate a panic in the API call or a callback.
 type panicSender struct{}
