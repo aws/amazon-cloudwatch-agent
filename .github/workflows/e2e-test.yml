@@ -199,6 +199,91 @@ jobs:
       eks_installation_type: "HELM_CHART"
     secrets: inherit
 
+  EKSE2EOTELContainerInsightsTestAddon:
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
+    name: 'EKSE2EOtelContainerInsightsTestAddon'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/eks-e2e-test.yml
+    with:
+      terraform_dir: terraform/eks/e2e
+      job_id: eks-e2e-otelcontainerinsights-test-addon
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_containerinsights_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region || 'us-west-2' }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      agent_config: resources/cwagent_configs_eks_addon/ci_node.json
+      sample_app: resources/sample_apps/nginx.yaml
+      eks_installation_type: "EKS_ADDON"
+    secrets: inherit
+
+  EKSE2EOTELContainerInsightsTestHelmIPv6:
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
+    name: 'EKSE2EOtelContainerInsightsTestHelmIPv6'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/eks-e2e-test.yml
+    with:
+      terraform_dir: terraform/eks/e2e
+      job_id: eks-e2e-otelcontainerinsights-test-helm-ipv6
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_containerinsights_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region || 'us-west-2' }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      agent_config: resources/cwagent_configs_helm_chart/ci_node.json
+      sample_app: resources/sample_apps/nginx.yaml
+      eks_installation_type: "HELM_CHART"
+      ip_family: "ipv6"
+      vpc_name: "ipv6-eks-integ-test/VPC"
+    secrets: inherit
+
+  EKSE2EOTELContainerInsightsTestAddonIPv6:
+    needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
+    if: always() && !cancelled() && !contains(needs.*.result, 'failure')
+    name: 'EKSE2EOtelContainerInsightsTestAddonIPv6'
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/eks-e2e-test.yml
+    with:
+      terraform_dir: terraform/eks/e2e
+      job_id: eks-e2e-otelcontainerinsights-test-addon-ipv6
+      test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_containerinsights_matrix }}
+      test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+      test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      cloudwatch_agent_repository: ${{ needs.OutputEnvVariables.outputs.ECR_INTEGRATION_TEST_REPO }}
+      cloudwatch_agent_tag: ${{ inputs.build_sha || github.sha }}
+      cloudwatch_agent_operator_repository: ${{ needs.OutputEnvVariables.outputs.ECR_OPERATOR_REPO }}
+      cloudwatch_agent_operator_tag: ${{ needs.GetLatestOperatorCommitSHA.outputs.operator_commit_sha }}
+      region: ${{ inputs.region || 'us-west-2' }}
+      helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      agent_config: resources/cwagent_configs_eks_addon/ci_node.json
+      sample_app: resources/sample_apps/nginx.yaml
+      eks_installation_type: "EKS_ADDON"
+      ip_family: "ipv6"
+      vpc_name: "ipv6-eks-integ-test/VPC"
+    secrets: inherit
+
   EKSE2EJVMTomcatTestHelm:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
