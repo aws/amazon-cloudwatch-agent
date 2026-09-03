@@ -413,7 +413,6 @@ func TestBatchRetryMetadata(t *testing.T) {
 
 	// Test initial state
 	assert.True(t, batch.startTime.IsZero())
-	assert.True(t, batch.isReadyForRetry())
 	assert.False(t, batch.isExpired())
 
 	// Test initializeStartTime
@@ -425,15 +424,7 @@ func TestBatchRetryMetadata(t *testing.T) {
 	batch.updateRetryMetadata(err)
 	assert.Equal(t, 1, batch.retryCountShort)
 	assert.Equal(t, 0, batch.retryCountLong)
-	assert.Equal(t, err, batch.lastError)
 	assert.False(t, batch.nextRetryTime.IsZero())
-
-	// Test isReadyForRetry - should be false immediately after retry metadata update
-	assert.False(t, batch.isReadyForRetry())
-
-	// Test isReadyForRetry - should be true after nextRetryTime passes
-	batch.nextRetryTime = time.Now().Add(-1 * time.Second) // Set to past time
-	assert.True(t, batch.isReadyForRetry())
 
 	// Test isExpired
 	batch.expireAfter = time.Now().Add(-1 * time.Hour)
@@ -474,59 +465,6 @@ func TestBatchInitializeStartTimeIdempotent(t *testing.T) {
 	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on third call")
 }
 
-// A batch dropped because the retry heap is already stopped (shutdown in
-// progress) must not fire done callbacks. done() runs updateState() AND every
-// doneCallback -- per-event LogEvent.Done() plus the queue's onSuccessCallback -- which
-// marks never-delivered events as delivered and advances file offsets past them, so the
-// events are neither shipped nor re-read after restart.
-func TestHeapStoppedDropDoesNotSignalSuccess(t *testing.T) {
-	logger := testutil.NewNopLogger()
-	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-		return nil, &cloudwatchlogs.ServiceUnavailableException{}
-	})
-
-	retryHeap := NewRetryHeap(logger)
-	retryHeap.Stop() // shutdown already closed the heap
-
-	var delivered, offsetsAdvanced atomic.Int32
-	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsetsAdvanced.Add(1) })
-
-	newSender(logger, service, NewTargetManager(logger, service), retryHeap).Send(batch)
-
-	assert.Zero(t, delivered.Load(),
-		"undelivered batch dropped at shutdown fired done callbacks: events are reported delivered")
-	assert.Zero(t, offsetsAdvanced.Load(),
-		"undelivered batch dropped at shutdown advanced file offsets: events are lost across restart")
-}
-
-// Second site: the same false-success signal on the expired-batch drop
-// inside flushReadyBatches. Expiry is a permanent give-up, so offsets SHOULD advance --
-// but done callbacks must not fire, because nothing was delivered.
-func TestExpiredBatchDropDoesNotSignalSuccess(t *testing.T) {
-	logger := testutil.NewNopLogger()
-	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
-		return &cloudwatchlogs.PutLogEventsOutput{}, nil
-	})
-
-	workerPool := NewWorkerPool(1)
-	defer workerPool.Stop()
-	retryHeap := NewRetryHeap(logger)
-
-	var delivered, offsetsAdvanced atomic.Int32
-	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsetsAdvanced.Add(1) })
-	batch.expireAfter = time.Now().Add(-time.Hour) // already past its expiry window
-	require.NoError(t, retryHeap.Push(batch))
-
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
-	p.flushReadyBatches()
-
-	require.True(t, batch.isExpired(), "test setup: batch must be expired to exercise the drop path")
-	assert.Zero(t, delivered.Load(),
-		"expired batch fired done callbacks: never-delivered events are reported delivered")
-	assert.Equal(t, int32(1), offsetsAdvanced.Load(),
-		"expired batch is a permanent give-up, so offsets should advance exactly once")
-}
-
 // drop() must track undelivered events via an atomic counter so
 // data loss is observable. Every event in a dropped batch counts.
 func TestDropIncrementsDroppedLogEvents(t *testing.T) {
@@ -549,7 +487,7 @@ func TestInvalidBatchAdvancesOffsetsAndResumes(t *testing.T) {
 		return nil, &cloudwatchlogs.InvalidParameterException{}
 	})
 	retryHeap := NewRetryHeap(logger)
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 
 	var delivered, offsets, resumed atomic.Int32
 	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsets.Add(1) })
@@ -573,10 +511,10 @@ func TestPanicInStateCallbackStillClearsCircuitBreaker(t *testing.T) {
 	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	})
-	workerPool := NewWorkerPool(1)
+	workerPool := NewWorkerPool(1, testutil.NewNopLogger())
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 	p := NewRetryHeapProcessor(retryHeap, workerPool, svc, NewTargetManager(logger, svc), logger, nil)
 
 	b := readyBatch("g", nil, func() { panic("state callback boom") })

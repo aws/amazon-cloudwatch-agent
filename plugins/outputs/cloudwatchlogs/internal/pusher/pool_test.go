@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -20,7 +21,7 @@ import (
 
 func TestWorkerPool(t *testing.T) {
 	t.Run("BasicSubmit", func(t *testing.T) {
-		pool := NewWorkerPool(3).(*workerPool)
+		pool := NewWorkerPool(3, testutil.NewNopLogger()).(*workerPool)
 		assert.EqualValues(t, 3, pool.WorkerCount())
 		var wg sync.WaitGroup
 		var completed atomic.Int32
@@ -41,7 +42,7 @@ func TestWorkerPool(t *testing.T) {
 	})
 
 	t.Run("GracefulStop", func(t *testing.T) {
-		pool := NewWorkerPool(20)
+		pool := NewWorkerPool(20, testutil.NewNopLogger())
 
 		var completed atomic.Int32
 		taskCount := 500
@@ -58,7 +59,7 @@ func TestWorkerPool(t *testing.T) {
 	})
 
 	t.Run("SubmitAfterStop", func(t *testing.T) {
-		pool := NewWorkerPool(3).(*workerPool)
+		pool := NewWorkerPool(3, testutil.NewNopLogger()).(*workerPool)
 		pool.Stop()
 		assert.EqualValues(t, 0, pool.WorkerCount())
 		assert.NotPanics(t, func() {
@@ -70,7 +71,7 @@ func TestWorkerPool(t *testing.T) {
 	})
 
 	t.Run("MultipleStops", func(t *testing.T) {
-		pool := NewWorkerPool(3)
+		pool := NewWorkerPool(3, testutil.NewNopLogger())
 		assert.NotPanics(t, func() {
 			for i := 0; i < 10; i++ {
 				pool.Stop()
@@ -79,7 +80,7 @@ func TestWorkerPool(t *testing.T) {
 	})
 
 	t.Run("ConcurrentSubmitAndStop", func(t *testing.T) {
-		pool := NewWorkerPool(20)
+		pool := NewWorkerPool(20, testutil.NewNopLogger())
 		var wg sync.WaitGroup
 		taskCount := 1000
 		var completed atomic.Int32
@@ -110,7 +111,7 @@ func TestSenderPool(t *testing.T) {
 	mockService := new(mockLogsService)
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
 	s := newSender(logger, mockService, nil, nil)
-	p := NewWorkerPool(12)
+	p := NewWorkerPool(12, testutil.NewNopLogger())
 	sp := newSenderPool(p, s, testutil.NewNopLogger())
 
 	var completed atomic.Int32
@@ -137,24 +138,26 @@ func TestSenderPool(t *testing.T) {
 // including more workers than CPUs.
 func TestWorkerPoolConcurrencyMatrix(t *testing.T) {
 	for _, size := range []int{1, 2, 8, runtime.NumCPU() * 4} {
-		var ran atomic.Int32
-		pool := NewWorkerPool(size)
-		total := size * 5
-		var wg sync.WaitGroup
-		for i := 0; i < total; i++ {
-			wg.Add(1)
-			pool.Submit(func() { defer wg.Done(); ran.Add(1) })
-		}
-		finished := make(chan struct{})
-		go func() { wg.Wait(); close(finished) }()
-		select {
-		case <-finished:
-		case <-time.After(20 * time.Second):
+		t.Run(fmt.Sprintf("size=%d", size), func(t *testing.T) {
+			var ran atomic.Int32
+			pool := NewWorkerPool(size, testutil.NewNopLogger())
+			total := size * 5
+			var wg sync.WaitGroup
+			for i := 0; i < total; i++ {
+				wg.Add(1)
+				pool.Submit(func() { defer wg.Done(); ran.Add(1) })
+			}
+			finished := make(chan struct{})
+			go func() { wg.Wait(); close(finished) }()
+			select {
+			case <-finished:
+			case <-time.After(20 * time.Second):
+				pool.Stop()
+				t.Fatalf("worker pool stalled at size %d (%d/%d tasks ran)", size, ran.Load(), total)
+			}
 			pool.Stop()
-			t.Fatalf("worker pool stalled at size %d (%d/%d tasks ran)", size, ran.Load(), total)
-		}
-		pool.Stop()
-		assert.Equal(t, total, int(ran.Load()), "all tasks should run at pool size %d", size)
+			assert.Equal(t, total, int(ran.Load()), "all tasks should run at pool size %d", size)
+		})
 	}
 }
 
@@ -164,7 +167,7 @@ func TestWorkerPoolConcurrencyMatrix(t *testing.T) {
 // goroutine, which terminates the whole agent process. flushBatch's recover only covers
 // the pop/expire/submit step, not the send that runs later in the worker.
 func TestWorkerPoolSurvivesPanickingTask(t *testing.T) {
-	pool := NewWorkerPool(1)
+	pool := NewWorkerPool(1, testutil.NewNopLogger())
 	defer pool.Stop()
 
 	var ran atomic.Int32
@@ -172,11 +175,7 @@ func TestWorkerPoolSurvivesPanickingTask(t *testing.T) {
 	// A later task must still execute: the worker has to survive the panic above.
 	pool.Submit(func() { ran.Add(1) })
 
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) && ran.Load() == 0 {
-		time.Sleep(20 * time.Millisecond)
-	}
-	require.Equal(t, 1, int(ran.Load()),
+	require.Eventually(t, func() bool { return ran.Load() == 1 }, 10*time.Second, 20*time.Millisecond,
 		"a panicking task must not kill the worker; without a recover in worker() the "+
 			"panic is unrecovered and the agent process exits")
 }
@@ -187,7 +186,7 @@ func TestWorkerPoolSurvivesPanickingTask(t *testing.T) {
 // abandons it (clears the breaker, does NOT persist offsets).
 func TestSenderPoolAbandonsBatchOnPanic(t *testing.T) {
 	logger := testutil.NewNopLogger()
-	pool := NewWorkerPool(1)
+	pool := NewWorkerPool(1, testutil.NewNopLogger())
 	defer pool.Stop()
 
 	var resumed, stateRuns atomic.Int32
@@ -210,7 +209,7 @@ func TestSenderPoolAbandonsBatchOnPanic(t *testing.T) {
 // Stop must release a Submit parked on a saturated pool: Submit selects on stopCh, so
 // closing stopCh wakes it. A lock-guarded Submit would instead deadlock against Stop.
 func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
-	pool := NewWorkerPool(1) // tasks buffer = 2
+	pool := NewWorkerPool(1, testutil.NewNopLogger()) // tasks buffer = 2
 	release := make(chan struct{})
 
 	// Occupy the worker and fill the buffer.
@@ -245,7 +244,7 @@ func TestWorkerPoolStopUnblocksSaturatedSubmit(t *testing.T) {
 // definitively so senderPool can abandon the batch instead.
 func TestSubmitRejectsAfterStopAndSenderPoolAbandons(t *testing.T) {
 	logger := testutil.NewNopLogger()
-	pool := NewWorkerPool(2) // buffer has room, so the race is reachable
+	pool := NewWorkerPool(2, testutil.NewNopLogger()) // buffer has room, so the race is reachable
 	pool.Stop()
 
 	// Submit must refuse deterministically, even with buffer space free.

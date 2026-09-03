@@ -128,7 +128,6 @@ type logEventBatch struct {
 	startTime       time.Time // Time of first request (for max retry duration calculation)
 	nextRetryTime   time.Time // When this batch should be retried next
 	expireAfter     time.Time // When this batch expires and should be dropped
-	lastError       error     // Last error encountered
 
 	// service is the client that first sent this batch. Retries must reuse it: the EMF
 	// x-amzn-logs-format header that switchToEMF installs is per-client state, so
@@ -329,9 +328,6 @@ func (b *logEventBatch) initializeStartTime() {
 // updateRetryMetadata updates the retry metadata after a failed send attempt.
 // It increments the appropriate retry counter based on the error type and calculates the next retry time.
 func (b *logEventBatch) updateRetryMetadata(err error) {
-	// Store the error
-	b.lastError = err
-
 	// Determine retry strategy and increment counter
 	var wait time.Duration
 	if chooseRetryWaitStrategy(err) == retryLong {
@@ -349,12 +345,4 @@ func (b *logEventBatch) updateRetryMetadata(err error) {
 // isExpired checks if the batch has exceeded its expiration time.
 func (b *logEventBatch) isExpired() bool {
 	return !b.expireAfter.IsZero() && time.Now().After(b.expireAfter)
-}
-
-// isReadyForRetry checks if enough time has passed since the last failure to retry this batch.
-func (b *logEventBatch) isReadyForRetry() bool {
-	if b.nextRetryTime.IsZero() {
-		return true
-	}
-	return time.Now().After(b.nextRetryTime)
 }

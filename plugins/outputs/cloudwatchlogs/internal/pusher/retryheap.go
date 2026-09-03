@@ -67,12 +67,12 @@ type RetryHeap interface {
 	Push(batch *logEventBatch) error
 	PopReady() []*logEventBatch
 	Size() int
-	Stop()
+	Close()
 }
 
 type retryHeap struct {
 	heap    retryHeapImpl
-	mutex   sync.RWMutex
+	mutex   sync.Mutex
 	stopped bool
 	logger  telegraf.Logger
 }
@@ -121,13 +121,14 @@ func (rh *retryHeap) PopReady() []*logEventBatch {
 
 // Size returns the current number of batches in the heap
 func (rh *retryHeap) Size() int {
-	rh.mutex.RLock()
-	defer rh.mutex.RUnlock()
+	rh.mutex.Lock()
+	defer rh.mutex.Unlock()
 	return len(rh.heap)
 }
 
-// Stop stops the retry heap
-func (rh *retryHeap) Stop() {
+// Close releases the retry heap and rejects further pushes. There is no background
+// goroutine to shut down; this only flips the stopped flag.
+func (rh *retryHeap) Close() {
 	rh.mutex.Lock()
 	defer rh.mutex.Unlock()
 

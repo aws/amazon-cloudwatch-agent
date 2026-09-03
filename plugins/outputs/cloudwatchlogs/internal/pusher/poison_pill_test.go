@@ -27,9 +27,9 @@ import (
 // behavior, not the end-to-end circuit breaker flow.
 func TestRetryHeapProcessorDoesNotStarveAllowedTarget(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
-	defer heap.Stop()
+	defer heap.Close()
 
-	workerPool := NewWorkerPool(2) // Low concurrency as in the bug scenario
+	workerPool := NewWorkerPool(2, &testutil.Logger{}) // Low concurrency as in the bug scenario
 	defer workerPool.Stop()
 
 	mockService := &mockLogsService{}
@@ -165,9 +165,9 @@ func TestRetryHeapProcessorDoesNotStarveAllowedTarget(t *testing.T) {
 // log group does not affect the allowed log group.
 func TestSingleDeniedLogGroup(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
-	defer heap.Stop()
+	defer heap.Close()
 
-	workerPool := NewWorkerPool(4) // Higher concurrency as in initial test
+	workerPool := NewWorkerPool(4, &testutil.Logger{}) // Higher concurrency as in initial test
 	defer workerPool.Stop()
 
 	mockService := &mockLogsService{}
@@ -208,10 +208,10 @@ func TestSingleDeniedLogGroup(t *testing.T) {
 	assert.NoError(t, err)
 
 	processor.processReadyMessages()
-	time.Sleep(100 * time.Millisecond)
 
 	// Verify allowed log group received events
-	assert.Greater(t, allowedGroupSuccessCount.Load(), int32(0),
+	require.Eventually(t, func() bool { return allowedGroupSuccessCount.Load() > 0 },
+		2*time.Second, 10*time.Millisecond,
 		"Allowed log group must receive events with single denied log group")
 }
 
@@ -237,7 +237,7 @@ func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
 		calls.Add(1)
 		return nil, &cloudwatchlogs.ServiceUnavailableException{}
 	})
-	workerPool := NewWorkerPool(4)
+	workerPool := NewWorkerPool(4, &testutil.Logger{})
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
 	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
@@ -268,7 +268,7 @@ func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
 		}
 		p.Stop()
 		workerPool.Stop()
-		retryHeap.Stop()
+		retryHeap.Close()
 		close(done)
 	}()
 	select {
@@ -289,7 +289,7 @@ func TestChurnWhileThrottledDoesNotWedge(t *testing.T) {
 		}
 		return nil, &cloudwatchlogs.ServiceUnavailableException{}
 	})
-	workerPool := NewWorkerPool(4)
+	workerPool := NewWorkerPool(4, &testutil.Logger{})
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
 	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
@@ -311,5 +311,5 @@ func TestChurnWhileThrottledDoesNotWedge(t *testing.T) {
 
 	p.Stop()
 	workerPool.Stop()
-	retryHeap.Stop()
+	retryHeap.Close()
 }

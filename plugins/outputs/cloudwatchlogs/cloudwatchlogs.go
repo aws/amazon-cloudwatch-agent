@@ -132,7 +132,7 @@ func (c *CloudWatchLogs) Close() error {
 	}
 
 	if c.retryHeap != nil {
-		c.retryHeap.Stop()
+		c.retryHeap.Close()
 	}
 
 	// Stop the shared retryer last, after all pushers have drained.
@@ -194,7 +194,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		c.targetManager = pusher.NewTargetManager(c.Log, c.sharedClient)
 
 		if c.Concurrency > 1 {
-			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
+			c.workerPool = pusher.NewWorkerPool(c.Concurrency, c.Log)
 			c.retryHeap = pusher.NewRetryHeap(c.Log)
 
 			// The retry-heap sender reads its client only as the batch.service nil-fallback

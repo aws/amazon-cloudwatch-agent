@@ -7,8 +7,35 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/stretchr/testify/mock"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
+
+type mockFileRangeQueue struct {
+	mock.Mock
+}
+
+func (m *mockFileRangeQueue) ID() string {
+	return m.Called().String(0)
+}
+
+func (m *mockFileRangeQueue) Enqueue(r state.Range) {
+	m.Called(r)
+}
+
+// newStatefulBatch creates a batch with stateful events that register state callbacks.
+func newStatefulBatch(target Target, queue *mockFileRangeQueue) *logEventBatch {
+	batch := newLogEventBatch(target, nil)
+	now := time.Now()
+	evt := newStatefulLogEvent(now, "test", nil, &logEventState{
+		r:     state.NewRange(0, 100),
+		queue: queue,
+	})
+	batch.append(evt)
+	return batch
+}
 
 func okStubService(ple func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error)) *stubLogsService {
 	return &stubLogsService{

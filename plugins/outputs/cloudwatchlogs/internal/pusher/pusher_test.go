@@ -34,7 +34,7 @@ func TestPusher(t *testing.T) {
 	t.Run("WithSenderPool", func(t *testing.T) {
 		t.Parallel()
 		var wg sync.WaitGroup
-		wp := NewWorkerPool(5)
+		wp := NewWorkerPool(5, testutil.NewNopLogger())
 		pusher := setupPusher(t, wp, &wg)
 
 		_, isSenderPool := pusher.Sender.(*senderPool)
@@ -133,11 +133,11 @@ func TestPusherRetryHeap(t *testing.T) {
 	mockManager := new(mockTargetManager)
 	mockManager.On("PutRetentionPolicy", target).Return()
 
-	workerPool := NewWorkerPool(2)
+	workerPool := NewWorkerPool(2, testutil.NewNopLogger())
 	defer workerPool.Stop()
 
 	retryHeap := NewRetryHeap(logger)
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 
 	var wg sync.WaitGroup
 	pusher := NewPusher(

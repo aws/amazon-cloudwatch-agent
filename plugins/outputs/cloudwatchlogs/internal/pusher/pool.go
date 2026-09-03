@@ -4,7 +4,6 @@
 package pusher
 
 import (
-	"log"
 	"sync"
 	"sync/atomic"
 
@@ -25,13 +24,15 @@ type workerPool struct {
 	stopCh      chan struct{}
 	stopOnce    sync.Once
 	stopping    atomic.Bool
+	logger      telegraf.Logger
 }
 
 // NewWorkerPool creates a pool of workers of the specified size.
-func NewWorkerPool(size int) WorkerPool {
+func NewWorkerPool(size int, logger telegraf.Logger) WorkerPool {
 	p := &workerPool{
 		tasks:  make(chan func(), size*2),
 		stopCh: make(chan struct{}),
+		logger: logger,
 	}
 	for i := 0; i < size; i++ {
 		p.addWorker()
@@ -55,14 +56,14 @@ func (p *workerPool) worker() {
 	for {
 		select {
 		case task := <-p.tasks:
-			runTask(task)
+			runTask(task, p.logger)
 		case <-p.stopCh:
 			// Drain what is already queued so a shutdown does not silently discard
 			// submitted sends, then exit.
 			for {
 				select {
 				case task := <-p.tasks:
-					runTask(task)
+					runTask(task, p.logger)
 				default:
 					return
 				}
@@ -73,10 +74,10 @@ func (p *workerPool) worker() {
 
 // runTask isolates a panic to the one task that raised it. Sends run here, so without
 // this an unrecovered panic in a worker goroutine terminates the whole agent process.
-func runTask(task func()) {
+func runTask(task func(), logger telegraf.Logger) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("E! [cloudwatchlogs] Recovered from panic in worker task: %v", r)
+			logger.Errorf("Recovered from panic in worker task: %v", r)
 		}
 	}()
 	task()

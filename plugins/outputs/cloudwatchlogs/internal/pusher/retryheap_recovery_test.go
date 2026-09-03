@@ -24,9 +24,9 @@ import (
 // and successfully publishes logs.
 func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 	heap := NewRetryHeap(&testutil.Logger{})
-	defer heap.Stop()
+	defer heap.Close()
 
-	workerPool := NewWorkerPool(2)
+	workerPool := NewWorkerPool(2, &testutil.Logger{})
 	defer workerPool.Stop()
 
 	// Mock service that initially returns AccessDenied, then succeeds
@@ -120,10 +120,10 @@ func TestProcessReadyMessagesRecoversFromPanic(t *testing.T) {
 	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	})
-	workerPool := NewWorkerPool(1)
+	workerPool := NewWorkerPool(1, &testutil.Logger{})
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
 
 	b := readyBatch("g", nil, func() { panic("boom in drop path") })
@@ -146,10 +146,10 @@ func TestFlushReadyBatchesPanicDoesNotStrandLaterBatches(t *testing.T) {
 		sent.Add(1)
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	})
-	workerPool := NewWorkerPool(2)
+	workerPool := NewWorkerPool(2, &testutil.Logger{})
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
 
 	// First batch panics during its expired -> drop() path.

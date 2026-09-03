@@ -307,7 +307,7 @@ func TestSenderConcurrencyWithRetryHeap(t *testing.T) {
 	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{}).Once()
 
 	retryHeap := NewRetryHeap(logger)
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 
 	s := newSender(logger, mockService, mockManager, retryHeap)
 

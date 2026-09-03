@@ -53,10 +53,10 @@ func TestCircuitBreakerBlocksTargetAfterFailure(t *testing.T) {
 	}
 
 	const concurrency = 5
-	workerPool := NewWorkerPool(concurrency)
+	workerPool := NewWorkerPool(concurrency, testutil.NewNopLogger())
 	retryHeap := NewRetryHeap(logger)
 	defer workerPool.Stop()
-	defer retryHeap.Stop()
+	defer retryHeap.Close()
 
 	tm := NewTargetManager(logger, service)
 
@@ -127,7 +127,7 @@ func TestTerminalFailureResumesHaltedTarget(t *testing.T) {
 		}
 	})
 
-	workerPool := NewWorkerPool(2)
+	workerPool := NewWorkerPool(2, testutil.NewNopLogger())
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
@@ -165,7 +165,7 @@ func TestHaltedQueueStillShutsDown(t *testing.T) {
 	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		return nil, &cloudwatchlogs.ServiceUnavailableException{}
 	})
-	workerPool := NewWorkerPool(2)
+	workerPool := NewWorkerPool(2, testutil.NewNopLogger())
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
@@ -186,7 +186,7 @@ func TestHaltedQueueStillShutsDown(t *testing.T) {
 	case <-time.After(20 * time.Second):
 		t.Fatal("Stop() hung on a halted queue: waitIfHalted did not observe stopCh")
 	}
-	retryHeap.Stop()
+	retryHeap.Close()
 }
 
 // KNOWN LIMITATION (documented, not fixed): the circuit breaker is a
