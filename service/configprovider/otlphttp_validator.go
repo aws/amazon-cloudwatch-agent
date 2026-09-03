@@ -9,16 +9,15 @@ import (
 	"net/url"
 	"strings"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"go.opentelemetry.io/collector/confmap"
-
-	"github.com/aws/amazon-cloudwatch-agent/sdk/endpoints/awsrulesfn"
 )
 
 // allowedDNSSuffixes contains AWS partition DNS suffixes (e.g., amazonaws.com, api.aws).
 var allowedDNSSuffixes = buildAllowedDNSSuffixes()
 
 func buildAllowedDNSSuffixes() []string {
-	return awsrulesfn.PartitionDNSSuffixes()
+	return override.GetPartitionDNSSuffixes()
 }
 
 // otlphttpValidator is a confmap.Converter that validates otlphttp exporter endpoints
