@@ -11,54 +11,38 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
     awsemf:
         add_entity: true
-        certificate_file_path: ""
         detailed_metrics: false
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: ""
         enhanced_container_insights: false
-        external_id: ""
         imds_retries: 1
-        local_mode: false
         log_group_name: /aws/cwagent
         log_retention: 0
         log_stream_name: ""
         max_retries: 2
         middleware: agenthealth/logs
         namespace: CWAgent
-        no_verify_ssl: false
         num_workers: 8
         output_destination: cloudwatch
-        profile: ""
-        proxy_address: ""
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         retain_initial_value_of_delta_metric: false
-        role_arn: ""
         version: "0"
     awsxray:
-        certificate_file_path: ""
-        endpoint: ""
-        external_id: ""
         imds_retries: 1
         index_all_attributes: false
-        local_mode: false
         max_retries: 2
         middleware: agenthealth/traces
-        no_verify_ssl: false
         num_workers: 8
-        profile: ""
-        proxy_address: ""
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
-        role_arn: ""
         telemetry:
             enabled: true
             include_metadata: true
@@ -117,14 +101,14 @@ processors:
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
         exclude:
             match_type: ""
         include:
             match_type: ""
         initial_value: 2
-        max_staleness: 0s
+        max_staleness: 1h0m0s
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
@@ -142,8 +126,8 @@ receivers:
             grpc:
                 endpoint: 0.0.0.0:1234
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 tls:
                     cert_file: /path/to/cert.pem
@@ -152,9 +136,10 @@ receivers:
     otlp/http_0_0_0_0_2345:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:2345
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
@@ -162,6 +147,7 @@ receivers:
                     cert_file: /path/to/cert.pem
                     key_file: /path/to/key.pem
                 traces_url_path: /v1/traces
+                transport: tcp
                 write_timeout: 0s
 service:
     extensions:
@@ -202,6 +188,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -214,3 +201,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null

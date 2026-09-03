@@ -4,6 +4,7 @@
 package util
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -133,7 +134,7 @@ func getTagMetadata() map[string]string {
 	}
 
 	result := make(map[string]string)
-	asgName := tagutil.GetAutoScalingGroupName(instanceID)
+	asgName := tagutil.GetAutoScalingGroupName(context.Background(), instanceID)
 	if asgName != "" {
 		result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
 	}

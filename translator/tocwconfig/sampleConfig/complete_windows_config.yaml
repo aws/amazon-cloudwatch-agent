@@ -12,6 +12,7 @@ exporters:
         region: us-west-2
         resource_to_telemetry_conversion:
             enabled: true
+            exclude_service_attributes: false
         role_arn: metrics_role_arn_value_test
         rollup_dimensions:
             - - ImageId
@@ -20,25 +21,18 @@ exporters:
             - - d1
             - []
     awscloudwatchlogs/emf_logs:
-        certificate_file_path: ""
         emf_only: true
         endpoint: https://logs-fips.us-west-2.amazonaws.com
-        external_id: ""
         imds_retries: 1
-        local_mode: false
         log_group_name: emf/logs/default
         log_retention: 0
         log_stream_name: LOG_STREAM_NAME
         max_retries: 2
         middleware: agenthealth/logs
-        no_verify_ssl: false
         num_workers: 8
-        profile: ""
-        proxy_address: ""
         raw_log: true
         region: us-west-2
         request_timeout_seconds: 30
-        resource_arn: ""
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -48,17 +42,15 @@ exporters:
             randomization_factor: 0.5
         role_arn: log_role_arn_value_test
         sending_queue:
+            batch: null
             block_on_overflow: false
-            blocking: false
-            enabled: true
             num_consumers: 1
             queue_size: 1000
-            sizer: {}
+            sizer: null
+            storage: null
             wait_for_result: false
     awsxray:
-        certificate_file_path: ""
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
-        external_id: ""
         imds_retries: 1
         index_all_attributes: false
         local_mode: true
@@ -66,7 +58,6 @@ exporters:
         middleware: agenthealth/traces
         no_verify_ssl: true
         num_workers: 1
-        profile: ""
         proxy_address: https://proxy.proxy.com
         region: us-west-2
         request_timeout_seconds: 30
@@ -133,9 +124,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -148,10 +139,11 @@ processors:
             - context: metric
               error_mode: propagate
               statements:
-                  - set(unit, "PERCENT") where name == "Processor % Idle Time"
-                  - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
-                  - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
-                  - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
+                - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
+                - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
+                - set(unit, "PERCENT") where name == "Processor % Idle Time"
+                - set(name, "CPU_IDLE") where name == "Processor % Idle Time"
+        profile_statements: []
         trace_statements: []
 receivers:
     awsxray:
@@ -175,20 +167,23 @@ receivers:
             grpc:
                 endpoint: 0.0.0.0:1111
                 keepalive:
-                    enforcement_policy: {}
-                    server_parameters: {}
+                    enforcement_policy: null
+                    server_parameters: null
                 read_buffer_size: 524288
                 transport: tcp
     otlp/http_0_0_0_0_2222:
         protocols:
             http:
-                cors: {}
+                cors: null
                 endpoint: 0.0.0.0:2222
                 idle_timeout: 0s
+                keep_alives_enabled: true
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
+                tls: null
                 traces_url_path: /v1/traces
+                transport: tcp
                 write_timeout: 0s
     telegraf_nvidia_smi:
         collection_interval: 1m0s
@@ -233,7 +228,7 @@ receivers:
         collection_interval: 1m0s
         initial_delay: 1s
         timeout: 0s
-    udplog/emf_logs:
+    udp_log/emf_logs:
         encoding: utf-8
         id: udp_input
         listen_address: 127.0.0.1:25888
@@ -262,7 +257,7 @@ service:
             processors:
                 - batch/emf_logs
             receivers:
-                - udplog/emf_logs
+                - udp_log/emf_logs
         metrics/host:
             exporters:
                 - awscloudwatch
@@ -271,13 +266,13 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/4283769065
-                - telegraf_win_perf_counters/3081249416
-                - telegraf_win_perf_counters/1063858558
-                - telegraf_procstat/1340600742
-                - telegraf_win_perf_counters/3762679655
                 - telegraf_win_perf_counters/1492679118
                 - telegraf_nvidia_smi
+                - telegraf_win_perf_counters/4283769065
+                - telegraf_win_perf_counters/3762679655
+                - telegraf_procstat/1340600742
+                - telegraf_win_perf_counters/1063858558
+                - telegraf_win_perf_counters/3081249416
                 - telegraf_win_perf_counters/2402387132
         metrics/hostCustomMetrics:
             exporters:
@@ -300,6 +295,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: debug
             output_paths:
                 - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
@@ -312,3 +308,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null

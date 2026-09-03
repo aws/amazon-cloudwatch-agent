@@ -53,11 +53,21 @@ func (ma *metricAppender) AppendCTZeroSample(storage.SeriesRef, labels.Labels, i
 	return 0, nil
 }
 
+func (ma *metricAppender) AppendSTZeroSample(storage.SeriesRef, labels.Labels, int64, int64) (storage.SeriesRef, error) {
+	// TODO: implement this func
+	return 0, nil
+}
+
 func (ma *metricAppender) SetOptions(_ *storage.AppendOptions) {
 	// Implement if needed, or leave empty if no special handling is required
 }
 
 func (ma *metricAppender) AppendHistogramCTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
+	// Implement basic handling or return nil if not needed
+	return 0, nil
+}
+
+func (ma *metricAppender) AppendHistogramSTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
 	// Implement basic handling or return nil if not needed
 	return 0, nil
 }
@@ -78,14 +88,14 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 func (ma *metricAppender) Append(_ storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
 	metricName := ""
 
-	labelMap := make(map[string]string, len(ls))
-	for _, l := range ls {
+	labelMap := make(map[string]string, ls.Len())
+	ls.Range(func(l labels.Label) {
 		if l.Name == model.MetricNameLabel {
 			metricName = l.Value
-			continue
+			return
 		}
 		labelMap[l.Name] = l.Value
-	}
+	})
 
 	if metricName == "" {
 		// The error should never happen, print log here for debugging

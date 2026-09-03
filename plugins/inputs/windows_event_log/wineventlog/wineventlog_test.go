@@ -39,7 +39,7 @@ var (
 	DEST            = "fake"
 	STATE_FILE_PATH = "fake"
 	BATCH_SIZE      = 99
-	RETENTION       = 42
+	RETENTION       = int32(42)
 	LOG_GROUP_CLASS = "standard"
 )
 

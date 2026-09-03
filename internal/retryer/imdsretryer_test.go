@@ -8,112 +8,135 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 )
 
-func Test_IMDSRetryer_ShouldRetry(t *testing.T) {
-	tests := []struct {
-		name string
-		req  *request.Request
+func TestIMDSRetryer_IsErrorRetryable(t *testing.T) {
+	testCases := map[string]struct {
+		err  error
 		want bool
 	}{
-		{
-			name: "ErrorIsNilDoNotRetry",
-			req: &request.Request{
-				Error: nil,
-			},
+		"ErrorIsNilNotRetryable": {
+			err:  nil,
 			want: false,
 		},
-		{
-			// no enum for status codes in request.Request nor http.Response
-			name: "ErrorIsDefaultRetryable",
-			req: &request.Request{
-				Error: awserr.New("throttle me for 503", "throttle me for 503", nil),
-				HTTPResponse: &http.Response{
-					StatusCode: 503,
+		"ErrorIsIMDSResponseErrorRetryable": {
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{
+						StatusCode: 404,
+					},
 				},
+				Err: errors.New("request to EC2 IMDS failed"),
 			},
 			want: true,
 		},
-		{
-			name: "ErrorIsEC2MetadataErrorRetryable",
-			req: &request.Request{
-				Error: awserr.New("EC2MetadataError", "EC2MetadataError", nil),
+		"ErrorIsIMDSResponseError5xxRetryable": {
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{
+						StatusCode: 500,
+					},
+				},
+				Err: errors.New("request to EC2 IMDS failed"),
 			},
 			want: true,
 		},
-		{
-			name: "ErrorIsAWSOtherErrorNotRetryable",
-			req: &request.Request{
-				Error: awserr.New("other", "other", nil),
-			},
-			want: false,
-		},
-		{
-			// errors.New as a parent error will always retry due to fallback
-			name: "ErrorIsAWSOtherWithParentErrorRetryable",
-			req: &request.Request{
-				Error: awserr.New("other", "other", errors.New("other")),
-			},
+		"ErrorIsWrappedIMDSResponseErrorRetryable": {
+			err: errors.Join(
+				errors.New("outer error"),
+				&smithyhttp.ResponseError{
+					Response: &smithyhttp.Response{
+						Response: &http.Response{
+							StatusCode: 503,
+						},
+					},
+					Err: errors.New("request to EC2 IMDS failed"),
+				},
+			),
 			want: true,
 		},
-		{
-			// errors.New will always retry due to fallback
-			name: "ErrorIsOtherErrorRetryable",
-			req: &request.Request{
-				Error: errors.New("other"),
-			},
-			want: true,
+		"ErrorIsGenericErrorNotRetryableByDefault": {
+			err:  errors.New("some other error"),
+			want: false, // Standard retryer doesn't treat generic errors as retryable by default
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewIMDSRetryer(GetDefaultRetryNumber()).ShouldRetry(tt.req); got != tt.want {
-				t.Errorf("ShouldRetry() = %v, want %v", got, tt.want)
-			}
+
+	retryer := NewIMDSRetryer(DefaultMetadataRetries)
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := retryer.IsErrorRetryable(testCase.err)
+			assert.Equal(t, testCase.want, got)
 		})
 	}
 }
 
-func TestNumberOfRetryTest(t *testing.T) {
-	tests := []struct {
-		name               string
-		expectedRetries    string
-		expectedRetriesInt int
+func TestIMDSRetryer_MaxAttempts(t *testing.T) {
+	testCases := map[string]struct {
+		retries int
+		want    int
 	}{
-		{
-			name:               "expect default for empty",
-			expectedRetries:    "",
-			expectedRetriesInt: DefaultImdsRetries,
+		"DefaultRetries": {
+			retries: DefaultMetadataRetries,
+			want:    DefaultMetadataRetries + 1,
 		},
-		{
-			name:               "expect 2 for 2",
-			expectedRetries:    "2",
-			expectedRetriesInt: 2,
+		"TwoRetries": {
+			retries: 2,
+			want:    3,
 		},
-		{
-			name:               "expect default for invalid",
-			expectedRetries:    "-1",
-			expectedRetriesInt: 1,
+		"ZeroRetries": {
+			retries: 0,
+			want:    1,
 		},
-		{
-			name:               "expect default for not int",
-			expectedRetries:    "not an int",
-			expectedRetriesInt: 1,
+		"FiveRetries": {
+			retries: 5,
+			want:    6,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			defer t.Setenv(envconfig.IMDS_NUMBER_RETRY, "")
-			t.Setenv(envconfig.IMDS_NUMBER_RETRY, tt.expectedRetries)
-			defaultIMDSRetryer := NewIMDSRetryer(GetDefaultRetryNumber())
-			newIMDSRetryer := NewIMDSRetryer(tt.expectedRetriesInt)
-			assert.Equal(t, defaultIMDSRetryer.MaxRetries(), tt.expectedRetriesInt)
-			assert.Equal(t, newIMDSRetryer.MaxRetries(), tt.expectedRetriesInt)
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			retryer := NewIMDSRetryer(testCase.retries)
+			assert.Equal(t, testCase.want, retryer.MaxAttempts())
+		})
+	}
+}
+
+func TestGetDefaultRetryNumber(t *testing.T) {
+	testCases := map[string]struct {
+		envValue        string
+		expectedRetries int
+	}{
+		"EmptyEnvUsesDefault": {
+			expectedRetries: DefaultMetadataRetries,
+		},
+		"NegativeEnvUsesDefault": {
+			envValue:        "-1",
+			expectedRetries: DefaultMetadataRetries,
+		},
+		"InvalidEnvUsesDefault": {
+			envValue:        "not an int",
+			expectedRetries: DefaultMetadataRetries,
+		},
+		"ZeroEnvValue": {
+			envValue:        "0",
+			expectedRetries: 0,
+		},
+		"ValidEnvValue": {
+			envValue:        "2",
+			expectedRetries: 2,
+		},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(envconfig.IMDS_NUMBER_RETRY, testCase.envValue)
+
+			assert.Equal(t, testCase.expectedRetries, GetDefaultRetryNumber())
 		})
 	}
 }

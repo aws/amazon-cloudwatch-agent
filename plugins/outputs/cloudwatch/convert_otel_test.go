@@ -10,7 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -18,7 +19,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -179,10 +179,9 @@ func checkDatum(
 	t *testing.T,
 	d *aggregationDatum,
 	unit string,
-	numMetrics int,
 ) {
 	assert.True(t, strings.HasPrefix(*d.MetricName, namePrefix))
-	assert.Equal(t, unit, *d.Unit)
+	assert.Equal(t, unit, string(d.Unit))
 	if d.distribution != nil {
 		// Verify distribution
 		assert.Equal(t, float64(histogramMax), d.distribution.Maximum())
@@ -212,13 +211,13 @@ func checkDatum(
 func TestConvertOtelMetrics_NoDimensions(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		metrics := createTestMetrics(i, i, 0, "Bytes")
-		datums := ConvertOtelMetrics(metrics)
+		datums := convertOtelMetrics(metrics)
 		// Expect nummetrics * numDatapointsPerMetric
 		assert.Equal(t, i*i, len(datums))
 
 		for _, d := range datums {
 			assert.Equal(t, 0, len(d.Dimensions))
-			checkDatum(t, d, "Bytes", i)
+			checkDatum(t, d, "Bytes")
 
 		}
 	}
@@ -233,14 +232,14 @@ func TestConvertOtelMetrics_Histogram(t *testing.T) {
 			distribution.NewClassicDistribution = regular.NewRegularDistribution
 		}
 		metrics := createTestHistogram(i, i, 0, "Bytes")
-		datums := ConvertOtelMetrics(metrics)
+		datums := convertOtelMetrics(metrics)
 		// Expect nummetrics * numDatapointsPerMetric
 		assert.Equal(t, i*i, len(datums))
 
 		// Verify dimensions per metric.
 		for _, d := range datums {
 			assert.Equal(t, 0, len(d.Dimensions))
-			checkDatum(t, d, "Bytes", i)
+			checkDatum(t, d, "Bytes")
 		}
 	}
 }
@@ -248,14 +247,14 @@ func TestConvertOtelMetrics_Histogram(t *testing.T) {
 func TestConvertOtelMetrics_ExponentialHistogram(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		metrics := createTestExponentialHistogram(i, i, 0, "Bytes")
-		datums := ConvertOtelMetrics(metrics)
+		datums := convertOtelMetrics(metrics)
 		// Expect nummetrics * numDatapointsPerMetric
 		assert.Equal(t, i*i, len(datums))
 
 		// Verify dimensions per metric.
 		for _, d := range datums {
 			assert.True(t, strings.HasPrefix(*d.MetricName, namePrefix))
-			assert.Equal(t, "Bytes", *d.Unit)
+			assert.Equal(t, "Bytes", string(d.Unit))
 			assert.Equal(t, 0, len(d.Dimensions))
 			// Verify distribution
 			assert.Equal(t, float64(histogramMax), d.distribution.Maximum())
@@ -281,17 +280,17 @@ func TestConvertOtelMetrics_ExponentialHistogram(t *testing.T) {
 
 func TestConvertOtelExponentialHistogram(t *testing.T) {
 	ts := time.Date(2025, time.March, 31, 22, 6, 30, 0, time.UTC)
-	entity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			"Type":         aws.String("Service"),
-			"Environment":  aws.String("MyEnvironment"),
-			"Name":         aws.String("MyServiceName"),
-			"AwsAccountId": aws.String("0123456789012"),
+	entity := types.Entity{
+		KeyAttributes: map[string]string{
+			"Type":         "Service",
+			"Environment":  "MyEnvironment",
+			"Name":         "MyServiceName",
+			"AwsAccountId": "0123456789012",
 		},
-		Attributes: map[string]*string{
-			"EC2.InstanceId":       aws.String("i-123456789"),
-			"PlatformType":         aws.String("AWS::EC2"),
-			"EC2.AutoScalingGroup": aws.String("asg-123"),
+		Attributes: map[string]string{
+			"EC2.InstanceId":       "i-123456789",
+			"PlatformType":         "AWS::EC2",
+			"EC2.AutoScalingGroup": "asg-123",
 		},
 	}
 
@@ -324,15 +323,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(800),
 							Minimum:     aws.Float64(2),
 							SampleCount: aws.Float64(55),
@@ -375,15 +374,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(0),
 							Minimum:     aws.Float64(-800),
 							SampleCount: aws.Float64(55),
@@ -422,15 +421,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(0),
 							Minimum:     aws.Float64(0),
 							SampleCount: aws.Float64(5),
@@ -474,15 +473,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(0),
 							SampleCount: aws.Float64(67),
@@ -526,15 +525,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(0),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(67),
@@ -582,15 +581,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(150),
@@ -639,15 +638,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(152),
@@ -685,15 +684,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(0),
 							Minimum:     aws.Float64(0),
 							SampleCount: aws.Float64(0),
@@ -735,15 +734,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(1),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(1),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(152),
@@ -793,15 +792,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(1),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(1),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(152),
@@ -850,15 +849,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(152),
@@ -910,15 +909,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(152),
@@ -969,15 +968,15 @@ func TestConvertOtelExponentialHistogram(t *testing.T) {
 			}(),
 			expected: []*aggregationDatum{
 				{
-					MetricDatum: cloudwatch.MetricDatum{
-						Dimensions: []*cloudwatch.Dimension{
+					MetricDatum: types.MetricDatum{
+						Dimensions: []types.Dimension{
 							{Name: aws.String("label1"), Value: aws.String("value1")},
 						},
 						MetricName:        aws.String("foo"),
-						Unit:              aws.String("none"),
+						Unit:              types.StandardUnit("none"),
 						Timestamp:         aws.Time(ts),
-						StorageResolution: aws.Int64(60),
-						StatisticValues: &cloudwatch.StatisticSet{
+						StorageResolution: aws.Int32(60),
+						StatisticValues: &types.StatisticSet{
 							Maximum:     aws.Float64(1000),
 							Minimum:     aws.Float64(-1000),
 							SampleCount: aws.Float64(152),
@@ -1032,7 +1031,7 @@ func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		// 1 data point per metric, but vary the number dimensions.
 		metrics := createTestMetrics(i, 1, i, "s")
-		datums := ConvertOtelMetrics(metrics)
+		datums := convertOtelMetrics(metrics)
 		// Expect nummetrics * numDatapointsPerMetric
 		assert.Equal(t, i, len(datums))
 
@@ -1043,25 +1042,25 @@ func TestConvertOtelMetrics_Dimensions(t *testing.T) {
 				expected = 30
 			}
 			assert.Equal(t, expected, len(d.Dimensions))
-			checkDatum(t, d, "Seconds", i)
+			checkDatum(t, d, "Seconds")
 		}
 	}
 }
 
 func TestConvertOtelMetrics_Entity(t *testing.T) {
 	metrics := createTestMetrics(1, 1, 1, "s")
-	datums := ConvertOtelMetrics(metrics)
-	expectedEntity := cloudwatch.Entity{
-		KeyAttributes: map[string]*string{
-			"Type":         aws.String("Service"),
-			"Environment":  aws.String("MyEnvironment"),
-			"Name":         aws.String("MyServiceName"),
-			"AwsAccountId": aws.String("0123456789012"),
+	datums := convertOtelMetrics(metrics)
+	expectedEntity := types.Entity{
+		KeyAttributes: map[string]string{
+			"Type":         "Service",
+			"Environment":  "MyEnvironment",
+			"Name":         "MyServiceName",
+			"AwsAccountId": "0123456789012",
 		},
-		Attributes: map[string]*string{
-			"EC2.InstanceId":       aws.String("i-123456789"),
-			"PlatformType":         aws.String("AWS::EC2"),
-			"EC2.AutoScalingGroup": aws.String("asg-123"),
+		Attributes: map[string]string{
+			"EC2.InstanceId":       "i-123456789",
+			"PlatformType":         "AWS::EC2",
+			"EC2.AutoScalingGroup": "asg-123",
 		},
 	}
 	assert.Equal(t, 1, len(datums))
@@ -1073,5 +1072,5 @@ func TestInvalidMetric(t *testing.T) {
 	m := pmetric.NewMetric()
 	m.SetName("name")
 	m.SetUnit("unit")
-	assert.Empty(t, ConvertOtelMetric(m, cloudwatch.Entity{}))
+	assert.Empty(t, convertOtelMetric(m, types.Entity{}))
 }

@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -77,8 +78,8 @@ func setNewDistributionFunc(maxValuesPerDatumLimit int) {
 	}
 }
 
-func payload(datum *cloudwatch.MetricDatum) (size int) {
-	size += timestampSize
+func payload(datum *types.MetricDatum) int {
+	size := timestampSize
 
 	for _, dimension := range datum.Dimensions {
 		size += len(*dimension.Name) + len(*dimension.Value) + dimensionOverheads
@@ -100,14 +101,14 @@ func payload(datum *cloudwatch.MetricDatum) (size int) {
 		size += valueOverheads
 	}
 
-	if datum.Unit != nil {
+	if datum.Unit != "" {
 		size += unitOverheads
 	}
 
-	return
+	return size
 }
 
-func entityToString(entity cloudwatch.Entity) string {
+func entityToString(entity types.Entity) string {
 	var attributes, keyAttributes, data string
 	if entity.Attributes != nil {
 		attributes = entityAttributesToString(entity.Attributes)
@@ -127,32 +128,28 @@ func entityToString(entity cloudwatch.Entity) string {
 }
 
 // Helper function to convert a map of entityAttributes to a consistent string representation
-func entityAttributesToString(m map[string]*string) string {
+func entityAttributesToString(m map[string]string) string {
 	if m == nil {
 		return ""
 	}
 	pairs := make([]string, 0, len(m))
 	for k, v := range m {
-		if v == nil {
-			pairs = append(pairs, k+":")
-		} else {
-			pairs = append(pairs, k+":"+*v)
-		}
+		pairs = append(pairs, k+":"+v)
 	}
 	sort.Strings(pairs) // Ensure a consistent order
 	return strings.Join(pairs, ";")
 }
 
-func stringToEntity(data string) cloudwatch.Entity {
+func stringToEntity(data string) types.Entity {
 	parts := strings.Split(data, "|")
 	if len(parts) < 2 {
 		// Handle error: invalid input string
-		return cloudwatch.Entity{}
+		return types.Entity{}
 	}
 
-	entity := cloudwatch.Entity{
-		Attributes:    make(map[string]*string),
-		KeyAttributes: make(map[string]*string),
+	entity := types.Entity{
+		Attributes:    make(map[string]string),
+		KeyAttributes: make(map[string]string),
 	}
 
 	if parts[0] != "" {
@@ -166,14 +163,13 @@ func stringToEntity(data string) cloudwatch.Entity {
 	return entity
 }
 
-func stringToEntityAttributes(s string) map[string]*string {
-	result := make(map[string]*string)
+func stringToEntityAttributes(s string) map[string]string {
+	result := make(map[string]string)
 	pairs := strings.Split(s, ";")
 	for _, pair := range pairs {
 		kv := strings.SplitN(pair, ":", 2)
 		if len(kv) == 2 {
-			value := kv[1]
-			result[kv[0]] = &value
+			result[kv[0]] = kv[1]
 		}
 	}
 	return result

@@ -4,15 +4,14 @@
 package downloader
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
@@ -158,33 +157,27 @@ func defaultJSONConfig(mode string) (string, error) {
 }
 
 func downloadFromSSM(region, parameterStoreName, mode string, credsConfig map[string]string) (string, error) {
-	var ses *session.Session
+	ctx := context.Background()
+
+	// Build v2 credentials config
 	credsMap := util.GetCredentials(mode, credsConfig)
-	profile, profileOk := credsMap[commonconfig.CredentialProfile]
-	sharedConfigFile, sharedConfigFileOk := credsMap[commonconfig.CredentialFile]
-	rootconfig := &aws.Config{
-		Region:   aws.String(region),
-		LogLevel: configaws.SDKLogLevel(),
-		Logger:   configaws.SDKLogger{},
-	}
-	if profileOk || sharedConfigFileOk {
-		rootconfig.Credentials = credentials.NewCredentials(&credentials.SharedCredentialsProvider{
-			Filename: sharedConfigFile,
-			Profile:  profile,
-		})
+	credConfig := &configaws.CredentialsConfig{
+		Region:   region,
+		Profile:  credsMap[commonconfig.CredentialProfile],
+		Filename: credsMap[commonconfig.CredentialFile],
 	}
 
-	ses, err := session.NewSession(rootconfig)
+	cfg, err := credConfig.LoadConfig(ctx)
 	if err != nil {
 		return "", fmt.Errorf("error in creating session: %v", err)
 	}
 
-	ssmClient := ssm.New(ses)
-	input := ssm.GetParameterInput{
+	ssmClient := ssm.NewFromConfig(cfg)
+	input := &ssm.GetParameterInput{
 		Name:           aws.String(parameterStoreName),
 		WithDecryption: aws.Bool(true),
 	}
-	output, err := ssmClient.GetParameter(&input)
+	output, err := ssmClient.GetParameter(ctx, input)
 	if err != nil {
 		return "", fmt.Errorf("error in retrieving parameter store content: %v", err)
 	}

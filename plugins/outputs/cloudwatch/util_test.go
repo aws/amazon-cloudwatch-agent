@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/regular"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/seh1"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 func TestPublishJitter(t *testing.T) {
@@ -47,7 +47,7 @@ func TestResize(t *testing.T) {
 
 	dist := distribution.NewClassicDistribution()
 
-	dist.AddEntry(1, 1)
+	assert.NoError(t, dist.AddEntry(1, 1))
 
 	distList := dist.Resize(maxListSize)
 	assert.Equal(t, 1, len(distList))
@@ -102,80 +102,83 @@ func TestResize(t *testing.T) {
 }
 
 func TestPayload_ValuesAndCounts(t *testing.T) {
-	datum := new(cloudwatch.MetricDatum)
-	datum.SetCounts(aws.Float64Slice([]float64{1, 2, 3}))
-	datum.SetValues(aws.Float64Slice([]float64{1, 2, 3}))
-	datum.SetStatisticValues(&cloudwatch.StatisticSet{
-		Sum:         aws.Float64(6),
-		SampleCount: aws.Float64(3),
-		Minimum:     aws.Float64(1),
-		Maximum:     aws.Float64(3),
-	})
-	datum.SetDimensions([]*cloudwatch.Dimension{
-		{Name: aws.String("DimensionName"), Value: aws.String("DimensionValue")},
-	})
-	datum.SetMetricName("MetricName")
-	datum.SetStorageResolution(1)
-	datum.SetTimestamp(time.Now())
-	datum.SetUnit("None")
+	datum := &types.MetricDatum{
+		Counts: []float64{1, 2, 3},
+		Values: []float64{1, 2, 3},
+		StatisticValues: &types.StatisticSet{
+			Sum:         aws.Float64(6),
+			SampleCount: aws.Float64(3),
+			Minimum:     aws.Float64(1),
+			Maximum:     aws.Float64(3),
+		},
+		Dimensions: []types.Dimension{
+			{Name: aws.String("DimensionName"), Value: aws.String("DimensionValue")},
+		},
+		MetricName:        aws.String("MetricName"),
+		StorageResolution: aws.Int32(1),
+		Timestamp:         aws.Time(time.Now()),
+		Unit:              types.StandardUnitNone,
+	}
 	assert.Equal(t, 867, payload(datum))
 }
 
 func TestPayload_Value(t *testing.T) {
-	datum := new(cloudwatch.MetricDatum)
-	datum.SetValue(1.23456789)
-	datum.SetDimensions([]*cloudwatch.Dimension{
-		{Name: aws.String("DimensionName"), Value: aws.String("DimensionValue")},
-	})
-	datum.SetMetricName("MetricName")
-	datum.SetStorageResolution(1)
-	datum.SetTimestamp(time.Now())
-	datum.SetUnit("None")
+	datum := &types.MetricDatum{
+		Value: aws.Float64(1.23456789),
+		Dimensions: []types.Dimension{
+			{Name: aws.String("DimensionName"), Value: aws.String("DimensionValue")},
+		},
+		MetricName:        aws.String("MetricName"),
+		StorageResolution: aws.Int32(1),
+		Timestamp:         aws.Time(time.Now()),
+		Unit:              types.StandardUnitNone,
+	}
 	assert.Equal(t, 356, payload(datum))
 }
 
 func TestPayload_Min(t *testing.T) {
-	datum := new(cloudwatch.MetricDatum)
-	datum.SetValue(1.23456789)
-	datum.SetMetricName("MetricName")
-	datum.SetTimestamp(time.Now())
+	datum := &types.MetricDatum{
+		Value:      aws.Float64(1.23456789),
+		MetricName: aws.String("MetricName"),
+		Timestamp:  aws.Time(time.Now()),
+	}
 	assert.Equal(t, 148, payload(datum))
 }
 
 func TestEntityToString_StringToEntity(t *testing.T) {
 	testCases := []struct {
 		name         string
-		entity       cloudwatch.Entity
+		entity       types.Entity
 		entityString string
 	}{
 		{
 			name: "Full Entity",
-			entity: cloudwatch.Entity{
-				KeyAttributes: map[string]*string{
-					"Service":     aws.String("Service"),
-					"Environment": aws.String("Environment"),
+			entity: types.Entity{
+				KeyAttributes: map[string]string{
+					"Service":     "Service",
+					"Environment": "Environment",
 				},
-				Attributes: map[string]*string{
-					"InstanceId":   aws.String("InstanceId"),
-					"InstanceType": aws.String("InstanceType"),
+				Attributes: map[string]string{
+					"InstanceId":   "InstanceId",
+					"InstanceType": "InstanceType",
 				},
 			},
 			entityString: "InstanceId:InstanceId;InstanceType:InstanceType|Environment:Environment;Service:Service",
 		},
 		{
 			name: "Empty Attributes",
-			entity: cloudwatch.Entity{
-				KeyAttributes: map[string]*string{
-					"Service":     aws.String("Service"),
-					"Environment": aws.String("Environment"),
+			entity: types.Entity{
+				KeyAttributes: map[string]string{
+					"Service":     "Service",
+					"Environment": "Environment",
 				},
-				Attributes: map[string]*string{},
+				Attributes: map[string]string{},
 			},
 			entityString: "|Environment:Environment;Service:Service",
 		},
 		{
 			name:         "Empty Entity",
-			entity:       cloudwatch.Entity{},
+			entity:       types.Entity{},
 			entityString: "",
 		},
 	}
@@ -191,14 +194,14 @@ func TestEntityToString_StringToEntity(t *testing.T) {
 func TestEntityToString(t *testing.T) {
 	testCases := []struct {
 		name         string
-		entity       cloudwatch.Entity
+		entity       types.Entity
 		entityString string
 	}{
 		{
 			name: "EmptyEntityMaps",
-			entity: cloudwatch.Entity{
-				KeyAttributes: map[string]*string{},
-				Attributes:    map[string]*string{},
+			entity: types.Entity{
+				KeyAttributes: map[string]string{},
+				Attributes:    map[string]string{},
 			},
 			entityString: "",
 		},
