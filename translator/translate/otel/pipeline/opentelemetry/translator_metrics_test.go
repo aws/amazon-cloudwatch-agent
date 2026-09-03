@@ -4,11 +4,12 @@
 package opentelemetry
 
 import (
+	gocontext "context"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
@@ -25,7 +26,7 @@ import (
 // looked up but none found" path without any network calls.
 type noTagsEC2Client struct{}
 
-func (noTagsEC2Client) DescribeTags(*ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error) {
+func (noTagsEC2Client) DescribeTags(gocontext.Context, *ec2.DescribeTagsInput, ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
 	return &ec2.DescribeTagsOutput{}, nil
 }
 
@@ -208,9 +209,7 @@ func TestBaseMetricsTranslatorNoClusterName(t *testing.T) {
 	// Force the ec2 tag lookup with no network to return no cluster name
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
-	tagutil.SetEC2APIProviderForTesting(func() interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	} {
+	tagutil.SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
 		return noTagsEC2Client{}
 	})
 	t.Cleanup(tagutil.ResetEC2APIProvider)
