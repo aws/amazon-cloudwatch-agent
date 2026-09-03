@@ -771,7 +771,6 @@ receivers:
         profile: AmazonCloudWatchAgent
         region: us-east-1
         request_timeout_seconds: 0
-        skip_replicaset_watch: false
         shared_credentials_file:
             - fake-path
         skip_replicaset_watch: false

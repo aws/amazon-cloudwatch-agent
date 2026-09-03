@@ -805,7 +805,6 @@ receivers:
         profile: default
         region: us-west-2
         request_timeout_seconds: 0
-        skip_replicaset_watch: false
         shared_credentials_file:
             - /root/.aws/credentials
         skip_replicaset_watch: false

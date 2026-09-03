@@ -183,8 +183,9 @@ func TestTranslate(t *testing.T) {
 					"env",
 					"gcp",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
 			}),
 		},
 		"WithAppSignalsEnabledOnGKE": {
@@ -200,8 +201,9 @@ func TestTranslate(t *testing.T) {
 					"env",
 					"gcp",
 				},
-				"timeout":  "2s",
-				"override": true,
+				"timeout":                "2s",
+				"override":               true,
+				"ignore_detector_errors": true,
 			}),
 		},
 	}
