@@ -52,7 +52,7 @@ func cleanLaunchConfiguration() error {
 			if err != nil {
 				return err
 			}
-			log.Printf("Succesfully deleted %s", *launchConfig.LaunchConfigurationName)
+			log.Printf("Successfully deleted %s", *launchConfig.LaunchConfigurationName)
 		}
 	}
 	return nil
