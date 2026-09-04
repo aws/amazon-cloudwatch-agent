@@ -115,7 +115,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64-${{ github.sha }}
           platforms: linux/amd64
           provenance: false
 
@@ -127,7 +127,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64-${{ github.sha }}
           platforms: linux/arm64
           provenance: false
 
@@ -319,8 +319,8 @@ jobs:
           REPOSITORYWindows: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:windows
           REPO2022: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
           REPO2019: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
-          REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
-          REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+          REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64-${{ github.sha }}
+          REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64-${{ github.sha }}
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
           docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
