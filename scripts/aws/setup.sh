@@ -765,11 +765,14 @@ trust_gcp_vm() {
 
      section "Configuring AWS trust..."
 
-     # Google is a built-in web-identity provider, so unlike the Azure platforms
-     # no IAM OIDC provider resource is registered: the principal is
-     # accounts.google.com itself. On Google identity tokens IAM matches :sub
-     # against the service account's unique ID and :oaud against the audience
-     # the token was requested with.
+     # Google is a built-in web-identity provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#principal-federated-web-identity),
+     # so unlike the Azure platforms no IAM OIDC provider resource is registered:
+     # the principal is accounts.google.com itself. On Google identity tokens IAM
+     # matches :sub against the service account's unique ID, :oaud against the
+     # audience the token was requested with, and :aud against the authorized
+     # party (azp), which on service-account tokens is the unique ID again.
+     # Pinning all three follows the recommended trust policy for Google-issued
+     # tokens: https://aws.amazon.com/blogs/security/access-aws-using-a-google-cloud-platform-native-workload-identity/.
      TRUST_STATEMENT=$(
           cat <<EOF
 {
@@ -780,6 +783,7 @@ trust_gcp_vm() {
     "Action": "sts:AssumeRoleWithWebIdentity",
     "Condition": {
       "StringEquals": {
+        "accounts.google.com:aud": "${SA_UNIQUE_ID}",
         "accounts.google.com:sub": "${SA_UNIQUE_ID}",
         "accounts.google.com:oaud": "sts.amazonaws.com"
       }

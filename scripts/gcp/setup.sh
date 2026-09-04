@@ -310,8 +310,8 @@ setup_gcp_vm() {
      fi
      log "Service account: ${SA_EMAIL}"
 
-     # The unique ID is what the AWS trust policy conditions on (:sub). The
-     # describe is not project-scoped: the email is globally unique and the
+     # The unique ID is what the AWS trust policy conditions on (:sub and :aud).
+     # The describe is not project-scoped: the email is globally unique and the
      # account may live in a different project than the VM.
      SA_UNIQUE_ID=$(gcloud iam service-accounts describe "${SA_EMAIL}" \
           --format 'value(uniqueId)' 2>/dev/null) ||
