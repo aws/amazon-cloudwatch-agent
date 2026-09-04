@@ -28,6 +28,7 @@ import (
 	"github.com/influxdata/wlog"
 	"github.com/kardianos/service"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.uber.org/zap"
 
@@ -377,6 +378,7 @@ func runAgent(ctx context.Context,
 	for _, uri := range otelConfigs {
 		e = append(e, "--config="+uri)
 	}
+	e = append(e, collectorFeatureGateArgs(featuregate.GlobalRegistry())...)
 	cmd.SetArgs(e)
 	return cmd.Execute()
 }
