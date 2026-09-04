@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -43,7 +42,7 @@ func TestRecoveryWhenPermissionGrantedDuringRetry(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Create batch and track circuit breaker state
 	target := Target{Group: "group", Stream: "stream"}
@@ -124,7 +123,7 @@ func TestProcessReadyMessagesRecoversFromPanic(t *testing.T) {
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Close()
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger)
 
 	b := readyBatch("g", nil, func() { panic("boom in drop path") })
 	b.expireAfter = time.Now().Add(-time.Hour) // force the expired -> drop() path
@@ -150,7 +149,7 @@ func TestFlushReadyBatchesPanicDoesNotStrandLaterBatches(t *testing.T) {
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Close()
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger)
 
 	// First batch panics during its expired -> drop() path.
 	bad := readyBatch("bad", nil, func() { panic("boom in drop path") })

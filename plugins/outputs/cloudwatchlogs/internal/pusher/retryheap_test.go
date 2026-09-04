@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -90,7 +89,7 @@ func TestRetryHeapProcessor(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 	defer processor.Stop()
 
 	// Test start/stop
@@ -108,7 +107,7 @@ func TestRetryHeapProcessorExpiredBatch(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
@@ -143,7 +142,7 @@ func TestRetryHeapProcessorSendsBatch(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	target := Target{Group: "group", Stream: "stream"}
 	batch := newLogEventBatch(target, nil)
@@ -215,7 +214,7 @@ func TestRetryHeapProcessorNoReadyBatches(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Process with empty heap - should not panic
 	processor.processReadyMessages()
@@ -237,7 +236,7 @@ func TestRetryHeapProcessorFailedBatchGoesBackToHeap(t *testing.T) {
 	mockTargetManager := &mockTargetManager{}
 	mockTargetManager.On("InitTarget", mock.Anything).Return(nil)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	processor.Start()
 	defer processor.Stop()
@@ -289,7 +288,7 @@ func TestRetryHeapProcessorStoppedProcessReadyMessages(t *testing.T) {
 	mockService := &mockLogsService{}
 	mockTargetManager := &mockTargetManager{}
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Add a ready batch to the heap
 	target := Target{Group: "group", Stream: "stream"}
@@ -349,7 +348,7 @@ func TestRetryHeapProcessorStopDoesNotDeadlock(t *testing.T) {
 		require.NoError(t, retryHeap.Push(readyBatch("g", nil, nil)))
 	}
 
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger)
 	p.Start()
 	require.Eventually(t, func() bool { return inFlight.Load() > 0 }, 5*time.Second, 10*time.Millisecond,
 		"test setup: expected the worker pool to be saturated")
@@ -386,7 +385,7 @@ func TestProcessorStopIsIdempotentAndConcurrencySafe(t *testing.T) {
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
 
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger)
 	p.Start()
 
 	var wg sync.WaitGroup
@@ -443,7 +442,7 @@ func TestRetryHeapProcessorStopDoesNotBlockOnSaturatedPool(t *testing.T) {
 
 	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Close()
-	p := NewRetryHeapProcessor(retryHeap, pool, svc, NewTargetManager(logger, svc), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, pool, svc, NewTargetManager(logger, svc), logger)
 
 	// Ready batches force Stop()'s flush to Submit into the saturated pool.
 	for i := 0; i < 3; i++ {
@@ -489,7 +488,7 @@ func TestProcessorStopWhenProcessLoopBlockedInSubmit(t *testing.T) {
 
 	heap := NewRetryHeap(logger)
 	defer heap.Close()
-	p := NewRetryHeapProcessor(heap, pool, svc, NewTargetManager(logger, svc), logger, nil)
+	p := NewRetryHeapProcessor(heap, pool, svc, NewTargetManager(logger, svc), logger)
 	require.NoError(t, heap.Push(readyBatch("g", nil, nil)))
 
 	p.Start()
@@ -551,7 +550,7 @@ func TestExpiredBatchDropDoesNotSignalSuccess(t *testing.T) {
 	batch.expireAfter = time.Now().Add(-time.Hour) // already past its expiry window
 	require.NoError(t, retryHeap.Push(batch))
 
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, NewTargetManager(logger, service), logger)
 	p.flushReadyBatches()
 
 	require.True(t, batch.isExpired(), "test setup: batch must be expired to exercise the drop path")
@@ -592,7 +591,7 @@ func TestRetryHeapSuccessCallsStateCallback(t *testing.T) {
 	defer retryHeap.Close()
 	defer workerPool.Stop()
 
-	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, retryer.NewLogThrottleRetryer(logger))
+	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger)
 
 	batch := newStatefulBatch(target, queue)
 	batch.nextRetryTime = time.Now().Add(-1 * time.Second)
@@ -639,7 +638,7 @@ func TestRetryHeapExpiryCallsStateCallback(t *testing.T) {
 	defer retryHeap.Close()
 	defer workerPool.Stop()
 
-	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger)
 
 	batch := newStatefulBatch(target, queue)
 	batch.initializeStartTime()
@@ -686,7 +685,7 @@ func TestShutdownDoesNotCallStateCallback(t *testing.T) {
 	}
 	tm := NewTargetManager(logger, service)
 
-	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	processor := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger)
 	processor.Start()
 
 	// Push a batch with a future retry time so it won't be processed before Stop

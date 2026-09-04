@@ -501,7 +501,7 @@ func TestPanicInStateCallbackStillClearsCircuitBreaker(t *testing.T) {
 	defer workerPool.Stop()
 	retryHeap := NewRetryHeap(logger)
 	defer retryHeap.Close()
-	p := NewRetryHeapProcessor(retryHeap, workerPool, svc, NewTargetManager(logger, svc), logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, svc, NewTargetManager(logger, svc), logger)
 
 	b := readyBatch("g", nil, func() { panic("state callback boom") })
 	b.addResumeCallback(func() { resumed.Add(1) })

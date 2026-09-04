@@ -203,7 +203,7 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 			// dedicated client here would never issue a PutLogEvents. Reuse the shared client
 			// (already non-nil, so the fallback can never nil-deref) instead of standing up a
 			// dedicated client and LogThrottleRetryer that would only leak a goroutine.
-			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, c.sharedClient, c.targetManager, c.Log, nil)
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, c.sharedClient, c.targetManager, c.Log)
 			c.retryHeapProcessor.Start()
 		}
 	})

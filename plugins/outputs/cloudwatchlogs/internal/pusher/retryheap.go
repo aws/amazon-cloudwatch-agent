@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
 // retryHeapImpl implements heap.Interface for logEventBatch sorted by nextRetryTime
@@ -142,7 +140,6 @@ func (rh *retryHeap) Close() {
 type RetryHeapProcessor struct {
 	retryHeap  RetryHeap
 	senderPool Sender
-	retryer    *retryer.LogThrottleRetryer
 	stopCh     chan struct{}
 	logger     telegraf.Logger
 	stopped    atomic.Bool
@@ -151,7 +148,7 @@ type RetryHeapProcessor struct {
 }
 
 // NewRetryHeapProcessor creates a new retry heap processor
-func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger, retryer *retryer.LogThrottleRetryer) *RetryHeapProcessor {
+func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service cloudWatchLogsService, targetManager TargetManager, logger telegraf.Logger) *RetryHeapProcessor {
 	// Create processor's own sender and senderPool
 	// Pass retryHeap so failed batches go back to RetryHeap instead of blocking on sync retry
 	sender := newSender(logger, service, targetManager, retryHeap)
@@ -160,7 +157,6 @@ func NewRetryHeapProcessor(retryHeap RetryHeap, workerPool WorkerPool, service c
 	return &RetryHeapProcessor{
 		retryHeap:  retryHeap,
 		senderPool: senderPool,
-		retryer:    retryer,
 		stopCh:     make(chan struct{}),
 		logger:     logger,
 	}
@@ -207,9 +203,6 @@ func (p *RetryHeapProcessor) Stop() {
 		}
 
 		// Downstream stops only once the producer loop is confirmed dead.
-		if p.retryer != nil {
-			p.retryer.Stop()
-		}
 		p.senderPool.Stop()
 	})
 }

@@ -132,7 +132,7 @@ func TestTerminalFailureResumesHaltedTarget(t *testing.T) {
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
 
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger)
 	p.Start()
 
 	var wg sync.WaitGroup

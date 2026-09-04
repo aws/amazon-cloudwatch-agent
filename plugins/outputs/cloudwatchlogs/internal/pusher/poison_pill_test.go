@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
@@ -59,7 +58,7 @@ func TestRetryHeapProcessorDoesNotStarveAllowedTarget(t *testing.T) {
 		deniedGroupAttemptCount.Add(1)
 	})
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Targets
 	allowedTarget := Target{Group: "log-stream-ple-access-granted", Stream: "i-test"}
@@ -190,7 +189,7 @@ func TestSingleDeniedLogGroup(t *testing.T) {
 		return *input.LogGroupName == "aws-restricted-log-group-name-log-stream-ple-access-denied"
 	})).Return((*cloudwatchlogs.PutLogEventsOutput)(nil), accessDeniedErr)
 
-	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{}, retryer.NewLogThrottleRetryer(&testutil.Logger{}))
+	processor := NewRetryHeapProcessor(heap, workerPool, mockService, mockTargetManager, &testutil.Logger{})
 
 	// Create batches
 	allowedTarget := Target{Group: "log-stream-ple-access-granted", Stream: "i-test"}
@@ -240,12 +239,13 @@ func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
 	workerPool := NewWorkerPool(4, &testutil.Logger{})
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger)
 	p.Start()
 
 	var wg sync.WaitGroup
-	pushers := make([]*Pusher, 0, 6)
-	for i := 0; i < 6; i++ {
+	numTargets := 6
+	pushers := make([]*Pusher, 0, numTargets)
+	for i := 0; i < numTargets; i++ {
 		grp := "failing-" + string(rune('a'+i))
 		pushers = append(pushers, NewPusher(logger, Target{Group: grp, Stream: "s"}, service, tm, nil,
 			workerPool, 20*time.Millisecond, &wg, retryHeap))
@@ -259,7 +259,7 @@ func TestAllTargetsFailingDoesNotDeadlock(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// breaker caps each failing target at roughly one in-flight batch
-	assert.LessOrEqual(t, retryHeap.Size(), 24, "heap grew beyond one batch per target: %d", retryHeap.Size())
+	assert.LessOrEqual(t, retryHeap.Size(), numTargets, "heap grew beyond one batch per target: %d", retryHeap.Size())
 
 	done := make(chan struct{})
 	go func() {
@@ -292,7 +292,7 @@ func TestChurnWhileThrottledDoesNotWedge(t *testing.T) {
 	workerPool := NewWorkerPool(4, &testutil.Logger{})
 	retryHeap := NewRetryHeap(logger)
 	tm := NewTargetManager(logger, service)
-	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger, nil)
+	p := NewRetryHeapProcessor(retryHeap, workerPool, service, tm, logger)
 	p.Start()
 
 	var wg sync.WaitGroup
