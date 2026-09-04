@@ -37,8 +37,6 @@ const (
 	LogEntryField     = "value"
 
 	defaultFlushTimeout = 5 * time.Second
-
-	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
 )
 
 var (
@@ -69,14 +67,16 @@ type CloudWatchLogs struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	pusherWaitGroup sync.WaitGroup
-	cwDests         sync.Map
-	workerPool      pusher.WorkerPool
-	targetManager   pusher.TargetManager
-	once            sync.Once
-	middleware      awsmiddleware.Middleware
-	configurer      *awsmiddleware.Configurer
-	configurerOnce  sync.Once
+	pusherWaitGroup    sync.WaitGroup
+	cwDests            sync.Map
+	workerPool         pusher.WorkerPool
+	retryHeap          pusher.RetryHeap
+	retryHeapProcessor *pusher.RetryHeapProcessor
+	targetManager      pusher.TargetManager
+	once               sync.Once
+	middleware         awsmiddleware.Middleware
+	configurer         *awsmiddleware.Configurer
+	configurerOnce     sync.Once
 
 	// Dedicated retryer/client for the TargetManager, owned by the plugin so its
 	// lifecycle is independent of any destination stop.
@@ -92,6 +92,24 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 func (c *CloudWatchLogs) Close() error {
+	// Shutdown order. The retry heap closes LAST of the publishing components: a worker
+	// whose send fails after the heap is closed cannot re-queue that batch and has to
+	// abandon it, so the workers are drained first to keep that path rare.
+	// 1. Stop all pushers (queues stop accepting new events, final send)
+	// 2. Wait for pushers to complete (in-flight sends finish, failed batches pushed to heap)
+	// 3. Stop RetryHeapProcessor (final flush, stop the ticker goroutine)
+	// 4. Stop WorkerPool (drain in-flight sends while the heap still accepts retries)
+	// 5. Stop RetryHeap (no more pushes accepted after this point)
+
+	// Signal the pushers BEFORE taking any destination lock. Publish holds cd.Lock across
+	// AddEvent, so a producer blocked on a halted target would otherwise keep d.Stop() from
+	// ever acquiring that lock -- and closing the queue's stopCh is what releases it.
+	c.cwDests.Range(func(_, value interface{}) bool {
+		if d, ok := value.(*cwDest); ok {
+			d.signalStop()
+		}
+		return true
+	})
 
 	c.cwDests.Range(func(_, value interface{}) bool {
 		if d, ok := value.(*cwDest); ok {
@@ -100,10 +118,21 @@ func (c *CloudWatchLogs) Close() error {
 		return true
 	})
 
+	// Deliberately unbounded. A queue send parked in workerPool.Submit is released when the
+	// pool is stopped below; bounding here would only move the wait to workerPool.Stop, which
+	// must wait for in-flight sends anyway. See the shutdown note in pool.go.
 	c.pusherWaitGroup.Wait()
+
+	if c.retryHeapProcessor != nil {
+		c.retryHeapProcessor.Stop()
+	}
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
+	}
+
+	if c.retryHeap != nil {
+		c.retryHeap.Close()
 	}
 
 	// Stop the shared retryer last, after all pushers have drained.
@@ -158,15 +187,27 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		useragent.Get().SetContainerInsightsFlag()
 	}
 	c.once.Do(func() {
-		if c.Concurrency > 1 {
-			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
-		}
 		// Dedicated retryer/client so the TargetManager isn't tied to the first dest.
+		// Must precede the retry heap: its processor captures targetManager by value.
 		c.sharedRetryer = retryer.NewLogThrottleRetryer(c.Log)
 		c.sharedClient = c.createClient(c.sharedRetryer)
 		c.targetManager = pusher.NewTargetManager(c.Log, c.sharedClient)
+
+		if c.Concurrency > 1 {
+			c.workerPool = pusher.NewWorkerPool(c.Concurrency, c.Log)
+			c.retryHeap = pusher.NewRetryHeap(c.Log)
+
+			// The retry-heap sender reads its client only as the batch.service nil-fallback
+			// (sender.go), but every batch reaching the heap was already pinned to its
+			// per-destination client by the first send, so that fallback never fires and a
+			// dedicated client here would never issue a PutLogEvents. Reuse the shared client
+			// (already non-nil, so the fallback can never nil-deref) instead of standing up a
+			// dedicated client and LogThrottleRetryer that would only leak a goroutine.
+			c.retryHeapProcessor = pusher.NewRetryHeapProcessor(c.retryHeap, c.workerPool, c.sharedClient, c.targetManager, c.Log)
+			c.retryHeapProcessor.Start()
+		}
 	})
-	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
+	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, &c.pusherWaitGroup, c.retryHeap)
 	cwd := &cwDest{
 		pusher:   p,
 		retryer:  logThrottleRetryer,
@@ -302,6 +343,13 @@ func (cd *cwDest) Stop() {
 	cd.Lock()
 	defer cd.Unlock()
 	cd.stop()
+}
+
+// signalStop stops the pusher WITHOUT taking the destination lock, releasing any Publish
+// blocked in AddEvent so the subsequent locked Stop() can proceed. Pusher.Stop is
+// idempotent, so the normal stop path still runs it.
+func (cd *cwDest) signalStop() {
+	cd.pusher.Stop()
 }
 
 func (cd *cwDest) stop() {

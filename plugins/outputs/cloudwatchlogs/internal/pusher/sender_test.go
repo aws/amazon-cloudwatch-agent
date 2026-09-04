@@ -5,6 +5,7 @@ package pusher
 
 import (
 	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -80,7 +82,7 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -103,7 +105,7 @@ func TestSender(t *testing.T) {
 		mockManager := new(mockTargetManager)
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{RejectedLogEventsInfo: rejectedInfo}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -122,7 +124,7 @@ func TestSender(t *testing.T) {
 		mockManager.On("InitTarget", mock.Anything).Return(nil).Once()
 		mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -149,7 +151,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.InvalidParameterException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -177,7 +179,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.DataAlreadyAcceptedException{}).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -205,7 +207,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, errors.New("test")).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -225,7 +227,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 		s.Send(batch)
 		s.Stop()
 
@@ -251,7 +253,12 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		s := newSender(logger, mockService, mockManager, 100*time.Millisecond)
+		s := newSender(logger, mockService, mockManager, nil)
+
+		// Set expireAfter to past time so batch expires immediately after first retry
+		batch.initializeStartTime()
+		batch.expireAfter = time.Now().Add(-1 * time.Hour)
+
 		s.Send(batch)
 		s.Stop()
 
@@ -279,7 +286,7 @@ func TestSender(t *testing.T) {
 		mockService.On("PutLogEvents", mock.Anything).
 			Return(&cloudwatchlogs.PutLogEventsOutput{}, awserr.New("SomeAWSError", "Some AWS error", nil)).Once()
 
-		s := newSender(logger, mockService, mockManager, time.Second)
+		s := newSender(logger, mockService, mockManager, nil)
 
 		go func() {
 			time.Sleep(50 * time.Millisecond)
@@ -292,4 +299,116 @@ func TestSender(t *testing.T) {
 		assert.True(t, stateCallbackCalled, "State callback was not called when stop was requested")
 		assert.False(t, doneCallbackCalled, "Done callback should not be called when stop was requested")
 	})
+}
+func TestSenderConcurrencyWithRetryHeap(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	mockService := new(mockLogsService)
+	mockManager := new(mockTargetManager)
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{}).Once()
+
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Close()
+
+	s := newSender(logger, mockService, mockManager, retryHeap)
+
+	batch := newLogEventBatch(Target{Group: "test-group", Stream: "test-stream"}, nil)
+	batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+	var failCalled bool
+	batch.addFailCallback(func() { failCalled = true })
+
+	s.Send(batch)
+
+	assert.True(t, failCalled, "Fail callback should be called")
+	assert.Equal(t, 1, retryHeap.Size(), "Batch should be in RetryHeap")
+	mockService.AssertExpectations(t)
+}
+
+func TestSenderConcurrencyFallbackToSync(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	mockService := new(mockLogsService)
+	mockManager := new(mockTargetManager)
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, &cloudwatchlogs.ServiceUnavailableException{}).Once()
+	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil).Once()
+
+	// Concurrency enabled but nil RetryHeap should fall back to sync
+	s := newSender(logger, mockService, mockManager, nil)
+
+	batch := newLogEventBatch(Target{Group: "test-group", Stream: "test-stream"}, nil)
+	batch.append(newLogEvent(time.Now(), "Test message", nil))
+
+	var doneCalled bool
+	batch.addDoneCallback(func() { doneCalled = true })
+
+	s.Send(batch)
+
+	assert.True(t, doneCalled, "Done callback should be called")
+	mockService.AssertExpectations(t)
+}
+
+// NOT A BUG -- intentional upstream behaviour. On the synchronous path (concurrency <= 1,
+// retryHeap == nil) a send interrupted by shutdown calls batch.drop(), persisting file
+// offsets for events that never reached CloudWatch. Upstream chose loss over duplication:
+// updateState() runs on this stop path deliberately, to avoid reprocessing the batch after
+// restart. This test pins that trade-off; flip it only if the trade is revisited.
+func TestSynchronousShutdownPersistsOffsetsByDesign(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var stateRuns, doneRuns atomic.Int32
+
+	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, awserr.New("OperationAbortedException", "forced by test", nil)
+	})
+	// nil retryHeap => synchronous sleep-retry path.
+	s := newSender(logger, svc, NewTargetManager(logger, svc), nil)
+
+	b := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
+	b.append(newLogEvent(time.Now(), "payload", func() { doneRuns.Add(1) }))
+	b.addStateCallback(func() { stateRuns.Add(1) })
+
+	// Interrupt while the sender is parked in its backoff select.
+	go func() {
+		time.Sleep(75 * time.Millisecond)
+		s.Stop()
+	}()
+	s.Send(b)
+
+	require.Zero(t, doneRuns.Load(),
+		"shutdown must never report undelivered events as delivered")
+	require.Equal(t, 1, int(stateRuns.Load()),
+		"offsets ARE persisted on synchronous shutdown by design; flipping this "+
+			"assertion means deliberately reversing that trade")
+}
+
+// TestRetriedBatchIgnoresSenderService confirms why the retry-heap processor's client
+// (cloudwatchlogs.go) was logically dead. sender.Send pins batch.service to its own client
+// only when the batch has none yet -- the first, per-destination send -- and always sends
+// through batch.service thereafter. A batch reaching the retry heap was already sent once,
+// so its service is pinned to the per-destination client and the retry-heap sender's own
+// client never issues a PutLogEvents. Reusing the shared client there is therefore safe.
+func TestRetriedBatchIgnoresSenderService(t *testing.T) {
+	var pinnedCalls, senderCalls atomic.Int32
+	pinnedClient := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		pinnedCalls.Add(1)
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+	senderClient := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		senderCalls.Add(1)
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+
+	logger := testutil.NewNopLogger()
+	// nil retryHeap => synchronous send path, so Send issues PutLogEvents directly.
+	s := newSender(logger, senderClient, NewTargetManager(logger, senderClient), nil)
+
+	batch := newLogEventBatch(Target{Group: "g", Stream: "s"}, nil)
+	batch.append(newLogEvent(time.Now(), "payload", func() {}))
+	batch.service = pinnedClient // already pinned by the first send before it reached the heap
+
+	s.Send(batch)
+
+	assert.Equal(t, int32(1), pinnedCalls.Load(),
+		"a retried batch must be sent through the client pinned on its first send")
+	assert.Equal(t, int32(0), senderCalls.Load(),
+		"the sender's own client must never issue PutLogEvents for a pre-pinned batch -- "+
+			"this is why the retry-heap processor's dedicated client was dead code")
 }

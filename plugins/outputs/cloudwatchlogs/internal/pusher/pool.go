@@ -6,11 +6,14 @@ package pusher
 import (
 	"sync"
 	"sync/atomic"
-	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 type WorkerPool interface {
-	Submit(task func())
+	// Submit reports whether the task was accepted. False means the pool is shutting down
+	// and the task will never run, so the caller must finalize whatever it owns.
+	Submit(task func()) bool
 	Stop()
 }
 
@@ -19,14 +22,17 @@ type workerPool struct {
 	workerCount atomic.Int32
 	wg          sync.WaitGroup
 	stopCh      chan struct{}
-	stopLock    sync.RWMutex
+	stopOnce    sync.Once
+	stopping    atomic.Bool
+	logger      telegraf.Logger
 }
 
 // NewWorkerPool creates a pool of workers of the specified size.
-func NewWorkerPool(size int) WorkerPool {
+func NewWorkerPool(size int, logger telegraf.Logger) WorkerPool {
 	p := &workerPool{
 		tasks:  make(chan func(), size*2),
 		stopCh: make(chan struct{}),
+		logger: logger,
 	}
 	for i := 0; i < size; i++ {
 		p.addWorker()
@@ -47,24 +53,53 @@ func (p *workerPool) worker() {
 		p.workerCount.Add(-1)
 		p.wg.Done()
 	}()
-	for task := range p.tasks {
-		task()
+	for {
+		select {
+		case task := <-p.tasks:
+			runTask(task, p.logger)
+		case <-p.stopCh:
+			// Drain what is already queued so a shutdown does not silently discard
+			// submitted sends, then exit.
+			for {
+				select {
+				case task := <-p.tasks:
+					runTask(task, p.logger)
+				default:
+					return
+				}
+			}
+		}
 	}
 }
 
-// Submit adds a task to the pool. Blocks until a worker is available to receive the task or the pool is stopped.
-func (p *workerPool) Submit(task func()) {
-	p.stopLock.RLock()
-	defer p.stopLock.RUnlock()
-	select {
-	case <-p.stopCh:
-		return
-	default:
-		select {
-		case p.tasks <- task:
-		case <-p.stopCh:
-			return
+// runTask isolates a panic to the one task that raised it. Sends run here, so without
+// this an unrecovered panic in a worker goroutine terminates the whole agent process.
+func runTask(task func(), logger telegraf.Logger) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("Recovered from panic in worker task: %v", r)
 		}
+	}()
+	task()
+}
+
+// Submit adds a task to the pool. Blocks until a worker is available to receive the task or the pool is stopped.
+//
+// Deliberately lock-free: holding a read lock across this blocking send meant Stop's write
+// lock could never be acquired, so Stop could not close stopCh to release a Submit parked
+// on a saturated pool -- the pool deadlocked on shutdown. Safe without the lock because
+// Stop no longer closes p.tasks, only stopCh.
+func (p *workerPool) Submit(task func()) bool {
+	// Check stopping first: select is random when both cases are ready, so without this a
+	// task could be enqueued after Stop and never run, leaving its batch unfinalized.
+	if p.stopping.Load() {
+		return false
+	}
+	select {
+	case p.tasks <- task:
+		return true
+	case <-p.stopCh:
+		return false
 	}
 }
 
@@ -73,53 +108,66 @@ func (p *workerPool) WorkerCount() int32 {
 	return p.workerCount.Load()
 }
 
-// Stop closes the channels and waits for the workers to stop.
+// Stop signals the workers and waits for them to drain and exit. p.tasks is deliberately
+// NOT closed: a concurrent Submit would panic on a closed channel, and avoiding the close
+// is what lets Submit run lock-free.
+//
+// This wait is unbounded by design, and it is the one place shutdown genuinely blocks on
+// in-flight work: a worker mid-PutLogEvents must be allowed to finish. Callers upstream
+// (pusherWaitGroup.Wait) therefore do not bound their own waits either -- doing so only
+// relocates the wait here. A worker that never returns (an HTTP call that never times out)
+// would stall shutdown; that is bounded in practice by the client's timeouts, not by us.
 func (p *workerPool) Stop() {
-	p.stopLock.Lock()
-	defer p.stopLock.Unlock()
-	select {
-	case <-p.stopCh:
-		return
-	default:
+	p.stopOnce.Do(func() {
+		p.stopping.Store(true) // stop accepting before signalling, so Submit answers definitively
 		close(p.stopCh)
-		close(p.tasks)
 		p.wg.Wait()
-	}
+	})
 }
 
 // senderPool wraps a Sender with a WorkerPool for concurrent sending.
 type senderPool struct {
 	workerPool WorkerPool
 	sender     Sender
+	logger     telegraf.Logger
 }
 
 var _ Sender = (*senderPool)(nil)
 
-func newSenderPool(workerPool WorkerPool, sender Sender) Sender {
+func newSenderPool(workerPool WorkerPool, sender Sender, logger telegraf.Logger) Sender {
 	return &senderPool{
 		workerPool: workerPool,
 		sender:     sender,
+		logger:     logger,
 	}
 }
 
 // Send submits a send task to the worker pool.
 func (s *senderPool) Send(batch *logEventBatch) {
-	s.workerPool.Submit(func() {
+	accepted := s.workerPool.Submit(func() {
+		// Recover here, where the batch is in scope, and abandon it. runTask's recover keeps
+		// the worker alive but cannot finalize the batch, which would leave the target's
+		// breaker halted and its file offsets never advanced. abandon() clears the breaker
+		// without persisting offsets, so the events are re-read after restart.
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.Errorf("Recovered from panic sending batch for %v/%v; abandoning it (will be re-read after restart): %v",
+					batch.Group, batch.Stream, r)
+				batch.abandon()
+			}
+		}()
 		s.sender.Send(batch)
 	})
+	if !accepted {
+		// The pool is shutting down and will never run this task, so finalize the batch here
+		// rather than leaving the target's breaker halted with its offsets never advanced.
+		s.logger.Warnf("Worker pool stopped, abandoning batch for %v/%v (will be re-read after restart)",
+			batch.Group, batch.Stream)
+		batch.abandon()
+	}
 }
 
 func (s *senderPool) Stop() {
 	// workerpool is stopped by the plugin
 	s.sender.Stop()
-}
-
-// SetRetryDuration sets the retry duration on the wrapped Sender.
-func (s *senderPool) SetRetryDuration(duration time.Duration) {
-	s.sender.SetRetryDuration(duration)
-}
-
-// RetryDuration returns the retry duration of the wrapped Sender.
-func (s *senderPool) RetryDuration() time.Duration {
-	return s.sender.RetryDuration()
 }

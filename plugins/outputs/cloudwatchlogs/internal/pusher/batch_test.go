@@ -5,16 +5,19 @@ package pusher
 
 import (
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
+	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
 type mockEntityProvider struct {
@@ -403,4 +406,110 @@ func TestValidateAndTruncateMessage(t *testing.T) {
 			assert.Equal(t, tt.expectedOutput, result)
 		})
 	}
+}
+func TestBatchRetryMetadata(t *testing.T) {
+	target := Target{Group: "test-group", Stream: "test-stream"}
+	batch := newLogEventBatch(target, nil)
+
+	// Test initial state
+	assert.True(t, batch.startTime.IsZero())
+	assert.False(t, batch.isExpired())
+
+	// Test initializeStartTime
+	batch.initializeStartTime()
+	assert.False(t, batch.startTime.IsZero())
+
+	// Test updateRetryMetadata
+	err := assert.AnError
+	batch.updateRetryMetadata(err)
+	assert.Equal(t, 1, batch.retryCountShort)
+	assert.Equal(t, 0, batch.retryCountLong)
+	assert.False(t, batch.nextRetryTime.IsZero())
+
+	// Test isExpired
+	batch.expireAfter = time.Now().Add(-1 * time.Hour)
+	assert.True(t, batch.isExpired())
+}
+
+func TestBatchInitializeStartTimeIdempotent(t *testing.T) {
+	batch := newLogEventBatch(Target{Group: "test-group", Stream: "test-stream"}, nil)
+
+	// Verify initial state
+	assert.True(t, batch.startTime.IsZero())
+	assert.True(t, batch.expireAfter.IsZero())
+
+	// First call should set both values
+	batch.initializeStartTime()
+	assert.False(t, batch.startTime.IsZero())
+	assert.False(t, batch.expireAfter.IsZero())
+
+	// Capture the values
+	firstStartTime := batch.startTime
+	firstExpireAfter := batch.expireAfter
+
+	// Verify expireAfter is set to startTime + maxRetryTimeout
+	expectedExpireAfter := firstStartTime.Add(maxRetryTimeout)
+	assert.Equal(t, expectedExpireAfter, firstExpireAfter)
+
+	// Wait a bit to ensure time has passed
+	time.Sleep(10 * time.Millisecond)
+
+	// Second call should NOT change the values (idempotent)
+	batch.initializeStartTime()
+	assert.Equal(t, firstStartTime, batch.startTime, "startTime should not change on second call")
+	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on second call")
+
+	// Third call should also not change the values
+	batch.initializeStartTime()
+	assert.Equal(t, firstStartTime, batch.startTime, "startTime should not change on third call")
+	assert.Equal(t, firstExpireAfter, batch.expireAfter, "expireAfter should not change on third call")
+}
+
+// A permanently invalid batch must advance offsets so it is not re-read forever, while still
+// clearing the breaker.
+func TestInvalidBatchAdvancesOffsetsAndResumes(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	service := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return nil, &cloudwatchlogs.InvalidParameterException{}
+	})
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Close()
+
+	var delivered, offsets, resumed atomic.Int32
+	batch := readyBatch("g", func() { delivered.Add(1) }, func() { offsets.Add(1) })
+	batch.addResumeCallback(func() { resumed.Add(1) })
+
+	newSender(logger, service, NewTargetManager(logger, service), retryHeap).Send(batch)
+
+	assert.Zero(t, delivered.Load(), "an invalid batch was never delivered")
+	assert.Equal(t, int32(1), offsets.Load(), "offsets must advance so the batch is not re-read forever")
+	assert.Equal(t, int32(1), resumed.Load(), "the circuit breaker must be cleared")
+}
+
+// drop() runs updateState() BEFORE resume(). A panic raised by a state
+// callback therefore skips resume(), leaving that target's circuit breaker latched forever.
+// The per-batch recover added for the retry heap stops one panic from stranding OTHER
+// batches, but it does not un-wedge the panicking batch's own target.
+func TestPanicInStateCallbackStillClearsCircuitBreaker(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	var resumed atomic.Int32
+
+	svc := okStubService(func(*cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	})
+	workerPool := NewWorkerPool(1, testutil.NewNopLogger())
+	defer workerPool.Stop()
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Close()
+	p := NewRetryHeapProcessor(retryHeap, workerPool, svc, NewTargetManager(logger, svc), logger)
+
+	b := readyBatch("g", nil, func() { panic("state callback boom") })
+	b.addResumeCallback(func() { resumed.Add(1) })
+	b.expireAfter = time.Now().Add(-time.Hour) // force the expired -> drop() path
+	require.NoError(t, retryHeap.Push(b))
+
+	require.NotPanics(t, func() { p.processReadyMessages() })
+	require.Equal(t, 1, int(resumed.Load()),
+		"a panic in a state callback must still clear the target's circuit breaker, "+
+			"otherwise that log group is permanently wedged")
 }
