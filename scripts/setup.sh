@@ -13,16 +13,19 @@
 #       aws/setup.sh (trust + install, one AWS shell)
 #   azure_vm / azure_aks
 #       azure/setup.sh (identity) -> aws/setup.sh (trust) -> azure/setup.sh (install)
+#   gcp_vm / gcp_gke
+#       gcp/setup.sh (identity) -> aws/setup.sh (trust) -> gcp/setup.sh (install)
 #
-# azure/setup.sh sets up the Azure identity while the role ARN is unknown, and
-# installs once it is known. aws/setup.sh sets up the AWS trust (plus install on
-# the AWS-native platforms). The dispatcher supplies the ARN across the handoff,
-# giving the Azure chain identity -> trust -> install.
+# azure/setup.sh and gcp/setup.sh set up their cloud's identity while the role
+# ARN is unknown, and install once it is known. aws/setup.sh sets up the AWS
+# trust (plus install on the AWS-native platforms). The dispatcher supplies the
+# ARN across the handoff, giving the Azure and GCP chains identity -> trust ->
+# install.
 #
-# AWS-native platforms run in one AWS shell. The Azure platforms span clouds:
-# identity and install need the Azure CLI, trust needs the AWS CLI. This runs
-# whichever steps the current shell can, then prints a command to paste into the
-# next shell, carrying the values produced so far.
+# AWS-native platforms run in one AWS shell. The Azure and GCP platforms span
+# clouds: identity and install need that cloud's CLI (az / gcloud), trust needs
+# the AWS CLI. This runs whichever steps the current shell can, then prints a
+# command to paste into the next shell, carrying the values produced so far.
 #
 # The setup scripts are always fetched over the network, never read from
 # alongside this file, so this needs "curl" and outbound access even when run
@@ -33,7 +36,7 @@
 #   CWAGENT_PLATFORM=aws_ec2 CWAGENT_AWS_INSTANCE_ID=i-123 ./setup.sh
 #
 # Environment variables:
-#   CWAGENT_PLATFORM                      aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
+#   CWAGENT_PLATFORM                      aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_vm | gcp_gke
 #   CWAGENT_AWS_ROLE_NAME                 IAM role name (default: CloudWatchAgentServerRole)
 #   CWAGENT_AWS_REGION                    AWS region telemetry is sent to
 #   CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH When set (1/true/yes/on), enable Transaction
@@ -57,7 +60,14 @@
 #   CWAGENT_AZURE_RESOURCE_GROUP          Resource group
 #   CWAGENT_AZURE_VM_NAME                 VM name (azure_vm only)
 #
-#   Kubernetes (EKS, AKS):
+#   GCP:
+#   CWAGENT_GCP_PROJECT                   Project ID (the gcloud config default
+#                                         is used when unset)
+#   CWAGENT_GCP_ZONE                      Zone the VM lives in (gcp_vm only)
+#   CWAGENT_GCP_VM_NAME                   VM name (gcp_vm only)
+#   CWAGENT_GCP_LOCATION                  Zone or region of the cluster (gcp_gke only)
+#
+#   Kubernetes (EKS, AKS, GKE):
 #   CWAGENT_K8S_CLUSTER_NAME              Cluster name
 
 set -eu
@@ -73,12 +83,18 @@ RESOURCE_ID="${CWAGENT_AZURE_RESOURCE_ID:-}"
 SUBSCRIPTION="${CWAGENT_AZURE_SUBSCRIPTION:-}"
 RESOURCE_GROUP="${CWAGENT_AZURE_RESOURCE_GROUP:-}"
 VM_NAME="${CWAGENT_AZURE_VM_NAME:-}"
+GCP_PROJECT="${CWAGENT_GCP_PROJECT:-}"
+GCP_ZONE="${CWAGENT_GCP_ZONE:-}"
+GCP_VM_NAME="${CWAGENT_GCP_VM_NAME:-}"
+GCP_LOCATION="${CWAGENT_GCP_LOCATION:-}"
 ECS_LAUNCH_TYPE="${CWAGENT_AWS_ECS_LAUNCH_TYPE:-}"
 # Identity/trust values that cross from one setup script to the next. On a
 # resumed shell they arrive via the paste command, otherwise the runs below
 # produce them.
 TENANT_ID="${CWAGENT_AZURE_TENANT_ID:-}"
 OIDC_ISSUER="${CWAGENT_AZURE_OIDC_ISSUER:-}"
+SA_UNIQUE_ID="${CWAGENT_GCP_SA_UNIQUE_ID:-}"
+GCP_OIDC_ISSUER="${CWAGENT_GCP_OIDC_ISSUER:-}"
 ROLE_ARN="${CWAGENT_AWS_ROLE_ARN:-}"
 
 # Where the setup scripts are fetched from and what the paste commands point at.
@@ -114,7 +130,7 @@ Usage:
   CWAGENT_PLATFORM=aws_ec2 CWAGENT_AWS_INSTANCE_ID=i-123 $0
 
 Environment variables:
-  CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
+  CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_vm | gcp_gke
   CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
   CWAGENT_AWS_REGION                      AWS region telemetry is sent to
   CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH   Enable Transaction Search in the region
@@ -132,7 +148,13 @@ Environment variables:
   CWAGENT_AZURE_RESOURCE_GROUP            Resource group
   CWAGENT_AZURE_VM_NAME                   VM name (azure_vm only)
 
-  Kubernetes (EKS, AKS):
+  GCP:
+  CWAGENT_GCP_PROJECT                     Project ID (gcloud config default when unset)
+  CWAGENT_GCP_ZONE                        Zone the VM lives in (gcp_vm only)
+  CWAGENT_GCP_VM_NAME                     VM name (gcp_vm only)
+  CWAGENT_GCP_LOCATION                    Zone or region of the cluster (gcp_gke only)
+
+  Kubernetes (EKS, AKS, GKE):
   CWAGENT_K8S_CLUSTER_NAME                Cluster name
 EOF
      exit "${rc}"
@@ -177,6 +199,8 @@ interactive_setup() {
           printf '  aws_eks     EKS cluster (add-on)\n'
           printf '  azure_vm    Azure VM\n'
           printf '  azure_aks   AKS cluster (Helm)\n'
+          printf '  gcp_vm      GCE VM\n'
+          printf '  gcp_gke     GKE cluster (Helm)\n'
           ask "Platform:"
           read -r PLATFORM || die "no platform selected"
      fi
@@ -202,6 +226,14 @@ interactive_setup() {
                prompt CLUSTER_NAME "Cluster name"
           fi
           ;;
+     gcp_vm)
+          prompt GCP_ZONE "Zone"
+          prompt GCP_VM_NAME "VM name"
+          ;;
+     gcp_gke)
+          prompt GCP_LOCATION "Location (zone or region)"
+          prompt CLUSTER_NAME "Cluster name"
+          ;;
      *) die "invalid platform: ${PLATFORM}" ;;
      esac
 
@@ -219,6 +251,7 @@ interactive_setup() {
 
 have_az() { command -v az >/dev/null 2>&1; }
 have_aws() { command -v aws >/dev/null 2>&1; }
+have_gcloud() { command -v gcloud >/dev/null 2>&1; }
 
 # Export everything the setup scripts read, so a plain "sh <script>" inherits it.
 # Empty values are harmless: the scripts fall back to their own defaults.
@@ -234,9 +267,15 @@ export_env() {
      export CWAGENT_AZURE_SUBSCRIPTION="${SUBSCRIPTION}"
      export CWAGENT_AZURE_RESOURCE_GROUP="${RESOURCE_GROUP}"
      export CWAGENT_AZURE_VM_NAME="${VM_NAME}"
+     export CWAGENT_GCP_PROJECT="${GCP_PROJECT}"
+     export CWAGENT_GCP_ZONE="${GCP_ZONE}"
+     export CWAGENT_GCP_VM_NAME="${GCP_VM_NAME}"
+     export CWAGENT_GCP_LOCATION="${GCP_LOCATION}"
      export CWAGENT_AWS_ECS_LAUNCH_TYPE="${ECS_LAUNCH_TYPE}"
      export CWAGENT_AZURE_TENANT_ID="${TENANT_ID}"
      export CWAGENT_AZURE_OIDC_ISSUER="${OIDC_ISSUER}"
+     export CWAGENT_GCP_SA_UNIQUE_ID="${SA_UNIQUE_ID}"
+     export CWAGENT_GCP_OIDC_ISSUER="${GCP_OIDC_ISSUER}"
      export CWAGENT_AWS_ROLE_ARN="${ROLE_ARN}"
 }
 
@@ -263,6 +302,12 @@ run_script() {
 # The identity/trust values a script may hand back, each folded into a local below.
 EMITTED_KEYS="CWAGENT_AZURE_TENANT_ID
 CWAGENT_AZURE_OIDC_ISSUER
+CWAGENT_GCP_SA_UNIQUE_ID
+CWAGENT_GCP_OIDC_ISSUER
+CWAGENT_GCP_PROJECT
+CWAGENT_GCP_ZONE
+CWAGENT_GCP_VM_NAME
+CWAGENT_GCP_LOCATION
 CWAGENT_AWS_ROLE_ARN
 CWAGENT_AWS_REGION
 CWAGENT_K8S_CLUSTER_NAME"
@@ -286,6 +331,12 @@ load_script() {
      done
      TENANT_ID="${CWAGENT_AZURE_TENANT_ID:-${TENANT_ID}}"
      OIDC_ISSUER="${CWAGENT_AZURE_OIDC_ISSUER:-${OIDC_ISSUER}}"
+     SA_UNIQUE_ID="${CWAGENT_GCP_SA_UNIQUE_ID:-${SA_UNIQUE_ID}}"
+     GCP_OIDC_ISSUER="${CWAGENT_GCP_OIDC_ISSUER:-${GCP_OIDC_ISSUER}}"
+     GCP_PROJECT="${CWAGENT_GCP_PROJECT:-${GCP_PROJECT}}"
+     GCP_ZONE="${CWAGENT_GCP_ZONE:-${GCP_ZONE}}"
+     GCP_VM_NAME="${CWAGENT_GCP_VM_NAME:-${GCP_VM_NAME}}"
+     GCP_LOCATION="${CWAGENT_GCP_LOCATION:-${GCP_LOCATION}}"
      ROLE_ARN="${CWAGENT_AWS_ROLE_ARN:-${ROLE_ARN}}"
      CLUSTER_NAME="${CWAGENT_K8S_CLUSTER_NAME:-${CLUSTER_NAME}}"
      REGION="${CWAGENT_AWS_REGION:-${REGION}}"
@@ -298,11 +349,14 @@ require_output() {
      [ -n "$2" ] || die "$1 did not produce $3. Rerun it."
 }
 
-# The identity run yields the tenant ID for a VM and the OIDC issuer for AKS.
+# The identity run yields the tenant ID for an Azure VM, the OIDC issuer for
+# AKS/GKE, and the service account unique ID for a GCE VM.
 require_identity_output() {
      case "${PLATFORM}" in
      azure_vm) require_output "azure/setup.sh" "${TENANT_ID}" "a tenant ID" ;;
      azure_aks) require_output "azure/setup.sh" "${OIDC_ISSUER}" "an OIDC issuer URL" ;;
+     gcp_vm) require_output "gcp/setup.sh" "${SA_UNIQUE_ID}" "a service account unique ID" ;;
+     gcp_gke) require_output "gcp/setup.sh" "${GCP_OIDC_ISSUER}" "an OIDC issuer URL" ;;
      esac
 }
 
@@ -325,6 +379,12 @@ print_resume() {
      add_kv CWAGENT_AZURE_SUBSCRIPTION "${SUBSCRIPTION}"
      add_kv CWAGENT_AZURE_RESOURCE_GROUP "${RESOURCE_GROUP}"
      add_kv CWAGENT_AZURE_VM_NAME "${VM_NAME}"
+     add_kv CWAGENT_GCP_SA_UNIQUE_ID "${SA_UNIQUE_ID}"
+     add_kv CWAGENT_GCP_OIDC_ISSUER "${GCP_OIDC_ISSUER}"
+     add_kv CWAGENT_GCP_PROJECT "${GCP_PROJECT}"
+     add_kv CWAGENT_GCP_ZONE "${GCP_ZONE}"
+     add_kv CWAGENT_GCP_VM_NAME "${GCP_VM_NAME}"
+     add_kv CWAGENT_GCP_LOCATION "${GCP_LOCATION}"
      add_kv CWAGENT_K8S_CLUSTER_NAME "${CLUSTER_NAME}"
      add_kv CWAGENT_AWS_REGION "${REGION}"
      [ "${ROLE_NAME}" = "CloudWatchAgentServerRole" ] || add_kv CWAGENT_AWS_ROLE_NAME "${ROLE_NAME}"
@@ -391,6 +451,51 @@ orchestrate_azure() {
      fi
 }
 
+# GCP platforms span clouds the same way: identity_done / trust_done are read
+# off the values already in the environment, so each shell resumes at the
+# right step.
+orchestrate_gcp() {
+     case "${PLATFORM}" in
+     gcp_vm) [ -n "${SA_UNIQUE_ID}" ] && identity_done=1 || identity_done="" ;;
+     gcp_gke) [ -n "${GCP_OIDC_ISSUER}" ] && identity_done=1 || identity_done="" ;;
+     esac
+     [ -n "${ROLE_ARN}" ] && trust_done=1 || trust_done=""
+
+     if have_gcloud && have_aws; then
+          # One shell with both CLIs: run the whole chain.
+          if [ -z "${identity_done}" ]; then
+               load_script gcp/setup.sh
+               require_identity_output
+          fi
+          if [ -z "${trust_done}" ]; then
+               load_script aws/setup.sh
+               require_output "aws/setup.sh" "${ROLE_ARN}" "an IAM role ARN"
+          fi
+          run_script gcp/setup.sh
+     elif have_aws; then
+          # AWS shell: only the trust step belongs here.
+          [ -n "${identity_done}" ] || die "run gcp/setup.sh in a shell with the Google Cloud CLI first (it produces the service account unique ID / OIDC issuer the trust step needs)"
+          if [ -z "${trust_done}" ]; then
+               load_script aws/setup.sh
+               require_output "aws/setup.sh" "${ROLE_ARN}" "an IAM role ARN"
+          fi
+          print_resume "Google Cloud Shell (has the gcloud CLI)"
+     elif have_gcloud; then
+          # GCP shell: run identity if pending, install once trust is done.
+          if [ -z "${identity_done}" ]; then
+               load_script gcp/setup.sh
+               require_identity_output
+               print_resume "AWS CloudShell (has the AWS CLI)"
+          elif [ -n "${trust_done}" ]; then
+               run_script gcp/setup.sh
+          else
+               print_resume "AWS CloudShell (has the AWS CLI)"
+          fi
+     else
+          die "need the Google Cloud CLI (identity/install) and/or the AWS CLI (trust) for ${PLATFORM}"
+     fi
+}
+
 main() {
      case "${1:-}" in -h | --help) usage 0 ;; esac
 
@@ -403,7 +508,8 @@ main() {
      case "${PLATFORM}" in
      aws_ec2 | aws_ecs | aws_eks) orchestrate_aws ;;
      azure_vm | azure_aks) orchestrate_azure ;;
-     *) die "unsupported platform: ${PLATFORM} (valid: aws_ec2, aws_ecs, aws_eks, azure_vm, azure_aks)" ;;
+     gcp_vm | gcp_gke) orchestrate_gcp ;;
+     *) die "unsupported platform: ${PLATFORM} (valid: aws_ec2, aws_ecs, aws_eks, azure_vm, azure_aks, gcp_vm, gcp_gke)" ;;
      esac
 }
 

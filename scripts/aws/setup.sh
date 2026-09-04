@@ -16,13 +16,18 @@
 #               install runs on the Azure side via azure/setup.sh
 #   azure_aks   trust only (web-identity for the AKS issuer OIDC provider),
 #               install runs on the Azure side via azure/setup.sh
+#   gcp_vm      trust only (web-identity federated with accounts.google.com),
+#               install runs on the GCP side via gcp/setup.sh
+#   gcp_gke     trust only (web-identity for the GKE issuer OIDC provider),
+#               install runs on the GCP side via gcp/setup.sh
 #
 # Safe to re-run: trust statements and policies are merged, not replaced, and an
 # instance keeps its profile.
 #
 # Requires IAM write access, "aws", and "jq". For azure_vm and azure_aks it also
 # takes an identity value from the Azure setup (the tenant ID or the OIDC issuer
-# URL). Outputs the role ARN.
+# URL); gcp_vm and gcp_gke take one from the GCP setup (the service account
+# unique ID or the cluster OIDC issuer URL). Outputs the role ARN.
 #
 # Usage:
 #     CWAGENT_PLATFORM=aws_eks \
@@ -32,7 +37,7 @@
 #
 # Environment variables:
 #   Common:
-#     CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
+#     CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_vm | gcp_gke
 #     CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
 #     CWAGENT_AWS_REGION                      AWS region telemetry is sent to (required,
 #                                             falls back to the AWS CLI config if unset)
@@ -53,12 +58,18 @@
 #     CWAGENT_AZURE_TENANT_ID                 Azure tenant ID
 #   azure_aks:
 #     CWAGENT_AZURE_OIDC_ISSUER               AKS OIDC issuer URL
+#   gcp_vm:
+#     CWAGENT_GCP_SA_UNIQUE_ID                GCP service account unique ID
+#   gcp_gke:
+#     CWAGENT_GCP_OIDC_ISSUER                 GKE cluster OIDC issuer URL
 
 set -eu
 
 PLATFORM="${CWAGENT_PLATFORM:-}"
 TENANT_ID="${CWAGENT_AZURE_TENANT_ID:-}"
 OIDC_ISSUER="${CWAGENT_AZURE_OIDC_ISSUER:-}"
+SA_UNIQUE_ID="${CWAGENT_GCP_SA_UNIQUE_ID:-}"
+GCP_OIDC_ISSUER="${CWAGENT_GCP_OIDC_ISSUER:-}"
 INSTANCE_ID="${CWAGENT_AWS_INSTANCE_ID:-}"
 UPDATE_INSTANCE_ROLE="${CWAGENT_AWS_UPDATE_INSTANCE_ROLE:-}"
 ENABLE_TXN_SEARCH="${CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH:-}"
@@ -131,10 +142,12 @@ Usage:
   CWAGENT_PLATFORM=aws_ecs   CWAGENT_AWS_REGION=us-east-1                                       $0
   CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_OIDC_ISSUER=https://... $0
   CWAGENT_PLATFORM=azure_vm  CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_TENANT_ID=<tenant>      $0
+  CWAGENT_PLATFORM=gcp_vm    CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_SA_UNIQUE_ID=<unique-id>  $0
+  CWAGENT_PLATFORM=gcp_gke   CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_OIDC_ISSUER=https://...   $0
 
 Environment variables:
   Common:
-    CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
+    CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_vm | gcp_gke
     CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
     CWAGENT_AWS_REGION                      AWS region telemetry is sent to (required)
     CWAGENT_EMIT_ENV                        Print eval-able KEY='value' lines on stdout
@@ -150,6 +163,10 @@ Environment variables:
     CWAGENT_AZURE_TENANT_ID                 Azure tenant ID
   azure_aks:
     CWAGENT_AZURE_OIDC_ISSUER               AKS OIDC issuer URL
+  gcp_vm:
+    CWAGENT_GCP_SA_UNIQUE_ID                GCP service account unique ID
+  gcp_gke:
+    CWAGENT_GCP_OIDC_ISSUER                 GKE cluster OIDC issuer URL
 EOF
      exit "${rc}"
 }
@@ -217,9 +234,9 @@ version_ge() {
 # =============================================================================
 # Interactive mode
 #
-# The identity values (tenant ID, OIDC issuer) come from the Azure identity
-# setup. When run by hand they can be pasted in at the prompts rather than
-# passed through the environment.
+# The identity values (tenant ID, OIDC issuer, service account unique ID)
+# come from the Azure or GCP identity setup. When run by hand they can be
+# pasted in at the prompts rather than passed through the environment.
 # =============================================================================
 
 prompt() {
@@ -252,6 +269,8 @@ interactive_setup() {
      printf '  aws_eks     EKS cluster\n' >&3
      printf '  azure_vm    Azure VM\n' >&3
      printf '  azure_aks   AKS cluster\n' >&3
+     printf '  gcp_vm      GCE VM\n' >&3
+     printf '  gcp_gke     GKE cluster\n' >&3
      ask "Platform:"
      read -r choice || die "no platform selected"
      case "${choice}" in
@@ -260,6 +279,8 @@ interactive_setup() {
      aws_eks) PLATFORM=aws_eks ;;
      azure_vm) PLATFORM=azure_vm ;;
      azure_aks) PLATFORM=azure_aks ;;
+     gcp_vm) PLATFORM=gcp_vm ;;
+     gcp_gke) PLATFORM=gcp_gke ;;
      *) die "invalid platform: ${choice}" ;;
      esac
 
@@ -279,6 +300,12 @@ interactive_setup() {
           ;;
      azure_aks)
           prompt OIDC_ISSUER "AKS OIDC issuer URL"
+          ;;
+     gcp_vm)
+          prompt SA_UNIQUE_ID "GCP service account unique ID"
+          ;;
+     gcp_gke)
+          prompt GCP_OIDC_ISSUER "GKE cluster OIDC issuer URL"
           ;;
      esac
      # `prompt` returns early on a non-empty current value, and ROLE_NAME always
@@ -728,6 +755,85 @@ EOF
 }
 
 # =============================================================================
+# GCP Compute Engine trust
+# =============================================================================
+
+trust_gcp_vm() {
+     if [ -z "${SA_UNIQUE_ID}" ]; then
+          die "CWAGENT_GCP_SA_UNIQUE_ID is required for gcp_vm (produced by gcp/setup.sh)"
+     fi
+
+     section "Configuring AWS trust..."
+
+     # Google is a built-in web-identity provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#principal-federated-web-identity),
+     # so unlike the Azure platforms no IAM OIDC provider resource is registered:
+     # the principal is accounts.google.com itself. On Google identity tokens IAM
+     # matches :sub against the service account's unique ID, :oaud against the
+     # audience the token was requested with, and :aud against the authorized
+     # party (azp), which on service-account tokens is the unique ID again.
+     # Pinning all three follows the recommended trust policy for Google-issued
+     # tokens: https://aws.amazon.com/blogs/security/access-aws-using-a-google-cloud-platform-native-workload-identity/.
+     TRUST_STATEMENT=$(
+          cat <<EOF
+{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "accounts.google.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "accounts.google.com:aud": "${SA_UNIQUE_ID}",
+        "accounts.google.com:sub": "${SA_UNIQUE_ID}",
+        "accounts.google.com:oaud": "sts.amazonaws.com"
+      }
+    }
+  }
+EOF
+     )
+
+     ensure_iam_role "${TRUST_STATEMENT}"
+     attach_permissions_policy
+}
+
+# =============================================================================
+# GCP GKE trust
+# =============================================================================
+
+trust_gcp_gke() {
+     if [ -z "${GCP_OIDC_ISSUER}" ]; then
+          die "CWAGENT_GCP_OIDC_ISSUER is required for gcp_gke (produced by gcp/setup.sh)"
+     fi
+
+     OIDC_HOST="${GCP_OIDC_ISSUER#https://}"
+
+     section "Configuring AWS trust..."
+
+     ensure_oidc_provider "${OIDC_HOST}" "${GCP_OIDC_ISSUER}" sts.amazonaws.com
+
+     TRUST_STATEMENT=$(
+          cat <<EOF
+{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "arn:aws:iam::${AWS_ACCOUNT}:oidc-provider/${OIDC_HOST}"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "${OIDC_HOST}:sub": "system:serviceaccount:${K8S_NAMESPACE}:cloudwatch-agent",
+        "${OIDC_HOST}:aud": "sts.amazonaws.com"
+      }
+    }
+  }
+EOF
+     )
+
+     ensure_iam_role "${TRUST_STATEMENT}"
+     attach_permissions_policy
+}
+
+# =============================================================================
 # Install payload builders (EC2 path)
 # =============================================================================
 
@@ -941,8 +1047,8 @@ main() {
      fi
 
      case "${PLATFORM}" in
-     aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks) ;;
-     *) die "unsupported platform: ${PLATFORM:-<unset>} (valid: aws_ec2, aws_ecs, aws_eks, azure_vm, azure_aks)" ;;
+     aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_vm | gcp_gke) ;;
+     *) die "unsupported platform: ${PLATFORM:-<unset>} (valid: aws_ec2, aws_ecs, aws_eks, azure_vm, azure_aks, gcp_vm, gcp_gke)" ;;
      esac
 
      check_prerequisites
@@ -957,14 +1063,16 @@ main() {
      fi
      [ -n "${REGION}" ] || die "CWAGENT_AWS_REGION is required (set it or run 'aws configure set region <region>')"
 
-     # Trust always runs. The Azure platforms stop after emitting the ARN
-     # (install happens on the Azure side).
+     # Trust always runs. The Azure and GCP platforms stop after emitting the
+     # ARN (install happens on their own cloud side).
      case "${PLATFORM}" in
      aws_ec2) trust_aws_ec2 ;;
      aws_ecs) trust_aws_ecs ;;
      aws_eks) trust_aws_eks ;;
      azure_vm) trust_azure_vm ;;
      azure_aks) trust_azure_aks ;;
+     gcp_vm) trust_gcp_vm ;;
+     gcp_gke) trust_gcp_gke ;;
      esac
 
      ROLE_ARN=$(aws iam get-role \
@@ -980,6 +1088,9 @@ main() {
      aws_ecs) install_aws_ecs ;;
      azure_vm | azure_aks)
           log "Trust configured. Install runs on the Azure side (azure/setup.sh) with the role ARN above."
+          ;;
+     gcp_vm | gcp_gke)
+          log "Trust configured. Install runs on the GCP side (gcp/setup.sh) with the role ARN above."
           ;;
      esac
 
