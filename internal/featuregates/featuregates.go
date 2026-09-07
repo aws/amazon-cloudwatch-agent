@@ -24,3 +24,18 @@ func CanEnable(reg *featuregate.Registry, id string) bool {
 	})
 	return enableable
 }
+
+func Enable(reg *featuregate.Registry, id string) error {
+	var found bool
+	var stage featuregate.Stage
+	reg.VisitAll(func(g *featuregate.Gate) {
+		if g.ID() == id {
+			found = true
+			stage = g.Stage()
+		}
+	})
+	if !found || stage == featuregate.StageDeprecated || stage == featuregate.StageStable {
+		return nil
+	}
+	return reg.Set(id, true)
+}
