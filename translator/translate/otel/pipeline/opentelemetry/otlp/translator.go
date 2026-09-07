@@ -18,8 +18,8 @@ const pipelineName = "otlp"
 
 var otlpKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtlpKey)
 
-// NewTranslators returns OTLP pipeline translators for metrics, logs, and traces.
-// Each pipeline creates OTLP receivers (grpc + http) and forwards to the shared base pipeline.
+// NewTranslators returns OTLP pipeline translators for metrics, logs, traces, and profiles.
+// Each pipeline creates OTLP receivers (grpc + http); metrics, logs, and traces forward to the shared base pipeline.
 func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators := common.NewTranslatorMap[*common.ComponentTranslators, pipeline.ID]()
 	if conf == nil || !conf.IsSet(otlpKey) {
@@ -29,6 +29,7 @@ func NewTranslators(conf *confmap.Conf) common.PipelineTranslatorMap {
 	translators.Set(&otlpPipelineTranslator{signal: pipeline.SignalMetrics})
 	translators.Set(&otlpPipelineTranslator{signal: pipeline.SignalLogs})
 	translators.Set(&otlpPipelineTranslator{signal: pipeline.SignalTraces})
+	translators.Set(&profilesPipelineTranslator{})
 
 	return translators
 }
@@ -54,10 +55,7 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
-	processors.Set(transformprocessor.NewTranslatorWithName("otlp_scope",
-		transformprocessor.WithErrorMode("ignore"),
-		transformprocessor.WithScopeStatements(common.ScopeStatementsForSolution("otel-otlp")),
-	))
+	processors.Set(newOtlpScopeTranslator())
 	if t.signal == pipeline.SignalLogs {
 		processors.Set(transformprocessor.NewTranslatorWithName("otlp_log_source",
 			transformprocessor.WithLogResourceStatements([]string{
@@ -73,4 +71,11 @@ func (t *otlpPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
+}
+
+func newOtlpScopeTranslator() common.ComponentTranslator {
+	return transformprocessor.NewTranslatorWithName("otlp_scope",
+		transformprocessor.WithErrorMode("ignore"),
+		transformprocessor.WithScopeStatements(common.ScopeStatementsForSolution("otel-otlp")),
+	)
 }
