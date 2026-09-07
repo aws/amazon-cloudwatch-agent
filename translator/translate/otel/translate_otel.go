@@ -39,6 +39,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/journald"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/nop"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/profiles"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
@@ -99,6 +100,7 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))
 	translators.Set(systemmetrics.NewTranslator())
+	translators.Set(profiles.NewTranslator())
 	translators.Merge(opentelemetry.NewTranslators(conf))
 	translators.Merge(journald.NewTranslators(conf))
 	translators.Merge(registry)

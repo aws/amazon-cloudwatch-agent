@@ -146,6 +146,17 @@ func TestTracesConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidTrace.json", false, expectedErrorMap)
 }
 
+func TestProfilesConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validProfiles.json", true, map[string]int{})
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validProfilesMinimal.json", true, map[string]int{})
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["required"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidProfilesWithMissingServiceName.json", false, expectedErrorMap)
+	expectedErrorMap1 := map[string]int{}
+	expectedErrorMap1["additional_property_not_allowed"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidProfilesWithAdditionalProperties.json", false, expectedErrorMap1)
+}
+
 func TestJMXConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validJMX.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}

@@ -666,14 +666,14 @@ require (
 	go.opentelemetry.io/collector/exporter/exporterhelper/xexporterhelper v0.150.0 // indirect
 	go.opentelemetry.io/collector/exporter/xexporter v0.150.0 // indirect
 	go.opentelemetry.io/collector/extension/xextension v0.150.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.56.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.56.0
 	go.opentelemetry.io/collector/internal/fanoutconsumer v0.150.0 // indirect
 	go.opentelemetry.io/collector/internal/memorylimiter v0.150.0 // indirect
 	go.opentelemetry.io/collector/internal/sharedcomponent v0.150.0 // indirect
 	go.opentelemetry.io/collector/internal/telemetry v0.150.0 // indirect
 	go.opentelemetry.io/collector/pdata/pprofile v0.150.0 // indirect
 	go.opentelemetry.io/collector/pdata/testdata v0.150.0 // indirect
-	go.opentelemetry.io/collector/pipeline/xpipeline v0.150.0 // indirect
+	go.opentelemetry.io/collector/pipeline/xpipeline v0.150.0
 	go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper v0.150.0 // indirect
 	go.opentelemetry.io/collector/processor/xprocessor v0.150.0 // indirect
 	go.opentelemetry.io/collector/receiver/receiverhelper v0.150.0 // indirect

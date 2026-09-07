@@ -39,5 +39,6 @@ import (
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/swap"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/rollup_dimensions"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry"
+	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/profiles"
 	_ "github.com/aws/amazon-cloudwatch-agent/translator/translate/traces"
 )

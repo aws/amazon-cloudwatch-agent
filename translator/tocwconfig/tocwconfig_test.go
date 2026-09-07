@@ -900,6 +900,45 @@ func TestTraceConfig(t *testing.T) {
 	}
 }
 
+func TestProfilesConfig(t *testing.T) {
+	testCases := map[string]testCase{
+		"linux": {
+			filename:        "profiles_config",
+			targetPlatform:  "linux",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_linux",
+		},
+		"darwin": {
+			filename:        "profiles_config",
+			targetPlatform:  "darwin",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_linux",
+		},
+		"windows": {
+			filename:        "profiles_config",
+			targetPlatform:  "windows",
+			expectedEnvVars: map[string]string{},
+			appendString:    "_windows",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			checkTranslation(t, testCase.filename, testCase.targetPlatform, testCase.expectedEnvVars, testCase.appendString)
+		})
+	}
+}
+
+// TestProfilesCombinedConfig covers profiles alongside a default-endpoint traces OTLP
+// source: both pipelines must share one otlp receiver on 127.0.0.1:4318.
+func TestProfilesCombinedConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	checkTranslation(t, "profiles_combined_config", "linux", nil, "")
+}
+
 func TestAppendDimensionsHostMetrics(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

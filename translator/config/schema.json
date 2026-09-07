@@ -15,6 +15,9 @@
     "traces": {
       "$ref": "#/definitions/tracesDefinition"
     },
+    "profiles": {
+      "$ref": "#/definitions/profilesDefinition"
+    },
     "opentelemetry": {
       "$ref": "#/definitions/opentelemetryDefinition"
     }
@@ -1477,6 +1480,40 @@
           "type": "boolean"
         }
       }
+    },
+    "profilesDefinition": {
+      "type": "object",
+      "description": "configuration for collecting OTLP profiles and uploading to CloudWatch",
+      "properties": {
+        "service_name": {
+          "description": "The service name stamped on every profile as the service.name resource attribute",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "otlp": {
+          "type": "object",
+          "properties": {
+            "http_endpoint": {
+              "description": "The endpoint the agent listens on for OTLP/HTTP profiles. The default is 127.0.0.1:4318",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          },
+          "additionalProperties": false
+        },
+        "endpoint_override": {
+          "description": "The override endpoint host to upload profiles to. The profiles path is appended to it and https is assumed when no scheme is given",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      },
+      "required": [
+        "service_name"
+      ],
+      "additionalProperties": false
     },
     "otlpDefinitions": {
       "oneOf": [
