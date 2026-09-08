@@ -330,7 +330,7 @@ check_prerequisites() {
 # =============================================================================
 # Role ARN validation
 #
-# When CWAGENT_AWS_ROLE_ARN is provided (e.g. populated by the console UI), the
+# When CWAGENT_AWS_ROLE_ARN is provided, the
 # account baked into it must match the account this shell is authenticated
 # against: creating the role and trust in the wrong account does not fail here,
 # it fails later and silently on the assume-role side. The role name used
