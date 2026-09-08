@@ -34,6 +34,11 @@
 #   Common:
 #     CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
 #     CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
+#     CWAGENT_AWS_ROLE_ARN                    IAM role ARN. The role name is derived
+#                                             from it (a CWAGENT_AWS_ROLE_NAME that
+#                                             disagrees is rejected), and its partition
+#                                             and account must match this shell's AWS
+#                                             credentials
 #     CWAGENT_AWS_REGION                      AWS region telemetry is sent to (required,
 #                                             falls back to the AWS CLI config if unset)
 #     CWAGENT_EMIT_ENV                        When set (1/true/yes/on), print eval-able
@@ -64,6 +69,7 @@ UPDATE_INSTANCE_ROLE="${CWAGENT_AWS_UPDATE_INSTANCE_ROLE:-}"
 ENABLE_TXN_SEARCH="${CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH:-}"
 CLUSTER_NAME="${CWAGENT_K8S_CLUSTER_NAME:-}"
 ROLE_NAME="${CWAGENT_AWS_ROLE_NAME:-CloudWatchAgentServerRole}"
+ROLE_ARN_INPUT="${CWAGENT_AWS_ROLE_ARN:-}"
 REGION="${CWAGENT_AWS_REGION:-}"
 EMIT_ENV="${CWAGENT_EMIT_ENV:-}"
 ECS_LAUNCH_TYPE="${CWAGENT_AWS_ECS_LAUNCH_TYPE:-}"
@@ -136,6 +142,9 @@ Environment variables:
   Common:
     CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
     CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
+    CWAGENT_AWS_ROLE_ARN                    IAM role ARN (its partition and account must
+                                            match the credentials; a disagreeing role
+                                            name is rejected)
     CWAGENT_AWS_REGION                      AWS region telemetry is sent to (required)
     CWAGENT_EMIT_ENV                        Print eval-able KEY='value' lines on stdout
     CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH   Enable Transaction Search in the region
@@ -281,11 +290,21 @@ interactive_setup() {
           prompt OIDC_ISSUER "AKS OIDC issuer URL"
           ;;
      esac
-     # `prompt` returns early on a non-empty current value, and ROLE_NAME always
-     # has one (the built-in default), so ask directly with the default filled in.
-     ask "IAM role name [${ROLE_NAME}]:"
-     read -r role_input || die "no input for IAM role name"
-     [ -n "${role_input}" ] && ROLE_NAME="${role_input}"
+     # Skip when a role was already identified through the environment. An ARN
+     # is preferred (it pins the account), but a plain name is still accepted:
+     # this script often creates the role, so a first run may have no ARN yet.
+     if [ -z "${ROLE_ARN_INPUT}" ] && [ -z "${CWAGENT_AWS_ROLE_NAME:-}" ]; then
+          ask "IAM role ARN or name [create/use ${ROLE_NAME} in this account]:"
+          read -r role_input || die "no input for IAM role"
+          # A plain if, not a trailing && list: an empty answer keeps the
+          # default role name and must not fail the function under set -e.
+          if [ -n "${role_input}" ]; then
+               case "${role_input}" in
+               arn:*) ROLE_ARN_INPUT="${role_input}" ;;
+               *) ROLE_NAME="${role_input}" ;;
+               esac
+          fi
+     fi
 }
 
 check_prerequisites() {
@@ -306,6 +325,62 @@ check_prerequisites() {
           log "AWS account: ${AWS_ACCOUNT}"
      fi
      log "AWS identity: ${AWS_ARN}"
+}
+
+# =============================================================================
+# Role ARN validation
+#
+# When CWAGENT_AWS_ROLE_ARN is provided (e.g. populated by the console UI), the
+# account baked into it must match the account this shell is authenticated
+# against: creating the role and trust in the wrong account does not fail here,
+# it fails later and silently on the assume-role side. The role name used
+# everywhere downstream is derived from the ARN.
+# =============================================================================
+
+validate_role_arn() {
+     [ -n "${ROLE_ARN_INPUT}" ] || return 0
+
+     case "${ROLE_ARN_INPUT}" in
+     arn:*:iam::*:role/?*) ;;
+     *) die "invalid IAM role ARN: ${ROLE_ARN_INPUT} (expected arn:<partition>:iam::<account-id>:role/<name>)" ;;
+     esac
+
+     # The role name is the last path segment, so an ARN with a path
+     # (arn:...:role/path/Name) resolves to the plain name the IAM CLI wants.
+     arn_role_name="${ROLE_ARN_INPUT##*/}"
+     [ -n "${arn_role_name}" ] || die "invalid IAM role ARN: ${ROLE_ARN_INPUT} (empty role name)"
+
+     # A redundantly-supplied role name is fine when it agrees with the ARN
+     # (the conflict rule CWAGENT_AZURE_RESOURCE_ID uses); a disagreement has
+     # no defined winner, so it fails loudly. The built-in default is exempt:
+     # the dispatcher always exports CWAGENT_AWS_ROLE_NAME, defaulted, so a
+     # default-valued name is indistinguishable from an unset one and the ARN
+     # wins.
+     if [ -n "${CWAGENT_AWS_ROLE_NAME:-}" ] &&
+          [ "${CWAGENT_AWS_ROLE_NAME}" != "CloudWatchAgentServerRole" ] &&
+          [ "${CWAGENT_AWS_ROLE_NAME}" != "${arn_role_name}" ]; then
+          die "CWAGENT_AWS_ROLE_NAME='${CWAGENT_AWS_ROLE_NAME}' conflicts with CWAGENT_AWS_ROLE_ARN (which resolves to '${arn_role_name}')
+Pass the role ARN or the role name, not both with different targets."
+     fi
+
+     arn_partition=$(printf '%s' "${ROLE_ARN_INPUT}" | cut -d: -f2)
+     arn_account=$(printf '%s' "${ROLE_ARN_INPUT}" | cut -d: -f5)
+
+     case "${arn_account}" in
+     [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
+     *) die "invalid IAM role ARN: ${ROLE_ARN_INPUT} (the account ID must be 12 digits)" ;;
+     esac
+
+     caller_partition=$(printf '%s' "${AWS_ARN}" | cut -d: -f2)
+     if [ "${arn_partition}" != "${caller_partition}" ]; then
+          die "the role ARN is in partition ${arn_partition} but this shell's credentials are in ${caller_partition}. Rerun with credentials for the account the role lives in"
+     fi
+     if [ "${arn_account}" != "${AWS_ACCOUNT}" ]; then
+          die "the role ARN is for account ${arn_account} but this shell is authenticated against account ${AWS_ACCOUNT}. Rerun with credentials for account ${arn_account}"
+     fi
+     log "Role ARN account matches this shell's credentials"
+
+     ROLE_NAME="${arn_role_name}"
 }
 
 # =============================================================================
@@ -946,6 +1021,7 @@ main() {
      esac
 
      check_prerequisites
+     validate_role_arn
 
      # Region is baked into the role/endpoint and is where telemetry lands, so
      # never guess it: fail rather than default silently.
@@ -970,6 +1046,12 @@ main() {
      ROLE_ARN=$(aws iam get-role \
           --role-name "${ROLE_NAME}" \
           --query Role.Arn --output text)
+     # The role in play can drift from a provided ARN: aws_ec2 swaps in an
+     # existing instance-profile role, and a pathed ARN for a role that did not
+     # exist yet is created at the default path. Flag either, neutrally.
+     if [ -n "${ROLE_ARN_INPUT}" ] && [ "${ROLE_ARN}" != "${ROLE_ARN_INPUT}" ]; then
+          logwarn "using ${ROLE_ARN} instead of the provided ${ROLE_ARN_INPUT}"
+     fi
      log "Role ARN: ${ROLE_ARN}"
 
      ensure_transaction_search
