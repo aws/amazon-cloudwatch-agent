@@ -6,6 +6,7 @@ package databaseinsights
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/forward"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/connector/signaltometrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/filterprocessor"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/groupbyattrsprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/filelog"
@@ -31,6 +33,31 @@ const (
 	dbiRawEvents
 	dbiServerLogs
 )
+
+// postgresLogSeverityLevels are the severity keywords PostgreSQL emits in stderr log
+// lines. Kept alongside the mapping below so the regex and mapping stay together.
+var postgresLogSeverityLevels = []string{
+	"LOG", "ERROR", "WARNING", "FATAL", "PANIC", `DEBUG\d?`, "INFO", "NOTICE", "STATEMENT",
+}
+
+// postgresLogSeverityMapping maps PostgreSQL log severity keywords to OTEL severity
+// levels for the filelog severity operator. Kept here (not in the generic filelog
+// translator) because these levels are PostgreSQL-specific.
+var postgresLogSeverityMapping = map[string]any{
+	"debug": []string{"DEBUG", "DEBUG1", "DEBUG2", "DEBUG3", "DEBUG4", "DEBUG5"},
+	"info":  []string{"LOG", "INFO", "NOTICE", "STATEMENT"},
+	"warn":  "WARNING",
+	"error": "ERROR",
+	"fatal": []string{"FATAL", "PANIC"},
+}
+
+// buildPostgresSeverityPattern builds the regex that extracts the severity from a
+// PostgreSQL stderr log line of the form "... [<pid>] <SEVERITY>: ...". The required
+// (?P<severity>...) named capture group is assembled from postgresLogSeverityLevels,
+// mirroring how the timestamp regex is built rather than inlining a raw pattern.
+func buildPostgresSeverityPattern() string {
+	return `\[\d+\]\s*(?P<severity>` + strings.Join(postgresLogSeverityLevels, "|") + `):`
+}
 
 type dbiTranslator struct {
 	pipelineType  dbiPipelineType
@@ -81,8 +108,22 @@ func (t *dbiTranslator) translateMetrics() (*common.ComponentTranslators, error)
 	countConn := count.NewTranslator(common.DbiConnectorDbload)
 	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql)
 
+	// Split postgresql metric collection into two receiver instances so per-resource
+	// (table/index) metrics are scraped at a configurable interval (default 60s) while
+	// server metrics stay at the default 10s. This caps per-resource ingestion volume
+	// for DBI GA pricing. The per-resource interval can be overridden via
+	// per_resource_collection_interval in the agent JSON config. The server instance
+	// keeps the events (query-sample / top-query) that feed DBLoad and TopSQL; the
+	// per-resource instance disables events so those are not double-counted.
+	serverRx := t.pgReceiver("metrics", postgresql.WithServerMetricsOnly())
+	perResourceRx := t.pgReceiver("metrics_perresource",
+		postgresql.WithPerResourceMetricsOnly(),
+		postgresql.WithCollectionInterval(t.cfg.perResourceCollectionInterval),
+		postgresql.WithEventsDisabled(),
+	)
+
 	return &common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics"), countConn, s2mConn),
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](serverRx, perResourceRx, countConn, s2mConn),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.scopeTransform(),
 			transformprocessor.NewTranslatorWithName(common.DbiTransformResource+"_"+idx, transformprocessor.WithMetricResourceStatements(t.resourceStatements())),
@@ -98,7 +139,7 @@ func (t *dbiTranslator) translateLogToMetrics() (*common.ComponentTranslators, e
 	s2mConn := signaltometrics.NewTranslator(common.DbiConnectorTopsql)
 
 	return &common.ComponentTranslators{
-		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics")),
+		Receivers:  common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("metrics", postgresql.WithServerMetricsOnly())),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](t.excludeMonitorFilter()),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](countConn, s2mConn),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](),
@@ -111,7 +152,13 @@ func (t *dbiTranslator) translateRawEvents() (*common.ComponentTranslators, erro
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
 	return &common.ComponentTranslators{
-		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("events", postgresql.WithQuerySampleInterval(60*time.Second))),
+		// The events receiver feeds a logs pipeline only, so no metrics pipeline consumes
+		// it. Disable its metrics so the generated config reflects that instead of
+		// listing metrics that are never collected.
+		Receivers: common.NewTranslatorMap[component.Config, component.ID](t.pgReceiver("events",
+			postgresql.WithQuerySampleInterval(60*time.Second),
+			postgresql.WithMetricsDisabled(),
+		)),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.excludeMonitorFilter(),
 			t.scopeTransform(),
@@ -136,14 +183,26 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 	idx := strconv.Itoa(t.instanceIndex)
 	fwd := forward.NewTranslator(common.OpenTelemetryKey)
 
+	// NOTE: timestamp parsing assumes the PostgreSQL instance logs in UTC. The %Z token
+	// only matches 3-letter zone abbreviations and the gotime layout parses them against a
+	// UTC location, so timestamps from a non-UTC instance would be silently offset. DBI
+	// therefore requires the instance to be configured with log_timezone = 'UTC'.
 	return &common.ComponentTranslators{
 		Receivers: common.NewTranslatorMap[component.Config, component.ID](
 			filelog.NewTranslator(filelog.WithNamePrefix("postgresql"),
-				filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath)),
+				filelog.WithIndex(t.instanceIndex), filelog.WithFilePath(t.cfg.logFilePath),
+				filelog.WithMultilinePattern(`^\d{4}-\d{2}-\d{2}`),
+				filelog.WithTimestampFormat("%Y-%m-%d %H:%M:%S.%f %Z", "UTC"),
+				filelog.WithSeverityPattern(buildPostgresSeverityPattern()),
+				filelog.WithSeverityMapping(postgresLogSeverityMapping)),
 		),
 		Processors: common.NewTranslatorMap[component.Config, component.ID](
 			t.scopeTransform(),
 			resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)),
+			// Promote log.file.name to a resource attribute, reusing the files pipeline's
+			// shared groupbyattrs instance so server-log parsing/grouping is consistent
+			// with regular file logs.
+			groupbyattrsprocessor.NewTranslatorWithName(common.FilesKey, "log.file.name"),
 			transformprocessor.NewTranslatorWithName(
 				common.DbiTransformResource+"_"+idx,
 				transformprocessor.WithMetricResourceStatements(t.resourceStatements()),
@@ -152,6 +211,13 @@ func (t *dbiTranslator) translateServerLogs() (*common.ComponentTranslators, err
 			transformprocessor.NewTranslatorWithName(
 				common.DbiTransformLogs+"_server-logs_"+idx,
 				transformprocessor.WithLogResourceStatements(t.logStatements("server-logs")),
+				// Drop the parsed attributes once promoted to the record's timestamp and
+				// severity fields, mirroring the files pipeline's timestamp cleanup, so they
+				// are not duplicated in the emitted log attributes.
+				transformprocessor.WithLogContextStatements([]string{
+					`delete_key(attributes, "timestamp")`,
+					`delete_key(attributes, "severity")`,
+				}),
 			),
 		),
 		Exporters:  common.NewTranslatorMap[component.Config, component.ID](fwd),

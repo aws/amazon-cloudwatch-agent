@@ -19,6 +19,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ec2util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/eksdetector"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/gcpdetector"
 )
 
 const (
@@ -34,6 +35,10 @@ var IsEKS = isEKS
 // IsAKS/IsAzureVM are overridable detection hooks; tests override these vars.
 var IsAKS = azuredetector.IsAKS
 var IsAzureVM = azuredetector.IsAzureVM
+
+// IsGCE/IsGKE are overridable detection hooks; tests override these vars.
+var IsGCE = gcpdetector.IsGCE
+var IsGKE = gcpdetector.IsGKE
 var runInAws = os.Getenv(config.RUN_IN_AWS)
 var runWithIrsa = os.Getenv(config.RUN_WITH_IRSA)
 
@@ -68,20 +73,38 @@ func DetectAgentMode(configuredMode string) string {
 		return config.ModeAzureVM
 	}
 
-	// Last resort: IMDS probe (~2s worst-case one-time cost on a black-holed host).
+	// Last resort for Azure: IMDS probe (~2s worst-case one-time cost on a black-holed host).
 	if IsAzureVM() {
 		fmt.Println("I! Detected the instance is Azure VM")
 		return config.ModeAzureVM
+	}
+
+	// GCP is checked after Azure: metadata-server probe (cached by the SDK).
+	if IsGCE() {
+		fmt.Println("I! Detected the instance is GCE")
+		return config.ModeGCE
 	}
 
 	fmt.Println("I! Detected the instance is OnPremise")
 	return config.ModeOnPrem
 }
 
+// DetectECS reports whether the agent is running on ECS. It indirects the
+// ecsutil singleton so callers don't depend on it directly, mirroring
+// DetectKubernetesMode.
+func DetectECS() bool {
+	return ecsutil.GetECSUtilSingleton().IsECS()
+}
+
 func DetectKubernetesMode(configuredMode string) string {
 	// RUN_IN_AKS is an explicit env signal (no I/O), so short-circuit before the EKS in-cluster probe.
 	if IsAKS() {
 		return config.ModeAKS
+	}
+
+	// RUN_IN_GKE is likewise an explicit env signal (no I/O).
+	if IsGKE() {
+		return config.ModeGKE
 	}
 
 	isEKS := IsEKS()

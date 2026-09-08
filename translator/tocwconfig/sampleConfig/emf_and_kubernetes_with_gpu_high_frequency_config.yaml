@@ -1625,6 +1625,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        skip_replicaset_watch: false
     tcplog/emf_logs:
         encoding: utf-8
         id: tcp_input

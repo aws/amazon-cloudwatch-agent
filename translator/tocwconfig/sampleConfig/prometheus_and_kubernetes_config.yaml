@@ -826,6 +826,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - /root/.aws/credentials
+        skip_replicaset_watch: false
     telegraf_prometheus:
         collection_interval: 1m0s
         initial_delay: 1s

@@ -78,8 +78,10 @@ jobs:
     steps:
       - name: Check trigger type
         id: check-trigger
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+          if [ "$EVENT_NAME" == "workflow_run" ]; then
             echo "Triggered by workflow_run from a scheduled event"
           else
             echo "Triggered manually via workflow_dispatch"

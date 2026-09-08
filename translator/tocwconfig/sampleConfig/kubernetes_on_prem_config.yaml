@@ -784,6 +784,7 @@ receivers:
         role_arn: ""
         shared_credentials_file:
             - fake-path
+        skip_replicaset_watch: false
 service:
     extensions:
         - agenthealth/logs

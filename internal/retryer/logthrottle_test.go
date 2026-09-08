@@ -123,6 +123,39 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 	}
 }
 
+// TestShouldRetryDoesNotBlockAfterStop verifies ShouldRetry does not block once the
+// retryer is stopped (its consumer goroutine no longer drains the throttle channel).
+func TestShouldRetryDoesNotBlockAfterStop(t *testing.T) {
+	l := &testLogger{}
+	r := NewLogThrottleRetryer(l)
+
+	// Stop the retryer, which closes the done channel and exits the consumer goroutine
+	r.Stop()
+	time.Sleep(50 * time.Millisecond) // Give the goroutine time to exit
+
+	req := &request.Request{
+		Error:     awserr.New("RequestLimitExceeded", "Test AWS Error", nil),
+		Operation: &request.Operation{Name: "Test"},
+	}
+
+	// Call ShouldRetry in a goroutine and use a timeout to detect blocking
+	done := make(chan bool, 1)
+	go func() {
+		// Call ShouldRetry multiple times to exceed channel capacity (1)
+		for i := 0; i < 10; i++ {
+			r.ShouldRetry(req)
+		}
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		// Success: ShouldRetry did not block
+	case <-time.After(2 * time.Second):
+		t.Fatal("ShouldRetry blocked after retryer was stopped - potential deadlock")
+	}
+}
+
 func setup() {
 	throttleReportTimeout = 400 * time.Millisecond
 	throttleReportCheckPeriod = 50 * time.Millisecond

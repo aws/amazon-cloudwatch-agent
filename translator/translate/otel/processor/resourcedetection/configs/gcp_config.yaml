@@ -1,0 +1,3 @@
+detectors: [env, gcp]
+override: true
+timeout: 2s

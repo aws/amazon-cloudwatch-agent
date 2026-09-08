@@ -82,6 +82,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/extension/nodemetadatacache"
+	"github.com/aws/amazon-cloudwatch-agent/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
@@ -186,6 +187,7 @@ func Factories() (otelcol.Factories, error) {
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
 		nodemetadatacache.NewFactory(),
+		selftelemetry.NewFactory(),
 		server.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),

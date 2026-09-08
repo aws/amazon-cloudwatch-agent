@@ -56,9 +56,12 @@ jobs:
             echo "Build SHA does not match test SHA"
             exit 1
           fi
-      - run: |
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
           for i in {1..6}; do
-            conclusion=$(gh run view ${{ inputs.build_run_id }} --repo $GITHUB_REPOSITORY --json conclusion -q '.conclusion')
+            conclusion=$(gh run view "$INPUT_BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion -q '.conclusion')
             if [[ "$conclusion" == "success" ]]; then
               echo "Run succeeded"
               exit 0
@@ -71,8 +74,6 @@ jobs:
           done
           echo "Timed out waiting for workflow"
           exit 1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   TestArtifacts:
     name: 'TestArtifacts'

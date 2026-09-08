@@ -1,0 +1,38 @@
+detectors: [env, ecs, ec2]
+override: true
+timeout: 2s
+ecs:
+  resource_attributes:
+    aws.ecs.cluster.arn:
+      enabled: true
+    aws.ecs.launchtype:
+      enabled: true
+    aws.ecs.task.arn:
+      enabled: false
+    aws.ecs.task.family:
+      enabled: false
+    aws.ecs.task.id:
+      enabled: false
+    aws.ecs.task.revision:
+      enabled: false
+    aws.log.group.arns:
+      enabled: false
+    aws.log.group.names:
+      enabled: false
+    aws.log.stream.arns:
+      enabled: false
+    aws.log.stream.names:
+      enabled: false
+    cloud.account.id:
+      enabled: true
+    cloud.availability_zone:
+      enabled: true
+    cloud.platform:
+      enabled: true
+    cloud.provider:
+      enabled: true
+    cloud.region:
+      enabled: true
+ec2:
+  tags:
+    - ^aws:autoscaling:groupName

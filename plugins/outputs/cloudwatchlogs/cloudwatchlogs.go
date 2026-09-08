@@ -77,6 +77,11 @@ type CloudWatchLogs struct {
 	middleware      awsmiddleware.Middleware
 	configurer      *awsmiddleware.Configurer
 	configurerOnce  sync.Once
+
+	// Dedicated retryer/client for the TargetManager, owned by the plugin so its
+	// lifecycle is independent of any destination stop.
+	sharedRetryer *retryer.LogThrottleRetryer
+	sharedClient  *cloudwatchlogs.CloudWatchLogs
 }
 
 var _ logs.LogBackend = (*CloudWatchLogs)(nil)
@@ -99,6 +104,11 @@ func (c *CloudWatchLogs) Close() error {
 
 	if c.workerPool != nil {
 		c.workerPool.Stop()
+	}
+
+	// Stop the shared retryer last, after all pushers have drained.
+	if c.sharedRetryer != nil {
+		c.sharedRetryer.Stop()
 	}
 
 	return nil
@@ -151,7 +161,10 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 		if c.Concurrency > 1 {
 			c.workerPool = pusher.NewWorkerPool(c.Concurrency)
 		}
-		c.targetManager = pusher.NewTargetManager(c.Log, client)
+		// Dedicated retryer/client so the TargetManager isn't tied to the first dest.
+		c.sharedRetryer = retryer.NewLogThrottleRetryer(c.Log)
+		c.sharedClient = c.createClient(c.sharedRetryer)
+		c.targetManager = pusher.NewTargetManager(c.Log, c.sharedClient)
 	})
 	p := pusher.NewPusher(c.Log, t, client, c.targetManager, logSrc, c.workerPool, c.ForceFlushInterval.Duration, maxRetryTimeout, &c.pusherWaitGroup)
 	cwd := &cwDest{

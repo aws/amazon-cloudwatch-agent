@@ -154,6 +154,40 @@ func TestTranslate(t *testing.T) {
 				"override": true,
 			}),
 		},
+		"WithAppSignalsEnabledOnGCE": {
+			mode: translatorconfig.ModeGCE,
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"detectors": []interface{}{
+					"env",
+					"gcp",
+				},
+				"timeout":  "2s",
+				"override": true,
+			}),
+		},
+		"WithAppSignalsEnabledOnGKE": {
+			kubernetesMode: translatorconfig.ModeGKE,
+			input: map[string]interface{}{
+				"traces": map[string]interface{}{
+					"traces_collected": map[string]interface{}{
+						"app_signals": map[string]interface{}{},
+					},
+				}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"detectors": []interface{}{
+					"env",
+					"gcp",
+				},
+				"timeout":  "2s",
+				"override": true,
+			}),
+		},
 	}
 	factory := resourcedetectionprocessor.NewFactory()
 	for name, testCase := range testCases {
@@ -189,6 +223,7 @@ func TestTranslate(t *testing.T) {
 
 func TestTranslate_OpenTelemetryKey_NoMiddleware(t *testing.T) {
 	tt := NewTranslator(WithName("opentelemetry"))
+	context.ResetContext()
 	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
 	ecsutil.GetECSUtilSingleton().Region = ""
 	conf := confmap.NewFromStringMap(map[string]interface{}{})

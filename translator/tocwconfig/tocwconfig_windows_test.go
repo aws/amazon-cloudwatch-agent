@@ -44,7 +44,7 @@ func TestDefaultOtelConfigWindowsTranslation(t *testing.T) {
 	agent.Global_Config.Region = "us-west-2"
 	agent.Global_Config.RegionType = config.RegionTypeCredsMap
 
-	cfg, ok := config.DefaultJSONConfigFor("otel")
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
 
 	var input any

@@ -1,0 +1,51 @@
+exporters:
+    nop: {}
+extensions:
+    selftelemetry: {}
+    server:
+        listen_addr: :4311
+        tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
+        tls_cert_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.crt
+        tls_key_path: /etc/amazon-cloudwatch-observability-agent-server-cert/server.key
+receivers:
+    nop: {}
+service:
+    extensions:
+        - server
+        - selftelemetry
+    pipelines:
+        metrics/nop:
+            exporters:
+                - nop
+            processors: []
+            receivers:
+                - nop
+    telemetry:
+        logs:
+            encoding: console
+            level: info
+            output_paths:
+                - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: Basic
+            readers:
+                - pull:
+                    exporter:
+                        prometheus:
+                            host: 127.0.0.1
+                            port: 28888
+                            with_resource_constant_labels:
+                                included:
+                                    - NodeName
+                            without_scope_info: true
+                            without_type_suffix: true
+                            without_units: true
+        resource:
+            NodeName: ${env:K8S_NODE_NAME}
+        traces:
+            level: None

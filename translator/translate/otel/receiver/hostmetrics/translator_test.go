@@ -45,7 +45,7 @@ func TestTranslate(t *testing.T) {
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
 						"host_metrics": map[string]interface{}{
-							"metrics_collection_interval": 10,
+							"collection_interval": 10,
 						},
 					},
 				},
@@ -60,7 +60,7 @@ func TestTranslate(t *testing.T) {
 				"opentelemetry": map[string]interface{}{
 					"collect": map[string]interface{}{
 						"host_metrics": map[string]interface{}{
-							"metrics_collection_interval": 10,
+							"collection_interval": 10,
 						},
 					},
 				},

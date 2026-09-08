@@ -276,7 +276,7 @@ extensions:
         additional_auth: sigv4auth/logs
         imds_retries: 1
         local_mode: true
-        logs_provision_failure_backoff: 30s
+        logs_provision_failure_backoff: 5s
         max_retries: 2
         num_workers: 8
         profile: AmazonCloudWatchAgent
@@ -605,7 +605,8 @@ processors:
                   aggregation_type: sum
                   experimental_scale: 0
                   label: ""
-                  label_set: []
+                  label_set:
+                    - name
                   label_value: ""
                   new_label: ""
                   new_value: ""
@@ -627,7 +628,8 @@ processors:
                   aggregation_type: sum
                   experimental_scale: 0
                   label: ""
-                  label_set: []
+                  label_set:
+                    - name
                   label_value: ""
                   new_label: ""
                   new_value: ""

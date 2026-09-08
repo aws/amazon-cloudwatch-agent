@@ -5,9 +5,12 @@
 package state
 
 import (
+	"io"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -280,6 +283,56 @@ func TestFileRangeManager(t *testing.T) {
 		assert.Equal(t, RangeList{
 			Range{start: 0, end: numThreads * rangePerThread},
 		}, restored)
+	})
+	t.Run("Enqueue/NonBlocking", func(t *testing.T) {
+		// Regression test: Enqueue must never block. With a competing receiver
+		// draining the queue, the full queue observed by the fast path select can
+		// be empty by the time the slow path runs.
+		prevOutput := log.Writer()
+		log.SetOutput(io.Discard)
+		t.Cleanup(func() { log.SetOutput(prevOutput) })
+
+		manager := NewFileRangeManager(ManagerConfig{
+			StateFileDir: t.TempDir(),
+			Name:         "nonblocking.log",
+			QueueSize:    1,
+		})
+		m := manager.(*rangeManager)
+
+		stop := make(chan struct{})
+		var consumerWg sync.WaitGroup
+		consumerWg.Add(1)
+		go func() {
+			defer consumerWg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				case <-m.queue:
+				default:
+					runtime.Gosched()
+				}
+			}
+		}()
+
+		producerDone := make(chan struct{})
+		go func() {
+			defer close(producerDone)
+			var r Range
+			for i := 0; i < 500000; i++ {
+				r.ShiftInt64(int64(i))
+				manager.Enqueue(r)
+			}
+		}()
+
+		select {
+		case <-producerDone:
+		case <-time.After(30 * time.Second):
+			t.Fatal("Enqueue blocked: producer did not complete")
+		}
+		close(stop)
+		consumerWg.Wait()
+		assert.Greater(t, m.Dropped(), uint64(0))
 	})
 	t.Run("Run/Notification/Delete", func(t *testing.T) {
 		t.Parallel()

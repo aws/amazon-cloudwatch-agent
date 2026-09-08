@@ -139,3 +139,35 @@ func TestAppSignalsRuntime(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, len(expectedCfg.Transforms), len(actualCfg.Transforms))
 }
+
+func TestAppSignalsGCMetricsPreserveNameLabel(t *testing.T) {
+	transl := NewTranslatorWithName(common.AppSignals).(*translator)
+	conf := confmap.NewFromStringMap(testutil.GetJson(t, filepath.Join("testdata", "appsignals_config.json")))
+	translatedCfg, err := transl.Translate(conf)
+	require.NoError(t, err)
+	actualCfg, ok := translatedCfg.(*metricstransformprocessor.Config)
+	require.True(t, ok)
+
+	// Verify that JVMGCCount and JVMGCDuration transforms preserve the "name" label
+	// (jvm.gc.name attribute) so Topology can distinguish GC collector types.
+	gcMetrics := map[string]bool{
+		"JVMGCCount":    false,
+		"JVMGCDuration": false,
+	}
+
+	for _, transform := range actualCfg.Transforms {
+		if _, isGCMetric := gcMetrics[transform.NewName]; isGCMetric {
+			for _, op := range transform.Operations {
+				if op.Action == "aggregate_labels" {
+					assert.Contains(t, op.LabelSet, "name",
+						"Transform %s must preserve 'name' label (jvm.gc.name) for GC collector differentiation", transform.NewName)
+					gcMetrics[transform.NewName] = true
+				}
+			}
+		}
+	}
+
+	for metricName, found := range gcMetrics {
+		assert.True(t, found, "Expected to find transform with aggregate_labels operation for %s", metricName)
+	}
+}

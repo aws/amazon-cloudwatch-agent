@@ -18,17 +18,19 @@ type translator struct {
 	name     string
 	channel  string
 	raw      bool
+	query    string
 	resource map[string]string
 	factory  receiver.Factory
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
 
-func NewTranslator(name, channel string, raw bool, resource map[string]string) common.ComponentTranslator {
+func NewTranslator(name, channel string, raw bool, query string, resource map[string]string) common.ComponentTranslator {
 	return &translator{
 		name:     name,
 		channel:  channel,
 		raw:      raw,
+		query:    query,
 		resource: resource,
 		factory:  windowseventlogreceiver.NewFactory(),
 	}
@@ -40,9 +42,13 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*windowseventlogreceiver.WindowsLogConfig)
-	cfg.InputConfig.Channel = t.channel
 	cfg.InputConfig.Raw = t.raw
 	cfg.InputConfig.StartAt = "end"
+	if t.query != "" {
+		cfg.InputConfig.Query = &t.query
+	} else {
+		cfg.InputConfig.Channel = t.channel
+	}
 	storageID := filestorage.ComponentID()
 	cfg.StorageID = &storageID
 	if len(t.resource) > 0 {

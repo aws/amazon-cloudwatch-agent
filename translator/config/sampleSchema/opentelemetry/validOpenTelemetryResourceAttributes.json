@@ -1,0 +1,17 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "resource_attributes": {
+      "team": "cloudwatch",
+      "environment": "prod"
+    },
+    "collect": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317",
+        "http_endpoint": "127.0.0.1:4318"
+      }
+    }
+  }
+}

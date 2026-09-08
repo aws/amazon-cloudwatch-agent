@@ -169,6 +169,7 @@ receivers:
         request_timeout_seconds: 0
         resource_arn: ""
         role_arn: ""
+        skip_replicaset_watch: false
     tcplog/emf_logs:
         encoding: utf-8
         id: tcp_input

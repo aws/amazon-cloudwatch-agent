@@ -125,9 +125,10 @@
     "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com"
   },
   "opentelemetry": {
+    "cluster_name": "TestCluster",
     "collect": {
       "host_metrics": {
-        "metrics_collection_interval": 60
+        "collection_interval": 60
       },
       "database_insights": {
         "postgresql": [

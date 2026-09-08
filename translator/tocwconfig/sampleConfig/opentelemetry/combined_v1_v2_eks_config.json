@@ -125,12 +125,12 @@
     "endpoint_override": "https://x-ray-endpoint.us-west-2.amazonaws.com"
   },
   "opentelemetry": {
+    "cluster_name": "TestCluster",
     "collect": {
       "host_metrics": {
-        "metrics_collection_interval": 60
+        "collection_interval": 60
       },
       "container_insights": {
-        "cluster_name": "TestCluster",
         "collection_interval": 30
       },
       "database_insights": {
@@ -147,8 +147,7 @@
         ]
       },
       "prometheus": {
-        "config_path": "./sampleConfig/opentelemetry/prometheus_otel_scrape_config.yaml",
-        "cluster_name": "TestCluster"
+        "config_path": "./sampleConfig/opentelemetry/prometheus_otel_scrape_config.yaml"
       },
       "otlp": {
         "grpc_endpoint": "127.0.0.1:4327",

@@ -103,7 +103,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		clusterName, clusterNameConfigured := common.GetHostedIn(conf)
 
 		if !clusterNameConfigured {
-			clusterName = common.GetClusterName(conf)
+			clusterName = common.GetClusterName(conf, common.LegacyClusterNameKey)
 		}
 
 		cfg.ClusterName = clusterName

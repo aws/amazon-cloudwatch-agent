@@ -107,12 +107,6 @@ processors:
     - context: datapoint
       statements:
       - set(resource.attributes["k8s.component.name"], attributes["component"])
-  transform/cw_k8s_ci_v0_clear_schema_url:
-    error_mode: ignore
-    metric_statements:
-    - context: resource
-      statements:
-      - set(resource.schema_url, "")
   resourcedetection/cw_k8s_ci_v0:
     detectors: [eks, env, ec2]
     override: false
@@ -123,6 +117,12 @@ processors:
     - context: resource
       statements:
       - set(attributes["cloud.resource_id"], Concat(["arn:aws:eks:", attributes["cloud.region"], ":", attributes["cloud.account.id"], ":cluster/", attributes["k8s.cluster.name"]], "")) where attributes["cloud.region"] != nil and attributes["cloud.account.id"] != nil and attributes["k8s.cluster.name"] != nil
+  transform/cw_k8s_ci_v0_mark_cluster:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      statements:
+      - set(attributes["_tmp.cluster_scoped"], true)
   awsattributelimit/cw_k8s_ci_v0:
     max_total_attributes: 150
     unconditional_removal_keys:
@@ -160,9 +160,9 @@ service:
       - transform/cw_k8s_ci_v0_set_cluster_name
       - transform/cw_k8s_ci_v0_set_component
       - transform/cw_k8s_ci_v0_promote_component
-      - transform/cw_k8s_ci_v0_clear_schema_url
       - resourcedetection/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
+      - transform/cw_k8s_ci_v0_mark_cluster
       - awsattributelimit/cw_k8s_ci_v0
       exporters:
       - forward/opentelemetry

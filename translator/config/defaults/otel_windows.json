@@ -6,6 +6,7 @@
   },
   "opentelemetry": {
     "collect": {
+      "host_metrics": {},
       "otlp": {},
       "windows_events": {
         "collect_list": [

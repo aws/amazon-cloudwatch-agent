@@ -20,6 +20,7 @@ func TestTranslator_Translate(t *testing.T) {
 		id       string
 		channel  string
 		raw      bool
+		query    string
 		resource map[string]string
 	}{
 		{
@@ -38,10 +39,19 @@ func TestTranslator_Translate(t *testing.T) {
 			channel: "System",
 			raw:     true,
 		},
+		{
+			name:  "WithQuery",
+			id:    "system_0",
+			raw:   false,
+			query: `<QueryList><Query Id="0"><Select Path="System">*[System[(Level='2')]]</Select></Query></QueryList>`,
+			resource: map[string]string{
+				"aws.log.source": "windows_events",
+			},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := NewTranslator(tc.id, tc.channel, tc.raw, tc.resource)
+			tr := NewTranslator(tc.id, tc.channel, tc.raw, tc.query, tc.resource)
 			assert.Equal(t, "windowseventlog/"+tc.id, tr.ID().String())
 
 			cfg, err := tr.Translate(nil)
@@ -49,11 +59,18 @@ func TestTranslator_Translate(t *testing.T) {
 
 			got, ok := cfg.(*windowseventlogreceiver.WindowsLogConfig)
 			require.True(t, ok)
-			assert.Equal(t, tc.channel, got.InputConfig.Channel)
 			assert.Equal(t, "end", got.InputConfig.StartAt)
 			assert.Equal(t, tc.raw, got.InputConfig.Raw)
 			assert.NotNil(t, got.StorageID)
 			assert.Equal(t, filestorage.ComponentID(), *got.StorageID)
+			if tc.query != "" {
+				assert.Equal(t, "", got.InputConfig.Channel)
+				require.NotNil(t, got.InputConfig.Query)
+				assert.Equal(t, tc.query, *got.InputConfig.Query)
+			} else {
+				assert.Equal(t, tc.channel, got.InputConfig.Channel)
+				assert.Nil(t, got.InputConfig.Query)
+			}
 			if len(tc.resource) > 0 {
 				for k, v := range tc.resource {
 					assert.Equal(t, helper.ExprStringConfig(v), got.InputConfig.Resource[k])

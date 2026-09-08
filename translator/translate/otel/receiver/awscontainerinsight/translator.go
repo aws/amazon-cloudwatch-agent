@@ -102,6 +102,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.LeaderLockUsingConfigMapOnly = true
 		tagServiceKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "tag_service")
 		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
+		// watch_replicaset is on by default; set it to false to stop the cluster-wide
+		// ReplicaSet informer. The receiver models this as SkipReplicaSetWatch, so invert.
+		watchRSKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.WatchReplicaSetKey)
+		cfg.SkipReplicaSetWatch = !common.GetOrDefaultBool(conf, watchRSKey, true)
 
 		if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 			cfg.LocalMode = true
@@ -130,7 +134,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 }
 
 func (t *translator) setClusterName(conf *confmap.Conf, cfg *awscontainerinsightreceiver.Config) error {
-	cfg.ClusterName = common.GetClusterName(conf)
+	cfg.ClusterName = common.GetClusterName(conf, common.LegacyClusterNameKey)
 
 	if cfg.ClusterName == "" {
 		return errors.New("cluster name is not provided and was not auto-detected from EC2 tags")

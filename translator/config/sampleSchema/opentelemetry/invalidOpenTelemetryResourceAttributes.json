@@ -1,0 +1,15 @@
+{
+  "agent": {
+    "region": "us-west-2"
+  },
+  "opentelemetry": {
+    "resource_attributes": {
+      "team": 123
+    },
+    "collect": {
+      "otlp": {
+        "grpc_endpoint": "127.0.0.1:4317"
+      }
+    }
+  }
+}

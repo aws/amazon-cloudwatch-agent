@@ -61,7 +61,7 @@ func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
 	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
 		cfg.RoleARN = agent.Global_Config.Role_arn
-		if agent.IsAzureWebIdentity() {
+		if agent.RequiresOIDCToken() {
 			cfg.WebIdentityTokenFile = paths.OIDCTokenPath
 		}
 	}
