@@ -293,11 +293,9 @@ interactive_setup() {
      # Skip when a role was already identified through the environment. An ARN
      # is preferred (it pins the account), but a plain name is still accepted:
      # this script often creates the role, so a first run may have no ARN yet.
-     if [ -z "${ROLE_ARN_INPUT}" ] && [ -z "${CWAGENT_AWS_ROLE_NAME:-}" ]; then
-          ask "IAM role ARN or name [create/use ${ROLE_NAME} in this account]:"
+     if [ -z "${CWAGENT_AWS_ROLE_ARN:-}" ] && [ -z "${CWAGENT_AWS_ROLE_NAME:-}" ]; then
+          ask "IAM role ARN or name [create/use '${ROLE_NAME}' in this account]:"
           read -r role_input || die "no input for IAM role"
-          # A plain if, not a trailing && list: an empty answer keeps the
-          # default role name and must not fail the function under set -e.
           if [ -n "${role_input}" ]; then
                case "${role_input}" in
                arn:*) ROLE_ARN_INPUT="${role_input}" ;;
@@ -320,11 +318,11 @@ check_prerequisites() {
      AWS_ARN=$(printf '%s' "${AWS_IDENTITY}" | cut -f2)
      AWS_ALIAS=$(aws iam list-account-aliases --query 'AccountAliases[0]' --output text 2>/dev/null || true)
      if [ -n "${AWS_ALIAS}" ] && [ "${AWS_ALIAS}" != "None" ]; then
-          log "AWS account: ${AWS_ACCOUNT} (${AWS_ALIAS})"
+          log "AWS account: '${AWS_ACCOUNT}' ('${AWS_ALIAS}')"
      else
-          log "AWS account: ${AWS_ACCOUNT}"
+          log "AWS account: '${AWS_ACCOUNT}'"
      fi
-     log "AWS identity: ${AWS_ARN}"
+     log "AWS identity: '${AWS_ARN}'"
 }
 
 # =============================================================================
@@ -373,14 +371,19 @@ Pass the role ARN or the role name, not both with different targets."
 
      caller_partition=$(printf '%s' "${AWS_ARN}" | cut -d: -f2)
      if [ "${arn_partition}" != "${caller_partition}" ]; then
-          die "the role ARN is in partition ${arn_partition} but this shell's credentials are in ${caller_partition}. Rerun with credentials for the account the role lives in"
+          die "the role ARN is in partition '${arn_partition}' but this shell's credentials are in '${caller_partition}'. Rerun with credentials for the '${arn_partition}' partition"
      fi
      if [ "${arn_account}" != "${AWS_ACCOUNT}" ]; then
-          die "the role ARN is for account ${arn_account} but this shell is authenticated against account ${AWS_ACCOUNT}. Rerun with credentials for account ${arn_account}"
+          die "the role ARN is for account '${arn_account}' but this shell is authenticated against account '${AWS_ACCOUNT}'. Rerun with credentials for account '${arn_account}'"
      fi
      log "Role ARN account matches this shell's credentials"
 
      ROLE_NAME="${arn_role_name}"
+
+     arn_resource="${ROLE_ARN_INPUT#*:role/}"
+     case "${arn_resource}" in
+     */*) ROLE_PATH="/${arn_resource%/*}/" ;;
+     esac
 }
 
 # =============================================================================
@@ -395,9 +398,10 @@ ensure_iam_role() {
      # a failure means the role is absent, so create it and return.
      if ! existing=$(aws iam get-role --role-name "${ROLE_NAME}" \
           --query 'Role.AssumeRolePolicyDocument' --output json 2>/dev/null); then
-          logaction "Creating IAM role ${ROLE_NAME}"
+          logaction "Creating IAM role '${ROLE_NAME}'"
           aws iam create-role \
                --role-name "${ROLE_NAME}" \
+               --path "${ROLE_PATH:-/}" \
                --assume-role-policy-document "${full_policy}" \
                >/dev/null
           return
@@ -419,18 +423,18 @@ ensure_iam_role() {
              else "stale" end')
 
      if [ "${state}" = "current" ]; then
-          log "IAM role ${ROLE_NAME} trust policy up to date"
+          log "IAM role '${ROLE_NAME}' trust policy up to date"
           return
      fi
 
      if [ "${state}" = "stale" ]; then
-          logaction "Updating trust statement on ${ROLE_NAME}"
+          logaction "Updating trust statement on '${ROLE_NAME}'"
           merged=$(printf '%s' "${existing}" | jq \
                --arg principal "${new_principal}" \
                --argjson stmt "${new_statement}" \
                '.Statement = ([.Statement[] | select((.Principal | if type == "object" then to_entries[0].value else . end) != $principal)] + [$stmt])')
      else
-          logaction "Merging trust statement into ${ROLE_NAME}"
+          logaction "Merging trust statement into '${ROLE_NAME}'"
           merged=$(printf '%s' "${existing}" | jq \
                --argjson stmt "${new_statement}" \
                '.Statement += [$stmt]')
@@ -487,7 +491,7 @@ ensure_transaction_search() {
      TRACE_DEST=$(aws xray get-trace-segment-destination --region "${REGION}" --query 'Destination' --output text 2>/dev/null) || TRACE_DEST_RC=$?
 
      if [ -n "${TRACE_DEST_RC}" ]; then
-          logwarn "Could not check Transaction Search. OTLP traces need it enabled in ${REGION}:"
+          logwarn "Could not check Transaction Search. OTLP traces need it enabled in '${REGION}':"
           logwarn "${TXN_SEARCH_DOC}"
           return
      fi
@@ -496,20 +500,20 @@ ensure_transaction_search() {
      fi
 
      if [ -t 0 ] && ! is_true "${EMIT_ENV}" && ! is_true "${ENABLE_TXN_SEARCH}"; then
-          ask "Enable Transaction Search for the whole account in ${REGION}? [y/N]"
+          ask "Enable Transaction Search for the whole account in '${REGION}'? [y/N]"
           read -r answer || answer=""
           case "${answer}" in [yY]*) ENABLE_TXN_SEARCH="true" ;; esac
      fi
 
      if ! is_true "${ENABLE_TXN_SEARCH}"; then
-          logwarn "OTLP traces need Transaction Search, which is off in ${REGION}. Enabling it"
+          logwarn "OTLP traces need Transaction Search, which is off in '${REGION}'. Enabling it"
           logwarn "changes how X-Ray traces are ingested for the whole account in this region."
           logwarn "Rerun with CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH=true to enable it, or:"
           logwarn "${TXN_SEARCH_DOC}"
           return
      fi
 
-     logaction "Enabling Transaction Search in ${REGION}"
+     logaction "Enabling Transaction Search in '${REGION}'"
      # Two steps: a resource policy letting X-Ray write spans into CloudWatch
      # Logs, then flipping the trace segment destination. Without the policy the
      # destination flips but X-Ray can't write, so spans never land.
@@ -580,12 +584,15 @@ trust_aws_ec2() {
                --query 'InstanceProfile.Roles[0].RoleName' --output text 2>/dev/null || true)
 
           if [ -z "${EXISTING_ROLE}" ] || [ "${EXISTING_ROLE}" = "None" ]; then
-               die "Instance profile ${PROFILE_NAME} has no role attached"
+               die "Instance profile '${PROFILE_NAME}' has no role attached"
           fi
 
           section "Using existing instance profile..."
-          log "Instance profile ${PROFILE_NAME} attached to ${INSTANCE_ID}"
-          log "Role: ${EXISTING_ROLE}"
+          log "Instance profile '${PROFILE_NAME}' attached to '${INSTANCE_ID}'"
+          log "Role: '${EXISTING_ROLE}'"
+          if [ -n "${ROLE_ARN_INPUT}" ] && [ "${EXISTING_ROLE}" != "${ROLE_NAME}" ]; then
+               logwarn "using this role instead of the provided '${ROLE_ARN_INPUT}'"
+          fi
           ROLE_NAME="${EXISTING_ROLE}"
 
           # Nothing to do if the policy is already there, so a re-run stays quiet
@@ -598,12 +605,12 @@ trust_aws_ec2() {
           fi
 
           if [ -t 0 ] && ! is_true "${EMIT_ENV}" && ! is_true "${UPDATE_INSTANCE_ROLE}"; then
-               ask "Attach CloudWatchAgentServerPolicy to ${ROLE_NAME}? [y/N]"
+               ask "Attach CloudWatchAgentServerPolicy to '${ROLE_NAME}'? [y/N]"
                read -r answer || answer=""
                case "${answer}" in [yY]*) UPDATE_INSTANCE_ROLE="true" ;; esac
           fi
           if ! is_true "${UPDATE_INSTANCE_ROLE}"; then
-               die "${ROLE_NAME} is missing CloudWatchAgentServerPolicy. Attach it manually, or set CWAGENT_AWS_UPDATE_INSTANCE_ROLE=true to have this script attach it"
+               die "'${ROLE_NAME}' is missing CloudWatchAgentServerPolicy. Attach it manually, or set CWAGENT_AWS_UPDATE_INSTANCE_ROLE=true to have this script attach it"
           fi
 
           attach_permissions_policy
@@ -619,7 +626,7 @@ trust_aws_ec2() {
 
      section "Configuring instance profile..."
      ensure_instance_profile "${PROFILE_NAME}"
-     logaction "Associating instance profile with ${INSTANCE_ID}"
+     logaction "Associating instance profile with '${INSTANCE_ID}'"
      aws ec2 associate-iam-instance-profile \
           --instance-id "${INSTANCE_ID}" \
           --iam-instance-profile Name="${PROFILE_NAME}" --region "${REGION}" >/dev/null
@@ -630,10 +637,10 @@ trust_aws_ec2() {
 ensure_instance_profile() {
      profile="$1"
      if aws iam get-instance-profile --instance-profile-name "${profile}" >/dev/null 2>&1; then
-          log "Instance profile ${profile} exists"
+          log "Instance profile '${profile}' exists"
           return
      fi
-     logaction "Creating instance profile ${profile}"
+     logaction "Creating instance profile '${profile}'"
      aws iam create-instance-profile --instance-profile-name "${profile}" >/dev/null
      aws iam add-role-to-instance-profile \
           --instance-profile-name "${profile}" --role-name "${ROLE_NAME}" >/dev/null
@@ -708,7 +715,7 @@ trust_aws_eks() {
           if [ "${EXISTING_ROLE}" = "${ROLE_ARN}" ]; then
                log "Pod identity association exists"
           else
-               logaction "Updating association role to ${ROLE_ARN}"
+               logaction "Updating association role to '${ROLE_ARN}'"
                aws eks update-pod-identity-association \
                     --cluster-name "${CLUSTER_NAME}" \
                     --association-id "${EXISTING_ASSOC}" \
@@ -858,7 +865,7 @@ run_via_ssm() {
                --command-id "${COMMAND_ID}" \
                --instance-id "${INSTANCE_ID}" \
                --region "${REGION}" --query 'StandardErrorContent' --output text >&2
-          die "SSM command finished with status: ${SSM_STATUS_DETAIL}"
+          die "SSM command finished with status: '${SSM_STATUS_DETAIL}'"
      fi
 }
 
@@ -884,19 +891,19 @@ install_aws_ec2() {
           if [ "${INSTANCE_PLATFORM}" = "windows" ]; then
                if INSTALL_CMD=$(windows_install_cmd); then
                     run_via_ssm "AWS-RunPowerShellScript" "${INSTALL_CMD}"
-                    log "Agent installed on ${INSTANCE_ID}"
+                    log "Agent installed on '${INSTANCE_ID}'"
                     return
                fi
           else
                if INSTALL_CMD=$(linux_install_cmd); then
                     run_via_ssm "AWS-RunShellScript" "${INSTALL_CMD}"
-                    log "Agent installed on ${INSTANCE_ID}"
+                    log "Agent installed on '${INSTANCE_ID}'"
                     return
                fi
           fi
           logwarn "could not build the install command (iconv is required for Windows targets)"
      else
-          logwarn "SSM agent is not available on ${INSTANCE_ID}"
+          logwarn "SSM agent is not available on '${INSTANCE_ID}'"
      fi
 
      printf '\n' >&3
@@ -944,9 +951,9 @@ install_aws_eks() {
      # create/update is async. Wait for active, but a slow activation shouldn't
      # fail the run, so on timeout just point at the status command.
      if aws eks wait addon-active --cluster-name "${CLUSTER_NAME}" --addon-name amazon-cloudwatch-observability --region "${REGION}" 2>/dev/null; then
-          log "Add-on active on ${CLUSTER_NAME}"
+          log "Add-on active on '${CLUSTER_NAME}'"
      else
-          logwarn "Add-on submitted, still activating. Check: aws eks describe-addon --cluster-name ${CLUSTER_NAME} --addon-name amazon-cloudwatch-observability --region ${REGION}"
+          logwarn "Add-on submitted, still activating. Check: aws eks describe-addon --cluster-name '${CLUSTER_NAME}' --addon-name amazon-cloudwatch-observability --region '${REGION}'"
      fi
 }
 
@@ -1046,13 +1053,7 @@ main() {
      ROLE_ARN=$(aws iam get-role \
           --role-name "${ROLE_NAME}" \
           --query Role.Arn --output text)
-     # The role in play can drift from a provided ARN: aws_ec2 swaps in an
-     # existing instance-profile role, and a pathed ARN for a role that did not
-     # exist yet is created at the default path. Flag either, neutrally.
-     if [ -n "${ROLE_ARN_INPUT}" ] && [ "${ROLE_ARN}" != "${ROLE_ARN_INPUT}" ]; then
-          logwarn "using ${ROLE_ARN} instead of the provided ${ROLE_ARN_INPUT}"
-     fi
-     log "Role ARN: ${ROLE_ARN}"
+     log "Role ARN: '${ROLE_ARN}'"
 
      ensure_transaction_search
 
