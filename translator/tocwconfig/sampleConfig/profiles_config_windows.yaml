@@ -1,0 +1,102 @@
+exporters:
+    otlp_http/profiles:
+        auth:
+            authenticator: agenthealth/profiles
+        compression: gzip
+        encoding: proto
+        force_attempt_http2: true
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        profiles_endpoint: https://monitoring.us-east-1.amazonaws.com/v1development/profiles
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        sending_queue:
+            batch: null
+            block_on_overflow: false
+            num_consumers: 10
+            queue_size: 1000
+            sizer: null
+            storage: null
+            wait_for_result: false
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
+extensions:
+    agenthealth/profiles:
+        additional_auth: sigv4auth/monitoring
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    sigv4auth/monitoring:
+        assume_role: {}
+        imds_retries: 1
+        max_retries: 2
+        num_workers: 8
+        region: us-east-1
+        request_timeout_seconds: 30
+        service: monitoring
+processors:
+    resource/profiles:
+        attributes:
+            - action: upsert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: service.name
+              pattern: ""
+              value: my-service
+receivers:
+    otlp/http_127_0_0_1_4318:
+        protocols:
+            http:
+                cors: null
+                endpoint: 127.0.0.1:4318
+                idle_timeout: 0s
+                keep_alives_enabled: true
+                logs_url_path: /v1/logs
+                metrics_url_path: /v1/metrics
+                read_header_timeout: 0s
+                tls: null
+                traces_url_path: /v1/traces
+                transport: tcp
+                write_timeout: 0s
+service:
+    extensions:
+        - sigv4auth/monitoring
+        - agenthealth/profiles
+    pipelines:
+        profiles/profiles:
+            exporters:
+                - otlp_http/profiles
+            processors:
+                - resource/profiles
+            receivers:
+                - otlp/http_127_0_0_1_4318
+    telemetry:
+        logs:
+            encoding: console
+            error_output_paths: null
+            level: info
+            output_paths:
+                - c:\ProgramData\Amazon\AmazonCloudWatchAgent\Logs\amazon-cloudwatch-agent.log
+            sampling:
+                enabled: true
+                initial: 2
+                thereafter: 500
+                tick: 10s
+        metrics:
+            level: None
+        traces:
+            level: None
+            propagators: null

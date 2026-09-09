@@ -38,6 +38,7 @@ var testDataList = []TestData{
 	{"SeparateSection_PrometheusAndLog", 11, 2, false},
 	{"Two_procstat", 12, 2, false},
 	{"Traces", 13, 2, false},
+	{"Profiles", 14, 2, false},
 }
 
 func TestMergeJsonConfigMaps(t *testing.T) {

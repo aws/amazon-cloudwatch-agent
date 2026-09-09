@@ -1,0 +1,11 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "profiles": {
+    "service_name": "my-service",
+    "otlp": {
+      "http_endpoint": "127.0.0.1:4318"
+    }
+  }
+}

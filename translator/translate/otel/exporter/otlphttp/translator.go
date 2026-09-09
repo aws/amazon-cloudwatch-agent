@@ -17,9 +17,10 @@ import (
 
 // EndpointConfig specifies signal-specific endpoints for the otlphttp exporter.
 type EndpointConfig struct {
-	LogsEndpoint    string
-	MetricsEndpoint string
-	TracesEndpoint  string
+	LogsEndpoint     string
+	MetricsEndpoint  string
+	TracesEndpoint   string
+	ProfilesEndpoint string
 }
 
 type translator struct {
@@ -87,6 +88,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	if t.endpoint.TracesEndpoint != "" {
 		cfg.TracesEndpoint = t.endpoint.TracesEndpoint
+	}
+	if t.endpoint.ProfilesEndpoint != "" {
+		cfg.ProfilesEndpoint = t.endpoint.ProfilesEndpoint
 	}
 	cfg.ClientConfig.Compression = configcompression.TypeGzip
 	if t.authenticator.Type().String() != "" {

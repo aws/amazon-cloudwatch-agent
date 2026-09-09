@@ -47,6 +47,7 @@ var (
 	OtelLogsName    = Name("opentelemetry_logs")
 	TracesName      = Name(pipeline.SignalTraces.String())
 	OtelTracesName  = Name("opentelemetry_traces")
+	ProfilesName    = Name("profiles")
 	StatusCodeName  = Name("statuscode")
 )
 

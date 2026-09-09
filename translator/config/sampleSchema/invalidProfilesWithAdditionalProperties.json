@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "service_name": "my-service",
+    "otlp": {
+      "grpc_endpoint": "127.0.0.1:4317"
+    }
+  }
+}

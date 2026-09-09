@@ -1,0 +1,9 @@
+{
+  "agent": {
+    "region": "us-east-1"
+  },
+  "profiles": {
+    "service_name": "my-service",
+    "endpoint_override": "monitoring.us-east-1.amazonaws.com"
+  }
+}

@@ -79,6 +79,12 @@ func NewTranslator(epConfig EndpointConfig, opts ...common.TranslatorOption) com
 	return t
 }
 
+// NewHTTPTranslator creates an OTLP receiver translator with only the HTTP
+// protocol enabled on the given endpoint.
+func NewHTTPTranslator(httpEndpoint string, opts ...common.TranslatorOption) common.ComponentTranslator {
+	return NewTranslator(EndpointConfig{protocol: http, endpoint: httpEndpoint}, opts...)
+}
+
 func (t *translator) ID() component.ID {
 	return component.NewIDWithName(t.factory.Type(), t.Name())
 }
