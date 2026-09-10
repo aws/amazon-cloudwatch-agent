@@ -26,6 +26,11 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      ArchTagSuffix:
+        description: "Optional suffix appended to per-arch image tags (e.g. -<sha>)."
+        required: false
+        type: string
+        default: ""
   workflow_call:
     inputs:
       ContainerRepositoryNameAndTag:
@@ -46,6 +51,11 @@ on:
         description: "Integration tests put the MSI and PKG in a different bucket path than the binaries."
         required: true
         type: string
+      ArchTagSuffix:
+        description: "Optional suffix appended to per-arch image tags (e.g. -<sha>)."
+        required: false
+        type: string
+        default: ""
 
 jobs:
   MakeBinary:
@@ -115,7 +125,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64${{ inputs.ArchTagSuffix }}
           platforms: linux/amd64
           provenance: false
 
@@ -127,7 +137,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+            ${{ steps.login-ecr.outputs.registry }}/${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64${{ inputs.ArchTagSuffix }}
           platforms: linux/arm64
           provenance: false
 
@@ -319,8 +329,8 @@ jobs:
           REPOSITORYWindows: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:windows
           REPO2022: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
           REPO2019: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
-          REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64
-          REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64
+          REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64${{ inputs.ArchTagSuffix }}
+          REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64${{ inputs.ArchTagSuffix }}
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
           docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
