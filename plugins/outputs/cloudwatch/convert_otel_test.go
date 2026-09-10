@@ -181,6 +181,7 @@ func checkDatum(
 	unit string,
 	numMetrics int,
 ) {
+	t.Helper()
 	assert.True(t, strings.HasPrefix(*d.MetricName, namePrefix))
 	assert.Equal(t, unit, *d.Unit)
 	if d.distribution != nil {
@@ -201,8 +202,14 @@ func checkDatum(
 		assert.Equal(t, metricValue, *d.Value)
 	}
 
-	// Assuming unit test does not take more than 1 s.
-	assert.Less(t, time.Since(*d.Timestamp), time.Second)
+	// 1-minute window: this checks the timestamp survived ConvertOtelMetrics unmodified,
+	// not wall-clock performance. Wide enough to absorb CI scheduling jitter while still
+	// catching real timestamp bugs (which drift by hours/years, not seconds).
+	elapsed := time.Since(*d.Timestamp)
+	if !assert.Less(t, elapsed, time.Minute,
+		"datum timestamp is unexpectedly stale: elapsed=%s", elapsed) {
+		t.Logf("checkDatum: numMetrics=%d unit=%s elapsed=%s", numMetrics, unit, elapsed)
+	}
 	for _, dim := range d.Dimensions {
 		assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
 		assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))

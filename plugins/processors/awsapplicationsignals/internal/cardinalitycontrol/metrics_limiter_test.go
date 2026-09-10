@@ -34,8 +34,13 @@ func TestAdmitAndRollup(t *testing.T) {
 	limiter := NewMetricsLimiter(config, logger)
 
 	admittedAttributes := map[string]pcommon.Map{}
+	// Use 10 DISTINCT keys so exactly-2-admitted is deterministic. With random keys
+	// (the old newLowCardinalityAttributes(100)), the stream could redraw a rejected
+	// key, bump its CMS frequency above the min, and get it promoted+admitted -- the
+	// top-K's intended rotation, but it made the exactly-2 assertion flaky (~7% on
+	// Windows, ~1% on Linux).
 	for i := 0; i < 10; i++ {
-		attr := newLowCardinalityAttributes(100)
+		attr := newFixedAttributes(i)
 		if ok, _ := limiter.Admit("latency", attr, emptyResourceAttributes); ok {
 			uniqKey, _ := attr.Get("RemoteOperation")
 			admittedAttributes[uniqKey.AsString()] = attr

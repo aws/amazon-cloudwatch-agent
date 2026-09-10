@@ -335,9 +335,12 @@ func TestLogsFileRemove(t *testing.T) {
 		close(stopped)
 	}()
 
+	// 10s budget: Windows CI contention can stretch the tailer's delete-detection
+	// (polling-watcher read-failure path) well past the original 1s grace. The happy
+	// path still returns as soon as `stopped` is closed.
 	select {
-	case <-time.After(1 * time.Second):
-		t.Errorf("tailerSrc should have stopped after tile is removed")
+	case <-time.After(10 * time.Second):
+		t.Errorf("tailerSrc should have stopped after file is removed")
 	case <-stopped:
 	}
 

@@ -674,8 +674,35 @@ func TestExistingAttributesNotOverwritten(t *testing.T) {
 	err := tagger.Start(context.Background(), componenttest.NewNopHost())
 	assert.Nil(t, err)
 
-	// Wait for tags and volumes to be retrieved
-	time.Sleep(time.Second)
+	// The tagger loads tags, volumes, and metadata asynchronously after Start(), so a
+	// fixed 1s sleep raced them under CI. Poll instead: dispatch a probe metric carrying
+	// the InstanceId the tagger keys off, and wait until the output picks up the
+	// async-loaded attributes (ImageId, tagKey2, VolumeId). The probe must use the real
+	// test attributes or the tagger drops it (no InstanceId -> no ResourceMetrics -> panic).
+	require.Eventually(t, func() bool {
+		probe := createTestMetrics([]map[string]string{{
+			"InstanceId": "i-100000",
+			"device":     device1,
+		}})
+		out, perr := tagger.processMetrics(context.Background(), probe)
+		if perr != nil || out.ResourceMetrics().Len() == 0 {
+			return false
+		}
+		sms := out.ResourceMetrics().At(0).ScopeMetrics()
+		if sms.Len() == 0 || sms.At(0).Metrics().Len() == 0 {
+			return false
+		}
+		metric := sms.At(0).Metrics().At(0)
+		if metric.Gauge().DataPoints().Len() == 0 {
+			return false
+		}
+		attrs := metric.Gauge().DataPoints().At(0).Attributes()
+		_, hasImg := attrs.Get("ImageId")
+		_, hasTag := attrs.Get(tagKey2)
+		_, hasVol := attrs.Get("VolumeId")
+		return hasImg && hasTag && hasVol
+	}, 15*time.Second, 50*time.Millisecond,
+		"tagger async metadata/tag/volume fetches did not complete within 15s")
 
 	// Create metrics with existing attributes that should not be overwritten
 	md := createTestMetrics([]map[string]string{
