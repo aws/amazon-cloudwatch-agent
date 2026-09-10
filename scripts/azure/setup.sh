@@ -213,9 +213,14 @@ version_ge() {
 
 # ARN-unknown mode: identity is done but install waits on the AWS trust setup.
 # Emitted to fd 3 so it never lands on stdout's CWAGENT_EMIT_ENV KEY='value' lines.
+# $1 = optional identity line to repeat, so the value to copy into aws/setup.sh
+# sits at the very end of the output rather than scrolled past the slow steps.
 print_await_arn() {
      printf '\n' >&3
      log "Azure identity configured (install pending the IAM role ARN)"
+     if [ -n "${1:-}" ]; then
+          log "$1"
+     fi
      printf '\nNext: run aws/setup.sh with the identity value above to create the IAM\n' >&3
      printf 'role and trust, then rerun this with CWAGENT_AWS_ROLE_ARN set to install the\n' >&3
      printf 'agent.\n' >&3
@@ -435,7 +440,7 @@ run_via_az() {
 
      if ! printf '%s' "${STDOUT}" | grep -q 'Amazon CloudWatch Agent installed and running\.'; then
           [ -n "${STDERR}" ] && printf '%s\n' "${STDERR}" >&2
-          die "Install script failed on ${VM_NAME}"
+          die "Install script failed on '${VM_NAME}'"
      fi
 }
 
@@ -446,38 +451,46 @@ run_via_az() {
 setup_azure_vm() {
      if [ -z "${RESOURCE_GROUP}" ] || [ -z "${VM_NAME}" ]; then usage; fi
 
-     section "Configuring Azure VM identity..."
-
      # One az vm show for the identity (whether to assign one) and the OS type
      # (which install payload). The nested [[...]] emits one tab-separated row
      # (null renders "None"); a flat [...] would print one value per line.
+     # Probing first also verifies the VM exists, so a wrong name or group
+     # fails here, before any setup output or slow identity work. az's own
+     # stderr is not suppressed: a permissions or throttling failure should
+     # show its real error above the message here, not read as not-found.
      VM_INFO=$(az_scoped vm show \
           --resource-group "${RESOURCE_GROUP}" \
           --name "${VM_NAME}" \
-          --query "[[identity.principalId, storageProfile.osDisk.osType]]" -o tsv 2>/dev/null || true)
+          --query "[[identity.principalId, storageProfile.osDisk.osType]]" -o tsv) ||
+          die "cannot find or access VM '${VM_NAME}' in resource group '${RESOURCE_GROUP}' (see the az error above)"
      IDENTITY=$(printf '%s' "${VM_INFO}" | cut -f1)
      VM_OS=$(printf '%s' "${VM_INFO}" | cut -f2)
 
+     # The tenant ID is what the AWS trust step (aws/setup.sh) needs, so
+     # surface it before the slow identity and install steps: the user can
+     # start the AWS side in parallel. Repeated at the end for easy copying.
+     TENANT_ID="${AZ_TENANT}"
+     log "Tenant ID (for the AWS setup): ${TENANT_ID}"
+
+     section "Configuring Azure VM identity..."
+
      if [ -n "${IDENTITY}" ] && [ "${IDENTITY}" != "None" ]; then
-          log "Managed identity enabled on ${VM_NAME}"
+          log "Managed identity enabled on '${VM_NAME}'"
      else
           logaction "Enabling managed identity (this may take a few minutes)"
           az_scoped vm identity assign \
                --resource-group "${RESOURCE_GROUP}" \
                --name "${VM_NAME}" \
                --output none
-          log "Managed identity enabled on ${VM_NAME}"
+          log "Managed identity enabled on '${VM_NAME}'"
      fi
-
-     TENANT_ID="${AZ_TENANT}"
-     log "Tenant: ${TENANT_ID}"
 
      add_env CWAGENT_PLATFORM "${PLATFORM}"
      add_env CWAGENT_AZURE_TENANT_ID "${TENANT_ID}"
 
      # No ARN yet: identity is done, emit the tenant ID for the AWS trust step and stop.
      if [ -z "${ROLE_ARN}" ]; then
-          print_await_arn
+          print_await_arn "Tenant ID (for the AWS setup): ${TENANT_ID}"
           return
      fi
 
@@ -486,14 +499,16 @@ setup_azure_vm() {
           ps_prelude="\$env:CWAGENT_CLOUD='azure'; \$env:CWAGENT_AWS_ROLE_ARN='${ROLE_ARN}'; \$env:CWAGENT_AWS_REGION='${REGION}'; "
           if INSTALL_CMD=$(windows_install_cmd "${ps_prelude}"); then
                run_via_az "RunPowerShellScript" "${INSTALL_CMD}"
-               log "Agent installed on ${VM_NAME}"
+               log "Agent installed on '${VM_NAME}'"
+               log "Tenant ID (for the AWS setup): ${TENANT_ID}"
                return
           fi
      else
           install_env="CWAGENT_CLOUD=azure CWAGENT_AWS_ROLE_ARN=${ROLE_ARN} CWAGENT_AWS_REGION=${REGION}"
           if INSTALL_CMD=$(linux_install_cmd "${install_env}"); then
                run_via_az "RunShellScript" "${INSTALL_CMD}"
-               log "Agent installed on ${VM_NAME}"
+               log "Agent installed on '${VM_NAME}'"
+               log "Tenant ID (for the AWS setup): ${TENANT_ID}"
                return
           fi
      fi
@@ -556,14 +571,12 @@ setup_azure_aks() {
                --query "oidcIssuerProfile.issuerUrl" -o tsv)
      fi
 
-     log "OIDC issuer: ${OIDC_ISSUER}"
-
      add_env CWAGENT_PLATFORM "${PLATFORM}"
      add_env CWAGENT_AZURE_OIDC_ISSUER "${OIDC_ISSUER}"
 
      # No ARN yet: identity is done, emit the OIDC issuer for the AWS trust step and stop.
      if [ -z "${ROLE_ARN}" ]; then
-          print_await_arn
+          print_await_arn "OIDC issuer (for the AWS setup): ${OIDC_ISSUER}"
           return
      fi
 
@@ -571,7 +584,7 @@ setup_azure_aks() {
      # commands to run from a shell that has them.
      if command -v helm >/dev/null 2>&1 && command -v kubectl >/dev/null 2>&1; then
           section "Installing CloudWatch Observability Helm chart on ${CLUSTER_NAME}..."
-          logaction "Configuring kubeconfig for ${CLUSTER_NAME}"
+          logaction "Configuring kubeconfig for '${CLUSTER_NAME}'"
           az_scoped aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --overwrite-existing >&3
 
           logaction "Installing via Helm"
@@ -598,7 +611,7 @@ setup_azure_aks() {
                --set-string 'agents[1].config=default' \
                --namespace "${K8S_NAMESPACE}" \
                --create-namespace >&3
-          log "Chart installed on ${CLUSTER_NAME}"
+          log "Chart installed on '${CLUSTER_NAME}'"
      else
           printf '\n' >&3
           printf 'Done. Install the Amazon CloudWatch Observability Helm chart (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
@@ -624,6 +637,8 @@ setup_azure_aks() {
                printf '    --create-namespace\n'
           } >&3
      fi
+
+     log "OIDC issuer (for the AWS setup): ${OIDC_ISSUER}"
 }
 
 main() {
