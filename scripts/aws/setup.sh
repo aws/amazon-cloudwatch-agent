@@ -318,11 +318,11 @@ check_prerequisites() {
      AWS_ARN=$(printf '%s' "${AWS_IDENTITY}" | cut -f2)
      AWS_ALIAS=$(aws iam list-account-aliases --query 'AccountAliases[0]' --output text 2>/dev/null || true)
      if [ -n "${AWS_ALIAS}" ] && [ "${AWS_ALIAS}" != "None" ]; then
-          log "AWS account: '${AWS_ACCOUNT}' ('${AWS_ALIAS}')"
+          log "AWS account: ${AWS_ACCOUNT} (${AWS_ALIAS})"
      else
-          log "AWS account: '${AWS_ACCOUNT}'"
+          log "AWS account: ${AWS_ACCOUNT}"
      fi
-     log "AWS identity: '${AWS_ARN}'"
+     log "AWS identity: ${AWS_ARN}"
 }
 
 # =============================================================================
@@ -589,7 +589,7 @@ trust_aws_ec2() {
 
           section "Using existing instance profile..."
           log "Instance profile '${PROFILE_NAME}' attached to '${INSTANCE_ID}'"
-          log "Role: '${EXISTING_ROLE}'"
+          log "Role: ${EXISTING_ROLE}"
           if [ -n "${ROLE_ARN_INPUT}" ] && [ "${EXISTING_ROLE}" != "${ROLE_NAME}" ]; then
                logwarn "using this role instead of the provided '${ROLE_ARN_INPUT}'"
           fi
@@ -865,7 +865,7 @@ run_via_ssm() {
                --command-id "${COMMAND_ID}" \
                --instance-id "${INSTANCE_ID}" \
                --region "${REGION}" --query 'StandardErrorContent' --output text >&2
-          die "SSM command finished with status: '${SSM_STATUS_DETAIL}'"
+          die "SSM command finished with status: ${SSM_STATUS_DETAIL}"
      fi
 }
 
@@ -1053,7 +1053,7 @@ main() {
      ROLE_ARN=$(aws iam get-role \
           --role-name "${ROLE_NAME}" \
           --query Role.Arn --output text)
-     log "Role ARN: '${ROLE_ARN}'"
+     log "Role ARN: ${ROLE_ARN}"
 
      ensure_transaction_search
 

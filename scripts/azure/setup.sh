@@ -364,9 +364,9 @@ Pass the resource ID or the individual values, not both with different targets."
           fi
      fi
      if [ -n "${AZ_NAME}" ]; then
-          log "Azure subscription: '${AZ_SUB}' ('${AZ_NAME}')"
+          log "Azure subscription: ${AZ_SUB} (${AZ_NAME})"
      else
-          log "Azure subscription: '${AZ_SUB}'"
+          log "Azure subscription: ${AZ_SUB}"
      fi
 }
 
@@ -470,7 +470,7 @@ setup_azure_vm() {
      # surface it before the slow identity and install steps: the user can
      # start the AWS side in parallel. Repeated at the end for easy copying.
      TENANT_ID="${AZ_TENANT}"
-     log "Tenant ID (for the AWS setup): '${TENANT_ID}'"
+     log "Tenant ID (for the AWS setup): ${TENANT_ID}"
 
      section "Configuring Azure VM identity..."
 
@@ -500,7 +500,7 @@ setup_azure_vm() {
           if INSTALL_CMD=$(windows_install_cmd "${ps_prelude}"); then
                run_via_az "RunPowerShellScript" "${INSTALL_CMD}"
                log "Agent installed on '${VM_NAME}'"
-               log "Tenant ID (for the AWS setup): '${TENANT_ID}'"
+               log "Tenant ID (for the AWS setup): ${TENANT_ID}"
                return
           fi
      else
@@ -508,7 +508,7 @@ setup_azure_vm() {
           if INSTALL_CMD=$(linux_install_cmd "${install_env}"); then
                run_via_az "RunShellScript" "${INSTALL_CMD}"
                log "Agent installed on '${VM_NAME}'"
-               log "Tenant ID (for the AWS setup): '${TENANT_ID}'"
+               log "Tenant ID (for the AWS setup): ${TENANT_ID}"
                return
           fi
      fi
@@ -571,14 +571,12 @@ setup_azure_aks() {
                --query "oidcIssuerProfile.issuerUrl" -o tsv)
      fi
 
-     log "OIDC issuer: '${OIDC_ISSUER}'"
-
      add_env CWAGENT_PLATFORM "${PLATFORM}"
      add_env CWAGENT_AZURE_OIDC_ISSUER "${OIDC_ISSUER}"
 
      # No ARN yet: identity is done, emit the OIDC issuer for the AWS trust step and stop.
      if [ -z "${ROLE_ARN}" ]; then
-          print_await_arn
+          print_await_arn "OIDC issuer (for the AWS setup): ${OIDC_ISSUER}"
           return
      fi
 
@@ -639,6 +637,8 @@ setup_azure_aks() {
                printf '    --create-namespace\n'
           } >&3
      fi
+
+     log "OIDC issuer (for the AWS setup): ${OIDC_ISSUER}"
 }
 
 main() {
