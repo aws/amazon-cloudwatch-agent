@@ -3,6 +3,8 @@
 
 package ecsservicediscovery
 
+import "context"
+
 // Filter out the tasks not matching the discovery configs
 // Filter out the tasks with nil task definition
 type TaskFilterProcessor struct {
@@ -12,7 +14,7 @@ func NewTaskFilterProcessor() *TaskFilterProcessor {
 	return &TaskFilterProcessor{}
 }
 
-func (p *TaskFilterProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
+func (p *TaskFilterProcessor) Process(_ context.Context, _ string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	var filteredClusterTasks []*DecoratedTask
 	for _, v := range taskList {
 		if v.ServiceName != "" || v.DockerLabelBased || v.TaskDefinitionBased {

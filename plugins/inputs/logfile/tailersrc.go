@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"golang.org/x/text/encoding"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
@@ -71,7 +71,7 @@ type tailerSrc struct {
 	timestampFn        func(string) (time.Time, string)
 	enc                encoding.Encoding
 	maxEventSize       int
-	retentionInDays    int
+	retentionInDays    int32
 
 	outputFn           func(logs.LogEvent)
 	isMLStart          func(string) bool
@@ -99,7 +99,7 @@ func NewTailerSrc(
 	timestampFn func(string) (time.Time, string),
 	enc encoding.Encoding,
 	maxEventSize int,
-	retentionInDays int,
+	retentionInDays int32,
 	backpressureMode logscommon.BackpressureMode,
 ) *tailerSrc {
 	ts := &tailerSrc{
@@ -161,7 +161,7 @@ func (ts *tailerSrc) Destination() string {
 	return ts.destination
 }
 
-func (ts *tailerSrc) Retention() int {
+func (ts *tailerSrc) Retention() int32 {
 	return ts.retentionInDays
 }
 
@@ -182,7 +182,7 @@ func (ts *tailerSrc) AddCleanUpFn(f func()) {
 	ts.cleanUpFns = append(ts.cleanUpFns, f)
 }
 
-func (ts *tailerSrc) Entity() *cloudwatchlogs.Entity {
+func (ts *tailerSrc) Entity() *types.Entity {
 	es := entitystore.GetEntityStore()
 	if es != nil {
 		return es.CreateLogFileEntity(entitystore.LogFileGlob(ts.fileGlobPath), entitystore.LogGroupName(ts.group))

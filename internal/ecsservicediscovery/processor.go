@@ -3,7 +3,9 @@
 
 package ecsservicediscovery
 
+import "context"
+
 type Processor interface {
-	Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error)
+	Process(ctx context.Context, cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error)
 	ProcessorName() string
 }

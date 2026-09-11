@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
+	"go.opentelemetry.io/collector/otelcol"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 
 	selftelemetryextension "github.com/aws/amazon-cloudwatch-agent/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -19,6 +21,15 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
 	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 )
+
+// v0.150 moved service telemetry config behind component.Config, so the concrete
+// otelconftelemetry config has to be asserted before its fields can be read.
+func telemetryOf(t *testing.T, cfg *otelcol.Config) *otelconftelemetry.Config {
+	t.Helper()
+	tc, ok := cfg.Service.Telemetry.(*otelconftelemetry.Config)
+	require.True(t, ok, "Service.Telemetry is not *otelconftelemetry.Config")
+	return tc
+}
 
 func selfTelemetryID() component.ID {
 	return component.NewID(selftelemetryextension.TypeStr)
@@ -47,8 +58,8 @@ func TestSelfTelemetryOffByDefault(t *testing.T) {
 
 	got, err := TranslateWithoutValidation(selfTelemetryInput(nil), "linux")
 	require.NoError(t, err)
-	assert.Equal(t, configtelemetry.LevelNone, got.Service.Telemetry.Metrics.Level)
-	assert.Empty(t, got.Service.Telemetry.Metrics.Readers)
+	assert.Equal(t, configtelemetry.LevelNone, telemetryOf(t, got).Metrics.Level)
+	assert.Empty(t, telemetryOf(t, got).Metrics.Readers)
 	assert.NotContains(t, got.Service.Extensions, selfTelemetryID())
 }
 
@@ -64,9 +75,9 @@ func TestSelfTelemetryEnabledAddsReaderAndExtension(t *testing.T) {
 	}), "linux")
 	require.NoError(t, err)
 
-	assert.Equal(t, configtelemetry.LevelBasic, got.Service.Telemetry.Metrics.Level)
-	require.Len(t, got.Service.Telemetry.Metrics.Readers, 1)
-	prom := got.Service.Telemetry.Metrics.Readers[0].Pull.Exporter.Prometheus
+	assert.Equal(t, configtelemetry.LevelBasic, telemetryOf(t, got).Metrics.Level)
+	require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
+	prom := telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus
 	require.NotNil(t, prom)
 	assert.Equal(t, 28888, *prom.Port)
 
@@ -92,9 +103,9 @@ func TestSelfTelemetryAlwaysBindsLoopback(t *testing.T) {
 	} {
 		got, err := TranslateWithoutValidation(selfTelemetryInput(selfTelemetry), "linux")
 		require.NoError(t, err)
-		require.Len(t, got.Service.Telemetry.Metrics.Readers, 1)
+		require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
 		assert.Equal(t, "127.0.0.1",
-			*got.Service.Telemetry.Metrics.Readers[0].Pull.Exporter.Prometheus.Host)
+			*telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus.Host)
 	}
 }
 
@@ -104,8 +115,8 @@ func TestSelfTelemetryDefaultPort(t *testing.T) {
 
 	got, err := TranslateWithoutValidation(selfTelemetryInput(map[string]any{"enabled": true}), "linux")
 	require.NoError(t, err)
-	require.Len(t, got.Service.Telemetry.Metrics.Readers, 1)
-	assert.Equal(t, 8888, *got.Service.Telemetry.Metrics.Readers[0].Pull.Exporter.Prometheus.Port)
+	require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
+	assert.Equal(t, 8888, *telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus.Port)
 }
 
 // TestSelfTelemetryWithoutPipelines covers the cluster-scraper shape, whose JSON config carries only
@@ -126,9 +137,9 @@ func TestSelfTelemetryWithoutPipelines(t *testing.T) {
 	require.NotNil(t, got)
 
 	assert.NotEmpty(t, got.Service.Pipelines, "a pipeline is required or the config is discarded")
-	assert.Equal(t, configtelemetry.LevelBasic, got.Service.Telemetry.Metrics.Level)
-	require.Len(t, got.Service.Telemetry.Metrics.Readers, 1)
-	assert.Equal(t, 28889, *got.Service.Telemetry.Metrics.Readers[0].Pull.Exporter.Prometheus.Port)
+	assert.Equal(t, configtelemetry.LevelBasic, telemetryOf(t, got).Metrics.Level)
+	require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
+	assert.Equal(t, 28889, *telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus.Port)
 	assert.Contains(t, got.Service.Extensions, selfTelemetryID())
 }
 
@@ -159,12 +170,12 @@ func TestSelfTelemetryStampsNodeViaResource(t *testing.T) {
 	got, err := TranslateWithoutValidation(selfTelemetryInput(map[string]any{"enabled": true}), "linux")
 	require.NoError(t, err)
 
-	require.Contains(t, got.Service.Telemetry.Resource, "NodeName")
-	require.NotNil(t, got.Service.Telemetry.Resource["NodeName"])
-	assert.Equal(t, "${env:K8S_NODE_NAME}", *got.Service.Telemetry.Resource["NodeName"])
+	require.Contains(t, telemetryOf(t, got).Resource, "NodeName")
+	require.NotNil(t, telemetryOf(t, got).Resource["NodeName"])
+	assert.Equal(t, "${env:K8S_NODE_NAME}", *telemetryOf(t, got).Resource["NodeName"])
 
-	require.Len(t, got.Service.Telemetry.Metrics.Readers, 1)
-	prom := got.Service.Telemetry.Metrics.Readers[0].Pull.Exporter.Prometheus
+	require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
+	prom := telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus
 	require.NotNil(t, prom.WithResourceConstantLabels)
 	assert.Equal(t, []string{"NodeName"}, prom.WithResourceConstantLabels.Included)
 }
@@ -177,7 +188,7 @@ func TestSelfTelemetryOffLeavesNoResource(t *testing.T) {
 
 	got, err := TranslateWithoutValidation(selfTelemetryInput(nil), "linux")
 	require.NoError(t, err)
-	assert.NotContains(t, got.Service.Telemetry.Resource, "NodeName")
+	assert.NotContains(t, telemetryOf(t, got).Resource, "NodeName")
 }
 
 // TestSelfTelemetryOnEC2UsesInstanceID is the EC2/off-Kubernetes contract: there is no operator-injected
@@ -205,14 +216,14 @@ func TestSelfTelemetryOnEC2UsesInstanceID(t *testing.T) {
 	require.NoError(t, err)
 
 	// Self telemetry works: the reader binds and the bridge extension is present.
-	require.Len(t, got.Service.Telemetry.Metrics.Readers, 1)
+	require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
 	assert.Contains(t, got.Service.Extensions, selfTelemetryID())
 
 	// The node label carries the resolved instance ID (not a K8S_NODE_NAME env ref), and the reader
 	// still promotes it as a constant label.
-	require.Contains(t, got.Service.Telemetry.Resource, "NodeName")
-	assert.Equal(t, "i-1234567890abcdef0", *got.Service.Telemetry.Resource["NodeName"])
-	require.NotNil(t, got.Service.Telemetry.Metrics.Readers[0].Pull.Exporter.Prometheus.WithResourceConstantLabels)
+	require.Contains(t, telemetryOf(t, got).Resource, "NodeName")
+	assert.Equal(t, "i-1234567890abcdef0", *telemetryOf(t, got).Resource["NodeName"])
+	require.NotNil(t, telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus.WithResourceConstantLabels)
 }
 
 // TestSelfTelemetryOnNonEC2FallsBackToHostname is the non-EC2/off-Kubernetes contract: when IMDS has no
@@ -239,7 +250,7 @@ func TestSelfTelemetryOnNonEC2FallsBackToHostname(t *testing.T) {
 	}, "linux")
 	require.NoError(t, err)
 
-	require.Contains(t, got.Service.Telemetry.Resource, "NodeName")
-	assert.Equal(t, "onprem-host-7", *got.Service.Telemetry.Resource["NodeName"])
-	assert.NotEqual(t, translateutil.UnknownInstanceID, *got.Service.Telemetry.Resource["NodeName"])
+	require.Contains(t, telemetryOf(t, got).Resource, "NodeName")
+	assert.Equal(t, "onprem-host-7", *telemetryOf(t, got).Resource["NodeName"])
+	assert.NotEqual(t, translateutil.UnknownInstanceID, *telemetryOf(t, got).Resource["NodeName"])
 }

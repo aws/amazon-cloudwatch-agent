@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/scrape"
 )
 
@@ -88,8 +89,10 @@ func (t *metadataServiceImpl) Get(job, instance string) (metadataCache, error) {
 	}
 
 	// from the same targetGroup, instance is not going to be duplicated
+	lb := labels.NewBuilder(labels.EmptyLabels())
 	for _, target := range targetGroup {
-		if target.DiscoveredLabels().Get(savedScrapeInstanceLabel) == instance || target.DiscoveredLabels().Get(scrapeInstanceLabel) == instance {
+		dl := target.DiscoveredLabels(lb)
+		if dl.Get(savedScrapeInstanceLabel) == instance || dl.Get(scrapeInstanceLabel) == instance {
 			return &mCache{target}, nil
 		}
 	}

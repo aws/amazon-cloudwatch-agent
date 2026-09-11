@@ -25,7 +25,11 @@ func newTestBridge(t *testing.T, sources func() []source) (*selfTelemetry, *prom
 	out := prometheus.NewRegistry()
 	exporter, err := otelprom.New(
 		otelprom.WithRegisterer(out),
+		//nolint:staticcheck // SA1019: the replacement WithTranslationStrategy also changes name
+		// escaping; these keep the test's exporter matching the suffix/unit-free shape the
+		// self_telemetry config requests. Migration tracked as a follow-up.
 		otelprom.WithoutCounterSuffixes(),
+		//nolint:staticcheck // SA1019: see WithoutCounterSuffixes above.
 		otelprom.WithoutUnits(),
 		otelprom.WithoutScopeInfo(),
 		otelprom.WithoutTargetInfo(),
@@ -204,7 +208,11 @@ func TestReregisterRetriesAfterFailure(t *testing.T) {
 	out := prometheus.NewRegistry()
 	exporter, err := otelprom.New(
 		otelprom.WithRegisterer(out),
+		//nolint:staticcheck // SA1019: the replacement WithTranslationStrategy also changes name
+		// escaping; these keep the test's exporter matching the suffix/unit-free shape the
+		// self_telemetry config requests. Migration tracked as a follow-up.
 		otelprom.WithoutCounterSuffixes(),
+		//nolint:staticcheck // SA1019: see WithoutCounterSuffixes above.
 		otelprom.WithoutUnits(),
 		otelprom.WithoutScopeInfo(),
 		otelprom.WithoutTargetInfo(),

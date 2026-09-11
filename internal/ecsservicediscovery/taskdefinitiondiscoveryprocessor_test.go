@@ -6,38 +6,39 @@ package ecsservicediscovery
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func buildTestingTasksforTaskDef() []*DecoratedTask {
+func buildTestingTasksForTaskDef() []*DecoratedTask {
 	taskDefArn1 := "arn:aws:ecs:us-east-2:1234567890:task-definition/prometheus-java-tomcat-fargate-awsvpc:1"
 	taskDefArn2 := "arn:aws:ecs:us-east-2:1234567890:task-definition/prometheus-java-jar-ec2-bridge:2"
 	taskDefArn3 := "arn:aws:ecs:us-east-2:1234567890:task-definition/prometheus-java-jar-ec2-bridge:3"
 	taskDefArn4 := "arn:aws:ecs:us-east-2:1234567890:task-definition/prometheus-cwagent:12"
 	return []*DecoratedTask{
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn1,
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn1),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn2,
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn2),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn3,
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn3),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn4,
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn4),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
+			TaskDefinition: &types.TaskDefinition{
 				TaskDefinitionArn: nil,
 			},
 		},
@@ -47,8 +48,9 @@ func buildTestingTasksforTaskDef() []*DecoratedTask {
 func Test_TaskDefinitionDiscoveryProcessor_EmptyConfig(t *testing.T) {
 	p := NewTaskDefinitionDiscoveryProcessor(nil)
 	assert.Equal(t, "TaskDefinitionDiscoveryProcessor", p.ProcessorName())
-	taskList := buildTestingTasksforTaskDef()
-	p.Process("test_ecs_cluster_name", taskList)
+	taskList := buildTestingTasksForTaskDef()
+	_, err := p.Process(t.Context(), "test_ecs_cluster_name", taskList)
+	assert.NoError(t, err)
 
 	for _, v := range taskList {
 		assert.False(t, v.DockerLabelBased)
@@ -63,10 +65,11 @@ func Test_TaskDefinitionDiscoveryProcessor_Normal(t *testing.T) {
 		{TaskDefArnPattern: "^.*task:[0-9]+$"},
 	}
 
-	taskList := buildTestingTasksforTaskDef()
+	taskList := buildTestingTasksForTaskDef()
 	p := NewTaskDefinitionDiscoveryProcessor(config)
 	assert.Equal(t, "TaskDefinitionDiscoveryProcessor", p.ProcessorName())
-	p.Process("test_ecs_cluster_name", taskList)
+	_, err := p.Process(t.Context(), "test_ecs_cluster_name", taskList)
+	assert.NoError(t, err)
 
 	for _, v := range taskList {
 		assert.False(t, v.DockerLabelBased)
@@ -89,44 +92,44 @@ func Test_TaskDefinitionDiscoveryProcessor_ContainerName(t *testing.T) {
 	containerNameMatch := "envoy"
 	tasks := []*DecoratedTask{
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn,
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn,
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn),
+				ContainerDefinitions: []types.ContainerDefinition{
 					{},
 				},
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn,
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn),
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameEmpty,
+						Name: aws.String(containerNameEmpty),
 					},
 				},
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn,
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn),
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameMismatch,
+						Name: aws.String(containerNameMismatch),
 					},
 				},
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				TaskDefinitionArn: &taskDefArn,
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				TaskDefinitionArn: aws.String(taskDefArn),
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameMatch,
+						Name: aws.String(containerNameMatch),
 					},
 				},
 			},
@@ -135,7 +138,8 @@ func Test_TaskDefinitionDiscoveryProcessor_ContainerName(t *testing.T) {
 
 	p := NewTaskDefinitionDiscoveryProcessor(config)
 	assert.Equal(t, "TaskDefinitionDiscoveryProcessor", p.ProcessorName())
-	p.Process("test_ecs_cluster_name", tasks)
+	_, err := p.Process(t.Context(), "test_ecs_cluster_name", tasks)
+	assert.NoError(t, err)
 
 	assert.Equal(t, 5, len(tasks))
 	assert.False(t, tasks[0].TaskDefinitionBased)

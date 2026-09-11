@@ -111,8 +111,9 @@ func TestPrometheusTranslatorClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got.Processors.Len())
-	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
+	assert.Equal(t, 2, got.Processors.Len())
+	assert.Equal(t, "metric_start_time/otel_prometheus", got.Processors.Keys()[0].String())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[1].String())
 }
 
 func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
@@ -129,8 +130,9 @@ func TestPrometheusTranslatorNoClusterNameProcessor(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got.Processors.Len())
-	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[0].String())
+	assert.Equal(t, 2, got.Processors.Len())
+	assert.Equal(t, "metric_start_time/otel_prometheus", got.Processors.Keys()[0].String())
+	assert.Equal(t, "transform/prometheus_scope", got.Processors.Keys()[1].String())
 }
 
 func TestPrometheusReceiverTranslator(t *testing.T) {
@@ -276,10 +278,11 @@ func TestPrometheusTranslatorK8sMode(t *testing.T) {
 	tt := NewTranslator()
 	got, err := tt.Translate(conf)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got.Processors.Len()) // scope only, cluster_name in export pipeline
+	assert.Equal(t, 2, got.Processors.Len()) // metricstarttime + scope (cluster_name moved to export pipeline)
 	keys := make([]string, 0, got.Processors.Len())
 	for _, k := range got.Processors.Keys() {
 		keys = append(keys, k.String())
 	}
+	assert.Contains(t, keys, "metric_start_time/otel_prometheus")
 	assert.Contains(t, keys, "transform/prometheus_scope")
 }

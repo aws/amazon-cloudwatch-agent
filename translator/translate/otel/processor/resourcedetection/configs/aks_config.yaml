@@ -1,3 +1,4 @@
 detectors: [env, aks, azure]
 override: true
 timeout: 2s
+ignore_detector_errors: true

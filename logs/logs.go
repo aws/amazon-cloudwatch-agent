@@ -9,12 +9,12 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 var ErrOutputStopped = errors.New("Output plugin stopped")
@@ -38,7 +38,7 @@ type StatefulLogEvent interface {
 }
 
 type LogEntityProvider interface {
-	Entity() *cloudwatchlogs.Entity
+	Entity() *types.Entity
 }
 
 // A LogSrc is a single source where log events are generated
@@ -50,7 +50,7 @@ type LogSrc interface {
 	Stream() string
 	Destination() string
 	Description() string
-	Retention() int
+	Retention() int32
 	Class() string
 	Stop()
 }
@@ -58,7 +58,7 @@ type LogSrc interface {
 // A LogBackend is able to return a LogDest of a given name.
 // The same name should always return the same LogDest.
 type LogBackend interface {
-	CreateDest(string, string, int, string, LogSrc) LogDest
+	CreateDest(string, string, int32, string, LogSrc) LogDest
 }
 
 // A LogDest represents a final endpoint where log events are published to.
@@ -178,7 +178,7 @@ func (l *LogAgent) runSrcToDest(src LogSrc, dest LogDest) {
 	}
 }
 
-func (l *LogAgent) checkRetentionAlreadyAttempted(retention int, logGroup string) int {
+func (l *LogAgent) checkRetentionAlreadyAttempted(retention int32, logGroup string) int32 {
 	if retention > 0 && l.retentionAlreadyAttempted[logGroup] {
 		log.Printf("D! [logagent] Retention already set for log group %s, current retention %d", logGroup, retention)
 		retention = -1

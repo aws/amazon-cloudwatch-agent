@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor"
@@ -15,6 +14,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
 
+	"github.com/aws/amazon-cloudwatch-agent/sdk/endpoints/awsrulesfn"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -392,6 +392,7 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	)
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(logsComponentName, logsEndpoint,
 		otlphttp.WithAuthenticator(headersSetterExt.ID()),
+		otlphttp.WithSendingQueueBatchMetadataKeys(metadataKeys...),
 	))
 	translators.Extensions.Set(headersSetterExt)
 
@@ -525,10 +526,9 @@ func setVariant(variant string) common.TranslatorOption {
 }
 
 func serviceEndpoint(service, region, path string) string {
-	partition, _ := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	dnsSuffix := partition.DNSSuffix()
-	if dnsSuffix == "" {
-		dnsSuffix = "amazonaws.com"
+	dnsSuffix := "amazonaws.com"
+	if partition := awsrulesfn.GetPartition(region); partition != nil && partition.DnsSuffix != "" {
+		dnsSuffix = partition.DnsSuffix
 	}
 	return fmt.Sprintf("https://%s.%s.%s%s", service, region, dnsSuffix, path)
 }

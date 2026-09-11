@@ -418,7 +418,7 @@ func TestTranslatorLogsBatch(t *testing.T) {
 
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Contains(t, collections.MapSlice(got.Processors.Keys(), component.ID.String), "batch/application_signals_logs")
-	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Equal(t, []string{"otlp_http/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "headers_setter/application_signals_logs")
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/logs")
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "awscloudwatchlogsprovisioner")
@@ -443,7 +443,7 @@ func TestTranslatorLogsNoBatch(t *testing.T) {
 
 	assert.Equal(t, []string{"routing/application_signals_logs"}, collections.MapSlice(got.Receivers.Keys(), component.ID.String))
 	assert.Empty(t, got.Processors.Keys())
-	assert.Equal(t, []string{"otlphttp/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
+	assert.Equal(t, []string{"otlp_http/application_signals_logs"}, collections.MapSlice(got.Exporters.Keys(), component.ID.String))
 	assert.Contains(t, collections.MapSlice(got.Extensions.Keys(), component.ID.String), "sigv4auth/logs")
 }
 

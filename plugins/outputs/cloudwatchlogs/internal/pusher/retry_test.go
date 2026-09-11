@@ -6,16 +6,22 @@ package pusher
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	sdkhttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	"github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var _ httpResponseError = (*smithyhttp.ResponseError)(nil)
+var _ httpResponseError = (*sdkhttp.ResponseError)(nil)
 
 func TestChooseRetryWaitStrategy(t *testing.T) {
 	t.Parallel()
@@ -24,31 +30,45 @@ func TestChooseRetryWaitStrategy(t *testing.T) {
 		expectedStrategy retryWaitStrategy
 	}{
 		"ResourceNotFoundException": {
-			err:              &cloudwatchlogs.ResourceNotFoundException{},
+			err:              &types.ResourceNotFoundException{},
 			expectedStrategy: retryShort,
 		},
 		"InvalidSequenceTokenException": {
-			err:              &cloudwatchlogs.InvalidSequenceTokenException{},
+			err:              &types.InvalidSequenceTokenException{},
 			expectedStrategy: retryShort,
 		},
 		"ServiceUnavailableException": {
-			err:              &cloudwatchlogs.ServiceUnavailableException{},
+			err:              &types.ServiceUnavailableException{},
 			expectedStrategy: retryLong,
 		},
 		"ThrottlingException": {
-			err:              &cloudwatchlogs.ThrottlingException{},
+			err:              &types.ThrottlingException{},
 			expectedStrategy: retryLong,
 		},
 		"500 - InternalFailure": {
-			err:              awserr.NewRequestFailure(awserr.New("500", "InternalFailure", nil), 500, ""),
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{
+						StatusCode: 500,
+					},
+				},
+				Err: errors.New("InternalFailure"),
+			},
 			expectedStrategy: retryLong,
 		},
 		"503 - ServiceUnavailable": {
-			err:              awserr.NewRequestFailure(awserr.New("503", "ServiceUnavailable", nil), 503, ""),
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{
+						StatusCode: 503,
+					},
+				},
+				Err: errors.New("ServiceUnavailable"),
+			},
 			expectedStrategy: retryLong,
 		},
 		"Connection Refused": {
-			err:              awserr.New("SomeError", "connection refused", nil),
+			err:              &smithy.GenericAPIError{Code: "SomeError", Message: "connection refused"},
 			expectedStrategy: retryLong,
 		},
 		"Connection Refused - syscall": {
@@ -56,7 +76,7 @@ func TestChooseRetryWaitStrategy(t *testing.T) {
 			expectedStrategy: retryLong,
 		},
 		"Connection Reset By Peer": {
-			err:              awserr.New("SomeError", "connection reset by peer", nil),
+			err:              &smithy.GenericAPIError{Code: "SomeError", Message: "connection reset by peer"},
 			expectedStrategy: retryLong,
 		},
 		"Connection Reset By Peer - syscall": {
@@ -68,11 +88,11 @@ func TestChooseRetryWaitStrategy(t *testing.T) {
 			expectedStrategy: retryLong,
 		},
 		"Request Timeout": {
-			err:              awserr.New("RequestTimeout", "request timed out", nil),
+			err:              &smithy.GenericAPIError{Code: "RequestTimeout", Message: "request timed out"},
 			expectedStrategy: retryLong,
 		},
 		"Response Timeout": {
-			err:              awserr.New("ResponseTimeout", "response timed out", nil),
+			err:              &smithy.GenericAPIError{Code: "ResponseTimeout", Message: "response timed out"},
 			expectedStrategy: retryLong,
 		},
 		"Deadline Exceeded": {

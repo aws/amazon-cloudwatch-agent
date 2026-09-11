@@ -110,7 +110,12 @@ func (t *translator) setJournaldFieldsFromConfig(cfg *awscloudwatchlogsexporter.
 	}
 
 	if retentionInDays, ok := t.collectConfig["retention_in_days"].(float64); ok {
-		cfg.LogRetention = int64(retentionInDays)
+		retention := int32(retentionInDays)
+		// The agent config schema uses -1 for "never expire"; the exporter expects 0 for the same.
+		if retention == -1 {
+			retention = 0
+		}
+		cfg.LogRetention = retention
 	}
 
 	return nil

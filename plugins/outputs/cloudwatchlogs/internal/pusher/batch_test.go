@@ -8,13 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 type mockEntityProvider struct {
@@ -23,12 +22,12 @@ type mockEntityProvider struct {
 
 var _ logs.LogEntityProvider = (*mockEntityProvider)(nil)
 
-func (m *mockEntityProvider) Entity() *cloudwatchlogs.Entity {
+func (m *mockEntityProvider) Entity() *types.Entity {
 	args := m.Called()
-	return args.Get(0).(*cloudwatchlogs.Entity)
+	return args.Get(0).(*types.Entity)
 }
 
-func newMockEntityProvider(entity *cloudwatchlogs.Entity) *mockEntityProvider {
+func newMockEntityProvider(entity *types.Entity) *mockEntityProvider {
 	ep := new(mockEntityProvider)
 	ep.On("Entity").Return(entity)
 	return ep
@@ -277,16 +276,16 @@ func TestLogEventBatch(t *testing.T) {
 	})
 
 	t.Run("WithEntityProvider", func(t *testing.T) {
-		testEntity := &cloudwatchlogs.Entity{
-			Attributes: map[string]*string{
-				"PlatformType":         aws.String("AWS::EC2"),
-				"EC2.InstanceId":       aws.String("i-123456789"),
-				"EC2.AutoScalingGroup": aws.String("test-group"),
+		testEntity := &types.Entity{
+			Attributes: map[string]string{
+				"PlatformType":         "AWS::EC2",
+				"EC2.InstanceId":       "i-123456789",
+				"EC2.AutoScalingGroup": "test-group",
 			},
-			KeyAttributes: map[string]*string{
-				"Name":         aws.String("myService"),
-				"Environment":  aws.String("myEnvironment"),
-				"AwsAccountId": aws.String("123456789"),
+			KeyAttributes: map[string]string{
+				"Name":         "myService",
+				"Environment":  "myEnvironment",
+				"AwsAccountId": "123456789",
 			},
 		}
 		mockProvider := newMockEntityProvider(testEntity)
