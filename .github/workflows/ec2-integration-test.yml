@@ -56,6 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data;
+      # account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(inputs.test_props) }}
     permissions:
