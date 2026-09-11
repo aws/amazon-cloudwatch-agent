@@ -16,9 +16,9 @@
 #     curl -fsSL <hosted-url>/install.sh | sudo sh
 #
 # Environment variables:
-#     CWAGENT_CLOUD         Target cloud: aws | azure (default: aws)
-#     CWAGENT_AWS_ROLE_ARN  AWS IAM role ARN (required for azure)
-#     CWAGENT_AWS_REGION    AWS region to send telemetry to (required for azure)
+#     CWAGENT_CLOUD         Target cloud: aws | azure | gcp (default: aws)
+#     CWAGENT_AWS_ROLE_ARN  AWS IAM role ARN (required for azure and gcp)
+#     CWAGENT_AWS_REGION    AWS region to send telemetry to (required for azure and gcp)
 
 main() {
      set -eu
@@ -32,13 +32,13 @@ main() {
 
      # --- validate ---
      case "${CLOUD}" in
-     aws | azure) ;;
-     *) die "unsupported cloud '${CLOUD}' (expected: aws, azure)" ;;
+     aws | azure | gcp) ;;
+     *) die "unsupported cloud '${CLOUD}' (expected: aws, azure, gcp)" ;;
      esac
 
-     if [ "${CLOUD}" = "azure" ]; then
-          [ -n "${ROLE_ARN}" ] || die "CWAGENT_AWS_ROLE_ARN is required for azure cloud"
-          [ -n "${REGION}" ] || die "CWAGENT_AWS_REGION is required for azure cloud"
+     if [ "${CLOUD}" != "aws" ]; then
+          [ -n "${ROLE_ARN}" ] || die "CWAGENT_AWS_ROLE_ARN is required for ${CLOUD} cloud"
+          [ -n "${REGION}" ] || die "CWAGENT_AWS_REGION is required for ${CLOUD} cloud"
      fi
 
      [ "$(id -u)" -eq 0 ] || die "must be run as root"
@@ -61,7 +61,7 @@ main() {
      # --- configure + start ---
      # Send the fetch-config transcript to stderr so stdout carries only the
      # status readout and success sentinel below.
-     if [ "${CLOUD}" = "azure" ]; then
+     if [ "${CLOUD}" != "aws" ]; then
           # CWAGENT_ROLE_ARN here is the agent's own env var (its default:otel
           # config expands ${CWAGENT_ROLE_ARN}), not the CWAGENT_AWS_ROLE_ARN
           # input read above. Do not rename it to match.
