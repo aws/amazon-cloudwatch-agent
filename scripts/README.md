@@ -84,6 +84,7 @@ CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_ROLE_ARN=arn:aws:iam::123456789012:role/C
 |-----------------------------------------|--------------------------------------------------------------------------|
 | `CWAGENT_PLATFORM`                      | `aws_ec2` \| `aws_ecs` \| `aws_eks` \| `azure_vm` \| `azure_aks`         |
 | `CWAGENT_AWS_ROLE_NAME`                 | IAM role name (default: `CloudWatchAgentServerRole`)                     |
+| `CWAGENT_AWS_ROLE_ARN`                  | IAM role ARN. `aws/setup.sh` derives the role name from it and fails when its partition or account does not match the shell's credentials. On Azure platforms, when set `azure/setup.sh` also installs |
 | `CWAGENT_AWS_REGION`                    | AWS region telemetry is sent to (required)                               |
 | `CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH` | When set (`1`/`true`/`yes`/`on`), enable Transaction Search if it is off |
 
@@ -99,7 +100,6 @@ CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_ROLE_ARN=arn:aws:iam::123456789012:role/C
 | `CWAGENT_AZURE_SUBSCRIPTION`       | `azure_vm`, `azure_aks` | Subscription ID or name (Cloud Shell's default is used when unset)                      |
 | `CWAGENT_AZURE_RESOURCE_GROUP`     | `azure_vm`, `azure_aks` | Resource group (not needed when `CWAGENT_AZURE_RESOURCE_ID` is set)                     |
 | `CWAGENT_AZURE_VM_NAME`            | `azure_vm`              | VM name (not needed when `CWAGENT_AZURE_RESOURCE_ID` is set)                            |
-| `CWAGENT_AWS_ROLE_ARN`             | `azure_vm`, `azure_aks` | IAM role ARN; when set, `azure/setup.sh` also installs                                  |
 | `CWAGENT_AZURE_TENANT_ID`          | `azure_vm`              | Azure tenant ID (produced by `azure/setup.sh`, consumed by `aws/setup.sh`)              |
 | `CWAGENT_AZURE_OIDC_ISSUER`        | `azure_aks`             | AKS OIDC issuer URL (produced by `azure/setup.sh`, consumed by `aws/setup.sh`)          |
 
