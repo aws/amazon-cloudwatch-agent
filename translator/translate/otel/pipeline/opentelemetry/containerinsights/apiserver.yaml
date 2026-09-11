@@ -29,6 +29,9 @@ receivers:
         tls_config:
           ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
           insecure_skip_verify: false
+{{- if .ApiserverTLSServerName }}
+          server_name: {{ .ApiserverTLSServerName }}
+{{- end }}
 processors:
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
