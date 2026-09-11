@@ -188,7 +188,23 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	assert.Empty(t, cmp.Diff(expected, actual, opt))
 }
 
-func TestDefaultOtelConfigTranslation(t *testing.T) {
+func TestDefaultOtelConfigOnPremTranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeOnPremise)
+	agent.Global_Config.Region = "us-west-2"
+
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_onprem.yaml")
+}
+
+func TestDefaultOtelConfigEC2Translation(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
 	agent.Global_Config.Region = "us-west-2"
@@ -201,7 +217,7 @@ func TestDefaultOtelConfigTranslation(t *testing.T) {
 
 	translator.SetTargetPlatform("linux")
 	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
-	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.yaml")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ec2.yaml")
 }
 
 func TestDefaultOtelConfigECSTranslation(t *testing.T) {
@@ -219,7 +235,7 @@ func TestDefaultOtelConfigECSTranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
-	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.conf")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_container.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.yaml")
 }
 
@@ -265,7 +281,7 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
-	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_k8s.conf")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_container.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.yaml")
 }
 
@@ -292,7 +308,7 @@ func TestDefaultOtelConfigGKETranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
-	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_k8s.conf")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_container.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_gke.yaml")
 }
 

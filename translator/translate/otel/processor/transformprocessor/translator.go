@@ -35,6 +35,9 @@ var transformDbiFixStartTimeConfig string
 //go:embed transform_identity_ec2.yaml
 var transformIdentityEC2Config string
 
+//go:embed transform_identity_fallback.yaml
+var transformIdentityFallbackConfig string
+
 //go:embed transform_identity_azure_vm.yaml
 var transformIdentityAzureVMConfig string
 
@@ -214,8 +217,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityAzureVMConfig)
 		case config.ModeGCE:
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityGCEConfig)
-		default:
+		case config.ModeEC2:
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityEC2Config)
+		default:
+			// On-prem and any unrecognized host mode. No cloud identity, so no cloud.resource_id;
+			// deployment.environment.name falls back to generic:default.
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityFallbackConfig)
 		}
 	}
 	if t.name == common.LogsRouting {
