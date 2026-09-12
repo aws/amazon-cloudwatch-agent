@@ -48,13 +48,15 @@ type metricAppender struct {
 	batch    PrometheusMetricBatch
 }
 
+// Start-timestamp zero samples are intentionally not stored. This appender feeds the Telegraf
+// EMF/CloudWatch path, which has no use for synthetic zero samples, and it opts out of the scrape
+// cache entirely by returning a zero SeriesRef (see Append below). The CT-named variants are the
+// pre-v0.311 spelling of the same hooks and are kept so both interface versions are satisfied.
 func (ma *metricAppender) AppendCTZeroSample(storage.SeriesRef, labels.Labels, int64, int64) (storage.SeriesRef, error) {
-	// TODO: implement this func
 	return 0, nil
 }
 
 func (ma *metricAppender) AppendSTZeroSample(storage.SeriesRef, labels.Labels, int64, int64) (storage.SeriesRef, error) {
-	// TODO: implement this func
 	return 0, nil
 }
 
@@ -63,12 +65,10 @@ func (ma *metricAppender) SetOptions(_ *storage.AppendOptions) {
 }
 
 func (ma *metricAppender) AppendHistogramCTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
-	// Implement basic handling or return nil if not needed
 	return 0, nil
 }
 
 func (ma *metricAppender) AppendHistogramSTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
-	// Implement basic handling or return nil if not needed
 	return 0, nil
 }
 
