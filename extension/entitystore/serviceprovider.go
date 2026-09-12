@@ -84,10 +84,18 @@ func (s *serviceprovider) startServiceProvider() {
 	if s.metadataProvider == nil {
 		return
 	}
-	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
-	unlimitedRetryerUntilSuccess := NewRetryer(true, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
-	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
-	go unlimitedRetryerUntilSuccess.refreshLoop(s.scrapeImdsServiceNameAndASG)
+	go s.newIAMRoleRetryer().refreshLoop(s.scrapeIAMRole)
+	go s.newInstanceTagsRetryer().refreshLoop(s.scrapeImdsServiceNameAndASG)
+}
+
+// newIAMRoleRetryer refreshes the IAM role for the life of the process.
+func (s *serviceprovider) newIAMRoleRetryer() *Retryer {
+	return NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
+}
+
+// newInstanceTagsRetryer stops after the first success or after maxRetry attempts.
+func (s *serviceprovider) newInstanceTagsRetryer() *Retryer {
+	return NewRetryer(true, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.BackoffSleepArray, maxRetry, s.done, s.logger)
 }
 
 func (s *serviceprovider) GetIAMRole() string {
