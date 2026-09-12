@@ -464,7 +464,8 @@ func main() {
 			}
 
 			if err := cmdwrapper.HandleSubcommand(subcommands, handlers); err != nil {
-				log.Fatalf("E! %s", err.Error())
+				// Subcommands route the package-level log to stdout; keep fatal errors on stderr.
+				log.New(os.Stderr, "", log.LstdFlags).Fatalf("E! %s", err.Error())
 			}
 			return
 		}
