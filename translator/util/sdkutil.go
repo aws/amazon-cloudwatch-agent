@@ -13,8 +13,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
-	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/azuredetector"
@@ -136,7 +136,10 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) string {
 
 	CheckAndSetHomeDir()
 
-	var opts []func(*config.LoadOptions) error
+	opts := []func(*config.LoadOptions) error{
+		config.WithLogger(configaws.SDKLogger{}),
+		config.WithClientLogMode(configaws.SDKLogLevel()),
+	}
 	if profileOK {
 		opts = append(opts, config.WithSharedConfigProfile(profile))
 	}
@@ -180,7 +183,8 @@ func detectRegion(mode string, credsConfig map[string]string) (string, string) {
 	if region == "" && mode == translatorconfig.ModeEC2 {
 
 		fmt.Println("I! Trying to detect region from ec2")
-		region = util.DefaultEC2Region(context.Background())
+		// IMDS requests are unsigned; use the IMDS-only ec2util singleton, not a credential session.
+		region = DefaultEC2Region()
 		regionType = translatorconfig.RegionTypeEC2Metadata
 	}
 

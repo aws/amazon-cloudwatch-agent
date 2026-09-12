@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 
+	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -88,7 +89,10 @@ func initEC2UtilSingleton() *EC2Util {
 }
 
 func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) error {
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithLogger(configaws.SDKLogger{}),
+		config.WithClientLogMode(configaws.SDKLogLevel()),
+	)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ package downloader
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,8 @@ const (
 )
 
 func RunDownloaderFromFlags(flags map[string]*string) error {
+	log.SetOutput(os.Stdout)
+
 	return RunDownloader(
 		*flags["mode"],
 		*flags["download-source"],

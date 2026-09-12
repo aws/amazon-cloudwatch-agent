@@ -34,6 +34,8 @@ type ConfigTranslator struct {
 }
 
 func RunTranslator(flags map[string]*string) error {
+	log.SetOutput(os.Stdout)
+
 	ct, err := NewConfigTranslator(
 		*flags["os"],
 		*flags["input"],
