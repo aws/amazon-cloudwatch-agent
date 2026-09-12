@@ -90,7 +90,6 @@ func isAgentStatsReset(stats agent.Stats) bool {
 		stats.PayloadBytes == nil &&
 		stats.StatusCode == nil &&
 		stats.SharedConfigFallback == nil &&
-		stats.ImdsFallbackSucceed == nil &&
 		stats.AppSignals == nil &&
 		stats.EnhancedContainerInsights == nil &&
 		stats.RunningInContainer == nil &&

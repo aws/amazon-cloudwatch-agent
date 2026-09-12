@@ -17,15 +17,13 @@ var (
 )
 
 const (
-	FlagIMDSFallbackSuccess Flag = iota
-	FlagSharedConfigFallback
+	FlagSharedConfigFallback Flag = iota
 	FlagAppSignal
 	FlagEnhancedContainerInsights
 	FlagRunningInContainer
 	FlagMode
 	FlagRegionType
 
-	flagIMDSFallbackSuccessStr       = "imds_fallback_success"
 	flagSharedConfigFallbackStr      = "shared_config_fallback"
 	flagAppSignalsStr                = "application_signals"
 	flagEnhancedContainerInsightsStr = "enhanced_container_insights"
@@ -45,8 +43,6 @@ func (f Flag) String() string {
 		return flagAppSignalsStr
 	case FlagEnhancedContainerInsights:
 		return flagEnhancedContainerInsightsStr
-	case FlagIMDSFallbackSuccess:
-		return flagIMDSFallbackSuccessStr
 	case FlagMode:
 		return flagModeStr
 	case FlagRegionType:
@@ -73,8 +69,6 @@ func (f *Flag) UnmarshalText(text []byte) error {
 		*f = FlagAppSignal
 	case flagEnhancedContainerInsightsStr:
 		*f = FlagEnhancedContainerInsights
-	case flagIMDSFallbackSuccessStr:
-		*f = FlagIMDSFallbackSuccess
 	case flagModeStr:
 		*f = FlagMode
 	case flagRegionTypeStr:
