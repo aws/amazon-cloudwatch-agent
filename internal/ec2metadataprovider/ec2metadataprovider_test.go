@@ -44,7 +44,11 @@ func mockIMDSServer(t *testing.T, v2Enabled bool, responses map[string]string) *
 	}))
 }
 
-func createTestProvider(serverURL string, retries int) MetadataProvider {
+func createTestProvider(t *testing.T, serverURL string, retries int) MetadataProvider {
+	t.Helper()
+	// Keep the tests hermetic: the IMDS client reads these from the environment.
+	t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
+	t.Setenv("AWS_EC2_METADATA_V1_DISABLED", "false")
 	return newMetadataProvider(aws.Config{}, retries, func(o *imds.Options) {
 		o.Endpoint = serverURL
 	})
@@ -76,7 +80,7 @@ func TestMetadataProvider_Get(t *testing.T) {
 			})
 			defer server.Close()
 
-			provider := createTestProvider(server.URL, 1)
+			provider := createTestProvider(t, server.URL, 1)
 			doc, err := provider.Get(t.Context())
 
 			require.NoError(t, err)
@@ -110,7 +114,7 @@ func TestMetadataProvider_InstanceID(t *testing.T) {
 			})
 			defer server.Close()
 
-			provider := createTestProvider(server.URL, 1)
+			provider := createTestProvider(t, server.URL, 1)
 			instanceID, err := provider.InstanceID(t.Context())
 
 			require.NoError(t, err)
@@ -141,7 +145,7 @@ func TestMetadataProvider_Hostname(t *testing.T) {
 			})
 			defer server.Close()
 
-			provider := createTestProvider(server.URL, 1)
+			provider := createTestProvider(t, server.URL, 1)
 			hostname, err := provider.Hostname(t.Context())
 
 			require.NoError(t, err)
@@ -175,7 +179,7 @@ func TestMetadataProvider_InstanceTags(t *testing.T) {
 			})
 			defer server.Close()
 
-			provider := createTestProvider(server.URL, 1)
+			provider := createTestProvider(t, server.URL, 1)
 			tags, err := provider.InstanceTags(t.Context())
 
 			require.NoError(t, err)
@@ -206,7 +210,7 @@ func TestMetadataProvider_ClientIAMRole(t *testing.T) {
 			})
 			defer server.Close()
 
-			provider := createTestProvider(server.URL, 1)
+			provider := createTestProvider(t, server.URL, 1)
 			roleName, err := provider.ClientIAMRole(t.Context())
 
 			require.NoError(t, err)
@@ -240,7 +244,7 @@ func TestMetadataProvider_InstanceTagValue(t *testing.T) {
 			})
 			defer server.Close()
 
-			provider := createTestProvider(server.URL, 1)
+			provider := createTestProvider(t, server.URL, 1)
 			tagValue, err := provider.InstanceTagValue(t.Context(), testCase.tagKey)
 
 			require.NoError(t, err)
@@ -256,7 +260,7 @@ func TestMetadataProvider_ErrorHandling(t *testing.T) {
 		}))
 		defer server.Close()
 
-		provider := createTestProvider(server.URL, 0)
+		provider := createTestProvider(t, server.URL, 0)
 		_, err := provider.InstanceID(t.Context())
 
 		assert.Error(t, err)
