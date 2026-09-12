@@ -14,8 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 )
 
 func mockIMDSServer(t *testing.T, v2Enabled bool, responses map[string]string) *httptest.Server {
@@ -61,16 +59,13 @@ func TestMetadataProvider_Get(t *testing.T) {
 	}`
 
 	testCases := map[string]struct {
-		v2Enabled    bool
-		wantFallback bool
+		v2Enabled bool
 	}{
 		"v2_enabled": {
-			v2Enabled:    true,
-			wantFallback: false,
+			v2Enabled: true,
 		},
 		"v2_disabled_fallback_to_v1": {
-			v2Enabled:    false,
-			wantFallback: true,
+			v2Enabled: false,
 		},
 	}
 
@@ -89,29 +84,22 @@ func TestMetadataProvider_Get(t *testing.T) {
 			assert.Equal(t, "us-west-2", doc.Region)
 			assert.Equal(t, "us-west-2a", doc.AvailabilityZone)
 			assert.Equal(t, "t3.micro", doc.InstanceType)
-
-			if testCase.wantFallback {
-				assert.True(t, agent.UsageFlags().IsSet(agent.FlagIMDSFallbackSuccess))
-			}
 		})
 	}
 }
 
 func TestMetadataProvider_InstanceID(t *testing.T) {
 	testCases := map[string]struct {
-		v2Enabled    bool
-		instanceID   string
-		wantFallback bool
+		v2Enabled  bool
+		instanceID string
 	}{
 		"v2_enabled": {
-			v2Enabled:    true,
-			instanceID:   "i-1234567890abcdef0",
-			wantFallback: false,
+			v2Enabled:  true,
+			instanceID: "i-1234567890abcdef0",
 		},
 		"v2_disabled_fallback_to_v1": {
-			v2Enabled:    false,
-			instanceID:   "i-0987654321fedcba0",
-			wantFallback: true,
+			v2Enabled:  false,
+			instanceID: "i-0987654321fedcba0",
 		},
 	}
 
@@ -127,10 +115,6 @@ func TestMetadataProvider_InstanceID(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, testCase.instanceID, instanceID)
-
-			if testCase.wantFallback {
-				assert.True(t, agent.UsageFlags().IsSet(agent.FlagIMDSFallbackSuccess))
-			}
 		})
 	}
 }

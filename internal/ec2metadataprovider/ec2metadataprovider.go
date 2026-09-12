@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
-	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
 	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 )
 
@@ -109,9 +108,6 @@ func withMetadataFallbackRetry[T any](c *metadataClient, fn func(*imds.Client) (
 	if err != nil {
 		log.Printf("D! Could not perform operation without IMDS v1 fallback enabled. Enabling fallback.")
 		result, err = fn(c.v1Client)
-		if err == nil {
-			agent.UsageFlags().Set(agent.FlagIMDSFallbackSuccess)
-		}
 	}
 	return result, err
 }

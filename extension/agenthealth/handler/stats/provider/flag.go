@@ -30,7 +30,6 @@ type flagStats struct {
 
 func (p *flagStats) update() {
 	p.stats.Store(agent.Stats{
-		ImdsFallbackSucceed:       boolToSparseInt(p.flagSet.IsSet(agent.FlagIMDSFallbackSuccess)),
 		SharedConfigFallback:      boolToSparseInt(p.flagSet.IsSet(agent.FlagSharedConfigFallback)),
 		AppSignals:                boolToSparseInt(p.flagSet.IsSet(agent.FlagAppSignal)),
 		EnhancedContainerInsights: boolToSparseInt(p.flagSet.IsSet(agent.FlagEnhancedContainerInsights)),
