@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,7 +53,7 @@ func createTestProvider(t *testing.T, serverURL string, retries int) MetadataPro
 	// Keep the tests hermetic: the IMDS client reads these from the environment.
 	t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
 	t.Setenv("AWS_EC2_METADATA_V1_DISABLED", "false")
-	return newMetadataProvider(aws.Config{}, retries, func(o *imds.Options) {
+	return newMetadataProvider(aws.Config{}, nil, retries, func(o *imds.Options) {
 		o.Endpoint = serverURL
 	})
 }
@@ -265,4 +269,90 @@ func TestMetadataProvider_ErrorHandling(t *testing.T) {
 
 		assert.Error(t, err)
 	})
+}
+
+// v1OnlyIMDSServer rejects every IMDSv2 token request and serves metadata to
+// token-less (IMDSv1) requests, counting both.
+func v1OnlyIMDSServer(t *testing.T) (*httptest.Server, *atomic.Int32, *atomic.Int32) {
+	t.Helper()
+	var tokenPuts, tokenlessGets atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/latest/api/token" {
+			tokenPuts.Add(1)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		if r.Header.Get("X-aws-ec2-metadata-token") == "" {
+			tokenlessGets.Add(1)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("i-1234567890abcdef0"))
+	}))
+	t.Cleanup(server.Close)
+	return server, &tokenPuts, &tokenlessGets
+}
+
+func TestMetadataProvider_IMDSv1OptOut(t *testing.T) {
+	testCases := map[string]struct {
+		env          string
+		sharedConfig string
+		wantErr      bool
+	}{
+		"fallback_allowed":               {env: "false"},
+		"env_opt_out":                    {env: "true", wantErr: true},
+		"shared_config_opt_out":          {sharedConfig: "[default]\nec2_metadata_v1_disabled = true\n", wantErr: true},
+		"env_false_overrides_shared_cfg": {env: "false", sharedConfig: "[default]\nec2_metadata_v1_disabled = true\n"},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			server, tokenPuts, tokenlessGets := v1OnlyIMDSServer(t)
+
+			t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
+			t.Setenv("AWS_EC2_METADATA_V1_DISABLED", testCase.env)
+			t.Setenv("AWS_PROFILE", "")
+			sharedConfigFiles := []string{}
+			if testCase.sharedConfig != "" {
+				path := filepath.Join(t.TempDir(), "config")
+				require.NoError(t, os.WriteFile(path, []byte(testCase.sharedConfig), 0o600))
+				sharedConfigFiles = []string{path}
+			}
+			cfg, err := config.LoadDefaultConfig(t.Context(),
+				config.WithSharedConfigFiles(sharedConfigFiles),
+				config.WithSharedCredentialsFiles([]string{}))
+			require.NoError(t, err)
+
+			provider := newMetadataProvider(cfg, nil, 0, func(o *imds.Options) {
+				o.Endpoint = server.URL
+			})
+			id, err := provider.InstanceID(t.Context())
+
+			assert.Positive(t, tokenPuts.Load(), "IMDSv2 must be attempted first")
+			if testCase.wantErr {
+				assert.Error(t, err)
+				assert.Zero(t, tokenlessGets.Load(), "opted-out client must not send token-less requests")
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, "i-1234567890abcdef0", id)
+			assert.Positive(t, tokenlessGets.Load(), "fallback should have used IMDSv1")
+		})
+	}
+}
+
+// A config without ConfigSources (e.g. a zero aws.Config substituted after a
+// failed load) cannot carry the shared-config opt-out, but the environment
+// opt-out must still be honored.
+func TestMetadataProvider_IMDSv1OptOut_ZeroConfig(t *testing.T) {
+	server, tokenPuts, tokenlessGets := v1OnlyIMDSServer(t)
+	t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
+	t.Setenv("AWS_EC2_METADATA_V1_DISABLED", "true")
+
+	provider := newMetadataProvider(aws.Config{}, nil, 0, func(o *imds.Options) {
+		o.Endpoint = server.URL
+	})
+	_, err := provider.InstanceID(t.Context())
+
+	assert.Positive(t, tokenPuts.Load(), "IMDSv2 must be attempted first")
+	assert.Error(t, err)
+	assert.Zero(t, tokenlessGets.Load(), "opted-out client must not send token-less requests")
 }

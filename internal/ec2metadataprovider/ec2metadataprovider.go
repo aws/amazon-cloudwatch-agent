@@ -6,13 +6,12 @@ package ec2metadataprovider
 import (
 	"context"
 	"io"
-	"log"
 	"strings"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
+	"go.uber.org/zap"
 )
 
 type MetadataProvider interface {
@@ -25,29 +24,29 @@ type MetadataProvider interface {
 }
 
 type metadataClient struct {
-	// v2Client has fallback disabled, so it only tries to call IMDSv2.
-	v2Client *imds.Client
-	// v1Client has fallback enabled, so it will try to get the IMDSv2 token first and on failure will use IMDSv1.
-	v1Client *imds.Client
+	client *override.IMDSClient
 }
 
 var _ MetadataProvider = (*metadataClient)(nil)
 
-func NewMetadataProvider(cfg aws.Config, retries int) MetadataProvider {
-	return newMetadataProvider(cfg, retries)
+// NewMetadataProvider returns a MetadataProvider backed by the shared IMDS client.
+// logger may be nil, in which case IMDS retry and fallback decisions are not logged.
+func NewMetadataProvider(cfg aws.Config, logger *zap.Logger, retries int) MetadataProvider {
+	return newMetadataProvider(cfg, logger, retries)
 }
 
-func newMetadataProvider(cfg aws.Config, retries int, optFns ...func(*imds.Options)) MetadataProvider {
-	v2Options := append(optFns, func(o *imds.Options) {
-		o.Retryer = retryer.NewIMDSRetryer(retries)
-		o.EnableFallback = aws.FalseTernary
-	})
-	v1Options := append(optFns, func(o *imds.Options) {
-		o.EnableFallback = aws.TrueTernary
-	})
+func newMetadataProvider(cfg aws.Config, logger *zap.Logger, retries int, optFns ...func(*imds.Options)) MetadataProvider {
 	return &metadataClient{
-		v2Client: imds.NewFromConfig(cfg, v2Options...),
-		v1Client: imds.NewFromConfig(cfg, v1Options...),
+		client: override.NewIMDSClientFromConfig(cfg, logger, retries, optFns...),
+	}
+}
+
+// NewMetadataProviderWithoutConfig returns a MetadataProvider that does not depend on an
+// aws.Config, for callers that run before one can be loaded. The IMDSv1 opt-out is resolved
+// from the environment only.
+func NewMetadataProviderWithoutConfig(logger *zap.Logger, retries int, optFns ...func(*imds.Options)) MetadataProvider {
+	return &metadataClient{
+		client: override.NewIMDSClient(logger, retries, optFns...),
 	}
 }
 
@@ -76,38 +75,21 @@ func (c *metadataClient) InstanceTagValue(ctx context.Context, tagKey string) (s
 }
 
 func (c *metadataClient) Get(ctx context.Context) (imds.InstanceIdentityDocument, error) {
-	return withMetadataFallbackRetry(c, func(client *imds.Client) (imds.InstanceIdentityDocument, error) {
-		out, err := client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
-		if err != nil {
-			return imds.InstanceIdentityDocument{}, err
-		}
-		return out.InstanceIdentityDocument, nil
-	})
+	out, err := c.client.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
+		return imds.InstanceIdentityDocument{}, err
+	}
+	return out.InstanceIdentityDocument, nil
 }
 
 func (c *metadataClient) getMetadata(ctx context.Context, path string) (string, error) {
-	return withMetadataFallbackRetry(c, func(client *imds.Client) (string, error) {
-		out, err := client.GetMetadata(ctx, &imds.GetMetadataInput{
-			Path: path,
-		})
-		if err != nil {
-			return "", err
-		}
-		content, err := io.ReadAll(out.Content)
-		if err != nil {
-			return "", err
-		}
-		return string(content), nil
-	})
-}
-
-// withMetadataFallbackRetry each fn call will first try the IMDS v2 client before falling back and retrying with the
-// IMDS v1 client.
-func withMetadataFallbackRetry[T any](c *metadataClient, fn func(*imds.Client) (T, error)) (T, error) {
-	result, err := fn(c.v2Client)
+	out, err := c.client.GetMetadata(ctx, &imds.GetMetadataInput{Path: path})
 	if err != nil {
-		log.Printf("D! Could not perform operation without IMDS v1 fallback enabled. Enabling fallback.")
-		result, err = fn(c.v1Client)
+		return "", err
 	}
-	return result, err
+	content, err := io.ReadAll(out.Content)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

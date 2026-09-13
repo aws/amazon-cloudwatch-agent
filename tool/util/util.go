@@ -16,12 +16,12 @@ import (
 	"strconv"
 	"strings"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/data/interfaze"
 	"github.com/aws/amazon-cloudwatch-agent/tool/runtime"
 	"github.com/aws/amazon-cloudwatch-agent/tool/stdin"
@@ -197,7 +197,7 @@ func DefaultEC2Region(ctx context.Context) string {
 		return ""
 	}
 
-	mdProvider := ec2metadataprovider.NewMetadataProvider(awsCfg, retryer.GetDefaultRetryNumber())
+	mdProvider := ec2metadataprovider.NewMetadataProvider(awsCfg, nil, override.GetDefaultRetryNumber())
 	if info, err := mdProvider.Get(ctx); err != nil {
 		fmt.Printf("W! could not get region from ec2 metadata... %v", err)
 	} else {
