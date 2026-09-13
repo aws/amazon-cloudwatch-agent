@@ -81,7 +81,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 		Config:           config,
 		logger:           logger,
 		cancelFunc:       cancel,
-		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCfg, config.IMDSRetries),
+		metadataProvider: ec2metadataprovider.NewMetadataProvider(mdCfg, logger, config.IMDSRetries),
 	}
 	p.ec2Provider = p.createEC2Client
 	return p

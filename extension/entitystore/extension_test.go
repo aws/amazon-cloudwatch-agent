@@ -83,7 +83,7 @@ type mockMetadataProvider struct {
 
 var _ ec2metadataprovider.MetadataProvider = (*mockMetadataProvider)(nil)
 
-func mockMetadataProviderFunc(context.Context) ec2metadataprovider.MetadataProvider {
+func mockMetadataProviderFunc(context.Context, *zap.Logger) ec2metadataprovider.MetadataProvider {
 	return &mockMetadataProvider{
 		Tags: map[string]string{
 			"aws:autoscaling:groupName": "ASG-1",

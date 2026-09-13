@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"os"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsxrayexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -81,7 +81,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
 		cfg.AWSSessionSettings.Endpoint = endpointOverride
 	}
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.AWSSessionSettings.LocalMode = true
 	}

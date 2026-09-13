@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/jellydator/ttlcache/v3"
@@ -21,7 +22,6 @@ import (
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 )
@@ -84,7 +84,7 @@ func (e *EntityStore) Start(ctx context.Context, _ component.Host) error {
 	// These will be passed down to any object that requires access to IMDS or EC2
 	// API client so we have single source of truth for credential
 	e.done = make(chan struct{})
-	e.metadataprovider = getMetaDataProvider(ctx)
+	e.metadataprovider = getMetaDataProvider(ctx, e.logger)
 	e.mode = e.config.Mode
 	e.kubernetesMode = e.config.KubernetesMode
 	e.podTerminationCheckInterval = podTerminationCheckInterval
@@ -294,13 +294,13 @@ var (
 	getEnv       = os.Getenv
 	getK8sConfig = rest.InClusterConfig
 
-	getMetaDataProvider = func(ctx context.Context) ec2metadataprovider.MetadataProvider {
+	getMetaDataProvider = func(ctx context.Context, logger *zap.Logger) ec2metadataprovider.MetadataProvider {
 		mdCredentialConfig := &configaws.CredentialsConfig{}
 		cfg, err := mdCredentialConfig.LoadConfig(ctx)
 		if err != nil {
 			cfg = aws.Config{}
 		}
-		return ec2metadataprovider.NewMetadataProvider(cfg, retryer.GetDefaultRetryNumber())
+		return ec2metadataprovider.NewMetadataProvider(cfg, logger, override.GetDefaultRetryNumber())
 	}
 )
 

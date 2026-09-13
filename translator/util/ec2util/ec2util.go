@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 )
@@ -81,23 +81,16 @@ func initEC2UtilSingleton() *EC2Util {
 		fmt.Println("E! [EC2] No available network interface")
 	}
 
-	if err := newInstance.deriveEC2MetadataFromIMDS(context.Background()); err != nil {
-		fmt.Println("E! [EC2] Cannot get EC2 Metadata from IMDS:", err)
-	}
+	newInstance.deriveEC2MetadataFromIMDS(context.Background())
 
 	return newInstance
 }
 
-func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) error {
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithLogger(configaws.SDKLogger{}),
-		config.WithClientLogMode(configaws.SDKLogLevel()),
-	)
-	if err != nil {
-		return err
-	}
-
-	mdProvider := ec2metadataprovider.NewMetadataProvider(cfg, retryer.GetDefaultRetryNumber())
+func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) {
+	mdProvider := ec2metadataprovider.NewMetadataProviderWithoutConfig(nil, override.GetDefaultRetryNumber(), func(o *imds.Options) {
+		o.Logger = configaws.SDKLogger{}
+		o.ClientLogMode = configaws.SDKLogLevel()
+	})
 	// ec2 and ecs treats retries for getting host name differently
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
 	if hostname, err := mdProvider.Hostname(ctx); err != nil {
@@ -117,6 +110,4 @@ func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) error {
 		e.InstanceType = instanceIdentityDocument.InstanceType
 		e.ImageID = instanceIdentityDocument.ImageID
 	}
-
-	return nil
 }
