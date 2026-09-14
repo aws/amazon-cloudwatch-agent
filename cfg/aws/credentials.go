@@ -7,6 +7,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -46,19 +47,25 @@ func (c *CredentialsConfig) rootConfig(ctx context.Context) (aws.Config, error) 
 	return c.loadConfig(ctx, c.fromChain())
 }
 
-func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
-	cfgFiles := getFallbackSharedConfigFiles(backwardsCompatibleUserHomeDir)
-	log.Printf("D! Fallback shared config file(s): %v", cfgFiles)
+func (c *CredentialsConfig) loadOptions(provider aws.CredentialsProvider) []func(*config.LoadOptions) error {
+	credentialsFiles, configFiles := getFallbackSharedConfigFiles(backwardsCompatibleUserHomeDir)
+	log.Printf("D! Fallback shared credentials file(s): %v, shared config file(s): %v", credentialsFiles, configFiles)
 	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(c.Region),
 		config.WithHTTPClient(getSharedHTTPClient()),
 		config.WithClientLogMode(SDKLogLevel()),
 		config.WithLogger(SDKLogger{}),
-		config.WithSharedCredentialsFiles(cfgFiles),
+		config.WithSharedCredentialsFiles(credentialsFiles),
+		config.WithSharedConfigFiles(configFiles),
 	}
 	if provider != nil {
 		opts = append(opts, config.WithCredentialsProvider(provider))
 	}
+	return opts
+}
+
+func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.CredentialsProvider) (aws.Config, error) {
+	opts := c.loadOptions(provider)
 	cfg, err := config.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		log.Printf("E! Failed to create credential sessions, retrying in 15s, error was '%s'", err)
@@ -78,8 +85,8 @@ func (c *CredentialsConfig) loadConfig(ctx context.Context, provider aws.Credent
 	}
 	if cred.Source == ec2rolecreds.ProviderName {
 		var found []string
-		cfgFiles = getFallbackSharedConfigFiles(currentUserHomeDir)
-		for _, cfgFile := range cfgFiles {
+		credentialsFiles, configFiles := getFallbackSharedConfigFiles(currentUserHomeDir)
+		for _, cfgFile := range slices.Concat(credentialsFiles, configFiles) {
 			if _, err = os.Stat(cfgFile); err == nil {
 				found = append(found, cfgFile)
 			}
@@ -122,7 +129,7 @@ func init() {
 	staticCredentialsProvider := CredentialsProvider{
 		Name: func() string { return "StaticCredentialsProvider" },
 		Provider: func(c *CredentialsConfig) aws.CredentialsProvider {
-			if c.AccessKey != "" && c.SecretKey != "" {
+			if c.AccessKey != "" || c.SecretKey != "" {
 				return aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(c.AccessKey, c.SecretKey, c.Token))
 			}
 			return nil
