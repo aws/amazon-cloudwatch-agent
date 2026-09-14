@@ -24,6 +24,7 @@ type RefreshableSharedCredentialsProvider struct {
 	// Provider is the underlying SharedCredentialsProvider.
 	Provider SharedCredentialsProvider
 	// Retrieval frequency, if the value is 15 minutes, the credentials will be retrieved every 15 minutes.
+	// Zero means defaultExpiryWindow.
 	ExpiryWindow time.Duration
 }
 
@@ -34,8 +35,12 @@ func (p RefreshableSharedCredentialsProvider) Retrieve(ctx context.Context) (aws
 	if err != nil {
 		return aws.Credentials{}, err
 	}
+	window := p.ExpiryWindow
+	if window == 0 {
+		window = defaultExpiryWindow
+	}
 	credentials.CanExpire = true
-	credentials.Expires = time.Now().Add(p.ExpiryWindow)
+	credentials.Expires = time.Now().Add(window)
 	return credentials, nil
 }
 

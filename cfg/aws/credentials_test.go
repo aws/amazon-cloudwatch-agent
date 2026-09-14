@@ -161,11 +161,20 @@ func TestDefaultCredentialsChain(t *testing.T) {
 		},
 		"Refreshable": {
 			cfg: &CredentialsConfig{
+				Profile:  "P",
+				Filename: "F",
+			},
+			wantProvider: RefreshableSharedCredentialsProvider{},
+		},
+		// A half-configured static pair must select the static provider (which then fails on
+		// retrieval) rather than silently falling through to a different identity.
+		"StaticHalfPair": {
+			cfg: &CredentialsConfig{
 				AccessKey: "A",
 				Profile:   "P",
 				Filename:  "F",
 			},
-			wantProvider: RefreshableSharedCredentialsProvider{},
+			wantProvider: credentials.StaticCredentialsProvider{},
 		},
 		"NotInChain": {
 			cfg:          &CredentialsConfig{},
@@ -184,6 +193,64 @@ func TestDefaultCredentialsChain(t *testing.T) {
 			} else {
 				assert.Nil(t, provider)
 			}
+		})
+	}
+}
+
+func TestDefaultCredentialsChain_StaticHalfPairFailsLoudly(t *testing.T) {
+	for name, cfg := range map[string]*CredentialsConfig{
+		"access_key_only": {AccessKey: "A"},
+		"secret_key_only": {SecretKey: "S"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			provider := cfg.fromChain()
+			require.NotNil(t, provider)
+			_, err := provider.Retrieve(t.Context())
+			var emptyErr *credentials.StaticCredentialsEmptyError
+			assert.ErrorAs(t, err, &emptyErr)
+		})
+	}
+}
+
+// The SDK falls back to its default ~/.aws/config whenever SharedConfigFiles is nil, and
+// otherwise honors AWS_CONFIG_FILE via EnvConfig. Either way the shared config file must not
+// participate in resolution unless AWS_SDK_LOAD_CONFIG is truthy.
+func TestCredentialsConfig_LoadConfig_SharedConfigGate(t *testing.T) {
+	dir := t.TempDir()
+	cfgFile := filepath.Join(dir, "config")
+	require.NoError(t, os.WriteFile(cfgFile, []byte(
+		"[default]\nregion = eu-west-3\naws_access_key_id = AKIDFROMCONFIGFILE\n"+
+			"aws_secret_access_key = secretFromConfigFile\n"), 0o600))
+
+	for _, tc := range []struct {
+		name, gate  string
+		wantHonored bool
+	}{
+		{"unset", "", false}, {"false", "false", false}, {"true", "true", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, k := range []string{
+				"AWS_PROFILE", "AWS_REGION", "AWS_DEFAULT_REGION",
+				"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+			} {
+				t.Setenv(k, "")
+			}
+			t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+			t.Setenv(envAwsSharedConfigFile, cfgFile)
+			t.Setenv(envAwsSharedCredentialsFile, filepath.Join(dir, "no-such-credentials"))
+			t.Setenv(envAwsSdkLoadConfig, tc.gate)
+
+			cfg, err := (&CredentialsConfig{}).LoadConfig(t.Context())
+			require.NoError(t, err)
+			creds, credErr := cfg.Credentials.Retrieve(t.Context())
+			if tc.wantHonored {
+				require.NoError(t, credErr)
+				assert.Equal(t, "AKIDFROMCONFIGFILE", creds.AccessKeyID)
+				assert.Equal(t, "eu-west-3", cfg.Region)
+				return
+			}
+			assert.Empty(t, cfg.Region, "region must not come from the shared config file")
+			assert.NotEqual(t, "AKIDFROMCONFIGFILE", creds.AccessKeyID)
 		})
 	}
 }

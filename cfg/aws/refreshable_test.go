@@ -114,3 +114,18 @@ func TestSharedCredentialsProvider_IgnoresSharedConfigFile(t *testing.T) {
 	_, err := p.Retrieve(t.Context())
 	require.Error(t, err)
 }
+
+func TestRefreshableSharedCredentialsProvider_DefaultsExpiryWindow(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "credentials")
+	require.NoError(t, os.WriteFile(file, []byte("[default]\naws_access_key_id = AKID\naws_secret_access_key = SECRET\n"), 0o600))
+
+	provider := RefreshableSharedCredentialsProvider{
+		Provider: SharedCredentialsProvider{Filename: file, Profile: "default"},
+	}
+	before := time.Now()
+	creds, err := provider.Retrieve(t.Context())
+	require.NoError(t, err)
+	assert.True(t, creds.CanExpire)
+	assert.False(t, creds.Expires.Before(before.Add(defaultExpiryWindow-time.Minute)), "zero ExpiryWindow must default, not expire immediately")
+}
