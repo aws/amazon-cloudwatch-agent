@@ -2184,7 +2184,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arrays: [{ wip: true }]
+        arrays: [{ wip: false }]
     permissions:
       id-token: write
       contents: read
