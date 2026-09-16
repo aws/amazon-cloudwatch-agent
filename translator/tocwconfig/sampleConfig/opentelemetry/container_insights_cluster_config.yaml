@@ -526,6 +526,7 @@ processors:
                 - delete_matching_keys(resource.attributes, "^host.") where resource.attributes["_tmp.cluster_scoped"] == true
                 - delete_key(resource.attributes, "cloud.availability_zone") where resource.attributes["_tmp.cluster_scoped"] == true
                 - delete_matching_keys(resource.attributes, "^ec2.tag.") where resource.attributes["_tmp.cluster_scoped"] == true
+                - delete_matching_keys(resource.attributes, "^azure.vm.") where resource.attributes["_tmp.cluster_scoped"] == true
                 - delete_key(resource.attributes, "_tmp.cluster_scoped")
         trace_statements: []
     transform/cw_k8s_ci_v0_apiserver_cleanup_version:
