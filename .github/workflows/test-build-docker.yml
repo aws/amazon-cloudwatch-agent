@@ -31,6 +31,11 @@ on:
         required: false
         type: string
         default: ""
+      CacheKeyOverride:
+        description: "Optional cache key namespace; defaults to github.sha."
+        required: false
+        type: string
+        default: ""
   workflow_call:
     inputs:
       ContainerRepositoryNameAndTag:
@@ -53,6 +58,11 @@ on:
         type: string
       ArchTagSuffix:
         description: "Optional suffix appended to per-arch image tags (e.g. -<sha>)."
+        required: false
+        type: string
+        default: ""
+      CacheKeyOverride:
+        description: "Optional cache key namespace; defaults to github.sha."
         required: false
         type: string
         default: ""
@@ -82,7 +92,7 @@ jobs:
         id: cached_container
         uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c # v3.5.0
         with:
-          key: "cached_container_${{ github.sha }}"
+          key: "cached_container_${{ inputs.CacheKeyOverride != '' && inputs.CacheKeyOverride || github.sha }}"
           path: go.mod
 
       - name: Login ECR
