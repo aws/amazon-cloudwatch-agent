@@ -2043,13 +2043,7 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/vm
-            terraform destroy --auto-approve \
-              -var="region=us-east-2" \
-              -var="runner_ip=$RUNNER_IP" \
-              -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
-              -var="azure_vnet_name=$AZURE_VNET_NAME" \
-              -var="azure_oidc_provider_arn=$AZURE_OIDC_PROVIDER_ARN" \
-              -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
+            terraform destroy --auto-approve -var="region=us-east-2" -var="runner_ip=$RUNNER_IP" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="azure_oidc_provider_arn=$AZURE_OIDC_PROVIDER_ARN" -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
 
   AKSIntegrationTest:
     needs: [OutputEnvVariables]
@@ -2179,12 +2173,7 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/aks
-            terraform destroy --auto-approve \
-              -var="region=us-east-2" \
-              -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
-              -var="cwagent_image_tag=$BUILD_ID" \
-              -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
-              -var="azure_vnet_name=$AZURE_VNET_NAME" \
+            terraform destroy --auto-approve -var="region=us-east-2" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
 
   AKSContainerInsightsIntegrationTest:
     needs: [OutputEnvVariables]
@@ -2315,13 +2304,5 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/aks
-            terraform destroy --auto-approve \
-              -var="region=us-east-2" \
-              -var="test_mode=containerinsights" \
-              -var="test_dir=./test/azure/aks/containerinsights" \
-              -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
-              -var="cwagent_image_tag=$BUILD_ID" \
-              -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
-              -var="azure_vnet_name=$AZURE_VNET_NAME" \
-              -var="runner_ip=$RUNNER_IP"
-              -var="runner_ip=$RUNNER_IP"
+            terraform destroy --auto-approve -var="region=us-east-2" -var="test_mode=containerinsights" -var="test_dir=./test/azure/aks/containerinsights" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
+
