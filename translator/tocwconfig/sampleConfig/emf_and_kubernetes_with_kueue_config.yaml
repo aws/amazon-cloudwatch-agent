@@ -602,6 +602,20 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
+              include: aws_ebs_csi_write_ops_total
+              match_type: ""
+              new_name: node_diskio_ebs_total_write_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeEBS
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
               include: aws_ebs_csi_read_bytes_total
               match_type: ""
               new_name: node_diskio_ebs_total_read_bytes
@@ -742,20 +756,6 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ebs_csi_write_ops_total
-              match_type: ""
-              new_name: node_diskio_ebs_total_write_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeEBS
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: aws_ec2_instance_store_csi_read_ops_total
               match_type: ""
               new_name: node_diskio_instance_store_total_read_ops
@@ -770,37 +770,9 @@ processors:
               submatch_case: ""
             - action: update
               aggregation_type: ""
-              include: aws_ec2_instance_store_csi_write_ops_total
-              match_type: ""
-              new_name: node_diskio_instance_store_total_write_ops
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeInstanceStore
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
               include: aws_ec2_instance_store_csi_read_bytes_total
               match_type: ""
               new_name: node_diskio_instance_store_total_read_bytes
-              operations:
-                - action: add_label
-                  aggregation_type: ""
-                  experimental_scale: 0
-                  label: ""
-                  label_value: ""
-                  new_label: Type
-                  new_value: NodeInstanceStore
-              submatch_case: ""
-            - action: update
-              aggregation_type: ""
-              include: aws_ec2_instance_store_csi_write_bytes_total
-              match_type: ""
-              new_name: node_diskio_instance_store_total_write_bytes
               operations:
                 - action: add_label
                   aggregation_type: ""
@@ -880,10 +852,38 @@ processors:
                   new_label: Type
                   new_value: NodeInstanceStore
               submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ec2_instance_store_csi_write_ops_total
+              match_type: ""
+              new_name: node_diskio_instance_store_total_write_ops
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeInstanceStore
+              submatch_case: ""
+            - action: update
+              aggregation_type: ""
+              include: aws_ec2_instance_store_csi_write_bytes_total
+              match_type: ""
+              new_name: node_diskio_instance_store_total_write_bytes
+              operations:
+                - action: add_label
+                  aggregation_type: ""
+                  experimental_scale: 0
+                  label: ""
+                  label_value: ""
+                  new_label: Type
+                  new_value: NodeInstanceStore
+              submatch_case: ""
 receivers:
     awscontainerinsightreceiver:
-        accelerated_compute_metrics: false
         accelerated_compute_gpu_metrics_collection_interval: 1m0s
+        accelerated_compute_metrics: false
         add_container_name_metric_label: true
         add_full_pod_name_metric_label: true
         add_service_as_attribute: true

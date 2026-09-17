@@ -40,9 +40,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -71,8 +71,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_win_perf_counters/4283769065
                 - telegraf_win_perf_counters/1492679118
+                - telegraf_win_perf_counters/4283769065
     telemetry:
         logs:
             encoding: console

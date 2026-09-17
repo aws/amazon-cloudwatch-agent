@@ -69,8 +69,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_disk
                 - telegraf_mem
+                - telegraf_disk
     telemetry:
         logs:
             encoding: console
