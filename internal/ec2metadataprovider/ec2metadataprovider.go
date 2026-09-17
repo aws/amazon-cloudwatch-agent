@@ -87,6 +87,7 @@ func (c *metadataClient) getMetadata(ctx context.Context, path string) (string, 
 	if err != nil {
 		return "", err
 	}
+	defer out.Content.Close()
 	content, err := io.ReadAll(out.Content)
 	if err != nil {
 		return "", err
