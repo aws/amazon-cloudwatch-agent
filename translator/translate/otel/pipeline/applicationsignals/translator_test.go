@@ -4,7 +4,7 @@
 package applicationsignals
 
 import (
-	gocontext "context"
+	"context"
 	"fmt"
 	"testing"
 
@@ -20,7 +20,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
-	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	translatorcontext "github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
@@ -178,7 +178,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(common.KubernetesEnvVar, "TEST")
 			eksdetector.IsEKS = testCase.isEKSCache
-			context.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
+			translatorcontext.CurrentContext().SetKubernetesMode(testCase.kubernetesMode)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
 			assert.Equal(t, testCase.wantErr, err)
@@ -252,8 +252,8 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.CurrentContext()
-			context.CurrentContext().SetKubernetesMode("")
+			ctx := translatorcontext.CurrentContext()
+			translatorcontext.CurrentContext().SetKubernetesMode("")
 			ctx.SetMode(config.ModeEC2)
 			conf := confmap.NewFromStringMap(testCase.input)
 			got, err := tt.Translate(conf)
@@ -326,7 +326,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
-			context.CurrentContext().SetRunInContainer(true)
+			translatorcontext.CurrentContext().SetRunInContainer(true)
 			t.Setenv(config.RUN_IN_CONTAINER, config.RUN_IN_CONTAINER_TRUE)
 			ecsutil.GetECSUtilSingleton().Region = "test"
 
@@ -468,17 +468,17 @@ func TestBuildOTTLSetStatementsNilPlaceholder(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	// service.name NOT set — Concat produces "<nil>", replace_pattern fixes it
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
@@ -510,10 +510,10 @@ func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	// service.name IS set — Concat resolves normally, replace_pattern is no-op
 	logs := plog.NewLogs()
@@ -521,7 +521,7 @@ func TestBuildOTTLSetStatementsResolvedPlaceholder(t *testing.T) {
 	rl.Resource().Attributes().PutStr("service.name", "my-service")
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
@@ -553,10 +553,10 @@ func TestBuildOTTLSetStatementsUnknownServiceTruncation(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	// service.name is "unknown_service:java" — should be truncated to "unknown_service"
 	logs := plog.NewLogs()
@@ -564,7 +564,7 @@ func TestBuildOTTLSetStatementsUnknownServiceTruncation(t *testing.T) {
 	rl.Resource().Attributes().PutStr("service.name", "unknown_service:java")
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
@@ -596,16 +596,16 @@ func TestBuildOTTLSetStatementsNonServiceNameNil(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
@@ -637,17 +637,17 @@ func TestBuildOTTLSetStatementsPartialNil(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
 	rl.Resource().Attributes().PutStr("host.name", "my-host")
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
@@ -679,17 +679,17 @@ func TestBuildOTTLSetStatementsSourceNotMutated(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
 	rl.Resource().Attributes().PutStr("service.name", "unknown_service:python")
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
@@ -724,17 +724,17 @@ func TestBuildOTTLSetStatementsUnknownServiceWithoutColon(t *testing.T) {
 	require.NoError(t, confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg))
 
 	sink := new(consumertest.LogsSink)
-	proc, err := factory.CreateLogs(gocontext.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
+	proc, err := factory.CreateLogs(context.Background(), processortest.NewNopSettings(factory.Type()), cfg, sink)
 	require.NoError(t, err)
-	require.NoError(t, proc.Start(gocontext.Background(), nil))
-	defer proc.Shutdown(gocontext.Background())
+	require.NoError(t, proc.Start(context.Background(), nil))
+	defer proc.Shutdown(context.Background())
 
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
 	rl.Resource().Attributes().PutStr("service.name", "unknown_service")
 	rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-	err = proc.ConsumeLogs(gocontext.Background(), logs)
+	err = proc.ConsumeLogs(context.Background(), logs)
 	require.NoError(t, err)
 
 	result := sink.AllLogs()
