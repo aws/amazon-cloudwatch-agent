@@ -34,6 +34,7 @@ func (sd *ServiceDiscovery) init(ctx context.Context) {
 	}
 	awsConfig, err := credentialConfig.LoadConfig(ctx)
 	if err != nil {
+		log.Printf("E! ECS SD: Failed to load AWS config: %v", err)
 		awsConfig = aws.Config{}
 	}
 

@@ -298,6 +298,7 @@ var (
 		mdCredentialConfig := &configaws.CredentialsConfig{}
 		cfg, err := mdCredentialConfig.LoadConfig(ctx)
 		if err != nil {
+			logger.Error("entitystore: Failed to load AWS config for metadata provider", zap.Error(err))
 			cfg = aws.Config{}
 		}
 		return ec2metadataprovider.NewMetadataProvider(cfg, logger, override.GetDefaultRetryNumber())
