@@ -90,6 +90,7 @@ func newTagger(config *Config, logger *zap.Logger) *Tagger {
 func (t *Tagger) createEC2Client(ctx context.Context, host component.Host, credentialConfig *configaws.CredentialsConfig) EC2APIClient {
 	cfg, err := credentialConfig.LoadConfig(ctx)
 	if err != nil {
+		t.logger.Error("ec2tagger: Failed to load AWS config for EC2 client", zap.Error(err))
 		cfg = aws.Config{}
 	}
 
