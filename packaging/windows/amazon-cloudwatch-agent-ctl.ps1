@@ -61,7 +61,7 @@ $UsageString = @"
         -m: mode
             ec2:                                    indicate this is on ec2 host.
             onPremise, onPrem:                      indicate this is on onPremise host.
-            auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
+            auto:                                   detect the environment automatically.
 
         -c: amazon-cloudwatch-agent configuration
             default:                                default configuration for quick trial.
@@ -114,7 +114,6 @@ $JSON_DIR = "${CWAProgramData}\Configs"
 $COMMON_CONIG="${CWAProgramData}\common-config.toml"
 $ENV_CONFIG="${CWAProgramData}\env-config.json"
 
-$EC2 = $false
 # WMI is unavailable on Nano, CIM is unavailable on 2003
 $CIM = $false
 
@@ -330,10 +329,7 @@ Function CWAConfig() {
         [string]$multi_config = 'default'
     )
 
-    $param_mode="ec2"
-    if (!$EC2) {
-        $param_mode="onPremise"
-    }
+    $param_mode=$Mode
 
     if ($ConfigLocation -eq $AllConfig -And $multi_config -ne 'remove') {
         Write-Output "Ignore amazon-cloudwatch-agent's configuration ${AllConfig} as it is only supported by action `"remove-config`""
@@ -418,23 +414,6 @@ Function CheckCMDResult($ErrorMessage, $SuccessMessage) {
     }
 }
 
-# TODO Occasionally metadata service isn't available and this gives a false negative - might
-# be a better way to probe
-# http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/identify_ec2_instances.html
-# Ultimately though an optional 'ec2-override' flag seems necessary for easier testing
-Function CWATestEC2() {
-    $error.clear()
-    $request = [System.Net.WebRequest]::Create('http://169.254.169.254/')
-    $request.Timeout = 5
-    try {
-        $response = $request.GetResponse()
-        $response.Close()
-    } catch {
-        return $false
-    }
-    return !$error
-}
-
 Function SetLogLevelAll() {
     switch -exact ($LogLevel) {
         INFO { }
@@ -479,10 +458,10 @@ Function main() {
     }
 
     switch -exact ($Mode) {
-        ec2 { $EC2 = $true }
-        onPremise { $EC2 = $false }
-        onPrem { $EC2 = $false }
-        auto { $EC2 = CWATestEC2 }
+        ec2 { }
+        onPremise { }
+        onPrem { }
+        auto { }
         default {
            Write-Output "Invalid mode: ${Mode}`n${UsageString}"
            Exit 1
