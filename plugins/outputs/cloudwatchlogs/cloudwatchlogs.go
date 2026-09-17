@@ -134,7 +134,13 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int32, logGr
 		Retention: retention,
 		Class:     logGroupClass,
 	}
-	return c.getDest(t, logSrc)
+	// getDest may return a nil *cwDest on client-creation failure. Explicitly return
+	// a nil LogDest interface (not a typed-nil box) so callers can `dest == nil` check.
+	cwd := c.getDest(t, logSrc)
+	if cwd == nil {
+		return nil
+	}
+	return cwd
 }
 
 func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
@@ -159,6 +165,8 @@ func (c *CloudWatchLogs) getDest(t pusher.Target, logSrc logs.LogSrc) *cwDest {
 	client, err := c.createClient(context.Background(), logThrottleRetryer, cwd)
 	if err != nil {
 		c.Log.Errorf("Failed to create CloudWatch Logs client: %v", err)
+		// Stop the retryer we just created so its watchThrottleEvents goroutine exits.
+		logThrottleRetryer.Stop()
 		return nil
 	}
 	agent.UsageFlags().SetValue(agent.FlagRegionType, c.RegionType)
