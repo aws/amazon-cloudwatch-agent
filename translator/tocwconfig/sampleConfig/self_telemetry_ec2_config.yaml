@@ -58,8 +58,8 @@ service:
             processors:
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_cpu
+                - telegraf_mem
     telemetry:
         logs:
             encoding: console

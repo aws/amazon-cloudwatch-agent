@@ -105,8 +105,8 @@ processors:
         error_mode: propagate
         logs:
             log_record:
-                - not IsMatch(body, ".*user.*")
                 - IsMatch(body, ".*failed.*")
+                - not IsMatch(body, ".*user.*")
         metrics: {}
         profiles: {}
         spans: {}

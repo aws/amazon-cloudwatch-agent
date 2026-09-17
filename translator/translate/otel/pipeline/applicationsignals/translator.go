@@ -391,7 +391,6 @@ func (t *translator) translateLogsRouteToOtlp(conf *confmap.Conf, batch bool) (*
 	)
 	translators.Exporters.Set(otlphttp.NewTranslatorWithName(logsComponentName, logsEndpoint,
 		otlphttp.WithAuthenticator(headersSetterExt.ID()),
-		otlphttp.WithSendingQueueBatchMetadataKeys(metadataKeys...),
 	))
 	translators.Extensions.Set(headersSetterExt)
 

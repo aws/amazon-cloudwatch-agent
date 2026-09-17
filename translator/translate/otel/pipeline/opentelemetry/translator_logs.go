@@ -150,7 +150,7 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	return &common.ComponentTranslators{
 		Receivers:  common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 		Processors: processors,
-		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()), otlphttp.WithSendingQueueBatchMetadataKeys(logsMetadataKeys...))),
+		Exporters:  common.NewTranslatorMap[component.Config, component.ID](otlphttp.NewTranslatorWithName("logs", otlphttp.EndpointConfig{LogsEndpoint: logsEndpoint}, otlphttp.WithAuthenticator(agentHealthExt.ID()))),
 		Extensions: common.NewTranslatorMap[component.Config, component.ID](sigv4Ext, provisionerExt, headersExt, agentHealthExt),
 		Connectors: common.NewTranslatorMap[component.Config, component.ID](fwdConnector),
 	}, nil
