@@ -131,10 +131,16 @@ func (l *LogAgent) Run(ctx context.Context) {
 					backend, ok := l.backends[dname]
 					if !ok {
 						log.Printf("E! [logagent] Failed to find destination %s for log source %s/%s(%s) ", dname, logGroup, logStream, description)
+						src.Stop()
 						continue
 					}
 					retention = l.checkRetentionAlreadyAttempted(retention, logGroup)
 					dest := backend.CreateDest(logGroup, logStream, retention, logGroupClass, src)
+					if dest == nil {
+						log.Printf("E! [logagent] Failed to create destination %s for log source %s/%s(%s); skipping", dname, logGroup, logStream, description)
+						src.Stop()
+						continue
+					}
 					log.Printf("I! [logagent] piping log from %s/%s(%s) to %s with retention %d", logGroup, logStream, description, dname, retention)
 					go l.runSrcToDest(src, dest)
 				}
