@@ -47,14 +47,15 @@ func (v *otlphttpValidator) Convert(_ context.Context, conf *confmap.Conf) error
 		return nil
 	}
 	for name, cfg := range exporters {
-		if name != "otlphttp" && !strings.HasPrefix(name, "otlphttp/") {
+		exporterType, _, _ := strings.Cut(name, "/")
+		if exporterType != "otlphttp" && exporterType != "otlp_http" {
 			continue
 		}
 		exporterCfg, ok := cfg.(map[string]any)
 		if !ok {
 			continue
 		}
-		for _, key := range []string{"endpoint", "metrics_endpoint", "traces_endpoint", "logs_endpoint"} {
+		for _, key := range []string{"endpoint", "metrics_endpoint", "traces_endpoint", "logs_endpoint", "profiles_endpoint"} {
 			if ep, ok := exporterCfg[key].(string); ok && ep != "" {
 				if !isAWSEndpoint(ep) {
 					return fmt.Errorf("invalid AWS endpoint: %q", ep)
