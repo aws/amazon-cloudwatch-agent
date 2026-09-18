@@ -6,12 +6,12 @@ package sigv4auth
 import (
 	"fmt"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/sigv4authextension"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -58,7 +58,7 @@ func (t *translator) Translate(*confmap.Conf) (component.Config, error) {
 	if mode := context.CurrentContext().Mode(); mode == config.ModeOnPrem || mode == config.ModeOnPremise {
 		cfg.LocalMode = true
 	}
-	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 	if agent.Global_Config.Role_arn != "" {
 		cfg.RoleARN = agent.Global_Config.Role_arn
 		if agent.RequiresOIDCToken() {

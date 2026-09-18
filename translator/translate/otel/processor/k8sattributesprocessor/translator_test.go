@@ -14,7 +14,7 @@ import (
 
 func TestNewTranslator(t *testing.T) {
 	tt := NewTranslator("test")
-	assert.Equal(t, "k8sattributes/test", tt.ID().String())
+	assert.Equal(t, "k8s_attributes/test", tt.ID().String())
 }
 
 func TestTranslate(t *testing.T) {
