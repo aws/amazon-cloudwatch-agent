@@ -19,14 +19,6 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        sending_queue:
-            batch: null
-            block_on_overflow: false
-            num_consumers: 10
-            queue_size: 1000
-            sizer: null
-            storage: null
-            wait_for_result: false
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
@@ -48,14 +40,6 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        sending_queue:
-            batch: null
-            block_on_overflow: false
-            num_consumers: 10
-            queue_size: 1000
-            sizer: null
-            storage: null
-            wait_for_result: false
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
@@ -77,14 +61,6 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        sending_queue:
-            batch: null
-            block_on_overflow: false
-            num_consumers: 10
-            queue_size: 1000
-            sizer: null
-            storage: null
-            wait_for_result: false
         timeout: 30s
         traces_endpoint: https://xray.us-west-2.amazonaws.com/v1/traces
         write_buffer_size: 524288

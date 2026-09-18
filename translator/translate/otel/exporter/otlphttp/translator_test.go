@@ -49,16 +49,13 @@ func TestTranslatorWithAuthenticator(t *testing.T) {
 }
 
 func TestTranslatorDisablesQueueBatcher(t *testing.T) {
-	// CWA runs a pipeline-side batchprocessor before the exporter, so the v0.150 default
-	// exporter-level batcher is redundant (and, for context-routed exporters, harmful).
-	// Verify the translator disables the batcher while keeping the queue itself for
-	// backpressure.
+	// Outer QueueConfig=None (not inner Batch=None) so the confmap round-trip
+	// doesn't re-enable the exporter batcher via configoptional promotion.
 	tr := NewTranslatorWithName("logs", EndpointConfig{LogsEndpoint: "https://logs.us-west-2.amazonaws.com/v1/logs"})
 
 	cfg, err := tr.Translate(nil)
 	require.NoError(t, err)
 
 	otlpCfg := cfg.(*otlphttpexporter.Config)
-	require.True(t, otlpCfg.QueueConfig.HasValue(), "queue itself must remain enabled for backpressure")
-	assert.False(t, otlpCfg.QueueConfig.Get().Batch.HasValue(), "exporter-level batcher must be disabled")
+	assert.False(t, otlpCfg.QueueConfig.HasValue())
 }

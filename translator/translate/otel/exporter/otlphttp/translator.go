@@ -78,9 +78,12 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		})
 	}
 
-	// Disable the exporter-level queue batcher; CWA batches upstream via the pipeline
-	// batchprocessor.
-	cfg.QueueConfig.GetOrInsertDefault().Batch = configoptional.None[exporterhelper.BatchConfig]()
+	// Disable the exporter batcher; CWA batches in the pipeline batchprocessor.
+	//
+	// Use the OUTER Optional. Inner Batch=None writes "batch: null" in YAML
+	// which the collector's confmap round-trip promotes back to Some(defaults),
+	// re-enabling the batcher.
+	cfg.QueueConfig = configoptional.None[exporterhelper.QueueBatchConfig]()
 
 	return cfg, nil
 }

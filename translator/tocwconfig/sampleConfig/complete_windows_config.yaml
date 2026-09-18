@@ -41,14 +41,6 @@ exporters:
             multiplier: 1.5
             randomization_factor: 0.5
         role_arn: log_role_arn_value_test
-        sending_queue:
-            batch: null
-            block_on_overflow: false
-            num_consumers: 1
-            queue_size: 1000
-            sizer: null
-            storage: null
-            wait_for_result: false
     awsxray:
         endpoint: https://x-ray-endpoint.us-west-2.amazonaws.com
         imds_retries: 1

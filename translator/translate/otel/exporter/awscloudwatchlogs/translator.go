@@ -11,8 +11,10 @@ import (
 	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/exporter/exporterhelper"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -53,6 +55,10 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscloudwatchlogsexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
+
+	// Disable the exporter batcher; see otlphttp/translator.go for why we
+	// use the outer Optional rather than the inner Batch field.
+	cfg.QueueSettings = configoptional.None[exporterhelper.QueueBatchConfig]()
 
 	// Add more else if when otel supports log reading
 	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {

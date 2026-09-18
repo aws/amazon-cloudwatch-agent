@@ -17,14 +17,6 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        sending_queue:
-            batch: null
-            block_on_overflow: false
-            num_consumers: 1
-            queue_size: 1000
-            sizer: null
-            storage: null
-            wait_for_result: false
     awscloudwatchlogs/journald_1:
         endpoint: ""
         imds_retries: 1
@@ -43,14 +35,6 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        sending_queue:
-            batch: null
-            block_on_overflow: false
-            num_consumers: 1
-            queue_size: 1000
-            sizer: null
-            storage: null
-            wait_for_result: false
 extensions:
     agenthealth/logs:
         is_usage_data_enabled: true
