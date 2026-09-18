@@ -1,7 +1,7 @@
 connectors:
     forward/opentelemetry: {}
     spanmetrics/opentelemetry:
-        add_resource_attributes: false
+        add_resource_attributes: true
         aggregation_cardinality_limit: 0
         aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
         dimensions:
