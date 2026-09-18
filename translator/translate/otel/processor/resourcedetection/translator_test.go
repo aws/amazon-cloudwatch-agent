@@ -149,6 +149,13 @@ func TestTranslate(t *testing.T) {
 				"timeout":                "2s",
 				"override":               true,
 				"ignore_detector_errors": true,
+				"azure": map[string]interface{}{
+					"resource_attributes": map[string]interface{}{
+						"cloud.availability_zone": map[string]interface{}{
+							"enabled": true,
+						},
+					},
+				},
 			}),
 		},
 		"WithAppSignalsEnabledOnAKS": {
@@ -168,6 +175,13 @@ func TestTranslate(t *testing.T) {
 				"timeout":                "2s",
 				"override":               true,
 				"ignore_detector_errors": true,
+				"azure": map[string]interface{}{
+					"resource_attributes": map[string]interface{}{
+						"cloud.availability_zone": map[string]interface{}{
+							"enabled": true,
+						},
+					},
+				},
 			}),
 		},
 		"WithAppSignalsEnabledOnGCE": {

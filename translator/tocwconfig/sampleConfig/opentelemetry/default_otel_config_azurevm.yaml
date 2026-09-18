@@ -1,7 +1,7 @@
 connectors:
     forward/opentelemetry: {}
     spanmetrics/opentelemetry:
-        add_resource_attributes: false
+        add_resource_attributes: true
         aggregation_cardinality_limit: 0
         aggregation_temporality: AGGREGATION_TEMPORALITY_CUMULATIVE
         dimensions:
@@ -261,7 +261,7 @@ processors:
                 cloud.account.id:
                     enabled: true
                 cloud.availability_zone:
-                    enabled: false
+                    enabled: true
                 cloud.platform:
                     enabled: true
                 cloud.provider:

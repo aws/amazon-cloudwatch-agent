@@ -115,7 +115,7 @@ processors:
                 cloud.account.id:
                     enabled: true
                 cloud.availability_zone:
-                    enabled: false
+                    enabled: true
                 cloud.platform:
                     enabled: true
                 cloud.provider:
