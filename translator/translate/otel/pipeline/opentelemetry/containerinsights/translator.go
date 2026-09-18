@@ -165,19 +165,20 @@ func (t *yamlPipelineTranslator) Translate(conf *confmap.Conf) (*common.Componen
 	}
 
 	data := templateData{
-		ClusterName:        clusterName,
-		Region:             agent.Global_Config.Region,
-		CollectionInterval: collectionInterval.String(),
-		ScrapeTimeout:      scrapeTimeout.String(),
-		NodeName:           envOrPlaceholder("K8S_NODE_NAME"),
-		HostIP:             envOrPlaceholder("HOST_IP"),
-		AppLogGroup:        fmt.Sprintf("/aws/otel/containerinsights/%s/application", clusterName),
-		AppLogStream:       envOrPlaceholder("K8S_NODE_NAME") + "-application",
-		NodeLogGroup:       fmt.Sprintf("/aws/otel/containerinsights/%s/host", clusterName),
-		NodeLogStream:      envOrPlaceholder("K8S_NODE_NAME") + "-host",
-		KarpenterNamespace: solutionNamespace(conf, "karpenter", defaultKarpenterNamespace),
-		KedaNamespace:      solutionNamespace(conf, "keda", defaultKedaNamespace),
-		WatchReplicaSet:    watchReplicaSet(conf),
+		ClusterName:            clusterName,
+		Region:                 agent.Global_Config.Region,
+		CollectionInterval:     collectionInterval.String(),
+		ScrapeTimeout:          scrapeTimeout.String(),
+		NodeName:               envOrPlaceholder("K8S_NODE_NAME"),
+		HostIP:                 envOrPlaceholder("HOST_IP"),
+		AppLogGroup:            fmt.Sprintf("/aws/otel/containerinsights/%s/application", clusterName),
+		AppLogStream:           envOrPlaceholder("K8S_NODE_NAME") + "-application",
+		NodeLogGroup:           fmt.Sprintf("/aws/otel/containerinsights/%s/host", clusterName),
+		NodeLogStream:          envOrPlaceholder("K8S_NODE_NAME") + "-host",
+		KarpenterNamespace:     solutionNamespace(conf, "karpenter", defaultKarpenterNamespace),
+		KedaNamespace:          solutionNamespace(conf, "keda", defaultKedaNamespace),
+		WatchReplicaSet:        watchReplicaSet(conf),
+		ApiserverTLSServerName: apiserverTLSServerName(),
 	}
 
 	// Execute template
