@@ -1367,7 +1367,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   EKSPrometheusIntegrationTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
