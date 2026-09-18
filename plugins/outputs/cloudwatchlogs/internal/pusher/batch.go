@@ -12,12 +12,16 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 // CloudWatch Logs PutLogEvents API limits
 // Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 const (
+	// maxRetryTimeout is the default retry timeout for CloudWatch Logs operations
+	maxRetryTimeout = 14*24*time.Hour + 10*time.Minute
+
 	// The maximum batch size in bytes. This size is calculated as the sum of all event messages in UTF-8,
 	// plus 26 bytes for each log event.
 	reqSizeLimit = 1024 * 1024
@@ -100,7 +104,23 @@ type logEventBatch struct {
 	doneCallbacks []func()
 	// Callbacks specifically for updating state
 	stateCallbacks []func()
-	batchers       map[string]*state.RangeQueueBatcher
+	// Callbacks to execute when batch fails (for circuit breaker notification)
+	failCallbacks []func()
+	// Callbacks that clear the circuit breaker without signalling delivery
+	resumeCallbacks []func()
+	batchers        map[string]*state.RangeQueueBatcher
+
+	// Retry metadata
+	retryCountShort int       // Number of retries using short delay strategy
+	retryCountLong  int       // Number of retries using long delay strategy
+	startTime       time.Time // Time of first request (for max retry duration calculation)
+	nextRetryTime   time.Time // When this batch should be retried next
+	expireAfter     time.Time // When this batch expires and should be dropped
+
+	// service is the client that first sent this batch. Retries must reuse it: the EMF
+	// x-amzn-logs-format header that switchToEMF installs is per-client state, so
+	// re-sending through the retry processor's own client would silently drop it.
+	service cloudWatchLogsService
 }
 
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
@@ -175,6 +195,13 @@ func (b *logEventBatch) addStateCallback(callback func()) {
 	}
 }
 
+// addFailCallback adds the callback to the end of the registered fail callbacks.
+func (b *logEventBatch) addFailCallback(callback func()) {
+	if callback != nil {
+		b.failCallbacks = append(b.failCallbacks, callback)
+	}
+}
+
 // done runs all registered callbacks, including both success callbacks and state callbacks.
 func (b *logEventBatch) done() {
 	b.updateState()
@@ -194,6 +221,56 @@ func (b *logEventBatch) updateState() {
 		callback := b.stateCallbacks[i]
 		callback()
 	}
+}
+
+// fail runs fail callbacks to notify upstream components of batch failure.
+// This is used for circuit breaker notification when a batch fails.
+func (b *logEventBatch) fail() {
+	for i := len(b.failCallbacks) - 1; i >= 0; i-- {
+		callback := b.failCallbacks[i]
+		callback()
+	}
+}
+
+// addResumeCallback adds the callback to the end of the registered resume callbacks.
+func (b *logEventBatch) addResumeCallback(callback func()) {
+	if callback != nil {
+		b.resumeCallbacks = append(b.resumeCallbacks, callback)
+	}
+}
+
+// resume runs only the resume callbacks, clearing the circuit breaker for this target
+// without signalling delivery. Needed because halt() is latched by fail() and would
+// otherwise only ever be cleared by done(), which implies success.
+func (b *logEventBatch) resume() {
+	for i := len(b.resumeCallbacks) - 1; i >= 0; i-- {
+		callback := b.resumeCallbacks[i]
+		callback()
+	}
+}
+
+// drop finalizes a batch that will never be delivered after a permanent failure. It
+// persists state so the events are not reprocessed on restart and clears the circuit
+// breaker, but deliberately does NOT run doneCallbacks: those signal successful
+// delivery (per-event LogEvent.Done plus the queue's success bookkeeping). The count of
+// dropped events is published as a per-target profiler stat so operators can monitor data loss.
+func (b *logEventBatch) drop() {
+	// Deferred so a panic in a state callback still clears the breaker: updateState runs
+	// arbitrary callbacks, and skipping resume() would wedge this target permanently.
+	defer b.resume()
+
+	dropped := int64(len(b.events))
+	// Per-target visibility, matching the existing emfMetricDrop stat convention.
+	profiler.Profiler.AddStats([]string{"cloudwatchlogs", b.Group, "logEventsDropped"}, float64(dropped))
+	b.updateState()
+}
+
+// abandon finalizes a batch dropped for a transient reason, such as the retry heap
+// closing during shutdown. State is deliberately NOT persisted so the events are
+// re-read after restart rather than silently lost; the circuit breaker is still
+// cleared so shutdown is not blocked.
+func (b *logEventBatch) abandon() {
+	b.resume()
 }
 
 // build creates a cloudwatchlogs.PutLogEventsInput from the batch. The log events in the batch must be in
@@ -225,4 +302,34 @@ func (t byTimestamp) Swap(i, j int) {
 
 func (t byTimestamp) Less(i, j int) bool {
 	return *t[i].Timestamp < *t[j].Timestamp
+}
+
+// initializeStartTime sets the start time and expiration time if not already set.
+func (b *logEventBatch) initializeStartTime() {
+	if b.startTime.IsZero() {
+		b.startTime = time.Now()
+		b.expireAfter = b.startTime.Add(maxRetryTimeout)
+	}
+}
+
+// updateRetryMetadata updates the retry metadata after a failed send attempt.
+// It increments the appropriate retry counter based on the error type and calculates the next retry time.
+func (b *logEventBatch) updateRetryMetadata(err error) {
+	// Determine retry strategy and increment counter
+	var wait time.Duration
+	if chooseRetryWaitStrategy(err) == retryLong {
+		wait = retryWaitLong(b.retryCountLong)
+		b.retryCountLong++
+	} else {
+		wait = retryWaitShort(b.retryCountShort)
+		b.retryCountShort++
+	}
+
+	// Calculate next retry time
+	b.nextRetryTime = time.Now().Add(wait)
+}
+
+// isExpired checks if the batch has exceeded its expiration time.
+func (b *logEventBatch) isExpired() bool {
+	return !b.expireAfter.IsZero() && time.Now().After(b.expireAfter)
 }

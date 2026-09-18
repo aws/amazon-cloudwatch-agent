@@ -36,12 +36,17 @@ type queue struct {
 	flushTimer   *time.Timer
 	flushTimeout atomic.Value
 	stopCh       chan struct{}
-	stopped      bool
+	stopOnce     sync.Once
 	lastSentTime atomic.Value
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
 	wg                    *sync.WaitGroup
+
+	// Circuit breaker halt/resume functionality
+	haltMu sync.Mutex
+	haltCh chan struct{}
+	halted bool
 }
 
 var _ (Queue) = (*queue)(nil)
@@ -67,6 +72,8 @@ func newQueue(
 		stopCh:          make(chan struct{}),
 		startNonBlockCh: make(chan struct{}),
 		wg:              wg,
+		haltCh:          make(chan struct{}),
+		halted:          false,
 	}
 	q.flushTimeout.Store(flushTimeout)
 	q.wg.Add(1)
@@ -80,7 +87,12 @@ func (q *queue) AddEvent(e logs.LogEvent) {
 		q.logger.Errorf("The log entry in (%v/%v) with timestamp (%v) comparing to the current time (%v) is out of accepted time range. Discard the log entry.", q.target.Group, q.target.Stream, e.Time(), time.Now())
 		return
 	}
-	q.eventsCh <- e
+	// Stop-aware: cwDest.Publish holds the destination lock across this call, so a producer
+	// that blocked here forever would keep cwDest.Stop from ever acquiring that lock.
+	select {
+	case q.eventsCh <- e:
+	case <-q.stopCh:
+	}
 }
 
 // AddEventNonBlocking adds an event to the queue without blocking. If the queue is full, drops the oldest event in
@@ -93,7 +105,13 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 
 	q.initNonBlockingChOnce.Do(func() {
 		q.nonBlockingEventsCh = make(chan logs.LogEvent, reqEventsLimit*2)
-		q.startNonBlockCh <- struct{}{} // Unblock the select loop to recognize the channel merge
+		// Stop-aware: startNonBlockCh is unbuffered and its only receiver is the merge loop,
+		// which exits on stopCh. Without this, the first EMF event after shutdown blocks
+		// forever while cwDest.Publish holds the destination lock.
+		select {
+		case q.startNonBlockCh <- struct{}{}: // let the select loop pick up the merged channel
+		case <-q.stopCh:
+		}
 	})
 
 	// Drain the channel until new event can be added
@@ -109,12 +127,12 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 }
 
 // Stop stops all goroutines associated with this queue instance.
+// Stop is idempotent: it is signalled once before destination locks are taken (see
+// cwDest.signalStop) and again on the normal Stop path.
 func (q *queue) Stop() {
-	if q.stopped {
-		return
-	}
-	close(q.stopCh)
-	q.stopped = true
+	q.stopOnce.Do(func() {
+		close(q.stopCh)
+	})
 }
 
 // start is the main loop for processing events and managing the queue.
@@ -175,6 +193,15 @@ func (q *queue) merge(mergeChan chan logs.LogEvent) {
 func (q *queue) send() {
 	if len(q.batch.events) > 0 {
 		q.batch.addDoneCallback(q.onSuccessCallback(q.batch.bufferedSize))
+		q.batch.addFailCallback(q.halt)
+		// Lets a permanently-failed or abandoned batch clear the breaker without being
+		// reported as delivered. Without this, halt() latches until the next done().
+		q.batch.addResumeCallback(q.resume)
+
+		// In synchronous mode (no retryHeap) halt() is never called, so waitIfHalted is a
+		// no-op guard on the uncontended send path.
+		q.waitIfHalted()
+
 		q.sender.Send(q.batch)
 		q.batch = newLogEventBatch(q.target, q.entityProvider)
 	}
@@ -183,6 +210,7 @@ func (q *queue) send() {
 // onSuccessCallback returns a callback function to be executed after a successful send.
 func (q *queue) onSuccessCallback(bufferedSize int) func() {
 	return func() {
+		q.resume() // Resume queue on success
 		q.lastSentTime.Store(time.Now())
 		go q.addStats("rawSize", float64(bufferedSize))
 		q.resetFlushTimer()
@@ -201,7 +229,15 @@ func (q *queue) manageFlushTimer() {
 	for {
 		select {
 		case <-q.flushTimer.C:
-			q.flushCh <- struct{}{}
+			// Stop-aware: start() is the only receiver, and it can be parked in
+			// waitIfHalted. A bare send would then block here and never observe stopCh,
+			// leaking this goroutine and its timer once start() returns.
+			select {
+			case q.flushCh <- struct{}{}:
+			case <-q.stopCh:
+				q.stopFlushTimer()
+				return
+			}
 		case <-q.resetTimerCh:
 			q.stopFlushTimer()
 			if flushTimeout, ok := q.flushTimeout.Load().(time.Duration); ok {
@@ -244,4 +280,49 @@ func hasValidTime(e logs.LogEvent) bool {
 		}
 	}
 	return true
+}
+
+// waitIfHalted blocks until the queue is unhalted or stopped.
+//
+// Deliberately unbounded: this is the backpressure that keeps a broken target to roughly
+// one batch in flight, which is what bounds retry-heap memory. Timing it out would let a
+// permanently failing target push a fresh batch onto the unbounded heap every interval.
+// Shutdown liveness comes from stopCh instead -- see AddEvent and cwDest.signalStop.
+func (q *queue) waitIfHalted() {
+	for {
+		q.haltMu.Lock()
+		if !q.halted {
+			q.haltMu.Unlock()
+			return
+		}
+		ch := q.haltCh
+		q.haltMu.Unlock()
+		select {
+		case <-ch:
+			// Loop instead of returning: resume() closes ch, but a halt() re-engaged
+			// before this wakeup leaves q.halted true, so re-check rather than let the
+			// send proceed on a still-halted queue. Still unbounded (see the doc above);
+			// stopCh remains the only liveness escape.
+		case <-q.stopCh:
+			return
+		}
+	}
+}
+
+// halt stops the queue from sending batches (called on failure).
+func (q *queue) halt() {
+	q.haltMu.Lock()
+	defer q.haltMu.Unlock()
+	q.halted = true
+}
+
+// resume allows the queue to send batches again (called on success).
+func (q *queue) resume() {
+	q.haltMu.Lock()
+	defer q.haltMu.Unlock()
+	if q.halted {
+		q.halted = false
+		close(q.haltCh)
+		q.haltCh = make(chan struct{})
+	}
 }

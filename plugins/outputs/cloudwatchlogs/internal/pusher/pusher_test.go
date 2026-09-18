@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
@@ -33,7 +34,7 @@ func TestPusher(t *testing.T) {
 	t.Run("WithSenderPool", func(t *testing.T) {
 		t.Parallel()
 		var wg sync.WaitGroup
-		wp := NewWorkerPool(5)
+		wp := NewWorkerPool(5, testutil.NewNopLogger())
 		pusher := setupPusher(t, wp, &wg)
 
 		_, isSenderPool := pusher.Sender.(*senderPool)
@@ -111,8 +112,8 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 		nil,
 		workerPool,
 		time.Second,
-		time.Minute,
 		wg,
+		nil, // retryHeap
 	)
 
 	assert.NotNil(t, pusher)
@@ -123,4 +124,46 @@ func setupPusher(t *testing.T, workerPool WorkerPool, wg *sync.WaitGroup) *Pushe
 	// Verify that PutRetentionPolicy was called
 	mockManager.AssertCalled(t, "PutRetentionPolicy", target)
 	return pusher
+}
+
+func TestPusherRetryHeap(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	target := Target{Group: "G", Stream: "S"}
+	service := &stubLogsService{}
+	mockManager := new(mockTargetManager)
+	mockManager.On("PutRetentionPolicy", target).Return()
+
+	workerPool := NewWorkerPool(2, testutil.NewNopLogger())
+	defer workerPool.Stop()
+
+	retryHeap := NewRetryHeap(logger)
+	defer retryHeap.Close()
+
+	var wg sync.WaitGroup
+	pusher := NewPusher(
+		logger,
+		target,
+		service,
+		mockManager,
+		nil,
+		workerPool,
+		time.Second,
+		&wg,
+		retryHeap,
+	)
+
+	assert.NotNil(t, pusher)
+	assert.Equal(t, target, pusher.Target)
+
+	// The point of this pusher variant: the retryHeap passed to NewPusher must be wired into
+	// the underlying sender so failed batches go to the shared heap instead of busy-waiting.
+	sp, ok := pusher.Sender.(*senderPool)
+	require.True(t, ok, "with a worker pool the pusher's Sender must be a *senderPool")
+	inner, ok := sp.sender.(*sender)
+	require.True(t, ok, "senderPool must wrap the concrete *sender")
+	require.NotNil(t, inner.retryHeap, "NewPusher must wire a retry heap into the underlying sender")
+	assert.Same(t, retryHeap, inner.retryHeap,
+		"NewPusher must wire the passed retry heap into the underlying sender")
+
+	mockManager.AssertCalled(t, "PutRetentionPolicy", target)
 }
