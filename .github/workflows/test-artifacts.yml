@@ -1978,7 +1978,7 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 45
-        working-directory: terraform/azure/vm
+        working-directory: terraform/azure/vm/linux
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -2042,7 +2042,7 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            cd terraform/azure/vm
+            cd terraform/azure/vm/linux
             terraform destroy --auto-approve \
               -var="region=us-east-2" \
               -var="runner_ip=$RUNNER_IP" \
@@ -2111,7 +2111,7 @@ jobs:
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 45
-        working-directory: terraform/azure/vm-windows
+        working-directory: terraform/azure/vm/win
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -2175,7 +2175,7 @@ jobs:
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            cd terraform/azure/vm-windows
+            cd terraform/azure/vm/win
             terraform destroy --auto-approve \
               -var="region=us-east-2" \
               -var="runner_ip=$RUNNER_IP" \
