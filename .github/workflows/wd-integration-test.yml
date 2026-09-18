@@ -270,6 +270,7 @@ jobs:
             fi
 
             terraform init
+            RUNNER_IP="$(curl -s ifconfig.me)/32"
             if terraform apply --auto-approve \
               -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -278,6 +279,7 @@ jobs:
               -var="cwa_github_sha=$INPUT_BUILD_SHA"  \
               -var="test_dir=$MATRIX_TEST_DIR" \
               -var="ami=$MATRIX_AMI" \
+              -var="runner_ip=$RUNNER_IP" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
             else
@@ -498,6 +500,7 @@ jobs:
             fi
 
             terraform init
+            RUNNER_IP="$(curl -s ifconfig.me)/32"
             if terraform apply --auto-approve \
               -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
               -var="ssh_key_value=${PRIVATE_KEY}" \
@@ -506,6 +509,7 @@ jobs:
               -var="cwa_github_sha=$INPUT_BUILD_SHA"  \
               -var="test_dir=$MATRIX_TEST_DIR" \
               -var="ami=$MATRIX_AMI" \
+              -var="runner_ip=$RUNNER_IP" \
               -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
               terraform destroy -auto-approve
             else
