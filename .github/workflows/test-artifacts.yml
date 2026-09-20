@@ -2080,17 +2080,29 @@ jobs:
       # The pre-built MSI at this path is produced by the agent build workflow (MakeMSIZip + BuildMSI-2022);
       # CheckBuildTestArtifacts in integration-test.yml gates this whole workflow on that build succeeding,
       # so the MSI is guaranteed to exist here -- the same guarantee the linux .deb download relies on.
-      # The Azure VM has no AWS instance profile, so (unlike terraform/ec2/win) the runner downloads the
-      # MSI here and hands terraform a local path to file-provision over WinRM.
-      - name: Download pre-built agent MSI
+      # The Azure VM has no AWS instance profile, so (unlike terraform/ec2/win) it cannot 'aws s3 cp' the
+      # MSI itself; the runner presigns the S3 object here and hands terraform a URL the VM downloads over HTTPS.
+      - name: Presign pre-built agent MSI URL
+        id: msi
         env:
-          MSI_S3_URI: "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/packaging/${{ inputs.build_id }}/amazon-cloudwatch-agent.msi"
+          S3_INTEGRATION_BUCKET: ${{ env.S3_INTEGRATION_BUCKET }}
+          BUILD_ID: ${{ inputs.build_id }}
         run: |
-          if ! aws s3 ls "$MSI_S3_URI" >/dev/null 2>&1; then
-            echo "::error::No agent .msi at $MSI_S3_URI"
+          BUCKET="$S3_INTEGRATION_BUCKET"
+          KEY="integration-test/packaging/$BUILD_ID/amazon-cloudwatch-agent.msi"
+          # Fail early with a clear message if the MSI the agent build should have produced is missing.
+          if ! aws s3api head-object --bucket "$BUCKET" --key "$KEY" > /dev/null; then
+            echo "::error::No agent .msi at s3://$BUCKET/$KEY"
             exit 1
           fi
-          aws s3 cp "$MSI_S3_URI" "${{ github.workspace }}/amazon-cloudwatch-agent.msi" --no-progress
+          # SigV4 presigned URLs are region-specific, so presign against the bucket's own region.
+          REGION="$(aws s3api get-bucket-location --bucket "$BUCKET" --query LocationConstraint --output text)"
+          if [[ "$REGION" == "None" || "$REGION" == "null" || -z "$REGION" ]]; then
+            REGION="us-east-1"
+          fi
+          URL="$(aws s3 presign "s3://$BUCKET/$KEY" --expires-in 3600 --region "$REGION")"
+          echo "::add-mask::$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Get Runner IP
         id: runner_ip
@@ -2119,7 +2131,7 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
           BUILD_ID: ${{ inputs.build_id }}
-          AGENT_MSI_PATH: ${{ github.workspace }}/amazon-cloudwatch-agent.msi
+          AGENT_MSI_URL: ${{ steps.msi.outputs.url }}
           TEST_REPO_URL: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
           TEST_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
@@ -2132,7 +2144,7 @@ jobs:
             -var="region=us-east-2" \
             -var="runner_ip=$RUNNER_IP" \
             -var="cwa_github_sha=$BUILD_ID" \
-            -var="agent_msi_path=$AGENT_MSI_PATH" \
+            -var="agent_msi_url=$AGENT_MSI_URL" \
             -var="github_test_repo=$TEST_REPO_URL" \
             -var="github_test_repo_branch=$TEST_REPO_BRANCH" \
             -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
@@ -2176,7 +2188,9 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/vm/win
+            # State is local to the runner; a timed-out apply leaves a stale lock that otherwise blocks cleanup (run 35537032697 leaked 5 resources).
             terraform destroy --auto-approve \
+              -lock=false \
               -var="region=us-east-2" \
               -var="runner_ip=$RUNNER_IP" \
               -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
