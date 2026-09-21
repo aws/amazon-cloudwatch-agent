@@ -89,8 +89,7 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	r.Stop()
-	time.Sleep(200 * time.Millisecond) // Wait a bit to collect all logs
+	r.Stop() // synchronous: drains queued events and waits for the watcher to exit
 
 	// Check the debug level log messages
 	debugCnt := 0
@@ -129,9 +128,8 @@ func TestShouldRetryDoesNotBlockAfterStop(t *testing.T) {
 	l := &testLogger{}
 	r := NewLogThrottleRetryer(l)
 
-	// Stop the retryer, which closes the done channel and exits the consumer goroutine
+	// Stop the retryer: closes done, drains queued events, and waits for the goroutine to exit
 	r.Stop()
-	time.Sleep(50 * time.Millisecond) // Give the goroutine time to exit
 
 	req := &request.Request{
 		Error:     awserr.New("RequestLimitExceeded", "Test AWS Error", nil),

@@ -343,9 +343,15 @@ func marshalRangeList(rl state.RangeList) string {
 }
 
 func assertStateFileRange(t *testing.T, fileName string, rl state.RangeList) {
-	time.Sleep(200 * time.Millisecond)
-	content, _ := os.ReadFile(fileName)
-	assert.Contains(t, string(content), marshalRangeList(rl))
+	// The state file flushes asynchronously on a 100ms ticker (saveStateInterval),
+	// so a fixed 200ms sleep + single read races under Windows CI (reads an empty
+	// file). Poll for the expected range instead.
+	expected := marshalRangeList(rl)
+	assert.Eventually(t, func() bool {
+		content, _ := os.ReadFile(fileName)
+		return strings.Contains(string(content), expected)
+	}, 10*time.Second, 100*time.Millisecond,
+		"state file %s should contain range %q", fileName, expected)
 }
 
 // Start and end are both inclusive
