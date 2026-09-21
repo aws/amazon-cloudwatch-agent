@@ -1926,7 +1926,7 @@ jobs:
   AzureVMIntegrationTest:
     needs: [OutputEnvVariables]
     if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
-    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel-Linux
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
     strategy:
@@ -2054,7 +2054,7 @@ jobs:
   AzureVMWindowsIntegrationTest:
     needs: [OutputEnvVariables]
     if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
-    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-Windows-default-otel
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel-Windows
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
     strategy:
