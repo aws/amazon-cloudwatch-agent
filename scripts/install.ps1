@@ -71,23 +71,17 @@ Remove-Item $MsiPath -Force -ErrorAction SilentlyContinue
 # --- configure + start ---
 # Send the fetch-config transcript to stderr so stdout carries only the status
 # readout and success sentinel below.
-# The ctl chain runs native commands (config-downloader, the agent) whose benign
-# stderr output -- e.g. the IMDS fallback warning every non-EC2 host emits during
-# mode detection -- would become a terminating NativeCommandError under
-# ErrorActionPreference Stop with the 2>&1 redirection. Success is asserted by
-# the explicit status check below, not by treating stderr as fatal.
-$ErrorActionPreference = "Continue"
 if ($Cloud -in @('azure', 'gcp')) {
     # CWAGENT_ROLE_ARN here is the agent's own env var (its default:otel config
     # expands ${CWAGENT_ROLE_ARN}), not the CWAGENT_AWS_ROLE_ARN input read
     # above. Do not rename it to match.
     & $Ctl -Action set-env -EnvVar "CWAGENT_ROLE_ARN=${RoleArn}" 2>&1 | ForEach-Object { [Console]::Error.WriteLine($_) }
     & $Ctl -Action set-env -EnvVar "AWS_REGION=${Region}" 2>&1 | ForEach-Object { [Console]::Error.WriteLine($_) }
+    $env:AWS_EC2_METADATA_DISABLED = "true"
     & $Ctl -Action fetch-config -Mode auto -ConfigLocation default:otel -Start 2>&1 | ForEach-Object { [Console]::Error.WriteLine($_) }
 } else {
     & $Ctl -Action fetch-config -Mode ec2 -ConfigLocation default:otel -Start 2>&1 | ForEach-Object { [Console]::Error.WriteLine($_) }
 }
-$ErrorActionPreference = "Stop"
 
 # fetch-config can exit 0 while leaving the agent stopped, so assert it is
 # actually running rather than trust the exit status.
