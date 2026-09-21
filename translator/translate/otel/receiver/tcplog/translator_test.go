@@ -17,7 +17,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
-	require.EqualValues(t, "tcplog", acit.ID().String())
+	require.EqualValues(t, "tcp_log", acit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *tcplogreceiver.TCPLogConfig

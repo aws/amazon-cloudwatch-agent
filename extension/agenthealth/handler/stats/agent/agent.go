@@ -23,7 +23,6 @@ type Stats struct {
 	PayloadBytes              *int              `json:"load,omitempty"`
 	StatusCode                *int              `json:"code,omitempty"`
 	SharedConfigFallback      *int              `json:"scfb,omitempty"`
-	ImdsFallbackSucceed       *int              `json:"ifs,omitempty"`
 	AppSignals                *int              `json:"as,omitempty"`
 	EnhancedContainerInsights *int              `json:"eci,omitempty"`
 	RunningInContainer        *int              `json:"ric,omitempty"`
@@ -59,9 +58,6 @@ func (s *Stats) Merge(other Stats) {
 	}
 	if other.SharedConfigFallback != nil {
 		s.SharedConfigFallback = other.SharedConfigFallback
-	}
-	if other.ImdsFallbackSucceed != nil {
-		s.ImdsFallbackSucceed = other.ImdsFallbackSucceed
 	}
 	if other.AppSignals != nil {
 		s.AppSignals = other.AppSignals

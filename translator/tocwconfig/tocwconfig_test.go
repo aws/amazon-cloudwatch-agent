@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/BurntSushi/toml"
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
@@ -28,7 +29,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
 	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
@@ -1083,12 +1083,15 @@ func readCommonConfig(t *testing.T, commonConfigFilePath string) {
 }
 
 func resetContext(t *testing.T) {
-	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(retryer.DefaultImdsRetries))
+	t.Setenv(envconfig.IMDS_NUMBER_RETRY, strconv.Itoa(override.DefaultIMDSRetries))
 	t.Setenv(envconfig.SystemMetricsEnabled, "false")
 	// sigv4auth.Validate() eagerly resolves a credential provider. Set fake
 	// credentials so validation doesn't fail in environments without them.
 	t.Setenv("AWS_ACCESS_KEY_ID", "test")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	// v0.150 k8sattributesprocessor validates node_from_env_var's env var is set
+	// (production sets K8S_NODE_NAME via the downward API).
+	t.Setenv("K8S_NODE_NAME", "node_name_from_env")
 	util.DetectRegion = func(string, map[string]string) (string, string) {
 		return "us-west-2", "ACJ"
 	}

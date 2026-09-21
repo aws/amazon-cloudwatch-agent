@@ -6,11 +6,13 @@ package ecsservicediscovery
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func buildTestingTasksforServiceName() []*DecoratedTask {
+func buildTestingTasksForServiceName() []*DecoratedTask {
 	matchingID1 := "jghsdf3242"
 	matchingID2 := "sdfdagfsdg"
 	matchingID3 := "jfdnvufhsn"
@@ -19,51 +21,51 @@ func buildTestingTasksforServiceName() []*DecoratedTask {
 	containerNameMismatch := "InvalidPattern"
 	return []*DecoratedTask{
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameMismatch,
+						Name: aws.String(containerNameMismatch),
 					},
 				},
 			},
-			Task: &ecs.Task{
-				StartedBy: &matchingID1,
+			Task: &types.Task{
+				StartedBy: aws.String(matchingID1),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameMatch,
+						Name: aws.String(containerNameMatch),
 					},
 				},
 			},
-			Task: &ecs.Task{
-				StartedBy: &matchingID2,
+			Task: &types.Task{
+				StartedBy: aws.String(matchingID2),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameMismatch,
+						Name: aws.String(containerNameMismatch),
 					},
 				},
 			},
-			Task: &ecs.Task{
-				StartedBy: &matchingID3,
+			Task: &types.Task{
+				StartedBy: aws.String(matchingID3),
 			},
 		},
 		{
-			TaskDefinition: &ecs.TaskDefinition{
-				ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinition: &types.TaskDefinition{
+				ContainerDefinitions: []types.ContainerDefinition{
 					{
-						Name: &containerNameMatch,
+						Name: aws.String(containerNameMatch),
 					},
 				},
 			},
-			Task: &ecs.Task{
-				StartedBy: &mismatchingID,
+			Task: &types.Task{
+				StartedBy: aws.String(mismatchingID),
 			},
 		},
 	}
@@ -75,8 +77,8 @@ func Test_ServiceNameDiscoveryProcessor_Normal(t *testing.T) {
 		{ServiceNamePattern: "ServiceWithoutContainerNamePattern[1-9]+"},
 	}
 	var stats ProcessorStats
-	taskList := buildTestingTasksforServiceName()
-	mockSvc := &ecs.ECS{}
+	taskList := buildTestingTasksForServiceName()
+	mockSvc := &ecs.Client{}
 	p := NewServiceEndpointDiscoveryProcessor(mockSvc, config, &stats)
 	assert.Equal(t, "ServiceEndpointDiscoveryProcessor", p.ProcessorName())
 	mismatchContainerMatchingID1 := "jghsdf3242"

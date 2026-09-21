@@ -10,7 +10,11 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/pipeline"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 )
 
 func TestTranslatorID(t *testing.T) {
@@ -43,6 +47,65 @@ func TestTranslatorTranslate(t *testing.T) {
 	require.Len(t, routingCfg.Table, 1)
 	assert.Equal(t, `resource.attributes["key"] == "value"`, routingCfg.Table[0].Condition)
 	assert.Equal(t, []pipeline.ID{pipelineB}, routingCfg.Table[0].Pipelines)
+	assert.Equal(t, routingconnector.Move, routingCfg.Table[0].Action)
+}
+
+func TestTranslatorDefaultsActionToMove(t *testing.T) {
+	pipelineA := pipeline.NewIDWithName(pipeline.SignalMetrics, "a")
+	pipelineB := pipeline.NewIDWithName(pipeline.SignalMetrics, "b")
+	tr := NewTranslator("test",
+		WithDefaultPipelines(pipelineA),
+		WithTable(routingconnector.RoutingTableItem{
+			Condition: `attributes["k"] == "v"`,
+			Pipelines: []pipeline.ID{pipelineB},
+		}),
+	)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	routingCfg := cfg.(*routingconnector.Config)
+	assert.Equal(t, routingconnector.Move, routingCfg.Table[0].Action)
+}
+
+func TestTranslatorPreservesExplicitAction(t *testing.T) {
+	pipelineA := pipeline.NewIDWithName(pipeline.SignalMetrics, "a")
+	pipelineB := pipeline.NewIDWithName(pipeline.SignalMetrics, "b")
+	tr := NewTranslator("test",
+		WithDefaultPipelines(pipelineA),
+		WithTable(routingconnector.RoutingTableItem{
+			Condition: `attributes["k"] == "v"`,
+			Pipelines: []pipeline.ID{pipelineB},
+			Action:    routingconnector.Copy,
+		}),
+	)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+	routingCfg := cfg.(*routingconnector.Config)
+	assert.Equal(t, routingconnector.Copy, routingCfg.Table[0].Action)
+}
+
+// TestTranslatorConfigRoundTrips ensures the generated config survives a marshal
+// (CWA's encoder) + unmarshal (connector factory) round trip and validates.
+func TestTranslatorConfigRoundTrips(t *testing.T) {
+	pipelineA := pipeline.NewIDWithName(pipeline.SignalMetrics, "a")
+	pipelineB := pipeline.NewIDWithName(pipeline.SignalMetrics, "b")
+	tr := NewTranslator("test",
+		WithErrorMode(ottl.IgnoreError),
+		WithDefaultPipelines(pipelineA),
+		WithTable(routingconnector.RoutingTableItem{
+			Condition: `attributes["k"] == "v"`,
+			Pipelines: []pipeline.ID{pipelineB},
+		}),
+	)
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	m, err := mapstructure.Marshal(cfg)
+	require.NoError(t, err)
+
+	factory := routingconnector.NewFactory()
+	decoded := factory.CreateDefaultConfig()
+	require.NoError(t, confmap.NewFromStringMap(m).Unmarshal(decoded))
+	require.NoError(t, xconfmap.Validate(decoded))
 }
 
 func TestTranslatorDefaults(t *testing.T) {
