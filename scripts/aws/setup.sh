@@ -874,7 +874,7 @@ trust_gcp_gce() {
      TRUST_STATEMENT=$(
           cat <<EOF
 {
-    "Sid": "CWAgentGCE${SA_UNIQUE_ID}",
+    "Sid": "GCE${SA_UNIQUE_ID}",
     "Effect": "Allow",
     "Principal": {
       "Federated": "accounts.google.com"

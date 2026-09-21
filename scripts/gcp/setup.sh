@@ -9,10 +9,10 @@
 #
 #   gcp_gce     reads the service account attached to the GCE VM and its
 #               unique ID (the value the AWS trust policy conditions on),
-#               then pushes install.sh to it via "gcloud compute ssh",
-#               printing the command instead when SSH cannot reach the VM.
-#               Windows instances always get the printed PowerShell command
-#               (SSH on GCE Windows VMs is opt-in and off by default)
+#               then pushes the install (install.sh on Linux, install.ps1 on
+#               Windows) via "gcloud compute ssh", printing the command instead
+#               when SSH cannot reach the VM. Windows SSH is opt-in and off by
+#               default, so those usually get the printed command.
 #               (requires: gcloud)
 #   gcp_gke     reads the cluster and emits its OIDC issuer URL (the value the
 #               AWS trust policy is built on), then installs the CloudWatch
@@ -260,12 +260,14 @@ check_prerequisites() {
           [ "${PROJECT}" = "(unset)" ] && PROJECT=""
      fi
      [ -n "${PROJECT}" ] || die "no GCP project (set CWAGENT_GCP_PROJECT or run 'gcloud config set project <project-id>')"
-     # Describe doubles as the existence and access check, like the Azure
-     # script's scoped account show. Its stderr is not suppressed: a permission
-     # or throttling failure should show its real error above the message here.
-     _resolved_project=$(gcloud projects describe "${PROJECT}" --format='value(projectId)') ||
-          die "cannot access project '${PROJECT}' (see the gcloud error above; check 'gcloud projects list')"
-     PROJECT="${_resolved_project}"
+     # Normalize a project number to its ID (the GKE issuer URL needs the ID).
+     # Non-fatal: the resource describe below is the real access check, so lacking
+     # resourcemanager.projects.get here should not block setup.
+     if _resolved_project=$(gcloud projects describe "${PROJECT}" --format='value(projectId)' 2>/dev/null); then
+          PROJECT="${_resolved_project}"
+     else
+          logwarn "could not read project '${PROJECT}' (using it as given)"
+     fi
      log "GCP account: ${ACTIVE_ACCOUNT}"
      log "GCP project: ${PROJECT}"
 }
@@ -315,7 +317,7 @@ setup_gcp_gce() {
      # should show its real error above the message here, not read as not-found.
      VM_INFO=$(gcloud_scoped compute instances describe "${INSTANCE_NAME}" \
           --zone "${LOCATION}" \
-          --format 'value(serviceAccounts[0].email, disks[0].licenses)') ||
+          --format 'value(serviceAccounts[0].email, disks.filter("boot:true").extract(licenses))') ||
           die "cannot find or access instance '${INSTANCE_NAME}' in zone '${LOCATION}' of project '${PROJECT}' (see the gcloud error above)"
      SA_EMAIL=$(printf '%s' "${VM_INFO}" | cut -f1)
      VM_LICENSES=$(printf '%s' "${VM_INFO}" | cut -f2)
@@ -350,13 +352,23 @@ setup_gcp_gce() {
           return
      fi
 
-     # Windows instances always get the printed command: gcloud has no remote-
-     # command service to push through (its only remote execution is SSH), and
-     # SSH on Windows VMs is opt-in, requiring the google-compute-engine-ssh
-     # agent and enable-windows-ssh metadata
-     # (https://docs.cloud.google.com/compute/docs/connect/windows-ssh), so
-     # there is no push path to probe.
+     # Default remote shell is cmd.exe: the probe uses a cmd-safe "exit 0" (not the
+     # Linux "true"), and install.ps1 runs via powershell -EncodedCommand to dodge nested quoting.
      if [ "${VM_OS}" = "Windows" ]; then
+          win_install="\$env:CWAGENT_CLOUD='gcp'; \$env:CWAGENT_AWS_ROLE_ARN='${ROLE_ARN}'; \$env:CWAGENT_AWS_REGION='${REGION}'; Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1; & \$env:TEMP\\install.ps1"
+
+          if command -v iconv >/dev/null 2>&1 && command -v base64 >/dev/null 2>&1 &&
+               gcloud_scoped compute ssh "${INSTANCE_NAME}" --zone "${LOCATION}" --command "exit 0" >/dev/null 2>&1; then
+               section "Installing agent on ${INSTANCE_NAME}..."
+               enc=$(printf '%s' "${win_install}" | iconv -f UTF-8 -t UTF-16LE | base64 | tr -d '\n')
+               if run_via_gcloud_ssh "powershell -NoProfile -EncodedCommand ${enc}"; then
+                    log "Agent installed on '${INSTANCE_NAME}'"
+                    log "Service account unique ID (for the AWS setup): ${SA_UNIQUE_ID}"
+                    return
+               fi
+               logwarn "remote install on '${INSTANCE_NAME}' failed (the SSH session may not be elevated); run the command below in an elevated PowerShell"
+          fi
+
           printf '\n' >&3
           printf 'Done. Run the following on %s to install and start the agent:\n' "${INSTANCE_NAME}" >&3
           printf '\n' >&3
