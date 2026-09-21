@@ -148,7 +148,7 @@ Usage:
   CWAGENT_PLATFORM=aws_ecs   CWAGENT_AWS_REGION=us-east-1                                       $0
   CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_OIDC_ISSUER=https://... $0
   CWAGENT_PLATFORM=azure_vm  CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_TENANT_ID=<tenant>      $0
-  CWAGENT_PLATFORM=gcp_gce   CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_SA_UNIQUE_ID=<unique-id>   $0
+  CWAGENT_PLATFORM=gcp_gce   CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_SA_UNIQUE_ID=<unique-id>  $0
   CWAGENT_PLATFORM=gcp_gke   CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_OIDC_ISSUER=https://...   $0
 
 Environment variables:
@@ -1030,7 +1030,7 @@ install_aws_ec2() {
      fi
 
      printf '\n' >&3
-     printf 'Done. Run the following on %s to install and start the agent:\n' "${INSTANCE_ID}" >&3
+     printf 'To install manually, run the following on %s:\n' "${INSTANCE_ID}" >&3
      printf '\n' >&3
      if [ "${INSTANCE_PLATFORM}" = "windows" ]; then
           printf '%s\n' "  # PowerShell, as Administrator:" >&3

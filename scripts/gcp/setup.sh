@@ -285,6 +285,18 @@ linux_install_cmd() {
      printf 'curl -fsSL %s/install.sh | sudo %s sh' "${SCRIPT_BASE_URL}" "${envs}"
 }
 
+# Windows counterpart. The prelude + fetch are wrapped into one -EncodedCommand
+# base64 payload (UTF-16LE) so it needs no quoting through the default cmd.exe
+# shell. $1 = PowerShell env prelude. Returns non-zero if it cannot encode (no
+# iconv), letting the caller fall back to printing the command.
+windows_install_cmd() {
+     ps_prelude="$1"
+     ps_script="\$ProgressPreference='SilentlyContinue'; ${ps_prelude}Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1; & \$env:TEMP\\install.ps1"
+     encoded=$(printf '%s' "${ps_script}" | iconv -f UTF-8 -t UTF-16LE 2>/dev/null | base64 | tr -d '\n')
+     [ -n "${encoded}" ] || return 1
+     printf 'powershell -NoProfile -EncodedCommand %s' "${encoded}"
+}
+
 # Run a command on the GCE VM via gcloud compute ssh. $1 = command.
 # ssh preserves the remote exit status (unlike Azure's run-command, which
 # masks it), so the install script's own failure handling surfaces directly
@@ -355,22 +367,25 @@ setup_gcp_gce() {
      # Default remote shell is cmd.exe: the probe uses a cmd-safe "exit 0" (not the
      # Linux "true"), and install.ps1 runs via powershell -EncodedCommand to dodge nested quoting.
      if [ "${VM_OS}" = "Windows" ]; then
-          win_install="\$env:CWAGENT_CLOUD='gcp'; \$env:CWAGENT_AWS_ROLE_ARN='${ROLE_ARN}'; \$env:CWAGENT_AWS_REGION='${REGION}'; Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1; & \$env:TEMP\\install.ps1"
+          ps_prelude="\$env:CWAGENT_CLOUD='gcp'; \$env:CWAGENT_AWS_ROLE_ARN='${ROLE_ARN}'; \$env:CWAGENT_AWS_REGION='${REGION}'; "
 
-          if command -v iconv >/dev/null 2>&1 && command -v base64 >/dev/null 2>&1 &&
+          section "Checking SSH connectivity to ${INSTANCE_NAME}..."
+          if INSTALL_CMD=$(windows_install_cmd "${ps_prelude}") &&
                gcloud_scoped compute ssh "${INSTANCE_NAME}" --zone "${LOCATION}" --command "exit 0" >/dev/null 2>&1; then
+               log "SSH connection established"
                section "Installing agent on ${INSTANCE_NAME}..."
-               enc=$(printf '%s' "${win_install}" | iconv -f UTF-8 -t UTF-16LE | base64 | tr -d '\n')
-               if run_via_gcloud_ssh "powershell -NoProfile -EncodedCommand ${enc}"; then
+               if run_via_gcloud_ssh "${INSTALL_CMD}"; then
                     log "Agent installed on '${INSTANCE_NAME}'"
                     log "Service account unique ID (for the AWS setup): ${SA_UNIQUE_ID}"
                     return
                fi
-               logwarn "remote install on '${INSTANCE_NAME}' failed (the SSH session may not be elevated); run the command below in an elevated PowerShell"
+               logwarn "remote install on '${INSTANCE_NAME}' failed (the SSH session may not be elevated)"
+          else
+               logwarn "could not reach '${INSTANCE_NAME}' over SSH (Windows SSH is opt-in)"
           fi
 
           printf '\n' >&3
-          printf 'Done. Run the following on %s to install and start the agent:\n' "${INSTANCE_NAME}" >&3
+          printf 'To install manually, run the following on %s:\n' "${INSTANCE_NAME}" >&3
           printf '\n' >&3
           printf '%s\n' "  # PowerShell, as Administrator:" >&3
           printf '%s\n' "  \$env:CWAGENT_CLOUD='gcp'; \$env:CWAGENT_AWS_ROLE_ARN='${ROLE_ARN}'; \$env:CWAGENT_AWS_REGION='${REGION}'" >&3
@@ -384,7 +399,9 @@ setup_gcp_gce() {
      # Reachability probe, mirroring the EC2 path's SSM Online check: separates
      # "cannot SSH to the VM" (fall back to printing the command) from "install
      # failed" (die). The probe also performs gcloud's one-time SSH key setup.
+     section "Checking SSH connectivity to ${INSTANCE_NAME}..."
      if gcloud_scoped compute ssh "${INSTANCE_NAME}" --zone "${LOCATION}" --command true >/dev/null 2>&1; then
+          log "SSH connection established"
           section "Installing agent on ${INSTANCE_NAME}..."
           run_via_gcloud_ssh "${INSTALL_CMD}" || die "Install script failed on '${INSTANCE_NAME}'"
           log "Agent installed on '${INSTANCE_NAME}'"
@@ -394,7 +411,7 @@ setup_gcp_gce() {
      logwarn "cannot reach '${INSTANCE_NAME}' over SSH (check network access and compute.instances.osLogin/SSH key permissions)"
 
      printf '\n' >&3
-     printf 'Done. Run the following on %s to install and start the agent:\n' "${INSTANCE_NAME}" >&3
+     printf 'To install manually, run the following on %s:\n' "${INSTANCE_NAME}" >&3
      printf '\n' >&3
      printf '%s\n' "  ${INSTALL_CMD}" >&3
 }
@@ -467,7 +484,7 @@ setup_gcp_gke() {
           log "Chart installed on '${CLUSTER_NAME}'"
      else
           printf '\n' >&3
-          printf 'Done. Install the Amazon CloudWatch Observability Helm chart (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
+          printf 'Install the Amazon CloudWatch Observability Helm chart manually (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
           printf '\n' >&3
           {
                printf '%s\n' "  helm repo add aws-observability ${HELM_CHART_REPO}"

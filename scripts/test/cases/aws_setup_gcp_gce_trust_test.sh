@@ -68,7 +68,7 @@ current_policy() {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "CWAgentGCE${SA_ID}",
+      "Sid": "GCE${SA_ID}",
       "Effect": "Allow",
       "Principal": { "Federated": "accounts.google.com" },
       "Action": "sts:AssumeRoleWithWebIdentity",
@@ -146,8 +146,8 @@ assert_status 0
 assert_output_contains stdout "Merging trust statement"
 assert_not_called "iam create-role"
 assert_jq "${SANDBOX}/updated_trust.json" '.Statement | length == 2'
-assert_jq "${SANDBOX}/updated_trust.json" ".Statement | any(.Sid? == \"CWAgentGCE${SA_ID}\")"
-assert_jq "${SANDBOX}/updated_trust.json" ".Statement | any(.Sid? == \"CWAgentGCE${SA_ID_2}\")"
+assert_jq "${SANDBOX}/updated_trust.json" ".Statement | any(.Sid? == \"GCE${SA_ID}\")"
+assert_jq "${SANDBOX}/updated_trust.json" ".Statement | any(.Sid? == \"GCE${SA_ID_2}\")"
 assert_jq "${SANDBOX}/updated_trust.json" \
      ".Statement | any(.Condition.StringEquals[\"accounts.google.com:sub\"]? == \"${SA_ID}\")"
 assert_jq "${SANDBOX}/updated_trust.json" \
@@ -160,7 +160,7 @@ run_gce_trust
 assert_status 0
 assert_output_contains stdout "Updating trust statement"
 assert_jq "${SANDBOX}/updated_trust.json" '.Statement | length == 1'
-assert_jq "${SANDBOX}/updated_trust.json" ".Statement[0].Sid == \"CWAgentGCE${SA_ID}\""
+assert_jq "${SANDBOX}/updated_trust.json" ".Statement[0].Sid == \"GCE${SA_ID}\""
 
 t_case "pre-Sid statement for another service account: replaced by the keyed form"
 aws_fake
