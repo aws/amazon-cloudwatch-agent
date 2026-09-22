@@ -1165,7 +1165,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   ECSFargateIntegrationTest:
     if: ${{ needs.GenerateTestMatrix.outputs.ecs_fargate_matrix != '' && needs.GenerateTestMatrix.outputs.ecs_fargate_matrix != '[]' }}
@@ -1257,7 +1257,7 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   EKSIntegrationTest:
     if: ${{ needs.GenerateTestMatrix.outputs.eks_daemon_matrix != '' && needs.GenerateTestMatrix.outputs.eks_daemon_matrix != '[]' }}
@@ -1468,7 +1468,7 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   PerformanceTrackingTest:
     if: ${{ needs.GenerateTestMatrix.outputs.ec2_performance_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_performance_matrix != '[]' }}
@@ -1935,7 +1935,7 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            terraform destroy -auto-approve
+            terraform destroy -lock=false -auto-approve
 
   AzureVMIntegrationTest:
     needs: [OutputEnvVariables]
