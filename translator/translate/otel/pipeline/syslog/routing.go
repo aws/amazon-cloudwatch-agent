@@ -44,7 +44,11 @@ func (t *routingConnectorTranslator) Translate(_ *confmap.Conf) (component.Confi
 	var tableItems []map[string]any
 	for _, entry := range t.table {
 		tableItems = append(tableItems, map[string]any{
-			"context":   "log",
+			"context": "log",
+			// v0.150 routingconnector requires an explicit action per table
+			// entry; "move" gives first-match-wins routing (the record is moved
+			// to the matched pipeline rather than copied to all matches).
+			"action":    "move",
 			"condition": entry.condition,
 			"pipelines": pipelineIDsToStrings(entry.pipelines),
 		})

@@ -96,7 +96,11 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 
 	translators.Merge(prometheus.NewTranslators(conf))
 	translators.Set(emf_logs.NewTranslator())
-	translators.Merge(syslog.NewTranslators(conf))
+	syslogTranslators, err := syslog.NewTranslators(conf)
+	if err != nil {
+		return nil, err
+	}
+	translators.Merge(syslogTranslators)
 	translators.Set(xray.NewTranslator())
 	translators.Set(containerinsightsjmx.NewTranslator())
 	translators.Merge(jmx.NewTranslators(conf))

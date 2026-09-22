@@ -210,7 +210,7 @@ func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap
 	if defaultLogStreamName == "" {
 		defaultLogStreamName = "{hostname}"
 	}
-	defaultRetention := toInt64(syslogConf, "retention_in_days")
+	defaultRetention := toRetentionDays(syslogConf, "retention_in_days")
 
 	// Build receivers from listeners
 	var receiverTranslators []common.ComponentTranslator
@@ -310,7 +310,7 @@ func buildSectionPipelines(syslogConf map[string]any, sectionIdx int, _ *confmap
 		if ruleLogStream == "" {
 			ruleLogStream = defaultLogStreamName
 		}
-		ruleRetention := toInt64(rule, "retention_in_days")
+		ruleRetention := toRetentionDays(rule, "retention_in_days")
 		if ruleRetention == 0 {
 			ruleRetention = defaultRetention
 		}
@@ -551,14 +551,12 @@ type filter struct {
 	Expression string
 }
 
-func toInt64(m map[string]any, key string) int64 {
-	switch v := m[key].(type) {
-	case float64:
-		return int64(v)
-	case int:
-		return int64(v)
-	case int64:
-		return v
+func toRetentionDays(m map[string]any, key string) int32 {
+	// Numeric JSON config values unmarshal as float64. float64->int32 is the
+	// same conversion the other log exporters (e.g. journald) use and is safe
+	// for a day count.
+	if v, ok := m[key].(float64); ok {
+		return int32(v)
 	}
 	return 0
 }

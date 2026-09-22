@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
@@ -14,7 +15,6 @@ import (
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -29,7 +29,7 @@ const (
 )
 
 // newExporterTranslator is retained as dead code to support future OTLP delivery mode.
-func newExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int64, deliveryMode string, _ *confmap.Conf) common.ComponentTranslator {
+func newExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int32, deliveryMode string, _ *confmap.Conf) common.ComponentTranslator {
 	if deliveryMode == deliveryModeOTLP {
 		return newOTLPExporterTranslator(name)
 	}
@@ -42,13 +42,13 @@ type cwlExporterTranslator struct {
 	name            string
 	logGroupName    string
 	logStreamName   string
-	retentionInDays int64
+	retentionInDays int32
 	factory         exporter.Factory
 }
 
 var _ common.ComponentTranslator = (*cwlExporterTranslator)(nil)
 
-func newCWLExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int64) common.ComponentTranslator {
+func newCWLExporterTranslator(name, logGroupName, logStreamName string, retentionInDays int32) common.ComponentTranslator {
 	return &cwlExporterTranslator{
 		name:            name,
 		logGroupName:    logGroupName,
@@ -76,7 +76,7 @@ func (t *cwlExporterTranslator) Translate(c *confmap.Conf) (component.Config, er
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
-	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.Profile = fmt.Sprintf("%v", profileKey)
 	}

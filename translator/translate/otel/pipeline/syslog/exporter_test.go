@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -28,7 +29,7 @@ func TestCWLExporterTranslator_Translate(t *testing.T) {
 		name            string
 		logGroupName    string
 		logStreamName   string
-		retentionInDays int64
+		retentionInDays int32
 		mode            string
 		region          string
 		roleARN         string
@@ -37,7 +38,7 @@ func TestCWLExporterTranslator_Translate(t *testing.T) {
 		envVars         map[string]string
 		wantLogGroup    string
 		wantLogStream   string
-		wantRetention   int64
+		wantRetention   int32
 		wantRegion      string
 		wantRoleARN     string
 		wantProfile     string
@@ -206,7 +207,8 @@ func TestCWLExporterTranslator_Translate(t *testing.T) {
 
 func TestOTLPExporterTranslator_ID(t *testing.T) {
 	tr := newOTLPExporterTranslator("syslog_default")
-	assert.Equal(t, "otlphttp/syslog_default", tr.ID().String())
+	otlpType := otlphttpexporter.NewFactory().Type().String()
+	assert.Equal(t, otlpType+"/syslog_default", tr.ID().String())
 }
 
 func TestOTLPExporterTranslator_Translate(t *testing.T) {
@@ -246,7 +248,8 @@ func TestNewExporterTranslator_Dispatch(t *testing.T) {
 
 	t.Run("OTLP mode returns OTLP exporter", func(t *testing.T) {
 		tr := newExporterTranslator("test", "/group", "stream", 7, deliveryModeOTLP, conf)
-		assert.Equal(t, "otlphttp/test", tr.ID().String())
+		otlpType := otlphttpexporter.NewFactory().Type().String()
+		assert.Equal(t, otlpType+"/test", tr.ID().String())
 	})
 
 	t.Run("empty mode defaults to PLE", func(t *testing.T) {
