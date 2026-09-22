@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 )
 
 const (
@@ -44,8 +44,8 @@ type EC2MetaData struct {
 }
 
 type DecoratedTask struct {
-	Task           *ecs.Task
-	TaskDefinition *ecs.TaskDefinition
+	Task           *types.Task
+	TaskDefinition *types.TaskDefinition
 	EC2Info        *EC2MetaData
 	ServiceName    string
 
@@ -55,8 +55,8 @@ type DecoratedTask struct {
 
 func (t *DecoratedTask) String() string {
 	return fmt.Sprintf("Task:\n\t\tTaskArn: %v\n\t\tTaskDefinitionArn: %v\n\t\tEC2Info: %v\n\t\tDockerLabelBased: %v\n\t\tTaskDefinitionBased: %v\n",
-		aws.StringValue(t.Task.TaskArn),
-		aws.StringValue(t.Task.TaskDefinitionArn),
+		aws.ToString(t.Task.TaskArn),
+		aws.ToString(t.Task.TaskDefinitionArn),
 		t.EC2Info,
 		t.DockerLabelBased,
 		t.TaskDefinitionBased,
@@ -64,26 +64,26 @@ func (t *DecoratedTask) String() string {
 }
 
 func addExporterLabels(labels map[string]string, labelKey string, labelValue *string) {
-	if aws.StringValue(labelValue) != "" {
-		labels[labelKey] = *labelValue
+	if aws.ToString(labelValue) != "" {
+		labels[labelKey] = aws.ToString(labelValue)
 	}
 }
 
 // Get the private ip of the decorated task.
 // Return "" when fail to get the private ip
 func (t *DecoratedTask) getPrivateIp() string {
-	networkMode := aws.StringValue(t.TaskDefinition.NetworkMode)
-	if networkMode == ecs.NetworkModeNone {
+	networkMode := t.TaskDefinition.NetworkMode
+	if networkMode == types.NetworkModeNone {
 		return ""
 	}
 
 	// AWSVPC: Get Private IP from tasks->attachments (ElasticNetworkInterface -> privateIPv4Address)
-	if networkMode == ecs.NetworkModeAwsvpc {
+	if networkMode == types.NetworkModeAwsvpc {
 		for _, v := range t.Task.Attachments {
-			if aws.StringValue(v.Type) == "ElasticNetworkInterface" {
+			if aws.ToString(v.Type) == "ElasticNetworkInterface" {
 				for _, d := range v.Details {
-					if aws.StringValue(d.Name) == "privateIPv4Address" {
-						return aws.StringValue(d.Value)
+					if aws.ToString(d.Name) == "privateIPv4Address" {
+						return aws.ToString(d.Value)
 					}
 				}
 			}
@@ -96,29 +96,30 @@ func (t *DecoratedTask) getPrivateIp() string {
 	return ""
 }
 
-func (t *DecoratedTask) getPrometheusExporterPort(configuredPort int64, c *ecs.ContainerDefinition) int64 {
-	var mappedPort int64
-	networkMode := aws.StringValue(t.TaskDefinition.NetworkMode)
-	if networkMode == ecs.NetworkModeNone {
+func (t *DecoratedTask) getPrometheusExporterPort(configuredPort int32, c types.ContainerDefinition) int32 {
+	var mappedPort int32
+	networkMode := t.TaskDefinition.NetworkMode
+	if networkMode == types.NetworkModeNone {
 		// for network type: none, skipped directly
 		return 0
 	}
 
-	if networkMode == ecs.NetworkModeAwsvpc || networkMode == ecs.NetworkModeHost {
+	switch networkMode {
+	case types.NetworkModeAwsvpc, types.NetworkModeHost:
 		// for network type: awsvpc or host, get the mapped port from: taskDefinition->containerDefinitions->portMappings
 		for _, v := range c.PortMappings {
-			if aws.Int64Value(v.ContainerPort) == configuredPort {
-				mappedPort = aws.Int64Value(v.HostPort)
+			if aws.ToInt32(v.ContainerPort) == configuredPort {
+				mappedPort = aws.ToInt32(v.HostPort)
 			}
 		}
-	} else if networkMode == ecs.NetworkModeBridge || networkMode == "" {
+	case types.NetworkModeBridge, "":
 		// for network type: bridge, get the mapped port from: task->containers->networkBindings
-		containerName := aws.StringValue(c.Name)
+		containerName := aws.ToString(c.Name)
 		for _, tc := range t.Task.Containers {
-			if containerName == aws.StringValue(tc.Name) {
+			if containerName == aws.ToString(tc.Name) {
 				for _, v := range tc.NetworkBindings {
-					if aws.Int64Value(v.ContainerPort) == configuredPort {
-						mappedPort = aws.Int64Value(v.HostPort)
+					if aws.ToInt32(v.ContainerPort) == configuredPort {
+						mappedPort = aws.ToInt32(v.HostPort)
 					}
 				}
 			}
@@ -129,24 +130,25 @@ func (t *DecoratedTask) getPrometheusExporterPort(configuredPort int64, c *ecs.C
 
 func (t *DecoratedTask) generatePrometheusTarget(
 	dockerLabelReg *regexp.Regexp,
-	c *ecs.ContainerDefinition,
+	c types.ContainerDefinition,
 	ip string,
-	mappedPort int64,
+	mappedPort int32,
 	metricsPath string,
 	customizedJobName string) *PrometheusTarget {
 
 	labels := make(map[string]string)
 	addExporterLabels(labels, containerNameLabel, c.Name)
 	addExporterLabels(labels, taskFamilyLabel, t.TaskDefinition.Family)
-	revisionStr := fmt.Sprintf("%d", *t.TaskDefinition.Revision)
+	revisionStr := fmt.Sprintf("%d", t.TaskDefinition.Revision)
 	addExporterLabels(labels, taskRevisionLabel, &revisionStr)
 	addExporterLabels(labels, taskGroupLabel, t.Task.Group)
 	addExporterLabels(labels, taskStartedbyLabel, t.Task.StartedBy)
-	addExporterLabels(labels, taskLaunchTypeLabel, t.Task.LaunchType)
+	launchTypeStr := string(t.Task.LaunchType)
+	addExporterLabels(labels, taskLaunchTypeLabel, &launchTypeStr)
 
-	if arn, err := arn.Parse(*t.Task.TaskArn); err == nil {
+	if taskArn, err := arn.Parse(aws.ToString(t.Task.TaskArn)); err == nil {
 		// ARN formats: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-account-settings.html#ecs-resource-ids
-		splitResource := strings.Split(arn.Resource, "/")[1:]
+		splitResource := strings.Split(taskArn.Resource, "/")[1:]
 		if len(splitResource) == 1 {
 			// Old ARN format
 			taskId := splitResource[0]
@@ -169,7 +171,7 @@ func (t *DecoratedTask) generatePrometheusTarget(
 	addExporterLabels(labels, taskMetricsPathLabel, &metricsPath)
 	for k, v := range c.DockerLabels {
 		if dockerLabelReg.MatchString(k) {
-			addExporterLabels(labels, k, v)
+			addExporterLabels(labels, k, &v)
 		}
 	}
 	// handle customized job label at last, so the conflict job docker label is overridden
@@ -184,7 +186,7 @@ func (t *DecoratedTask) generatePrometheusTarget(
 func (t *DecoratedTask) exportDockerLabelBasedTarget(config *ServiceDiscoveryConfig,
 	dockerLabelReg *regexp.Regexp,
 	ip string,
-	c *ecs.ContainerDefinition,
+	c types.ContainerDefinition,
 	targets map[string]*PrometheusTarget) {
 
 	if !t.DockerLabelBased {
@@ -197,12 +199,12 @@ func (t *DecoratedTask) exportDockerLabelBasedTarget(config *ServiceDiscoveryCon
 		return
 	}
 
-	var exporterPort int64
-	if port, err := strconv.Atoi(aws.StringValue(configuredPortStr)); err != nil || port < 0 {
+	var exporterPort int32
+	if port, err := strconv.Atoi(configuredPortStr); err != nil || port < 0 || port > 65535 {
 		// an invalid port definition.
 		return
 	} else {
-		exporterPort = int64(port)
+		exporterPort = int32(port) // #nosec G109 -- port is validated to be in range 0-65535
 	}
 	mappedPort := t.getPrometheusExporterPort(exporterPort, c)
 	if mappedPort == 0 {
@@ -212,8 +214,8 @@ func (t *DecoratedTask) exportDockerLabelBasedTarget(config *ServiceDiscoveryCon
 	metricsPath := defaultPrometheusMetricsPath
 	metricsPathLabel := ""
 	if v, ok := c.DockerLabels[config.DockerLabel.MetricsPathLabel]; ok {
-		metricsPath = *v
-		metricsPathLabel = *v
+		metricsPath = v
+		metricsPathLabel = v
 	}
 	targetKey := fmt.Sprintf("%s:%d%s", ip, mappedPort, metricsPath)
 	if _, ok := targets[targetKey]; ok {
@@ -221,8 +223,8 @@ func (t *DecoratedTask) exportDockerLabelBasedTarget(config *ServiceDiscoveryCon
 	}
 
 	customizedJobName := ""
-	if _, ok := c.DockerLabels[config.DockerLabel.JobNameLabel]; ok {
-		customizedJobName = *c.DockerLabels[config.DockerLabel.JobNameLabel]
+	if v, ok := c.DockerLabels[config.DockerLabel.JobNameLabel]; ok {
+		customizedJobName = v
 	}
 
 	targets[targetKey] = t.generatePrometheusTarget(dockerLabelReg, c, ip, mappedPort, metricsPathLabel, customizedJobName)
@@ -231,7 +233,7 @@ func (t *DecoratedTask) exportDockerLabelBasedTarget(config *ServiceDiscoveryCon
 func (t *DecoratedTask) exportTaskDefinitionBasedTarget(config *ServiceDiscoveryConfig,
 	dockerLabelReg *regexp.Regexp,
 	ip string,
-	c *ecs.ContainerDefinition,
+	c types.ContainerDefinition,
 	targets map[string]*PrometheusTarget) {
 
 	if !t.TaskDefinitionBased {
@@ -240,17 +242,17 @@ func (t *DecoratedTask) exportTaskDefinitionBasedTarget(config *ServiceDiscovery
 
 	for _, v := range config.TaskDefinitions {
 		// skip if task def regex mismatch
-		if !v.taskDefRegex.MatchString(*t.Task.TaskDefinitionArn) {
+		if !v.taskDefRegex.MatchString(aws.ToString(t.Task.TaskDefinitionArn)) {
 			continue
 		}
 
 		// skip if there is container name regex pattern configured and container name mismatch
-		if v.ContainerNamePattern != "" && !v.containerNameRegex.MatchString(*c.Name) {
+		if v.ContainerNamePattern != "" && !v.containerNameRegex.MatchString(aws.ToString(c.Name)) {
 			continue
 		}
 
 		for _, port := range v.metricsPortList {
-			mappedPort := t.getPrometheusExporterPort(int64(port), c)
+			mappedPort := t.getPrometheusExporterPort(port, c)
 			if mappedPort == 0 {
 				continue
 			}
@@ -274,7 +276,7 @@ func (t *DecoratedTask) exportTaskDefinitionBasedTarget(config *ServiceDiscovery
 func (t *DecoratedTask) exportServiceEndpointBasedTarget(config *ServiceDiscoveryConfig,
 	dockerLabelReg *regexp.Regexp,
 	ip string,
-	c *ecs.ContainerDefinition,
+	c types.ContainerDefinition,
 	targets map[string]*PrometheusTarget) {
 
 	if t.ServiceName == "" {
@@ -287,12 +289,12 @@ func (t *DecoratedTask) exportServiceEndpointBasedTarget(config *ServiceDiscover
 			continue
 		}
 
-		if v.ContainerNamePattern != "" && !v.containerNameRegex.MatchString(*c.Name) {
+		if v.ContainerNamePattern != "" && !v.containerNameRegex.MatchString(aws.ToString(c.Name)) {
 			continue
 		}
 
 		for _, port := range v.metricsPortList {
-			mappedPort := t.getPrometheusExporterPort(int64(port), c)
+			mappedPort := t.getPrometheusExporterPort(port, c)
 			if mappedPort == 0 {
 				continue
 			}

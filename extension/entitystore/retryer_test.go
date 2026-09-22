@@ -4,10 +4,11 @@
 package entitystore
 
 import (
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
@@ -30,7 +31,7 @@ func TestRetryer_refreshLoop(t *testing.T) {
 			name: "HappyPath_CorrectRefresh",
 			fields: fields{
 				metadataProvider: &mockMetadataProvider{
-					InstanceIdentityDocument: &ec2metadata.EC2InstanceIdentityDocument{
+					InstanceIdentityDocument: &imds.InstanceIdentityDocument{
 						InstanceID: "i-123456789"},
 				},
 				iamRole: "original-role",
@@ -54,4 +55,31 @@ func TestRetryer_refreshLoop(t *testing.T) {
 			assert.Equal(t, tt.wantIamRole, s.GetIAMRole())
 		})
 	}
+}
+
+func TestRetryer_refreshLoop_maxRetryBoundsFailures(t *testing.T) {
+	logger := zap.NewNop()
+	done := make(chan struct{})
+	defer close(done)
+	calls := 0
+	failing := func() error {
+		calls++
+		return errors.New("always fails")
+	}
+
+	r := NewRetryer(true, true, 0, 1, []time.Duration{0}, 3, done, logger)
+	r.refreshLoop(failing)
+	assert.Equal(t, 3, calls)
+}
+
+func Test_serviceprovider_retryerBounds(t *testing.T) {
+	s := &serviceprovider{done: make(chan struct{}), logger: zap.NewNop()}
+
+	iam := s.newIAMRoleRetryer()
+	assert.Equal(t, infRetry, iam.maxRetry)
+	assert.False(t, iam.oneTime)
+
+	tags := s.newInstanceTagsRetryer()
+	assert.Equal(t, maxRetry, tags.maxRetry)
+	assert.True(t, tags.oneTime)
 }

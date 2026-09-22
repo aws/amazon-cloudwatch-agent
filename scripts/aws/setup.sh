@@ -16,13 +16,18 @@
 #               install runs on the Azure side via azure/setup.sh
 #   azure_aks   trust only (web-identity for the AKS issuer OIDC provider),
 #               install runs on the Azure side via azure/setup.sh
+#   gcp_gce     trust only (web-identity federated with accounts.google.com),
+#               install runs on the GCP side via gcp/setup.sh
+#   gcp_gke     trust only (web-identity for the GKE issuer OIDC provider),
+#               install runs on the GCP side via gcp/setup.sh
 #
 # Safe to re-run: trust statements and policies are merged, not replaced, and an
 # instance keeps its profile.
 #
 # Requires IAM write access, "aws", and "jq". For azure_vm and azure_aks it also
 # takes an identity value from the Azure setup (the tenant ID or the OIDC issuer
-# URL). Outputs the role ARN.
+# URL); gcp_gce and gcp_gke take one from the GCP setup (the service account
+# unique ID or the cluster OIDC issuer URL). Outputs the role ARN.
 #
 # Usage:
 #     CWAGENT_PLATFORM=aws_eks \
@@ -32,8 +37,13 @@
 #
 # Environment variables:
 #   Common:
-#     CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
+#     CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_gce | gcp_gke
 #     CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
+#     CWAGENT_AWS_ROLE_ARN                    IAM role ARN. The role name is derived
+#                                             from it (a CWAGENT_AWS_ROLE_NAME that
+#                                             disagrees is rejected), and its partition
+#                                             and account must match this shell's AWS
+#                                             credentials
 #     CWAGENT_AWS_REGION                      AWS region telemetry is sent to (required,
 #                                             falls back to the AWS CLI config if unset)
 #     CWAGENT_EMIT_ENV                        When set (1/true/yes/on), print eval-able
@@ -53,17 +63,24 @@
 #     CWAGENT_AZURE_TENANT_ID                 Azure tenant ID
 #   azure_aks:
 #     CWAGENT_AZURE_OIDC_ISSUER               AKS OIDC issuer URL
+#   gcp_gce:
+#     CWAGENT_GCP_SA_UNIQUE_ID                GCP service account unique ID
+#   gcp_gke:
+#     CWAGENT_GCP_OIDC_ISSUER                 GKE cluster OIDC issuer URL
 
 set -eu
 
 PLATFORM="${CWAGENT_PLATFORM:-}"
 TENANT_ID="${CWAGENT_AZURE_TENANT_ID:-}"
 OIDC_ISSUER="${CWAGENT_AZURE_OIDC_ISSUER:-}"
+SA_UNIQUE_ID="${CWAGENT_GCP_SA_UNIQUE_ID:-}"
+GCP_OIDC_ISSUER="${CWAGENT_GCP_OIDC_ISSUER:-}"
 INSTANCE_ID="${CWAGENT_AWS_INSTANCE_ID:-}"
 UPDATE_INSTANCE_ROLE="${CWAGENT_AWS_UPDATE_INSTANCE_ROLE:-}"
 ENABLE_TXN_SEARCH="${CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH:-}"
 CLUSTER_NAME="${CWAGENT_K8S_CLUSTER_NAME:-}"
 ROLE_NAME="${CWAGENT_AWS_ROLE_NAME:-CloudWatchAgentServerRole}"
+ROLE_ARN_INPUT="${CWAGENT_AWS_ROLE_ARN:-}"
 REGION="${CWAGENT_AWS_REGION:-}"
 EMIT_ENV="${CWAGENT_EMIT_ENV:-}"
 ECS_LAUNCH_TYPE="${CWAGENT_AWS_ECS_LAUNCH_TYPE:-}"
@@ -131,11 +148,16 @@ Usage:
   CWAGENT_PLATFORM=aws_ecs   CWAGENT_AWS_REGION=us-east-1                                       $0
   CWAGENT_PLATFORM=azure_aks CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_OIDC_ISSUER=https://... $0
   CWAGENT_PLATFORM=azure_vm  CWAGENT_AWS_REGION=us-east-1 CWAGENT_AZURE_TENANT_ID=<tenant>      $0
+  CWAGENT_PLATFORM=gcp_gce   CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_SA_UNIQUE_ID=<unique-id>  $0
+  CWAGENT_PLATFORM=gcp_gke   CWAGENT_AWS_REGION=us-east-1 CWAGENT_GCP_OIDC_ISSUER=https://...   $0
 
 Environment variables:
   Common:
-    CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks
+    CWAGENT_PLATFORM                        aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_gce | gcp_gke
     CWAGENT_AWS_ROLE_NAME                   IAM role name (default: CloudWatchAgentServerRole)
+    CWAGENT_AWS_ROLE_ARN                    IAM role ARN (its partition and account must
+                                            match the credentials; a disagreeing role
+                                            name is rejected)
     CWAGENT_AWS_REGION                      AWS region telemetry is sent to (required)
     CWAGENT_EMIT_ENV                        Print eval-able KEY='value' lines on stdout
     CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH   Enable Transaction Search in the region
@@ -150,6 +172,10 @@ Environment variables:
     CWAGENT_AZURE_TENANT_ID                 Azure tenant ID
   azure_aks:
     CWAGENT_AZURE_OIDC_ISSUER               AKS OIDC issuer URL
+  gcp_gce:
+    CWAGENT_GCP_SA_UNIQUE_ID                GCP service account unique ID
+  gcp_gke:
+    CWAGENT_GCP_OIDC_ISSUER                 GKE cluster OIDC issuer URL
 EOF
      exit "${rc}"
 }
@@ -217,9 +243,9 @@ version_ge() {
 # =============================================================================
 # Interactive mode
 #
-# The identity values (tenant ID, OIDC issuer) come from the Azure identity
-# setup. When run by hand they can be pasted in at the prompts rather than
-# passed through the environment.
+# The identity values (tenant ID, OIDC issuer, service account unique ID)
+# come from the Azure or GCP identity setup. When run by hand they can be
+# pasted in at the prompts rather than passed through the environment.
 # =============================================================================
 
 prompt() {
@@ -252,6 +278,8 @@ interactive_setup() {
      printf '  aws_eks     EKS cluster\n' >&3
      printf '  azure_vm    Azure VM\n' >&3
      printf '  azure_aks   AKS cluster\n' >&3
+     printf '  gcp_gce     GCE VM\n' >&3
+     printf '  gcp_gke     GKE cluster\n' >&3
      ask "Platform:"
      read -r choice || die "no platform selected"
      case "${choice}" in
@@ -260,6 +288,8 @@ interactive_setup() {
      aws_eks) PLATFORM=aws_eks ;;
      azure_vm) PLATFORM=azure_vm ;;
      azure_aks) PLATFORM=azure_aks ;;
+     gcp_gce) PLATFORM=gcp_gce ;;
+     gcp_gke) PLATFORM=gcp_gke ;;
      *) die "invalid platform: ${choice}" ;;
      esac
 
@@ -280,12 +310,26 @@ interactive_setup() {
      azure_aks)
           prompt OIDC_ISSUER "AKS OIDC issuer URL"
           ;;
+     gcp_gce)
+          prompt SA_UNIQUE_ID "GCP service account unique ID"
+          ;;
+     gcp_gke)
+          prompt GCP_OIDC_ISSUER "GKE cluster OIDC issuer URL"
+          ;;
      esac
-     # `prompt` returns early on a non-empty current value, and ROLE_NAME always
-     # has one (the built-in default), so ask directly with the default filled in.
-     ask "IAM role name [${ROLE_NAME}]:"
-     read -r role_input || die "no input for IAM role name"
-     [ -n "${role_input}" ] && ROLE_NAME="${role_input}"
+     # Skip when a role was already identified through the environment. An ARN
+     # is preferred (it pins the account), but a plain name is still accepted:
+     # this script often creates the role, so a first run may have no ARN yet.
+     if [ -z "${CWAGENT_AWS_ROLE_ARN:-}" ] && [ -z "${CWAGENT_AWS_ROLE_NAME:-}" ]; then
+          ask "IAM role ARN or name [create/use '${ROLE_NAME}' in this account]:"
+          read -r role_input || die "no input for IAM role"
+          if [ -n "${role_input}" ]; then
+               case "${role_input}" in
+               arn:*) ROLE_ARN_INPUT="${role_input}" ;;
+               *) ROLE_NAME="${role_input}" ;;
+               esac
+          fi
+     fi
 }
 
 check_prerequisites() {
@@ -309,6 +353,67 @@ check_prerequisites() {
 }
 
 # =============================================================================
+# Role ARN validation
+#
+# When CWAGENT_AWS_ROLE_ARN is provided, the
+# account baked into it must match the account this shell is authenticated
+# against: creating the role and trust in the wrong account does not fail here,
+# it fails later and silently on the assume-role side. The role name used
+# everywhere downstream is derived from the ARN.
+# =============================================================================
+
+validate_role_arn() {
+     [ -n "${ROLE_ARN_INPUT}" ] || return 0
+
+     case "${ROLE_ARN_INPUT}" in
+     arn:*:iam::*:role/?*) ;;
+     *) die "invalid IAM role ARN: ${ROLE_ARN_INPUT} (expected arn:<partition>:iam::<account-id>:role/<name>)" ;;
+     esac
+
+     # The role name is the last path segment, so an ARN with a path
+     # (arn:...:role/path/Name) resolves to the plain name the IAM CLI wants.
+     arn_role_name="${ROLE_ARN_INPUT##*/}"
+     [ -n "${arn_role_name}" ] || die "invalid IAM role ARN: ${ROLE_ARN_INPUT} (empty role name)"
+
+     # A redundantly-supplied role name is fine when it agrees with the ARN
+     # (the conflict rule CWAGENT_AZURE_RESOURCE_ID uses); a disagreement has
+     # no defined winner, so it fails loudly. The built-in default is exempt:
+     # the dispatcher always exports CWAGENT_AWS_ROLE_NAME, defaulted, so a
+     # default-valued name is indistinguishable from an unset one and the ARN
+     # wins.
+     if [ -n "${CWAGENT_AWS_ROLE_NAME:-}" ] &&
+          [ "${CWAGENT_AWS_ROLE_NAME}" != "CloudWatchAgentServerRole" ] &&
+          [ "${CWAGENT_AWS_ROLE_NAME}" != "${arn_role_name}" ]; then
+          die "CWAGENT_AWS_ROLE_NAME='${CWAGENT_AWS_ROLE_NAME}' conflicts with CWAGENT_AWS_ROLE_ARN (which resolves to '${arn_role_name}')
+Pass the role ARN or the role name, not both with different targets."
+     fi
+
+     arn_partition=$(printf '%s' "${ROLE_ARN_INPUT}" | cut -d: -f2)
+     arn_account=$(printf '%s' "${ROLE_ARN_INPUT}" | cut -d: -f5)
+
+     case "${arn_account}" in
+     [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) ;;
+     *) die "invalid IAM role ARN: ${ROLE_ARN_INPUT} (the account ID must be 12 digits)" ;;
+     esac
+
+     caller_partition=$(printf '%s' "${AWS_ARN}" | cut -d: -f2)
+     if [ "${arn_partition}" != "${caller_partition}" ]; then
+          die "the role ARN is in partition '${arn_partition}' but this shell's credentials are in '${caller_partition}'. Rerun with credentials for the '${arn_partition}' partition"
+     fi
+     if [ "${arn_account}" != "${AWS_ACCOUNT}" ]; then
+          die "the role ARN is for account '${arn_account}' but this shell is authenticated against account '${AWS_ACCOUNT}'. Rerun with credentials for account '${arn_account}'"
+     fi
+     log "Role ARN account matches this shell's credentials"
+
+     ROLE_NAME="${arn_role_name}"
+
+     arn_resource="${ROLE_ARN_INPUT#*:role/}"
+     case "${arn_resource}" in
+     */*) ROLE_PATH="/${arn_resource%/*}/" ;;
+     esac
+}
+
+# =============================================================================
 # Shared helpers
 # =============================================================================
 
@@ -320,9 +425,10 @@ ensure_iam_role() {
      # a failure means the role is absent, so create it and return.
      if ! existing=$(aws iam get-role --role-name "${ROLE_NAME}" \
           --query 'Role.AssumeRolePolicyDocument' --output json 2>/dev/null); then
-          logaction "Creating IAM role ${ROLE_NAME}"
+          logaction "Creating IAM role '${ROLE_NAME}'"
           aws iam create-role \
                --role-name "${ROLE_NAME}" \
+               --path "${ROLE_PATH:-/}" \
                --assume-role-policy-document "${full_policy}" \
                >/dev/null
           return
@@ -330,32 +436,45 @@ ensure_iam_role() {
 
      new_principal=$(printf '%s' "${new_statement}" | jq -r \
           '(.Principal | if type == "object" then to_entries[0].value else . end)')
+     new_sid=$(printf '%s' "${new_statement}" | jq -r '.Sid // ""')
 
      # Statements for different principals coexist on one role (EC2, ECS, EKS,
-     # and the Azure federations all key off distinct principals). For this
-     # principal: identical means nothing to do, different means replace (not
-     # leave stale, e.g. a changed :sub namespace), absent means append.
+     # and the Azure federations all key off distinct principals). GCE
+     # statements all share the accounts.google.com principal and are keyed by
+     # Sid instead, so statements for different service accounts coexist too.
+     # For this statement's key: identical means nothing to do, different means
+     # replace (not leave stale, e.g. a changed :sub namespace), absent means
+     # append. A same-principal statement without a Sid is claimed by the Sid
+     # match too, so a pre-Sid statement is replaced rather than left behind.
      state=$(printf '%s' "${existing}" | jq -r \
           --arg principal "${new_principal}" \
+          --arg sid "${new_sid}" \
           --argjson stmt "${new_statement}" \
-          '[.Statement[] | select((.Principal | if type == "object" then to_entries[0].value else . end) == $principal)] as $m
+          '[.Statement[] | select(
+               (.Principal | if type == "object" then to_entries[0].value else . end) == $principal
+               and (($sid == "") or ((.Sid // "") == $sid) or ((.Sid // "") == ""))
+           )] as $m
            | if ($m | length) == 0 then "absent"
              elif ($m | any(. == $stmt)) then "current"
              else "stale" end')
 
      if [ "${state}" = "current" ]; then
-          log "IAM role ${ROLE_NAME} trust policy up to date"
+          log "IAM role '${ROLE_NAME}' trust policy up to date"
           return
      fi
 
      if [ "${state}" = "stale" ]; then
-          logaction "Updating trust statement on ${ROLE_NAME}"
+          logaction "Updating trust statement on '${ROLE_NAME}'"
           merged=$(printf '%s' "${existing}" | jq \
                --arg principal "${new_principal}" \
+               --arg sid "${new_sid}" \
                --argjson stmt "${new_statement}" \
-               '.Statement = ([.Statement[] | select((.Principal | if type == "object" then to_entries[0].value else . end) != $principal)] + [$stmt])')
+               '.Statement = ([.Statement[] | select(
+                    ((.Principal | if type == "object" then to_entries[0].value else . end) != $principal)
+                    or (($sid != "") and ((.Sid // "") != $sid) and ((.Sid // "") != ""))
+                )] + [$stmt])')
      else
-          logaction "Merging trust statement into ${ROLE_NAME}"
+          logaction "Merging trust statement into '${ROLE_NAME}'"
           merged=$(printf '%s' "${existing}" | jq \
                --argjson stmt "${new_statement}" \
                '.Statement += [$stmt]')
@@ -412,7 +531,7 @@ ensure_transaction_search() {
      TRACE_DEST=$(aws xray get-trace-segment-destination --region "${REGION}" --query 'Destination' --output text 2>/dev/null) || TRACE_DEST_RC=$?
 
      if [ -n "${TRACE_DEST_RC}" ]; then
-          logwarn "Could not check Transaction Search. OTLP traces need it enabled in ${REGION}:"
+          logwarn "Could not check Transaction Search. OTLP traces need it enabled in '${REGION}':"
           logwarn "${TXN_SEARCH_DOC}"
           return
      fi
@@ -421,20 +540,20 @@ ensure_transaction_search() {
      fi
 
      if [ -t 0 ] && ! is_true "${EMIT_ENV}" && ! is_true "${ENABLE_TXN_SEARCH}"; then
-          ask "Enable Transaction Search for the whole account in ${REGION}? [y/N]"
+          ask "Enable Transaction Search for the whole account in '${REGION}'? [y/N]"
           read -r answer || answer=""
           case "${answer}" in [yY]*) ENABLE_TXN_SEARCH="true" ;; esac
      fi
 
      if ! is_true "${ENABLE_TXN_SEARCH}"; then
-          logwarn "OTLP traces need Transaction Search, which is off in ${REGION}. Enabling it"
+          logwarn "OTLP traces need Transaction Search, which is off in '${REGION}'. Enabling it"
           logwarn "changes how X-Ray traces are ingested for the whole account in this region."
           logwarn "Rerun with CWAGENT_AWS_ENABLE_TRANSACTION_SEARCH=true to enable it, or:"
           logwarn "${TXN_SEARCH_DOC}"
           return
      fi
 
-     logaction "Enabling Transaction Search in ${REGION}"
+     logaction "Enabling Transaction Search in '${REGION}'"
      # Two steps: a resource policy letting X-Ray write spans into CloudWatch
      # Logs, then flipping the trace segment destination. Without the policy the
      # destination flips but X-Ray can't write, so spans never land.
@@ -505,12 +624,15 @@ trust_aws_ec2() {
                --query 'InstanceProfile.Roles[0].RoleName' --output text 2>/dev/null || true)
 
           if [ -z "${EXISTING_ROLE}" ] || [ "${EXISTING_ROLE}" = "None" ]; then
-               die "Instance profile ${PROFILE_NAME} has no role attached"
+               die "Instance profile '${PROFILE_NAME}' has no role attached"
           fi
 
           section "Using existing instance profile..."
-          log "Instance profile ${PROFILE_NAME} attached to ${INSTANCE_ID}"
+          log "Instance profile '${PROFILE_NAME}' attached to '${INSTANCE_ID}'"
           log "Role: ${EXISTING_ROLE}"
+          if [ -n "${ROLE_ARN_INPUT}" ] && [ "${EXISTING_ROLE}" != "${ROLE_NAME}" ]; then
+               logwarn "using this role instead of the provided '${ROLE_ARN_INPUT}'"
+          fi
           ROLE_NAME="${EXISTING_ROLE}"
 
           # Nothing to do if the policy is already there, so a re-run stays quiet
@@ -523,12 +645,12 @@ trust_aws_ec2() {
           fi
 
           if [ -t 0 ] && ! is_true "${EMIT_ENV}" && ! is_true "${UPDATE_INSTANCE_ROLE}"; then
-               ask "Attach CloudWatchAgentServerPolicy to ${ROLE_NAME}? [y/N]"
+               ask "Attach CloudWatchAgentServerPolicy to '${ROLE_NAME}'? [y/N]"
                read -r answer || answer=""
                case "${answer}" in [yY]*) UPDATE_INSTANCE_ROLE="true" ;; esac
           fi
           if ! is_true "${UPDATE_INSTANCE_ROLE}"; then
-               die "${ROLE_NAME} is missing CloudWatchAgentServerPolicy. Attach it manually, or set CWAGENT_AWS_UPDATE_INSTANCE_ROLE=true to have this script attach it"
+               die "'${ROLE_NAME}' is missing CloudWatchAgentServerPolicy. Attach it manually, or set CWAGENT_AWS_UPDATE_INSTANCE_ROLE=true to have this script attach it"
           fi
 
           attach_permissions_policy
@@ -544,7 +666,7 @@ trust_aws_ec2() {
 
      section "Configuring instance profile..."
      ensure_instance_profile "${PROFILE_NAME}"
-     logaction "Associating instance profile with ${INSTANCE_ID}"
+     logaction "Associating instance profile with '${INSTANCE_ID}'"
      aws ec2 associate-iam-instance-profile \
           --instance-id "${INSTANCE_ID}" \
           --iam-instance-profile Name="${PROFILE_NAME}" --region "${REGION}" >/dev/null
@@ -555,10 +677,10 @@ trust_aws_ec2() {
 ensure_instance_profile() {
      profile="$1"
      if aws iam get-instance-profile --instance-profile-name "${profile}" >/dev/null 2>&1; then
-          log "Instance profile ${profile} exists"
+          log "Instance profile '${profile}' exists"
           return
      fi
-     logaction "Creating instance profile ${profile}"
+     logaction "Creating instance profile '${profile}'"
      aws iam create-instance-profile --instance-profile-name "${profile}" >/dev/null
      aws iam add-role-to-instance-profile \
           --instance-profile-name "${profile}" --role-name "${ROLE_NAME}" >/dev/null
@@ -633,7 +755,7 @@ trust_aws_eks() {
           if [ "${EXISTING_ROLE}" = "${ROLE_ARN}" ]; then
                log "Pod identity association exists"
           else
-               logaction "Updating association role to ${ROLE_ARN}"
+               logaction "Updating association role to '${ROLE_ARN}'"
                aws eks update-pod-identity-association \
                     --cluster-name "${CLUSTER_NAME}" \
                     --association-id "${EXISTING_ASSOC}" \
@@ -704,6 +826,89 @@ trust_azure_aks() {
      section "Configuring AWS trust..."
 
      ensure_oidc_provider "${OIDC_HOST}" "${OIDC_ISSUER}" sts.amazonaws.com
+
+     TRUST_STATEMENT=$(
+          cat <<EOF
+{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "arn:aws:iam::${AWS_ACCOUNT}:oidc-provider/${OIDC_HOST}"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "${OIDC_HOST}:sub": "system:serviceaccount:${K8S_NAMESPACE}:cloudwatch-agent",
+        "${OIDC_HOST}:aud": "sts.amazonaws.com"
+      }
+    }
+  }
+EOF
+     )
+
+     ensure_iam_role "${TRUST_STATEMENT}"
+     attach_permissions_policy
+}
+
+# =============================================================================
+# GCP Compute Engine trust
+# =============================================================================
+
+trust_gcp_gce() {
+     if [ -z "${SA_UNIQUE_ID}" ]; then
+          die "CWAGENT_GCP_SA_UNIQUE_ID is required for gcp_gce (produced by gcp/setup.sh)"
+     fi
+
+     section "Configuring AWS trust..."
+
+     # Google is a built-in web-identity provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html#principal-federated-web-identity),
+     # so unlike the Azure platforms no IAM OIDC provider resource is registered:
+     # the principal is accounts.google.com itself. On Google identity tokens IAM
+     # matches :sub against the service account's unique ID, :oaud against the
+     # audience the token was requested with, and :aud against the authorized
+     # party (azp), which on service-account tokens is the unique ID again.
+     # Pinning all three follows the recommended trust policy for Google-issued
+     # tokens: https://aws.amazon.com/blogs/security/access-aws-using-a-google-cloud-platform-native-workload-identity/.
+     # The Sid keys the statement to this service account: every GCE statement
+     # shares the accounts.google.com principal, so without it a second
+     # instance's statement would replace the first (see ensure_iam_role).
+     TRUST_STATEMENT=$(
+          cat <<EOF
+{
+    "Sid": "GCE${SA_UNIQUE_ID}",
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "accounts.google.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "accounts.google.com:aud": "${SA_UNIQUE_ID}",
+        "accounts.google.com:sub": "${SA_UNIQUE_ID}",
+        "accounts.google.com:oaud": "sts.amazonaws.com"
+      }
+    }
+  }
+EOF
+     )
+
+     ensure_iam_role "${TRUST_STATEMENT}"
+     attach_permissions_policy
+}
+
+# =============================================================================
+# GCP GKE trust
+# =============================================================================
+
+trust_gcp_gke() {
+     if [ -z "${GCP_OIDC_ISSUER}" ]; then
+          die "CWAGENT_GCP_OIDC_ISSUER is required for gcp_gke (produced by gcp/setup.sh)"
+     fi
+
+     OIDC_HOST="${GCP_OIDC_ISSUER#https://}"
+
+     section "Configuring AWS trust..."
+
+     ensure_oidc_provider "${OIDC_HOST}" "${GCP_OIDC_ISSUER}" sts.amazonaws.com
 
      TRUST_STATEMENT=$(
           cat <<EOF
@@ -809,23 +1014,23 @@ install_aws_ec2() {
           if [ "${INSTANCE_PLATFORM}" = "windows" ]; then
                if INSTALL_CMD=$(windows_install_cmd); then
                     run_via_ssm "AWS-RunPowerShellScript" "${INSTALL_CMD}"
-                    log "Agent installed on ${INSTANCE_ID}"
+                    log "Agent installed on '${INSTANCE_ID}'"
                     return
                fi
           else
                if INSTALL_CMD=$(linux_install_cmd); then
                     run_via_ssm "AWS-RunShellScript" "${INSTALL_CMD}"
-                    log "Agent installed on ${INSTANCE_ID}"
+                    log "Agent installed on '${INSTANCE_ID}'"
                     return
                fi
           fi
           logwarn "could not build the install command (iconv is required for Windows targets)"
      else
-          logwarn "SSM agent is not available on ${INSTANCE_ID}"
+          logwarn "SSM agent is not available on '${INSTANCE_ID}'"
      fi
 
      printf '\n' >&3
-     printf 'Done. Run the following on %s to install and start the agent:\n' "${INSTANCE_ID}" >&3
+     printf 'To install manually, run the following on %s:\n' "${INSTANCE_ID}" >&3
      printf '\n' >&3
      if [ "${INSTANCE_PLATFORM}" = "windows" ]; then
           printf '%s\n' "  # PowerShell, as Administrator:" >&3
@@ -869,9 +1074,9 @@ install_aws_eks() {
      # create/update is async. Wait for active, but a slow activation shouldn't
      # fail the run, so on timeout just point at the status command.
      if aws eks wait addon-active --cluster-name "${CLUSTER_NAME}" --addon-name amazon-cloudwatch-observability --region "${REGION}" 2>/dev/null; then
-          log "Add-on active on ${CLUSTER_NAME}"
+          log "Add-on active on '${CLUSTER_NAME}'"
      else
-          logwarn "Add-on submitted, still activating. Check: aws eks describe-addon --cluster-name ${CLUSTER_NAME} --addon-name amazon-cloudwatch-observability --region ${REGION}"
+          logwarn "Add-on submitted, still activating. Check: aws eks describe-addon --cluster-name '${CLUSTER_NAME}' --addon-name amazon-cloudwatch-observability --region '${REGION}'"
      fi
 }
 
@@ -941,11 +1146,12 @@ main() {
      fi
 
      case "${PLATFORM}" in
-     aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks) ;;
-     *) die "unsupported platform: ${PLATFORM:-<unset>} (valid: aws_ec2, aws_ecs, aws_eks, azure_vm, azure_aks)" ;;
+     aws_ec2 | aws_ecs | aws_eks | azure_vm | azure_aks | gcp_gce | gcp_gke) ;;
+     *) die "unsupported platform: ${PLATFORM:-<unset>} (valid: aws_ec2, aws_ecs, aws_eks, azure_vm, azure_aks, gcp_gce, gcp_gke)" ;;
      esac
 
      check_prerequisites
+     validate_role_arn
 
      # Region is baked into the role/endpoint and is where telemetry lands, so
      # never guess it: fail rather than default silently.
@@ -957,14 +1163,16 @@ main() {
      fi
      [ -n "${REGION}" ] || die "CWAGENT_AWS_REGION is required (set it or run 'aws configure set region <region>')"
 
-     # Trust always runs. The Azure platforms stop after emitting the ARN
-     # (install happens on the Azure side).
+     # Trust always runs. The Azure and GCP platforms stop after emitting the
+     # ARN (install happens on their own cloud side).
      case "${PLATFORM}" in
      aws_ec2) trust_aws_ec2 ;;
      aws_ecs) trust_aws_ecs ;;
      aws_eks) trust_aws_eks ;;
      azure_vm) trust_azure_vm ;;
      azure_aks) trust_azure_aks ;;
+     gcp_gce) trust_gcp_gce ;;
+     gcp_gke) trust_gcp_gke ;;
      esac
 
      ROLE_ARN=$(aws iam get-role \
@@ -980,6 +1188,9 @@ main() {
      aws_ecs) install_aws_ecs ;;
      azure_vm | azure_aks)
           log "Trust configured. Install runs on the Azure side (azure/setup.sh) with the role ARN above."
+          ;;
+     gcp_gce | gcp_gke)
+          log "Trust configured. Install runs on the GCP side (gcp/setup.sh) with the role ARN above."
           ;;
      esac
 

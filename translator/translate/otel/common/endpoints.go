@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 )
 
 // CloudWatch OTLP endpoint batch limits.
@@ -22,9 +22,10 @@ const (
 	MetricsBatchTimeout = 10 * time.Second
 )
 
+// ServiceEndpoint builds the regional endpoint for an AWS service using the DNS suffix
+// of the region's partition, defaulting to the classic partition suffix.
 func ServiceEndpoint(service, region, path string) string {
-	partition, _ := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), region)
-	dnsSuffix := partition.DNSSuffix()
+	dnsSuffix := override.GetPartitionDNSSuffix(region)
 	if dnsSuffix == "" {
 		dnsSuffix = "amazonaws.com"
 	}
