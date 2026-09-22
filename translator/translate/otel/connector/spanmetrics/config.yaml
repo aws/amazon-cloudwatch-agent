@@ -1,5 +1,6 @@
 namespace: traces.span.metrics
 metrics_flush_interval: 30s
+add_resource_attributes: true
 dimensions:
   - name: http.response.status_code
   - name: http.request.method

@@ -4,10 +4,12 @@
 package ecsservicediscovery
 
 import (
+	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/hashicorp/golang-lru/simplelru"
 )
 
@@ -18,15 +20,15 @@ const (
 
 // Decorate the tasks with the ECS task definition
 type TaskDefinitionProcessor struct {
-	svcEcs *ecs.ECS
+	svcEcs *ecs.Client
 	stats  *ProcessorStats
 
 	taskDefCache *simplelru.LRU
 }
 
-func NewTaskDefinitionProcessor(ecs *ecs.ECS, s *ProcessorStats) *TaskDefinitionProcessor {
+func NewTaskDefinitionProcessor(ecsClient *ecs.Client, s *ProcessorStats) *TaskDefinitionProcessor {
 	p := &TaskDefinitionProcessor{
-		svcEcs: ecs,
+		svcEcs: ecsClient,
 		stats:  s,
 	}
 
@@ -39,14 +41,14 @@ func NewTaskDefinitionProcessor(ecs *ecs.ECS, s *ProcessorStats) *TaskDefinition
 	return p
 }
 
-func (p *TaskDefinitionProcessor) Process(cluster string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
+func (p *TaskDefinitionProcessor) Process(ctx context.Context, _ string, taskList []*DecoratedTask) ([]*DecoratedTask, error) {
 	defer func() {
 		p.stats.AddStatsCount(LRUCacheSizeTaskDefinition, p.taskDefCache.Len())
 	}()
 
-	arn2Definition := make(map[string]*ecs.TaskDefinition)
+	arn2Definition := make(map[string]*types.TaskDefinition)
 	for _, t := range taskList {
-		arn2Definition[aws.StringValue(t.Task.TaskDefinitionArn)] = nil
+		arn2Definition[aws.ToString(t.Task.TaskDefinitionArn)] = nil
 	}
 
 	for k := range arn2Definition {
@@ -54,12 +56,12 @@ func (p *TaskDefinitionProcessor) Process(cluster string, taskList []*DecoratedT
 			continue
 		}
 
-		var td *ecs.TaskDefinition
+		var td *types.TaskDefinition
 		if res, ok := p.taskDefCache.Get(k); ok {
 			p.stats.AddStats(LRUCacheGetTaskDefinition)
-			td = res.(*ecs.TaskDefinition)
+			td = res.(*types.TaskDefinition)
 		} else {
-			resp, err := p.svcEcs.DescribeTaskDefinition(&ecs.DescribeTaskDefinitionInput{TaskDefinition: &k})
+			resp, err := p.svcEcs.DescribeTaskDefinition(ctx, &ecs.DescribeTaskDefinitionInput{TaskDefinition: &k})
 			p.stats.AddStats(AWSCLIDescribeTaskDefinition)
 			if err != nil {
 				return taskList, newServiceDiscoveryError("Failed to describe task definition for "+k, &err)
@@ -71,7 +73,7 @@ func (p *TaskDefinitionProcessor) Process(cluster string, taskList []*DecoratedT
 	}
 
 	for _, v := range taskList {
-		v.TaskDefinition = arn2Definition[aws.StringValue(v.Task.TaskDefinitionArn)]
+		v.TaskDefinition = arn2Definition[aws.ToString(v.Task.TaskDefinitionArn)]
 	}
 
 	taskList = filterNilTaskDefinitionTasks(taskList)

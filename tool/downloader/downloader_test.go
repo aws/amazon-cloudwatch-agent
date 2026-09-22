@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,4 +71,26 @@ func TestRunDownloader_DefaultExtraColons(t *testing.T) {
 	outputDir := t.TempDir()
 	err := RunDownloader("ec2", "default:otel:extra", outputDir, "", "default", false)
 	assert.EqualError(t, err, `unknown default config "otel:extra"`)
+}
+
+// TestRunDownloaderFromFlags_LogsToStdout asserts the downloader routes the Go log package to stdout
+// before doing anything else; startup stderr aborts Windows user-data/SSM installs. Flags are
+// intentionally invalid so the call fails fast before any network access.
+func TestRunDownloaderFromFlags_LogsToStdout(t *testing.T) {
+	origWriter := log.Writer()
+	t.Cleanup(func() { log.SetOutput(origWriter) })
+	log.SetOutput(os.Stderr)
+
+	empty := ""
+	flags := map[string]*string{
+		"mode":            &empty,
+		"download-source": &empty,
+		"output-dir":      &empty,
+		"config":          &empty,
+		"multi-config":    &empty,
+		"dualstack":       &empty,
+	}
+	err := RunDownloaderFromFlags(flags)
+	require.Error(t, err, "empty flags should fail validation")
+	require.Same(t, os.Stdout, log.Writer(), "downloader must route log output to stdout")
 }
