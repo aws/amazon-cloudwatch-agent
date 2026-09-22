@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-	semconv "go.opentelemetry.io/collector/semconv/v1.6.1"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -339,29 +339,29 @@ func TestLogsRoutingSourceGuards(t *testing.T) {
 // rules depend on. If a dependency bump changes these, the OTTL must be updated.
 func TestIdentityTransformSemconvValues(t *testing.T) {
 	// cloud.platform values used in OTTL WHERE clauses
-	assert.Equal(t, "aws_ec2", semconv.AttributeCloudPlatformAWSEC2)
-	assert.Equal(t, "aws_ecs", semconv.AttributeCloudPlatformAWSECS)
-	assert.Equal(t, "aws_eks", semconv.AttributeCloudPlatformAWSEKS)
-	assert.Equal(t, "azure_vm", semconv.AttributeCloudPlatformAzureVM)
-	assert.Equal(t, "azure_aks", semconv.AttributeCloudPlatformAzureAKS)
-	assert.Equal(t, "gcp_compute_engine", semconv.AttributeCloudPlatformGCPComputeEngine)
+	assert.Equal(t, "aws_ec2", semconv.CloudPlatformAWSEC2.Value.AsString())
+	assert.Equal(t, "aws_ecs", semconv.CloudPlatformAWSECS.Value.AsString())
+	assert.Equal(t, "aws_eks", semconv.CloudPlatformAWSEKS.Value.AsString())
+	assert.Equal(t, "azure.vm", semconv.CloudPlatformAzureVM.Value.AsString())
+	assert.Equal(t, "azure.aks", semconv.CloudPlatformAzureAKS.Value.AsString())
+	assert.Equal(t, "gcp_compute_engine", semconv.CloudPlatformGCPComputeEngine.Value.AsString())
 
 	// Resource attribute keys used in OTTL statements
-	assert.Equal(t, "cloud.account.id", semconv.AttributeCloudAccountID)
-	assert.Equal(t, "cloud.availability_zone", semconv.AttributeCloudAvailabilityZone)
-	assert.Equal(t, "cloud.region", semconv.AttributeCloudRegion)
-	assert.Equal(t, "cloud.platform", semconv.AttributeCloudPlatform)
-	assert.Equal(t, "host.id", semconv.AttributeHostID)
-	assert.Equal(t, "host.name", semconv.AttributeHostName)
-	assert.Equal(t, "k8s.cluster.name", semconv.AttributeK8SClusterName)
-	assert.Equal(t, "k8s.namespace.name", semconv.AttributeK8SNamespaceName)
-	assert.Equal(t, "k8s.deployment.name", semconv.AttributeK8SDeploymentName)
-	assert.Equal(t, "k8s.pod.name", semconv.AttributeK8SPodName)
-	assert.Equal(t, "k8s.container.name", semconv.AttributeK8SContainerName)
-	assert.Equal(t, "service.name", semconv.AttributeServiceName)
-	assert.Equal(t, "service.namespace", semconv.AttributeServiceNamespace)
-	assert.Equal(t, "service.instance.id", semconv.AttributeServiceInstanceID)
-	assert.Equal(t, "service.version", semconv.AttributeServiceVersion)
+	assert.Equal(t, "cloud.account.id", string(semconv.CloudAccountIDKey))
+	assert.Equal(t, "cloud.availability_zone", string(semconv.CloudAvailabilityZoneKey))
+	assert.Equal(t, "cloud.region", string(semconv.CloudRegionKey))
+	assert.Equal(t, "cloud.platform", string(semconv.CloudPlatformKey))
+	assert.Equal(t, "host.id", string(semconv.HostIDKey))
+	assert.Equal(t, "host.name", string(semconv.HostNameKey))
+	assert.Equal(t, "k8s.cluster.name", string(semconv.K8SClusterNameKey))
+	assert.Equal(t, "k8s.namespace.name", string(semconv.K8SNamespaceNameKey))
+	assert.Equal(t, "k8s.deployment.name", string(semconv.K8SDeploymentNameKey))
+	assert.Equal(t, "k8s.pod.name", string(semconv.K8SPodNameKey))
+	assert.Equal(t, "k8s.container.name", string(semconv.K8SContainerNameKey))
+	assert.Equal(t, "service.name", string(semconv.ServiceNameKey))
+	assert.Equal(t, "service.namespace", string(semconv.ServiceNamespaceKey))
+	assert.Equal(t, "service.instance.id", string(semconv.ServiceInstanceIDKey))
+	assert.Equal(t, "service.version", string(semconv.ServiceVersionKey))
 }
 
 // TestAKSClusterResourceIDDerivation guards the AKS cloud.resource_id fix: the k8s identity transform

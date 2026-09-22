@@ -9,7 +9,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/exporter/exporterhelper"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
@@ -164,6 +166,11 @@ func TestTranslator(t *testing.T) {
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
+				// The translator disables the exporter-level queue+batcher via the
+				// outer Optional. Mirror that on wantCfg so we're not comparing
+				// against the raw factory default that still carries Some(queue).
+				wantCfg.(*awscloudwatchlogsexporter.Config).QueueSettings =
+					configoptional.None[exporterhelper.QueueBatchConfig]()
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

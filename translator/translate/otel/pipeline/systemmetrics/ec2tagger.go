@@ -4,11 +4,11 @@
 package systemmetrics
 
 import (
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/processor"
 
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -35,7 +35,7 @@ func (t *ec2TaggerTranslator) Translate(_ *confmap.Conf) (component.Config, erro
 	// Always add InstanceId
 	cfg.EC2MetadataTags = []string{"InstanceId"}
 	cfg.MiddlewareID = &agenthealth.StatusCodeID
-	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 
 	return cfg, nil
 }

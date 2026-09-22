@@ -100,12 +100,13 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
 		transformprocessor.WithLogResourceStatements(cleanupStmts),
 	)
+	logsMetadataKeys := []string{"aws.log.group.name", "aws.log.stream.name"}
 	batch := batchprocessor.NewTranslator(
 		common.WithName("opentelemetry_logs"),
 		batchprocessor.WithSendBatchSize(common.MaxLogsPerRequest),
 		batchprocessor.WithSendBatchMaxSize(common.MaxLogsPerRequest),
 		batchprocessor.WithTimeout(common.BatchTimeout),
-		batchprocessor.WithMetadataKeys([]string{"aws.log.group.name", "aws.log.stream.name"}),
+		batchprocessor.WithMetadataKeys(logsMetadataKeys),
 	)
 
 	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)

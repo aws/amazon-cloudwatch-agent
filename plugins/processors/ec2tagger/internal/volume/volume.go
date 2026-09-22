@@ -4,6 +4,7 @@
 package volume
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"golang.org/x/exp/maps"
 )
 
@@ -21,10 +22,10 @@ var (
 
 type Provider interface {
 	// DeviceToSerialMap provides a map with device name keys and serial number values.
-	DeviceToSerialMap() (map[string]string, error)
+	DeviceToSerialMap(context.Context) (map[string]string, error)
 }
 
-func NewProvider(ec2Client ec2iface.EC2API, instanceID string) Provider {
+func NewProvider(ec2Client ec2.DescribeVolumesAPIClient, instanceID string) Provider {
 	return newMergeProvider([]Provider{
 		newHostProvider(),
 		newDescribeVolumesProvider(ec2Client, instanceID),
@@ -71,7 +72,7 @@ func (c *cache) Refresh() error {
 	if c.provider == nil {
 		return errNoProviders
 	}
-	result, err := c.provider.DeviceToSerialMap()
+	result, err := c.provider.DeviceToSerialMap(context.Background())
 	if err != nil {
 		return fmt.Errorf("unable to refresh volume cache: %w", err)
 	}
