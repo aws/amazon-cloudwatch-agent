@@ -1,15 +1,17 @@
 connectors:
     forward/opentelemetry: {}
 exporters:
-    otlphttp/metrics:
+    otlp_http/metrics:
         auth:
             authenticator: agenthealth/opentelemetry_metrics
         compression: gzip
         encoding: proto
+        force_attempt_http2: true
         idle_conn_timeout: 1m30s
         logs_endpoint: ""
         max_idle_conns: 100
         metrics_endpoint: https://monitoring.us-east-1.amazonaws.com/v1/metrics
+        profiles_endpoint: ""
         retry_on_failure:
             enabled: true
             initial_interval: 5s
@@ -17,14 +19,6 @@ exporters:
             max_interval: 30s
             multiplier: 1.5
             randomization_factor: 0.5
-        sending_queue:
-            block_on_overflow: false
-            blocking: false
-            enabled: true
-            num_consumers: 10
-            queue_size: 1000
-            sizer: {}
-            wait_for_result: false
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
@@ -117,48 +111,7 @@ processors:
             - pod
             - namespace
             - node
-    k8sattributes/cw_k8s_ci_v0_node:
-        auth_type: serviceAccount
-        exclude:
-            pods: null
-        extract:
-            labels:
-                - from: node
-                  key_regex: (.*)
-                  tag_name: k8s.node.label.$$$$1
-            metadata:
-                - k8s.node.name
-        passthrough: false
-        pod_association:
-            - sources:
-                - from: resource_attribute
-                  name: k8s.node.name
-    k8sattributes/cw_k8s_ci_v0_pod:
-        auth_type: serviceAccount
-        exclude:
-            pods: null
-        extract:
-            labels:
-                - from: pod
-                  key_regex: (.*)
-                  tag_name: k8s.pod.label.$$$$1
-            metadata:
-                - k8s.pod.uid
-                - k8s.node.name
-                - k8s.deployment.name
-                - k8s.statefulset.name
-                - k8s.daemonset.name
-                - k8s.replicaset.name
-                - k8s.job.name
-                - k8s.cronjob.name
-        passthrough: false
-        pod_association:
-            - sources:
-                - from: resource_attribute
-                  name: k8s.pod.name
-                - from: resource_attribute
-                  name: k8s.namespace.name
-    k8sattributes/opentelemetry:
+    k8s_attributes/opentelemetry:
         auth_type: serviceAccount
         context: ""
         exclude:
@@ -181,6 +134,7 @@ processors:
                   key: resource.opentelemetry.io/service.version
                   key_regex: ""
                   tag_name: resource.opentelemetry.io/service.version
+            deployment_name_from_replicaset: false
             labels:
                 - from: pod
                   key: app.kubernetes.io/instance
@@ -212,10 +166,53 @@ processors:
             namespace: ""
             node: ""
             node_from_env_var: K8S_NODE_NAME
+        kube_api_burst: 0
+        kube_api_qps: 0
         kube_config_path: ""
         passthrough: false
         wait_for_metadata: false
         wait_for_metadata_timeout: 10s
+    k8sattributes/cw_k8s_ci_v0_node:
+        auth_type: serviceAccount
+        exclude:
+            pods: []
+        extract:
+            labels:
+                - from: node
+                  key_regex: (.*)
+                  tag_name: k8s.node.label.$$$$1
+            metadata:
+                - k8s.node.name
+        passthrough: false
+        pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.node.name
+    k8sattributes/cw_k8s_ci_v0_pod:
+        auth_type: serviceAccount
+        exclude:
+            pods: []
+        extract:
+            labels:
+                - from: pod
+                  key_regex: (.*)
+                  tag_name: k8s.pod.label.$$$$1
+            metadata:
+                - k8s.pod.uid
+                - k8s.node.name
+                - k8s.deployment.name
+                - k8s.statefulset.name
+                - k8s.daemonset.name
+                - k8s.replicaset.name
+                - k8s.job.name
+                - k8s.cronjob.name
+        passthrough: false
+        pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.name
+                - from: resource_attribute
+                  name: k8s.namespace.name
     metricstarttime/cw_k8s_ci_v0: null
     nodemetadataenricher/cw_k8s_ci_v0: null
     resourcedetection/cw_k8s_ci_v0:
@@ -226,6 +223,26 @@ processors:
         override: false
         timeout: 2s
     resourcedetection/opentelemetry:
+        akamai:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         aks:
             resource_attributes:
                 cloud.platform:
@@ -234,6 +251,27 @@ processors:
                     enabled: true
                 k8s.cluster.name:
                     enabled: false
+        alibaba_ecs:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         azure:
             resource_attributes:
                 azure.resourcegroup.name:
@@ -246,6 +284,8 @@ processors:
                     enabled: true
                 cloud.account.id:
                     enabled: true
+                cloud.availability_zone:
+                    enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
@@ -272,8 +312,22 @@ processors:
         detectors:
             - env
             - gcp
+        digitalocean:
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
         docker:
             resource_attributes:
+                container.image.name:
+                    enabled: false
+                container.name:
+                    enabled: false
                 host.name:
                     enabled: true
                 os.type:
@@ -302,6 +356,7 @@ processors:
                 host.type:
                     enabled: true
             tags: []
+            tags_from_imds: false
         ecs:
             resource_attributes:
                 aws.ecs.cluster.arn:
@@ -335,13 +390,26 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
+            node_from_env_var: ""
             resource_attributes:
                 cloud.account.id:
+                    enabled: false
+                cloud.availability_zone:
                     enabled: false
                 cloud.platform:
                     enabled: true
                 cloud.provider:
                     enabled: true
+                cloud.region:
+                    enabled: false
+                host.id:
+                    enabled: false
+                host.image.id:
+                    enabled: false
+                host.name:
+                    enabled: false
+                host.type:
+                    enabled: false
                 k8s.cluster.name:
                     enabled: false
         elasticbeanstalk:
@@ -356,7 +424,9 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
+        force_attempt_http2: true
         gcp:
+            labels: []
             resource_attributes:
                 cloud.account.id:
                     enabled: true
@@ -367,8 +437,6 @@ processors:
                 cloud.provider:
                     enabled: true
                 cloud.region:
-                    enabled: true
-                faas.id:
                     enabled: true
                 faas.instance:
                     enabled: true
@@ -416,10 +484,68 @@ processors:
                     enabled: true
                 service.version:
                     enabled: true
+        hetzner:
+            resource_attributes:
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: false
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        ibmcloud_classic:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        ibmcloud_vpc:
+            protocol: http
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         idle_conn_timeout: 1m30s
+        ignore_detector_errors: true
         k8snode:
             auth_type: serviceAccount
             context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
             kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
@@ -430,6 +556,8 @@ processors:
         kubeadm:
             auth_type: serviceAccount
             context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
             kube_config_path: ""
             resource_attributes:
                 k8s.cluster.name:
@@ -457,6 +585,24 @@ processors:
                 faas.version:
                     enabled: true
         max_idle_conns: 100
+        nova:
+            fail_on_missing_metadata: false
+            labels: []
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         openshift:
             address: ""
             resource_attributes:
@@ -470,7 +616,50 @@ processors:
                     enabled: true
             tls: {}
             token: ""
+        oraclecloud:
+            resource_attributes:
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
+                k8s.cluster.name:
+                    enabled: true
+                oracle_cloud.realm:
+                    enabled: true
         override: true
+        refresh_interval: 0s
+        scaleway:
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.image.name:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         system:
             resource_attributes:
                 host.arch:
@@ -489,19 +678,70 @@ processors:
                     enabled: false
                 host.id:
                     enabled: false
+                host.interface:
+                    enabled: false
                 host.ip:
                     enabled: false
                 host.mac:
                     enabled: false
                 host.name:
                     enabled: true
+                os.build.id:
+                    enabled: false
                 os.description:
+                    enabled: false
+                os.name:
                     enabled: false
                 os.type:
                     enabled: true
                 os.version:
                     enabled: false
+        tencent_cvm:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.account.id:
+                    enabled: true
+                cloud.availability_zone:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.image.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+                host.type:
+                    enabled: true
         timeout: 2s
+        upcloud:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
+        vultr:
+            fail_on_missing_metadata: false
+            resource_attributes:
+                cloud.platform:
+                    enabled: false
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                host.id:
+                    enabled: true
+                host.name:
+                    enabled: true
     transform/clear_schema_url:
         error_mode: ignore
         flatten_data: false
@@ -511,6 +751,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.schema_url, "")
+        profile_statements: []
         trace_statements: []
     transform/cluster_host_suppress:
         error_mode: ignore
@@ -525,6 +766,7 @@ processors:
                 - delete_matching_keys(resource.attributes, "^ec2.tag.") where resource.attributes["_tmp.cluster_scoped"] == true
                 - delete_matching_keys(resource.attributes, "^azure.vm.") where resource.attributes["_tmp.cluster_scoped"] == true
                 - delete_key(resource.attributes, "_tmp.cluster_scoped")
+        profile_statements: []
         trace_statements: []
     transform/cw_k8s_ci_v0_apiserver_cleanup_version:
         error_mode: ignore
@@ -734,9 +976,9 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["_tmp.log_type"] != "host"
                 - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
-                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
-                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure.aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure.aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure.aks"
                 - set(resource.attributes["cloud.resource_id"], Format("//container.googleapis.com/projects/%s/zones/%s/clusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.availability_zone"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.platform"] == "gcp_kubernetes_engine" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.availability_zone"] != nil and resource.attributes["k8s.cluster.name"] != nil
                 - set(resource.attributes["cloud.resource_id"], Format("//container.googleapis.com/projects/%s/locations/%s/clusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.region"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.platform"] == "gcp_kubernetes_engine" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.region"] != nil and resource.attributes["k8s.cluster.name"] != nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
@@ -782,9 +1024,9 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["_tmp.log_type"] != "host"
                 - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
-                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
-                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure.aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure.aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure.aks"
                 - set(resource.attributes["cloud.resource_id"], Format("//container.googleapis.com/projects/%s/zones/%s/clusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.availability_zone"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.platform"] == "gcp_kubernetes_engine" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.availability_zone"] != nil and resource.attributes["k8s.cluster.name"] != nil
                 - set(resource.attributes["cloud.resource_id"], Format("//container.googleapis.com/projects/%s/locations/%s/clusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.region"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.platform"] == "gcp_kubernetes_engine" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.region"] != nil and resource.attributes["k8s.cluster.name"] != nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
@@ -813,6 +1055,7 @@ processors:
                 - delete_key(resource.attributes, "app.kubernetes.io/version")
                 - delete_key(resource.attributes, "_tmp.azure.resourcegroup.name")
                 - delete_key(resource.attributes, "_tmp.log_type")
+        profile_statements: []
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -830,9 +1073,9 @@ processors:
                 - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil and resource.attributes["_tmp.log_type"] != "host"
                 - set(resource.attributes["cloud.resource_id"], Format("arn:aws:eks:%s:%s:cluster/%s", [resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.region"] != nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "aws_eks"
-                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure_aks" and resource.attributes["azure.resourcegroup.name"] != nil
-                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure_aks"
-                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure_aks"
+                - set(resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["azure.resourcegroup.name"]) where resource.attributes["cloud.platform"] == "azure.aks" and resource.attributes["azure.resourcegroup.name"] != nil
+                - replace_pattern(resource.attributes["_tmp.azure.resourcegroup.name"], "^MC_(.+)_TestCluster_[^_]+$", "$$$1") where resource.attributes["cloud.platform"] == "azure.aks"
+                - set(resource.attributes["cloud.resource_id"], Format("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerService/managedClusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["_tmp.azure.resourcegroup.name"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.account.id"] != nil and resource.attributes["_tmp.azure.resourcegroup.name"] != nil and resource.attributes["k8s.cluster.name"] != nil and resource.attributes["cloud.platform"] == "azure.aks"
                 - set(resource.attributes["cloud.resource_id"], Format("//container.googleapis.com/projects/%s/zones/%s/clusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.availability_zone"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.platform"] == "gcp_kubernetes_engine" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.availability_zone"] != nil and resource.attributes["k8s.cluster.name"] != nil
                 - set(resource.attributes["cloud.resource_id"], Format("//container.googleapis.com/projects/%s/locations/%s/clusters/%s", [resource.attributes["cloud.account.id"], resource.attributes["cloud.region"], resource.attributes["k8s.cluster.name"]])) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["cloud.platform"] == "gcp_kubernetes_engine" and resource.attributes["cloud.account.id"] != nil and resource.attributes["cloud.region"] != nil and resource.attributes["k8s.cluster.name"] != nil
                 - set(resource.attributes["k8s.workload.name"], resource.attributes["k8s.deployment.name"]) where resource.attributes["k8s.workload.name"] == nil and resource.attributes["k8s.deployment.name"] != nil
@@ -874,6 +1117,7 @@ processors:
               error_mode: ignore
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
+        profile_statements: []
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -1082,10 +1326,10 @@ service:
                 - prometheus/cw_k8s_ci_v0_kube_state_metrics
         metrics/opentelemetry:
             exporters:
-                - otlphttp/metrics
+                - otlp_http/metrics
             processors:
                 - resourcedetection/opentelemetry
-                - k8sattributes/opentelemetry
+                - k8s_attributes/opentelemetry
                 - transform/set_cluster_name
                 - transform/identity
                 - transform/cluster_host_suppress
@@ -1097,6 +1341,7 @@ service:
     telemetry:
         logs:
             encoding: console
+            error_output_paths: null
             level: info
             output_paths:
                 - /opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log
@@ -1109,3 +1354,4 @@ service:
             level: None
         traces:
             level: None
+            propagators: null
