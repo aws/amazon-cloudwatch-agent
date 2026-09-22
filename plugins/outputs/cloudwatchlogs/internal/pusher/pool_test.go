@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
@@ -106,7 +106,7 @@ func TestWorkerPool(t *testing.T) {
 func TestSenderPool(t *testing.T) {
 	logger := testutil.NewNopLogger()
 	mockService := new(mockLogsService)
-	mockService.On("PutLogEvents", mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
+	mockService.On("PutLogEvents", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.PutLogEventsOutput{}, nil)
 	s := newSender(logger, mockService, nil, time.Second)
 	p := NewWorkerPool(12)
 	sp := newSenderPool(p, s)

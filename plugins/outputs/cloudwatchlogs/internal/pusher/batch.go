@@ -7,12 +7,13 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 // CloudWatch Logs PutLogEvents API limits
@@ -77,10 +78,10 @@ func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(
 	}
 }
 
-// batch builds a cloudwatchlogs.InputLogEvent from the timestamp and message stored. Converts the timestamp to
+// batch builds a types.InputLogEvent from the timestamp and message stored. Converts the timestamp to
 // milliseconds to match the PutLogEvents specifications.
-func (e *logEvent) build() *cloudwatchlogs.InputLogEvent {
-	return &cloudwatchlogs.InputLogEvent{
+func (e *logEvent) build() types.InputLogEvent {
+	return types.InputLogEvent{
 		Timestamp: aws.Int64(e.timestamp.UnixMilli()),
 		Message:   aws.String(e.message),
 	}
@@ -88,7 +89,7 @@ func (e *logEvent) build() *cloudwatchlogs.InputLogEvent {
 
 type logEventBatch struct {
 	Target
-	events         []*cloudwatchlogs.InputLogEvent
+	events         []types.InputLogEvent
 	entityProvider logs.LogEntityProvider
 	// Total size of all events in the batch.
 	bufferedSize int
@@ -106,7 +107,7 @@ type logEventBatch struct {
 func newLogEventBatch(target Target, entityProvider logs.LogEntityProvider) *logEventBatch {
 	return &logEventBatch{
 		Target:         target,
-		events:         make([]*cloudwatchlogs.InputLogEvent, 0),
+		events:         make([]types.InputLogEvent, 0),
 		entityProvider: entityProvider,
 		batchers:       make(map[string]*state.RangeQueueBatcher),
 	}
@@ -213,7 +214,7 @@ func (b *logEventBatch) build() *cloudwatchlogs.PutLogEventsInput {
 	return input
 }
 
-type byTimestamp []*cloudwatchlogs.InputLogEvent
+type byTimestamp []types.InputLogEvent
 
 func (t byTimestamp) Len() int {
 	return len(t)

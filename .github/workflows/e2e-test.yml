@@ -172,17 +172,43 @@ jobs:
           echo "eks_e2e_jmx_matrix: $EKS_E2E_JMX_MATRIX"
           echo "eks_e2e_containerinsights_matrix: $EKS_E2E_CONTAINERINSIGHTS_MATRIX"
 
-  EKSE2EOTELContainerInsightsTestHelm:
+  EKSE2EOtelContainerInsightsTest:
     needs: [ GetLatestOperatorCommitSHA, GenerateTestMatrix, OutputEnvVariables ]
     if: always() && !cancelled() && !contains(needs.*.result, 'failure')
-    name: 'EKSE2EOtelContainerInsightsTestHelm'
+    name: '${{ matrix.name }}'
     permissions:
       id-token: write
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 'EKSE2EOtelContainerInsightsTestHelm'
+            eks_installation_type: "HELM_CHART"
+            ip_family: "ipv4"
+            job_id: eks-e2e-otelcontainerinsights-test-helm
+            agent_config: resources/cwagent_configs_helm_chart/ci_node.json
+          - name: 'EKSE2EOtelContainerInsightsTestAddon'
+            eks_installation_type: "EKS_ADDON"
+            ip_family: "ipv4"
+            job_id: eks-e2e-otelcontainerinsights-test-addon
+            agent_config: resources/cwagent_configs_eks_addon/ci_node.json
+          - name: 'EKSE2EOtelContainerInsightsTestHelmIPv6'
+            eks_installation_type: "HELM_CHART"
+            ip_family: "ipv6"
+            job_id: eks-e2e-otelcontainerinsights-test-helm-ipv6
+            agent_config: resources/cwagent_configs_helm_chart/ci_node.json
+            vpc_name: "ipv6-eks-integ-test/VPC"
+          - name: 'EKSE2EOtelContainerInsightsTestAddonIPv6'
+            eks_installation_type: "EKS_ADDON"
+            ip_family: "ipv6"
+            job_id: eks-e2e-otelcontainerinsights-test-addon-ipv6
+            agent_config: resources/cwagent_configs_eks_addon/ci_node.json
+            vpc_name: "ipv6-eks-integ-test/VPC"
     uses: ./.github/workflows/eks-e2e-test.yml
     with:
       terraform_dir: terraform/eks/e2e
-      job_id: eks-e2e-otelcontainerinsights-test-helm
+      job_id: ${{ matrix.job_id }}
       test_props: ${{ needs.GenerateTestMatrix.outputs.eks_e2e_containerinsights_matrix }}
       test_repo_name: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
       test_repo_url: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_URL }}
@@ -194,9 +220,11 @@ jobs:
       region: ${{ inputs.region || 'us-west-2' }}
       helm_charts_branch: ${{ inputs.helm-charts-branch || 'main' }}
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
-      agent_config: resources/cwagent_configs_helm_chart/ci_node.json
+      agent_config: ${{ matrix.agent_config }}
       sample_app: resources/sample_apps/nginx.yaml
-      eks_installation_type: "HELM_CHART"
+      eks_installation_type: ${{ matrix.eks_installation_type }}
+      ip_family: ${{ matrix.ip_family }}
+      vpc_name: ${{ matrix.vpc_name }}
     secrets: inherit
 
   EKSE2EJVMTomcatTestHelm:

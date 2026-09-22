@@ -65,7 +65,7 @@ UsageString="
         -m: mode
             ec2:                                    indicate this is on ec2 host.
             onPremise, onPrem:                      indicate this is on onPremise host.
-            auto:                                   use ec2 metadata to determine the environment, may not be accurate if ec2 metadata is not available for some reason on EC2.
+            auto:                                   detect the environment automatically.
 
         -c: configuration
             default:                                default configuration for quick trial.

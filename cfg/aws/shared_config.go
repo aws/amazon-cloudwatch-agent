@@ -12,28 +12,36 @@ import (
 
 const (
 	envAwsSdkLoadConfig         = "AWS_SDK_LOAD_CONFIG"
-	envAwsSharedCredentialsFile = "AWS_SHARED_CREDENTIALS_FILE"
+	envAwsSharedCredentialsFile = "AWS_SHARED_CREDENTIALS_FILE" // nolint:gosec
 	envAwsSharedConfigFile      = "AWS_CONFIG_FILE"
 )
 
 // getFallbackSharedConfigFiles follows the same logic as the AWS SDK but takes a getUserHomeDir
-// function.
-func getFallbackSharedConfigFiles(userHomeDirProvider func() string) []string {
+// function. The shared-credentials and shared-config lists are returned separately because the
+// v2 SDK loads them with different section-format rules. The shared config file is consulted
+// only when AWS_SDK_LOAD_CONFIG is truthy; otherwise the config list is non-nil and empty, since
+// the SDK treats nil as "not set" and would load the default ~/.aws/config.
+//
+// Mirrors the fork's internal/aws/awsutil/shared_config.go.
+func getFallbackSharedConfigFiles(userHomeDirProvider func() string) ([]string, []string) {
 	var sharedCredentialsFile, sharedConfigFile string
 	setFromEnvVal(&sharedCredentialsFile, envAwsSharedCredentialsFile)
-	setFromEnvVal(&sharedConfigFile, envAwsSharedConfigFile)
 	if sharedCredentialsFile == "" {
 		sharedCredentialsFile = defaultSharedCredentialsFile(userHomeDirProvider())
 	}
-	if sharedConfigFile == "" {
-		sharedConfigFile = defaultSharedConfig(userHomeDirProvider())
-	}
-	var cfgFiles []string
+	credentialsFiles := []string{sharedCredentialsFile}
+
+	// Must be non-nil: the SDK treats a nil list as "not set" and loads the default ~/.aws/config.
+	configFiles := []string{}
 	enableSharedConfig, _ := strconv.ParseBool(os.Getenv(envAwsSdkLoadConfig))
 	if enableSharedConfig {
-		cfgFiles = append(cfgFiles, sharedConfigFile)
+		setFromEnvVal(&sharedConfigFile, envAwsSharedConfigFile)
+		if sharedConfigFile == "" {
+			sharedConfigFile = defaultSharedConfig(userHomeDirProvider())
+		}
+		configFiles = []string{sharedConfigFile}
 	}
-	return append(cfgFiles, sharedCredentialsFile)
+	return credentialsFiles, configFiles
 }
 
 func setFromEnvVal(dst *string, keys ...string) {

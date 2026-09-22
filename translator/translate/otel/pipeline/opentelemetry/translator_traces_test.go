@@ -6,7 +6,7 @@ package opentelemetry
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
@@ -69,7 +69,7 @@ func TestBaseTracesTranslator(t *testing.T) {
 				assert.Equal(t, 2, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/traces", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlp_http/traces", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "sigv4auth/xray", got.Extensions.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 			}
@@ -174,9 +174,7 @@ func TestBaseTracesTranslatorNoClusterName(t *testing.T) {
 	// Force the ec2 tag lookup with no network to return no cluster name
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
-	tagutil.SetEC2APIProviderForTesting(func() interface {
-		DescribeTags(input *ec2.DescribeTagsInput) (*ec2.DescribeTagsOutput, error)
-	} {
+	tagutil.SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
 		return noTagsEC2Client{}
 	})
 	t.Cleanup(tagutil.ResetEC2APIProvider)

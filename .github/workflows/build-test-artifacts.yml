@@ -80,6 +80,7 @@ jobs:
       ContainerRepositoryNameAndTag: "cwagent-integration-test:${{ github.sha }}"
       BucketKey: "integration-test/binary/${{ github.sha }}"
       PackageBucketKey: "integration-test/packaging/${{ github.sha }}"
+      ArchTagSuffix: "-${{ github.sha }}"
 
   BuildDistributor:
     needs: [BuildAndUpload, BuildAndUploadPackages, BuildDocker]
