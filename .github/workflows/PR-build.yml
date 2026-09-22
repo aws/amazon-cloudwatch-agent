@@ -26,6 +26,7 @@ jobs:
     outputs:
       build: ${{ steps.filter.outputs.build }}
       lint: ${{ steps.filter.outputs.lint }}
+      scripts: ${{ steps.filter.outputs.scripts }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
@@ -219,9 +220,29 @@ jobs:
         if: needs.changes.outputs.build == 'true'
         run: make test-data-race
 
+  test-setup-scripts:
+    needs: [changes]
+    name: Test setup scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        if: needs.changes.outputs.scripts == 'true'
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Run setup script tests
+        if: needs.changes.outputs.scripts == 'true'
+        run: |
+          rc=0
+          for t in scripts/test/cases/*.sh; do
+            echo "::group::${t}"
+            sh "${t}" || rc=1
+            echo "::endgroup::"
+          done
+          exit "${rc}"
+
   verify-all:
     name: Verify All PR Build Jobs
-    needs: [ changes, lint, build, test-data-race ]
+    needs: [ changes, lint, build, test-data-race, test-setup-scripts ]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     steps:

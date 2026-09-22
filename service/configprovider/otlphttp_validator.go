@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"go.opentelemetry.io/collector/confmap"
 )
 
@@ -17,12 +17,7 @@ import (
 var allowedDNSSuffixes = buildAllowedDNSSuffixes()
 
 func buildAllowedDNSSuffixes() []string {
-	var suffixes []string
-	for _, p := range endpoints.DefaultPartitions() {
-		suffixes = append(suffixes, p.DNSSuffix())
-	}
-	suffixes = append(suffixes, "api.aws")
-	return suffixes
+	return override.GetPartitionDNSSuffixes()
 }
 
 // otlphttpValidator is a confmap.Converter that validates otlphttp exporter endpoints

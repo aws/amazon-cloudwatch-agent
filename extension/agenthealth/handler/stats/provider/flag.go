@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth/handler/stats/agent"
@@ -30,7 +30,6 @@ type flagStats struct {
 
 func (p *flagStats) update() {
 	p.stats.Store(agent.Stats{
-		ImdsFallbackSucceed:       boolToSparseInt(p.flagSet.IsSet(agent.FlagIMDSFallbackSuccess)),
 		SharedConfigFallback:      boolToSparseInt(p.flagSet.IsSet(agent.FlagSharedConfigFallback)),
 		AppSignals:                boolToSparseInt(p.flagSet.IsSet(agent.FlagAppSignal)),
 		EnhancedContainerInsights: boolToSparseInt(p.flagSet.IsSet(agent.FlagEnhancedContainerInsights)),
