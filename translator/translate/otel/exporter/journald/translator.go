@@ -6,13 +6,15 @@ package journald
 import (
 	"os"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/exporter/exporterhelper"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -48,6 +50,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscloudwatchlogsexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
+	// Disable the exporter batcher; see otlphttp/translator.go for why we
+	// use the outer Optional rather than the inner Batch field.
+	cfg.QueueSettings = configoptional.None[exporterhelper.QueueBatchConfig]()
+
 	// Configure from the specific collect_list entry
 	if t.collectConfig != nil {
 		if err := t.setJournaldFieldsFromConfig(cfg); err != nil {
@@ -61,7 +67,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
-	cfg.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		if s, ok := profileKey.(string); ok && s != "" {
 			cfg.Profile = s
@@ -110,7 +116,12 @@ func (t *translator) setJournaldFieldsFromConfig(cfg *awscloudwatchlogsexporter.
 	}
 
 	if retentionInDays, ok := t.collectConfig["retention_in_days"].(float64); ok {
-		cfg.LogRetention = int64(retentionInDays)
+		retention := int32(retentionInDays)
+		// The agent config schema uses -1 for "never expire"; the exporter expects 0 for the same.
+		if retention == -1 {
+			retention = 0
+		}
+		cfg.LogRetention = retention
 	}
 
 	return nil

@@ -64,5 +64,11 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg.ErrorMode = t.errorMode
 	cfg.DefaultPipelines = t.defaultPipelines
 	cfg.Table = t.table
+	// Default empty actions to Move; the routing connector rejects an empty action at decode time.
+	for i := range cfg.Table {
+		if cfg.Table[i].Action == "" {
+			cfg.Table[i].Action = routingconnector.Move
+		}
+	}
 	return cfg, nil
 }

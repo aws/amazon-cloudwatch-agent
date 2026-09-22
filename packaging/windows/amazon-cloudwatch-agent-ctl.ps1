@@ -340,9 +340,9 @@ Function CWAConfig() {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
         if ($d -and $multi_config -ne 'remove') {
-            & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}" --dualstack
+            & cmd /c "`"${CWAProgramFiles}\config-downloader.exe`" --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`" --dualstack 2>&1"
         } else {
-            & $CWAProgramFiles\config-downloader.exe --output-dir "${JSON_DIR}" --download-source "${ConfigLocation}" --mode "${param_mode}" --config "${COMMON_CONIG}" --multi-config "${multi_config}"
+            & cmd /c "`"${CWAProgramFiles}\config-downloader.exe`" --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`" 2>&1"
         }
         CheckCMDResult
     }

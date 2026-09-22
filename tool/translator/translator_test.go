@@ -5,6 +5,7 @@ package translator
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -80,4 +81,28 @@ func TestTranslate_RetainsCustomKeysAndClearsStaleTranslatorManagedKeys(t *testi
 	// Managed keys no longer configured are cleared rather than re-emitted from the old file.
 	_, exists := result["CWAGENT_LOGS_BACKPRESSURE_MODE"]
 	assert.False(t, exists)
+}
+
+// TestRunTranslator_LogsToStdout asserts the translator routes the Go log package to stdout before
+// doing anything else; startup stderr aborts Windows user-data/SSM installs. A non-existent
+// common-config path makes the call fail fast before mode/region detection.
+func TestRunTranslator_LogsToStdout(t *testing.T) {
+	origWriter := log.Writer()
+	t.Cleanup(func() { log.SetOutput(origWriter) })
+	log.SetOutput(os.Stderr)
+
+	empty := ""
+	missingConfig := filepath.Join(t.TempDir(), "does-not-exist.toml")
+	flags := map[string]*string{
+		"os":           &empty,
+		"input":        &empty,
+		"input-dir":    &empty,
+		"output":       &empty,
+		"mode":         &empty,
+		"config":       &missingConfig,
+		"multi-config": &empty,
+	}
+	err := RunTranslator(flags)
+	require.Error(t, err, "missing common-config should fail fast")
+	require.Same(t, os.Stdout, log.Writer(), "translator must route log output to stdout")
 }

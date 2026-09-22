@@ -515,7 +515,7 @@ setup_azure_vm() {
      logwarn "could not build the install command (iconv is required for Windows targets)"
 
      printf '\n' >&3
-     printf 'Done. Run the following on %s to install and start the agent:\n' "${VM_NAME}" >&3
+     printf 'To install manually, run the following on %s:\n' "${VM_NAME}" >&3
      printf '\n' >&3
      if [ "${VM_OS}" = "Windows" ]; then
           printf '%s\n' "  # PowerShell, as Administrator:" >&3
@@ -614,7 +614,7 @@ setup_azure_aks() {
           log "Chart installed on '${CLUSTER_NAME}'"
      else
           printf '\n' >&3
-          printf 'Done. Install the Amazon CloudWatch Observability Helm chart (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
+          printf 'Install the Amazon CloudWatch Observability Helm chart manually (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
           printf '\n' >&3
           {
                printf '%s\n' "  helm repo add aws-observability ${HELM_CHART_REPO}"
