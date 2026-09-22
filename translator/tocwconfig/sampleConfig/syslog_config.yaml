@@ -4,7 +4,7 @@ connectors:
             - logs/syslog_0_default
         error_mode: ignore
         table:
-            - condition: IsMatch(attributes["hostname"], "web-*")
+            - condition: IsMatch(attributes["hostname"], "^web-.*$")
               context: log
               pipelines:
                 - logs/syslog_0_rule_0
@@ -185,6 +185,7 @@ receivers:
         tcp:
             encoding: utf-8
             listen_address: 0.0.0.0:514
+            max_log_size: 65536
         type: syslog_input
     syslog/tcp_0_0_0_0_1514:
         id: syslog_input
@@ -199,6 +200,7 @@ receivers:
         tcp:
             encoding: utf-8
             listen_address: 0.0.0.0:1514
+            max_log_size: 65536
             tls:
                 ca_file: /etc/ssl/ca.pem
                 cert_file: /etc/ssl/cert.pem

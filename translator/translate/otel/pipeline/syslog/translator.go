@@ -377,12 +377,8 @@ func normalizeListeners(syslogConf map[string]any) []map[string]any {
 	if addr != "" {
 		listener["listen_address"] = addr
 	} else {
-		// No listen_address specified — construct default based on TLS presence
-		if _, hasTLS := syslogConf["tls"]; hasTLS {
-			listener["listen_address"] = "tcp://"
-		} else {
-			listener["listen_address"] = "tcp://"
-		}
+		// No listen_address specified — default to TCP (port resolved downstream based on TLS)
+		listener["listen_address"] = "tcp://"
 	}
 	if p, ok := syslogConf["protocol"].(string); ok {
 		listener["protocol"] = p
@@ -403,7 +399,12 @@ func buildOTTLCondition(matchMap map[string]any) string {
 		conditions = append(conditions, buildAttributeCondition("hostname", hostname))
 	}
 	if appName, ok := matchMap["app_name"].(string); ok && appName != "" {
-		conditions = append(conditions, buildAttributeCondition("app_name", appName))
+		// The config key is "app_name" (per schema), but the syslog parser
+		// writes the parsed attribute as "appname" (no underscore) on both the
+		// RFC 3164 and RFC 5424 paths. Emit the OTTL condition against the
+		// attribute name the parser actually produces, otherwise the rule never
+		// matches and its traffic silently falls through to the default route.
+		conditions = append(conditions, buildAttributeCondition("appname", appName))
 	}
 	if facility, ok := matchMap["facility"]; ok {
 		var facStr string

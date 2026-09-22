@@ -170,9 +170,21 @@ func TestBuildOTTLCondition(t *testing.T) {
 			want:  `attributes["facility"] == 4`,
 		},
 		{
+			// The config key "app_name" must map to the parser's "appname"
+			// attribute (no underscore), otherwise the rule never matches.
+			name:  "app_name exact",
+			match: map[string]any{"app_name": "nginx"},
+			want:  `attributes["appname"] == "nginx"`,
+		},
+		{
+			name:  "app_name glob",
+			match: map[string]any{"app_name": "api-*"},
+			want:  `IsMatch(attributes["appname"], "^api-.*$")`,
+		},
+		{
 			name:  "multiple conditions",
 			match: map[string]any{"hostname": "web-*", "app_name": "nginx"},
-			want:  `IsMatch(attributes["hostname"], "^web-.*$") and attributes["app_name"] == "nginx"`,
+			want:  `IsMatch(attributes["hostname"], "^web-.*$") and attributes["appname"] == "nginx"`,
 		},
 		{
 			name:  "empty",
