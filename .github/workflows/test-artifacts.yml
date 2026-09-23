@@ -444,6 +444,7 @@ jobs:
       terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_CN }}
 
   EC2NvidiaGPUIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_gpu_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_gpu_matrix != '[]' }}
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -617,6 +618,7 @@ jobs:
             terraform destroy --auto-approve
 
   EC2LinuxIntegrationTest-0:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 0 }}
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
     name: 'EC2Linux-0'
     uses:  ./.github/workflows/ec2-integration-test.yml
@@ -721,6 +723,7 @@ jobs:
     secrets: inherit
 
   LinuxOnPremIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix != '[]' }}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
@@ -800,6 +803,7 @@ jobs:
       is_selinux_test: true
 
   EC2WinIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_windows_matrix != '[]' }}
     needs: [OutputEnvVariables, GenerateTestMatrix]
     name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -910,6 +914,7 @@ jobs:
             fi
             terraform destroy --auto-approve
   EC2DarwinIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_mac_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_mac_matrix != '[]' }}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
@@ -1065,6 +1070,7 @@ jobs:
       s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET_CN }}
 
   ECSEC2IntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix != '' && needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1159,9 +1165,10 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   ECSFargateIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ecs_fargate_matrix != '' && needs.GenerateTestMatrix.outputs.ecs_fargate_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1250,9 +1257,10 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   EKSIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_daemon_matrix != '' && needs.GenerateTestMatrix.outputs.eks_daemon_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1367,9 +1375,10 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   EKSPrometheusIntegrationTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_deployment_matrix != '' && needs.GenerateTestMatrix.outputs.eks_deployment_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
@@ -1459,9 +1468,10 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
-            terraform destroy --auto-approve
+            terraform destroy -lock=false --auto-approve
 
   PerformanceTrackingTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_performance_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_performance_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1551,6 +1561,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   EC2WinPerformanceTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1640,6 +1651,7 @@ jobs:
           command: cd terraform/performance && terraform destroy --auto-approve
 
   StressTrackingTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_stress_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_stress_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1733,6 +1745,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   EC2WinStressTrackingTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix != '' && needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
     runs-on: ubuntu-latest
@@ -1828,6 +1841,7 @@ jobs:
           command: cd terraform/stress && terraform destroy --auto-approve
 
   GPUEndToEndTest:
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_addon_matrix != '' && needs.GenerateTestMatrix.outputs.eks_addon_matrix != '[]' }}
     name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     runs-on: ubuntu-latest
@@ -1921,7 +1935,7 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            terraform destroy -auto-approve
+            terraform destroy -lock=false -auto-approve
 
   AzureVMIntegrationTest:
     needs: [OutputEnvVariables]
