@@ -370,6 +370,27 @@ exporters:
         timeout: 30s
         traces_endpoint: ""
         write_buffer_size: 524288
+    otlp_http/profiles:
+        auth:
+            authenticator: agenthealth/profiles
+        compression: gzip
+        encoding: proto
+        force_attempt_http2: true
+        idle_conn_timeout: 1m30s
+        logs_endpoint: ""
+        max_idle_conns: 100
+        metrics_endpoint: ""
+        profiles_endpoint: https://monitoring.us-west-2.amazonaws.com/v1development/profiles
+        retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_elapsed_time: 5m0s
+            max_interval: 30s
+            multiplier: 1.5
+            randomization_factor: 0.5
+        timeout: 30s
+        traces_endpoint: ""
+        write_buffer_size: 524288
     otlp_http/traces:
         auth:
             authenticator: agenthealth/opentelemetry_traces
@@ -428,6 +449,15 @@ extensions:
                 region_type: ACJ
     agenthealth/opentelemetry_traces:
         additional_auth: sigv4auth/xray
+        is_usage_data_enabled: true
+        stats:
+            operations:
+                - '*'
+            usage_flags:
+                mode: EC2
+                region_type: ACJ
+    agenthealth/profiles:
+        additional_auth: sigv4auth/monitoring
         is_usage_data_enabled: true
         stats:
             operations:
@@ -554,9 +584,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -577,6 +607,15 @@ processors:
         gc_interval: 10m0s
         start_time_metric_regex: ""
         strategy: true_reset_point
+    resource/profiles:
+        attributes:
+            - action: insert
+              converted_type: ""
+              from_attribute: ""
+              from_context: ""
+              key: service.name
+              pattern: ""
+              value: unknown_service
     resourcedetection/opentelemetry:
         akamai:
             resource_attributes:
@@ -2040,6 +2079,7 @@ service:
         - agenthealth/logs
         - agenthealth/traces
         - sigv4auth/monitoring
+        - agenthealth/profiles
         - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
@@ -2127,12 +2167,12 @@ service:
                 - awsentity/resource
             receivers:
                 - telegraf_swap
-                - telegraf_processes
-                - telegraf_procstat/1917393364
                 - telegraf_netstat
+                - telegraf_procstat/1917393364
                 - telegraf_mem
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_processes
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
@@ -2147,8 +2187,8 @@ service:
                 - ec2tagger
                 - awsentity/service/telegraf
             receivers:
-                - telegraf_socket_listener
                 - telegraf_statsd
+                - telegraf_socket_listener
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
@@ -2157,8 +2197,8 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_net
                 - telegraf_diskio
+                - telegraf_net
         metrics/opentelemetry:
             exporters:
                 - otlp_http/metrics
@@ -2182,6 +2222,14 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/otlp_scope
+            receivers:
+                - otlp/grpc_127_0_0_1_4327
+                - otlp/http_127_0_0_1_4328
+        profiles/otlp:
+            exporters:
+                - otlp_http/profiles
+            processors:
+                - resource/profiles
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328

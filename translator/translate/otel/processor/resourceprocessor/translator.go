@@ -30,6 +30,14 @@ func WithAttributes(attrs map[string]string) common.TranslatorOption {
 	}
 }
 
+func WithAttributesAction(action string) common.TranslatorOption {
+	return func(target any) {
+		if t, ok := target.(*translator); ok {
+			t.attributesAction = action
+		}
+	}
+}
+
 // WithReservedKeys rejects the given attribute keys in the static-attributes
 // path so customer-supplied resource_attributes cannot clobber attributes the
 // agent manages internally (e.g. log routing keys).
@@ -44,9 +52,10 @@ func WithReservedKeys(keys ...string) common.TranslatorOption {
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	factory      processor.Factory
-	attributes   map[string]string
-	reservedKeys collections.Set[string]
+	factory          processor.Factory
+	attributes       map[string]string
+	attributesAction string
+	reservedKeys     collections.Set[string]
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -96,10 +105,14 @@ func (t *translator) translateStaticAttributes() (component.Config, error) {
 	sort.Strings(keys)
 
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
+	action := t.attributesAction
+	if action == "" {
+		action = "upsert"
+	}
 	attrs := make([]any, 0, len(keys))
 	for _, k := range keys {
 		attrs = append(attrs, map[string]any{
-			"action": "upsert",
+			"action": action,
 			"key":    k,
 			"value":  t.attributes[k],
 		})

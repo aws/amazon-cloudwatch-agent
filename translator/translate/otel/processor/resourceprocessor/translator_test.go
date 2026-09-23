@@ -211,6 +211,26 @@ func TestTranslateStaticAttributes(t *testing.T) {
 	assert.Equal(t, "upsert", string(gotCfg.AttributesActions[0].Action))
 }
 
+func TestTranslateStaticAttributes_ActionOverride(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_action"),
+		WithAttributes(map[string]string{
+			"service.name": "unknown_service",
+		}),
+		WithAttributesAction("insert"),
+	)
+
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+
+	gotCfg, ok := got.(*resourceprocessor.Config)
+	require.True(t, ok)
+	require.Len(t, gotCfg.AttributesActions, 1)
+	assert.Equal(t, "service.name", gotCfg.AttributesActions[0].Key)
+	assert.Equal(t, "unknown_service", gotCfg.AttributesActions[0].Value)
+	assert.Equal(t, "insert", string(gotCfg.AttributesActions[0].Action))
+}
+
 func TestTranslateStaticAttributes_MultipleKeys(t *testing.T) {
 	tt := NewTranslator(
 		common.WithName("test_multi"),
