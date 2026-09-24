@@ -235,13 +235,13 @@ func TestLeaseWriterJitterWithinBounds(t *testing.T) {
 	// Verify the jitterMax is set to 30 seconds
 	assert.Equal(t, 30*time.Second, lw.jitterMax)
 
-	// Single call with generous bound to avoid flakiness under CI load.
-	lw.jitterMax = 50 * time.Millisecond
-	start := time.Now()
-	lw.jitterSleep()
-	elapsed := time.Since(start)
-	assert.True(t, elapsed < 500*time.Millisecond,
-		"jitterSleep should complete well within bounds, took %v", elapsed)
+	// The jitter interval must always fall in [0, jitterMax). Asserted on the
+	// computed value across many draws, so there is no wall-clock dependency.
+	for i := 0; i < 1000; i++ {
+		d := lw.jitterInterval()
+		assert.GreaterOrEqual(t, d, time.Duration(0))
+		assert.Less(t, d, lw.jitterMax)
+	}
 }
 
 func TestLeaseWriterJitterZeroMax(t *testing.T) {
@@ -252,14 +252,10 @@ func TestLeaseWriterJitterZeroMax(t *testing.T) {
 	lw := NewLeaseWriter(ec2Info, testNodeName, testNamespace, fakeClient.CoordinationV1(), logger)
 	lw.jitterMax = 0
 
-	// Should return immediately without sleeping
-	start := time.Now()
-	lw.jitterSleep()
-	elapsed := time.Since(start)
-	// With jitterMax == 0 the function returns without sleeping. 500ms (matching
-	// the WithinBounds sibling) is a generous guard proving it did not sleep for a
-	// jitter interval, without tripping on CI scheduler noise (a 5ms bound flaked).
-	assert.True(t, elapsed < 500*time.Millisecond, "jitterSleep with zero max should return promptly, took %v", elapsed)
+	// With jitter disabled the interval is exactly zero (jitterSleep returns
+	// without sleeping). Asserted on the computed value, so there is no wall-clock
+	// dependency.
+	assert.Equal(t, time.Duration(0), lw.jitterInterval())
 }
 
 func TestLeaseWriterNoOwnerReferences(t *testing.T) {

@@ -368,14 +368,12 @@ func makeTempFile(t *testing.T, prefix string) *os.File {
 // getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
 // Verifies 1 and only 1 LogSrc is discovered.
 func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
-	start := time.Now()
+	// Verify FindLogSrc discovers exactly one source. (No wall-clock latency
+	// assertion here: FindLogSrc runs synchronously and is fast, but this helper
+	// is also called from a goroutine that runs while another writes 1M lines, so
+	// a timing bound would measure runner contention, not FindLogSrc. A genuine
+	// block/hang is caught by the package test timeout.)
 	logSources := logFile.FindLogSrc()
-	duration := time.Since(start)
-	// LogFile.FindLogSrc() should not block. It normally completes in well under a
-	// millisecond; 2s is a generous guard that still catches a regression which
-	// introduces blocking I/O, but never trips on CI scheduler noise (a 100ms
-	// bound flaked on loaded Windows runners).
-	require.Less(t, duration, 2*time.Second)
 	require.Equal(t, 1, len(logSources), "FindLogSrc() expected 1, got %d", len(logSources))
 	logSource := logSources[0]
 	evts := make(chan logs.LogEvent)
