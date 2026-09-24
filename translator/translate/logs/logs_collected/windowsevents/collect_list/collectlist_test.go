@@ -45,7 +45,8 @@ func TestApplyRule(t *testing.T) {
         ],
         "event_format": "xml",
         "log_group_name": "Application",
-		"retention_in_days": 1
+		"retention_in_days": 1,
+		"timezone": "UTC"
       }
     ]
 }
@@ -71,6 +72,7 @@ func TestApplyRule(t *testing.T) {
 			"batch_read_size":   BatchReadSizeValue,
 			"retention_in_days": 1,
 			"log_group_class":   "",
+			"timezone":          "UTC",
 		},
 	}
 
@@ -283,4 +285,29 @@ func TestEventID(t *testing.T) {
 	assert.True(t, exists, "event_ids should exist in final configuration")
 	assert.Equal(t, []int{100, 101, 102}, eventIDs)
 
+}
+
+func TestTimezone(t *testing.T) {
+	rawJSONString := `{
+		"collect_list": [{
+			"event_name": "Application",
+			"event_levels": ["ERROR"],
+			"timezone": "Local"
+		}, {
+			"event_name": "System",
+			"event_levels": ["WARNING"],
+			"timezone": "UTC"
+		}]
+	}`
+
+	var config interface{}
+	err := json.Unmarshal([]byte(rawJSONString), &config)
+	assert.NoError(t, err)
+
+	c := new(CollectList)
+	_, val := c.ApplyRule(config)
+	result := val.([]interface{})
+
+	assert.Equal(t, "LOCAL", result[0].(map[string]interface{})["timezone"])
+	assert.Equal(t, "UTC", result[1].(map[string]interface{})["timezone"])
 }

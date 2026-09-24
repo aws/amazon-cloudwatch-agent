@@ -115,6 +115,7 @@ type (
 		LogGroupName    string                     `toml:"log_group_name"`
 		LogStreamName   string                     `toml:"log_stream_name"`
 		RetentionInDays int                        `toml:"retention_in_days"`
+		Timezone        string                     `toml:"timezone"`
 	}
 
 	logFileConfig struct {
