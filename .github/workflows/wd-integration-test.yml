@@ -271,7 +271,18 @@ jobs:
 
             terraform init
             RUNNER_IP="$(curl -s ifconfig.me)/32"
-            if terraform apply --auto-approve \
+
+            # --- runner-side WinRM 5985 capture (PR #766 diagnostics; remove after root-cause) ---
+            # The RST is observed at THIS runner's socket, and the runner is NOT torn down by
+            # `terraform destroy`, so this capture always survives. Being on the far side of the
+            # NAT, it distinguishes an instance-side RST from a NAT-injected one via TTL/SEQ.
+            sudo apt-get -y install tcpdump >/dev/null 2>&1 || true
+            CAP="/tmp/runner-5985-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.pcap"
+            sudo nohup tcpdump -i any -U "tcp port 5985" -w "$CAP" >/tmp/tcpdump.log 2>&1 &
+            echo $! | sudo tee /tmp/tcpdump.pid >/dev/null
+
+            APPLY_RC=0
+            terraform apply --auto-approve \
               -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
               -var="ssh_key_value=${PRIVATE_KEY}" \
               -var="ssh_key_name=${KEY_NAME}" \
@@ -280,11 +291,15 @@ jobs:
               -var="test_dir=$MATRIX_TEST_DIR" \
               -var="ami=$MATRIX_AMI" \
               -var="runner_ip=$RUNNER_IP" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
-              terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" || APPLY_RC=$?
+
+            # Stop capture and upload the pcap BEFORE destroy so evidence survives (pass or fail).
+            sudo kill "$(cat /tmp/tcpdump.pid)" 2>/dev/null || true
+            sleep 2
+            aws s3 cp "$CAP" "s3://${S3_INTEGRATION_BUCKET}/winrm-debug/runner/$(basename "$CAP")" || true
+
+            terraform destroy -auto-approve
+            exit $APPLY_RC
 
       - name: "[WIP] ✅ Passed"
         if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
@@ -501,7 +516,18 @@ jobs:
 
             terraform init
             RUNNER_IP="$(curl -s ifconfig.me)/32"
-            if terraform apply --auto-approve \
+
+            # --- runner-side WinRM 5985 capture (PR #766 diagnostics; remove after root-cause) ---
+            # The RST is observed at THIS runner's socket, and the runner is NOT torn down by
+            # `terraform destroy`, so this capture always survives. Being on the far side of the
+            # NAT, it distinguishes an instance-side RST from a NAT-injected one via TTL/SEQ.
+            sudo apt-get -y install tcpdump >/dev/null 2>&1 || true
+            CAP="/tmp/runner-5985-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.pcap"
+            sudo nohup tcpdump -i any -U "tcp port 5985" -w "$CAP" >/tmp/tcpdump.log 2>&1 &
+            echo $! | sudo tee /tmp/tcpdump.pid >/dev/null
+
+            APPLY_RC=0
+            terraform apply --auto-approve \
               -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
               -var="ssh_key_value=${PRIVATE_KEY}" \
               -var="ssh_key_name=${KEY_NAME}" \
@@ -510,11 +536,15 @@ jobs:
               -var="test_dir=$MATRIX_TEST_DIR" \
               -var="ami=$MATRIX_AMI" \
               -var="runner_ip=$RUNNER_IP" \
-              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" ; then
-              terraform destroy -auto-approve
-            else
-              terraform destroy -auto-approve && exit 1
-            fi
+              -var="s3_bucket=${S3_INTEGRATION_BUCKET}" || APPLY_RC=$?
+
+            # Stop capture and upload the pcap BEFORE destroy so evidence survives (pass or fail).
+            sudo kill "$(cat /tmp/tcpdump.pid)" 2>/dev/null || true
+            sleep 2
+            aws s3 cp "$CAP" "s3://${S3_INTEGRATION_BUCKET}/winrm-debug/runner/$(basename "$CAP")" || true
+
+            terraform destroy -auto-approve
+            exit $APPLY_RC
 
       - name: "[WIP] ✅ Passed"
         if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
