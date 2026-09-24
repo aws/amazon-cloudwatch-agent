@@ -91,6 +91,7 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 				`delete_matching_keys(resource.attributes, "^host.") where resource.attributes["_tmp.cluster_scoped"] == true`,
 				`delete_key(resource.attributes, "cloud.availability_zone") where resource.attributes["_tmp.cluster_scoped"] == true`,
 				`delete_matching_keys(resource.attributes, "^ec2.tag.") where resource.attributes["_tmp.cluster_scoped"] == true`,
+				`delete_matching_keys(resource.attributes, "^azure.vm.") where resource.attributes["_tmp.cluster_scoped"] == true`,
 				`delete_key(resource.attributes, "_tmp.cluster_scoped")`,
 			})))
 		// resourcedetection/opentelemetry re-stamps schema_url post-fan-in; clear it here for CI.

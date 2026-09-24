@@ -30,7 +30,7 @@ extensions:
             operations:
                 - '*'
             usage_flags:
-                mode: EKS
+                mode: GKE
                 region_type: ACJ
     nodemetadatacache/cw_k8s_ci_v0:
         namespace: amazon-cloudwatch
@@ -310,9 +310,8 @@ processors:
                     enabled: true
             token_file: ""
         detectors:
-            - eks
             - env
-            - ec2
+            - gcp
         digitalocean:
             resource_attributes:
                 cloud.provider:
@@ -356,9 +355,7 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-            tags:
-                - ^kubernetes.io/cluster/.*$
-                - ^aws:autoscaling:groupName
+            tags: []
             tags_from_imds: false
         ecs:
             resource_attributes:
@@ -393,7 +390,7 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
-            node_from_env_var: HOST_NAME
+            node_from_env_var: ""
             resource_attributes:
                 cloud.account.id:
                     enabled: false
@@ -1157,6 +1154,7 @@ receivers:
                   tls_config:
                     ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
                     insecure_skip_verify: false
+                    server_name: kubernetes.default.svc
     prometheus/cw_k8s_ci_v0_karpenter:
         config:
             global:
