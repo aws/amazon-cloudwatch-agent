@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "win_services": {
+        "service_names": [
+          "AmazonSSMAgent",
+          "Spooler",
+          "Win*"
+        ],
+        "excluded_service_names": [
+          "WinRM"
+        ],
+        "measurement": [
+          "state",
+          "startup_mode"
+        ],
+        "metrics_collection_interval": 60,
+        "append_dimensions": {
+          "Environment": "prod"
+        }
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "force_flush_interval": 60
+  }
+}

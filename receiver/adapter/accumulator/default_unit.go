@@ -117,6 +117,10 @@ var defaultUnits = map[string]map[string]string{
 		"sleeping":      "Count",
 		"dead":          "Count",
 	},
+	"win_services": {
+		"state":        "None",
+		"startup_mode": "None",
+	},
 }
 
 func getDefaultUnit(measurement string, fieldKey string) string {

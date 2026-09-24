@@ -247,6 +247,10 @@ func TestEthtoolConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validEthtoolConfig.json", true, map[string]int{})
 }
 
+func TestWinServicesConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validWinServicesConfig.json", true, map[string]int{})
+}
+
 func TestCollectdConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validCollectdConfig.json", true, map[string]int{})
 }
