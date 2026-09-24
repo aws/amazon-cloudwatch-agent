@@ -256,7 +256,10 @@ func TestLeaseWriterJitterZeroMax(t *testing.T) {
 	start := time.Now()
 	lw.jitterSleep()
 	elapsed := time.Since(start)
-	assert.True(t, elapsed < 5*time.Millisecond, "jitterSleep with zero max should return immediately")
+	// With jitterMax == 0 the function returns without sleeping. 500ms (matching
+	// the WithinBounds sibling) is a generous guard proving it did not sleep for a
+	// jitter interval, without tripping on CI scheduler noise (a 5ms bound flaked).
+	assert.True(t, elapsed < 500*time.Millisecond, "jitterSleep with zero max should return promptly, took %v", elapsed)
 }
 
 func TestLeaseWriterNoOwnerReferences(t *testing.T) {

@@ -571,31 +571,31 @@ func TestMiddleware(t *testing.T) {
 
 func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{config: createDefaultConfig().(*Config)}
-	sleeps := []time.Duration{
-		time.Millisecond * 200,
-		time.Millisecond * 400,
-		time.Millisecond * 800,
-		time.Millisecond * 1600,
-		time.Millisecond * 3200,
-		time.Millisecond * 6400}
-	leniency := 200 * time.Millisecond
-	for i := 0; i <= defaultRetryCount; i++ {
-		start := time.Now()
-		c.backoffSleep()
-		// Expect time since start is between sleeps[i]/2 and sleeps[i].
-		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(t, sleeps[i]/2, time.Since(start))
-		assert.Greater(t, sleeps[i]+leniency, time.Since(start))
+	base := c.config.BackoffRetryBase
+
+	// Within the retry cap the schedule doubles each attempt and jitter keeps the
+	// duration in [d/2, d) where d = base * 2^retries. Asserted on the computed
+	// value so there is no dependency on wall-clock timing.
+	for i := 0; i <= c.config.MaxRetryCount; i++ {
+		c.retries = i
+		d := base * time.Duration(1<<i)
+		got := c.backoffDuration()
+		assert.GreaterOrEqual(t, got, d/2, "retry %d: below jitter floor", i)
+		assert.Less(t, got, d, "retry %d: above scheduled max", i)
 	}
-	start := time.Now()
-	c.backoffSleep()
-	assert.Less(t, 30*time.Second, time.Since(start))
-	assert.Greater(t, 60*time.Second, time.Since(start))
-	// reset
+
+	// Beyond the retry cap the schedule is pinned to one minute, so the jittered
+	// duration must fall in [30s, 60s).
+	c.retries = c.config.MaxRetryCount + 1
+	got := c.backoffDuration()
+	assert.GreaterOrEqual(t, got, 30*time.Second)
+	assert.Less(t, got, 60*time.Second)
+
+	// backoffSleep advances the retry counter (it sleeps at most base, which is
+	// short, and we intentionally do not assert on elapsed time).
 	c.retries = 0
-	start = time.Now()
 	c.backoffSleep()
-	assert.Greater(t, 200*time.Millisecond+leniency, time.Since(start))
+	assert.Equal(t, 1, c.retries)
 }
 
 // Fill up the channel and verify it is full.

@@ -63,7 +63,11 @@ func TestTailerSrc(t *testing.T) {
 		})
 
 	require.NoError(t, err, fmt.Sprintf("Failed to create tailer src for file %v with error: %v", file, err))
-	require.Equal(t, beforeCount+1, tail.OpenFileCount.Load())
+	// The open-file count is incremented asynchronously by the tailer goroutine,
+	// so poll for the increment rather than reading it immediately (mirrors the
+	// Eventually used for the decrement on close below).
+	require.Eventually(t, func() bool { return tail.OpenFileCount.Load() == beforeCount+1 }, 3*time.Second, 10*time.Millisecond,
+		"opening a tailer should increment the open-file count by exactly 1")
 
 	stateFilePath := statefile.Name()
 	m := state.NewFileRangeManager(state.ManagerConfig{
