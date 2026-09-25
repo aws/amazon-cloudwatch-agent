@@ -117,6 +117,9 @@ func (c *CloudWatch) Start(ctx context.Context, host component.Host) error {
 	client := cloudwatch.NewFromConfig(awsConfig, func(o *cloudwatch.Options) {
 		if c.config.EndpointOverride != "" {
 			o.BaseEndpoint = aws.String(c.config.EndpointOverride)
+			// SDK v2 rejects a custom endpoint combined with FIPS or dual-stack; the override wins.
+			o.EndpointOptions.UseFIPSEndpoint = aws.FIPSEndpointStateDisabled
+			o.EndpointOptions.UseDualStackEndpoint = aws.DualStackEndpointStateDisabled
 		}
 		o.Retryer = logThrottleRetryer
 	})
