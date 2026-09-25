@@ -240,6 +240,10 @@ jobs:
           done
           exit "${rc}"
 
+      - name: Run workflow script tests
+        if: needs.changes.outputs.scripts == 'true'
+        run: python3 -m unittest discover -s .github/scripts/tests -v
+
   verify-all:
     name: Verify All PR Build Jobs
     needs: [ changes, lint, build, test-data-race, test-setup-scripts ]

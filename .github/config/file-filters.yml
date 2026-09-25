@@ -16,4 +16,7 @@ build:
 
 scripts:
   - 'scripts/**'
+  - '.github/scripts/**'
+  - '.github/workflows/PR-test.yml'
+  - '.github/workflows/ec2-integration-test.yml'
   - '.github/workflows/PR-build.yml'
