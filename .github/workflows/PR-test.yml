@@ -213,13 +213,13 @@ jobs:
             echo "ec2_linux_matrix_${i}=${PAGE}" >> "$GITHUB_OUTPUT"
           done
 
-      - name: Echo test plan matrix
+      - name: Echo test plan summary
         env:
           EC2_LINUX_PAGE_COUNT: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
-          EC2_SELINUX_MATRIX: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
+        working-directory: integration-test-repo
         run: |
-          echo "ec2_linux_matrix pages: $EC2_LINUX_PAGE_COUNT"
-          echo "ec2_selinux_matrix: $EC2_SELINUX_MATRIX"
+          echo "ec2_linux cases=$(jq 'length' filtered_matrix.json) pairs=$(jq 'length' paired_matrix.json) pages=$EC2_LINUX_PAGE_COUNT"
+          echo "ec2_selinux cases=$(jq 'length' filtered_matrix_selinux.json) pairs=$(jq 'length' paired_matrix_selinux.json)"
 
 
   EC2LinuxIntegrationTest-0:

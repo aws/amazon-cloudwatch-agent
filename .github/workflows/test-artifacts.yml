@@ -289,60 +289,12 @@ jobs:
             echo "  page $i: $(echo "$PAGE" | jq 'length') pairs"
           done
 
-      - name: Echo test plan matrix
+      - name: Echo test plan summary
         env:
-          EC2_GPU_MATRIX: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
-          EKS_ADDON_MATRIX: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
           EC2_LINUX_PAGE_COUNT: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
-          EC2_LINUX_MATRIX_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
-          EC2_LINUX_MATRIX_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
-          EC2_LINUX_MATRIX_2: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_2 }}
-          EC2_LINUX_MATRIX_3: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_3 }}
-          EC2_LINUX_MATRIX_4: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_4 }}
-          EC2_LINUX_ONPREM_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_onprem_matrix }}
-          EC2_SELINUX_MATRIX: ${{ steps.set-matrix.outputs.ec2_selinux_matrix }}
-          EC2_WINDOWS_MATRIX: ${{ steps.set-matrix.outputs.ec2_windows_matrix }}
-          EC2_MAC_MATRIX: ${{ steps.set-matrix.outputs.ec2_mac_matrix }}
-          EC2_PERFORMANCE_MATRIX: ${{ steps.set-matrix.outputs.ec2_performance_matrix }}
-          EC2_WINDOWS_PERFORMANCE_MATRIX: ${{ steps.set-matrix.outputs.ec2_windows_performance_matrix }}
-          EC2_STRESS_MATRIX: ${{ steps.set-matrix.outputs.ec2_stress_matrix }}
-          EC2_WINDOWS_STRESS_MATRIX: ${{ steps.set-matrix.outputs.ec2_windows_stress_matrix }}
-          ECS_EC2_LAUNCH_DAEMON_MATRIX: ${{ steps.set-matrix.outputs.ecs_ec2_launch_daemon_matrix }}
-          ECS_FARGATE_MATRIX: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
-          EKS_DAEMON_MATRIX: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
-          EKS_DEPLOYMENT_MATRIX: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
-          EC2_LINUX_ITAR_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
-          EC2_LINUX_CHINA_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
         run: |
-          echo "ec2_gpu_matrix: $EC2_GPU_MATRIX"
-          echo "eks_addon_matrix: $EKS_ADDON_MATRIX"
-          echo "ec2_linux_matrix pages: $EC2_LINUX_PAGE_COUNT"
-          for i in 0 1 2 3 4; do
-            page="$EC2_LINUX_MATRIX_0"
-            case $i in
-              1) page="$EC2_LINUX_MATRIX_1" ;;
-              2) page="$EC2_LINUX_MATRIX_2" ;;
-              3) page="$EC2_LINUX_MATRIX_3" ;;
-              4) page="$EC2_LINUX_MATRIX_4" ;;
-            esac
-            if [ -n "$page" ]; then
-              echo "ec2_linux_matrix_$i: $(echo "$page" | jq 'length') pairs"
-            fi
-          done
-          echo "ec2_linux_onprem_matrix: $EC2_LINUX_ONPREM_MATRIX"
-          echo "ec2_selinux_matrix: $EC2_SELINUX_MATRIX"
-          echo "ec2_windows_matrix: $EC2_WINDOWS_MATRIX"
-          echo "ec2_mac_matrix: $EC2_MAC_MATRIX"
-          echo "ec2_performance_matrix: $EC2_PERFORMANCE_MATRIX"
-          echo "ec2_windows_performance_matrix: $EC2_WINDOWS_PERFORMANCE_MATRIX"
-          echo "ec2_stress_matrix: $EC2_STRESS_MATRIX"
-          echo "ec2_windows_stress_matrix: $EC2_WINDOWS_STRESS_MATRIX"
-          echo "ecs_ec2_launch_daemon_matrix: $ECS_EC2_LAUNCH_DAEMON_MATRIX"
-          echo "ecs_fargate_matrix: $ECS_FARGATE_MATRIX"
-          echo "eks_daemon_matrix: $EKS_DAEMON_MATRIX"
-          echo "eks_deployment_matrix: $EKS_DEPLOYMENT_MATRIX"
-          echo "ec2_linux_itar_matrix: $EC2_LINUX_ITAR_MATRIX"
-          echo "ec2_linux_china_matrix: $EC2_LINUX_CHINA_MATRIX"
+          echo "ec2_linux cases=$(jq 'length' filtered_ec2_linux_matrix.json) pairs=$(jq 'length' paired_ec2_linux_matrix.json) pages=$EC2_LINUX_PAGE_COUNT"
+          echo "ec2_selinux cases=$(jq 'length' filtered_ec2_selinux_matrix.json) pairs=$(jq 'length' paired_ec2_selinux_matrix.json)"
 
   CloudformationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
