@@ -32,6 +32,12 @@ const (
 	histogramCount = 987
 )
 
+// testTimestamp is a fixed, known timestamp stamped on every test datapoint so
+// that conversion can be asserted to preserve it exactly, rather than checking
+// that the datum timestamp is "close to now" (a wall-clock assertion that is
+// flaky on slow/loaded CI runners and silently accepts future-dated bugs).
+var testTimestamp = time.Unix(1700000000, 0)
+
 func addDimensions(attributes pcommon.Map, count int) {
 	for i := 0; i < count; i++ {
 		key := keyPrefix + strconv.Itoa(i)
@@ -88,7 +94,7 @@ func createTestMetrics(
 			}
 
 			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(time.Now()))
-			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(testTimestamp))
 			addDimensions(dp.Attributes(), numDimensions)
 		}
 	}
@@ -124,7 +130,7 @@ func createTestHistogram(
 			dp.SetSum(histogramSum)
 			dp.SetCount(histogramCount)
 			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(time.Now()))
-			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(testTimestamp))
 			addDimensions(dp.Attributes(), numDimensions)
 		}
 	}
@@ -166,7 +172,7 @@ func createTestExponentialHistogram(
 			})
 
 			dp.SetStartTimestamp(pcommon.NewTimestampFromTime(time.Now()))
-			dp.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
+			dp.SetTimestamp(pcommon.NewTimestampFromTime(testTimestamp))
 			addDimensions(dp.Attributes(), numDimensions)
 		}
 	}
@@ -200,8 +206,8 @@ func checkDatum(
 		assert.Equal(t, metricValue, *d.Value)
 	}
 
-	// Assuming unit test does not take more than 1 s.
-	assert.Less(t, time.Since(*d.Timestamp), time.Second)
+	// Conversion must preserve the datapoint timestamp exactly.
+	assert.Equal(t, testTimestamp.UnixNano(), d.Timestamp.UnixNano())
 	for _, dim := range d.Dimensions {
 		assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
 		assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))
@@ -268,8 +274,8 @@ func TestConvertOtelMetrics_ExponentialHistogram(t *testing.T) {
 			assert.Equal(t, []float64{6.0, 3.0, 1.5, 0, -1.5, -3.0, -6.0}, values)
 			assert.Equal(t, []float64{1, 2, 4, 5, 4, 2, 1}, counts)
 
-			// Assuming unit test does not take more than 1 s.
-			assert.Less(t, time.Since(*d.Timestamp), time.Second)
+			// Conversion must preserve the datapoint timestamp exactly.
+			assert.Equal(t, testTimestamp.UnixNano(), d.Timestamp.UnixNano())
 			for _, dim := range d.Dimensions {
 				assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
 				assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))

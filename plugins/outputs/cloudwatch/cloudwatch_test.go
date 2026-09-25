@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -351,8 +352,8 @@ func TestIsFlushable(t *testing.T) {
 		"TestEntity": append([]types.MetricDatum{}, datum),
 	}
 	assert.False(t, cw.timeToPublish(batch))
-	time.Sleep(time.Second + cw.config.ForceFlushInterval)
-	assert.True(t, cw.timeToPublish(batch))
+	require.Eventually(t, func() bool { return cw.timeToPublish(batch) }, 10*time.Second, 50*time.Millisecond,
+		"timeToPublish should become true after the force-flush interval elapses")
 	assert.NoError(t, cw.Shutdown(context.Background()))
 }
 
@@ -386,6 +387,10 @@ func TestIsFull(t *testing.T) {
 
 type mockCloudWatchClient struct {
 	mock.Mock
+	// putMetricDataCalls is a thread-safe counter of PutMetricData invocations,
+	// so tests can poll for the expected number of async publishes without racing
+	// on mock.Mock.Calls or sleeping a fixed time.
+	putMetricDataCalls atomic.Int64
 }
 
 var _ PutMetricDataAPI = (*mockCloudWatchClient)(nil)
@@ -395,6 +400,7 @@ func (m *mockCloudWatchClient) PutMetricData(
 	input *cloudwatch.PutMetricDataInput,
 	optFns ...func(*cloudwatch.Options),
 ) (*cloudwatch.PutMetricDataOutput, error) {
+	m.putMetricDataCalls.Add(1)
 	args := m.Called(ctx, input, optFns)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -456,7 +462,10 @@ func TestConsumeMetrics(t *testing.T) {
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	ctx := context.Background()
 	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
-	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+	// Expect 1500 metrics batched into exactly 2 PutMetricData calls; poll rather
+	// than sleeping a fixed time so a slow runner cannot fail the check early.
+	require.Eventually(t, func() bool { return svc.putMetricDataCalls.Load() == 2 }, 30*time.Second, 100*time.Millisecond,
+		"expected 1500 metrics to publish in 2 PutMetricData calls")
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 2))
 	assert.NoError(t, cw.Shutdown(ctx))
 }
@@ -480,12 +489,11 @@ func TestWriteError(t *testing.T) {
 	ctx := context.Background()
 	assert.NoError(t, cw.ConsumeMetrics(ctx, metrics))
 
-	// Sum time for all retries.
-	var sum int
-	for i := 0; i < defaultRetryCount; i++ {
-		sum += 1 << i
-	}
-	time.Sleep(backoffRetryBase * time.Duration(sum))
+	// The write fails and is retried, for 5 PutMetricData calls total. Poll for
+	// them instead of sleeping the whole backoff schedule (slow and flaky on
+	// loaded runners).
+	require.Eventually(t, func() bool { return svc.putMetricDataCalls.Load() == 5 }, 60*time.Second, 100*time.Millisecond,
+		"expected 5 PutMetricData calls (initial attempt plus retries)")
 	assert.True(t, svc.AssertNumberOfCalls(t, "PutMetricData", 5))
 	assert.NoError(t, cw.Shutdown(ctx))
 }
@@ -516,14 +524,16 @@ func TestPublish(t *testing.T) {
 	go func() {
 		assert.NoError(t, cw.ConsumeMetrics(ctx, metrics))
 	}()
-	// Expect some, but not all API calls after half the original interval.
-	time.Sleep(interval/2 + 2*time.Second)
-	assert.Less(t, 0, len(svc.Calls))
-	assert.Less(t, len(svc.Calls), expectedCalls)
-	// Expect all API calls after 1.5x the interval.
-	// 10K metrics in batches of 20...
-	time.Sleep(interval)
-	assert.Equal(t, expectedCalls, len(svc.Calls))
+	// Publishing is paced by the flush interval, so once it starts, not every
+	// batch has been sent yet -- they cannot all flush the instant they are
+	// enqueued. Read the count via the mock's atomic counter to avoid racing on
+	// svc.Calls.
+	require.Eventually(t, func() bool { return svc.putMetricDataCalls.Load() > 0 }, interval, 100*time.Millisecond,
+		"publishing should start within one interval")
+	assert.Less(t, svc.putMetricDataCalls.Load(), int64(expectedCalls), "not all batches should publish at once")
+	// All batches eventually publish.
+	require.Eventually(t, func() bool { return svc.putMetricDataCalls.Load() == int64(expectedCalls) }, 3*interval, 200*time.Millisecond,
+		"all batches should eventually publish")
 	assert.Equal(t, 0, metrics.ResourceMetrics().At(0).Resource().Attributes().Len())
 	assert.NoError(t, cw.Shutdown(ctx))
 }
@@ -549,11 +559,12 @@ func TestMiddleware(t *testing.T) {
 		logger: zap.NewNop(),
 	}
 	ctx := context.Background()
+	var handleRequestCalled, handleResponseCalled atomic.Bool
 	handler := new(awsmiddleware.MockHandler)
 	handler.On("ID").Return("test")
 	handler.On("Position").Return(awsmiddleware.After)
-	handler.On("HandleRequest", mock.Anything, mock.Anything)
-	handler.On("HandleResponse", mock.Anything, mock.Anything)
+	handler.On("HandleRequest", mock.Anything, mock.Anything).Run(func(mock.Arguments) { handleRequestCalled.Store(true) })
+	handler.On("HandleResponse", mock.Anything, mock.Anything).Run(func(mock.Arguments) { handleResponseCalled.Store(true) })
 	middleware := new(awsmiddleware.MockMiddlewareExtension)
 	middleware.On("Handlers").Return([]awsmiddleware.RequestHandler{handler}, []awsmiddleware.ResponseHandler{handler})
 	extensions := map[component.ID]component.Component{id: middleware}
@@ -563,7 +574,10 @@ func TestMiddleware(t *testing.T) {
 	// Expect 1500 metrics batched in 2 API calls.
 	pmetrics := createTestMetrics(1500, 1, 1, "B/s")
 	assert.NoError(t, cw.ConsumeMetrics(ctx, pmetrics))
-	time.Sleep(2*time.Second + 2*cw.config.ForceFlushInterval)
+	// The middleware handlers are invoked asynchronously on flush; poll for them
+	// instead of sleeping a fixed time that a slow runner can exceed.
+	require.Eventually(t, func() bool { return handleRequestCalled.Load() && handleResponseCalled.Load() }, 30*time.Second, 100*time.Millisecond,
+		"middleware HandleRequest and HandleResponse should be invoked")
 	handler.AssertCalled(t, "HandleRequest", mock.Anything, mock.Anything)
 	handler.AssertCalled(t, "HandleResponse", mock.Anything, mock.Anything)
 	require.NoError(t, cw.Shutdown(ctx))
@@ -571,31 +585,31 @@ func TestMiddleware(t *testing.T) {
 
 func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{config: createDefaultConfig().(*Config)}
-	sleeps := []time.Duration{
-		time.Millisecond * 200,
-		time.Millisecond * 400,
-		time.Millisecond * 800,
-		time.Millisecond * 1600,
-		time.Millisecond * 3200,
-		time.Millisecond * 6400}
-	leniency := 200 * time.Millisecond
-	for i := 0; i <= defaultRetryCount; i++ {
-		start := time.Now()
-		c.backoffSleep()
-		// Expect time since start is between sleeps[i]/2 and sleeps[i].
-		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(t, sleeps[i]/2, time.Since(start))
-		assert.Greater(t, sleeps[i]+leniency, time.Since(start))
+	base := c.config.BackoffRetryBase
+
+	// Within the retry cap the schedule doubles each attempt and jitter keeps the
+	// duration in [d/2, d) where d = base * 2^retries. Asserted on the computed
+	// value so there is no dependency on wall-clock timing.
+	for i := 0; i <= c.config.MaxRetryCount; i++ {
+		c.retries = i
+		d := base * time.Duration(1<<i)
+		got := c.backoffDuration()
+		assert.GreaterOrEqual(t, got, d/2, "retry %d: below jitter floor", i)
+		assert.Less(t, got, d, "retry %d: above scheduled max", i)
 	}
-	start := time.Now()
-	c.backoffSleep()
-	assert.Less(t, 30*time.Second, time.Since(start))
-	assert.Greater(t, 60*time.Second, time.Since(start))
-	// reset
+
+	// Beyond the retry cap the schedule is pinned to one minute, so the jittered
+	// duration must fall in [30s, 60s).
+	c.retries = c.config.MaxRetryCount + 1
+	got := c.backoffDuration()
+	assert.GreaterOrEqual(t, got, 30*time.Second)
+	assert.Less(t, got, 60*time.Second)
+
+	// backoffSleep advances the retry counter (it sleeps at most base, which is
+	// short, and we intentionally do not assert on elapsed time).
 	c.retries = 0
-	start = time.Now()
 	c.backoffSleep()
-	assert.Greater(t, 200*time.Millisecond+leniency, time.Since(start))
+	assert.Equal(t, 1, c.retries)
 }
 
 // Fill up the channel and verify it is full.
