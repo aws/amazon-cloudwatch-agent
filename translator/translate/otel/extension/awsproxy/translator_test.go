@@ -40,3 +40,18 @@ func TestTranslate(t *testing.T) {
 		assert.Equal(t, wantCfg, gotCfg)
 	}
 }
+
+func TestTranslate_SchemeLessEndpointOverride(t *testing.T) {
+	tt := NewTranslator()
+	originalRegion := agent.Global_Config.Region
+	agent.Global_Config.Region = "us-east-1"
+	t.Cleanup(func() { agent.Global_Config.Region = originalRegion })
+	conf := confmap.NewFromStringMap(map[string]any{"traces": map[string]any{
+		"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.xray.us-east-1.vpce.amazonaws.com",
+	}})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	gotCfg, ok := got.(*awsproxy.Config)
+	require.True(t, ok)
+	assert.Equal(t, "https://vpce-0123456789abcdef0-abcdefgh.xray.us-east-1.vpce.amazonaws.com", gotCfg.ProxyConfig.AWSEndpoint)
+}

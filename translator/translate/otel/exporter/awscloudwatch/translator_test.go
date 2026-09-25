@@ -62,6 +62,19 @@ func TestTranslator(t *testing.T) {
 				RoleARN:            "global_arn",
 			},
 		},
+		"WithSchemeLessEndpointOverride": {
+			input: map[string]interface{}{"metrics": map[string]interface{}{
+				"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.monitoring.us-east-1.vpce.amazonaws.com",
+			}},
+			want: &cloudwatch.Config{
+				Namespace:          "CWAgent",
+				Region:             "us-east-1",
+				ForceFlushInterval: time.Minute,
+				MaxValuesPerDatum:  150,
+				EndpointOverride:   "https://vpce-0123456789abcdef0-abcdefgh.monitoring.us-east-1.vpce.amazonaws.com",
+				RoleARN:            "global_arn",
+			},
+		},
 		"WithInvalidCredentialFields": {
 			input: map[string]interface{}{"metrics": map[string]interface{}{}},
 			credentials: map[string]interface{}{
@@ -162,6 +175,7 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want.Token, gotCfg.Token)
 				assert.Equal(t, testCase.want.Profile, gotCfg.Profile)
 				assert.Equal(t, testCase.want.SharedCredentialFilename, gotCfg.SharedCredentialFilename)
+				assert.Equal(t, testCase.want.EndpointOverride, gotCfg.EndpointOverride)
 				assert.Equal(t, testCase.want.MaxValuesPerDatum, gotCfg.MaxValuesPerDatum)
 				assert.Equal(t, testCase.want.RollupDimensions, gotCfg.RollupDimensions)
 				assert.NotNil(t, gotCfg.MiddlewareID)

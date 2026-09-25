@@ -151,6 +151,31 @@ func TestTranslator(t *testing.T) {
 				"shared_credentials_file": "/some/credentials",
 			}),
 		},
+		"WithSchemeLessEndpointOverride": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"emf": map[string]any{},
+					},
+					"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.logs.us-east-1.vpce.amazonaws.com",
+				},
+			},
+			mode: config.ModeEC2,
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path":   "/ca/bundle",
+				"emf_only":                true,
+				"endpoint":                "https://vpce-0123456789abcdef0-abcdefgh.logs.us-east-1.vpce.amazonaws.com",
+				"imds_retries":            1,
+				"log_group_name":          "emf/logs/default",
+				"log_stream_name":         "some_instance_id",
+				"middleware":              "agenthealth/logs",
+				"profile":                 "some_profile",
+				"raw_log":                 true,
+				"region":                  "us-east-1",
+				"role_arn":                "global_arn",
+				"shared_credentials_file": "/some/credentials",
+			}),
+		},
 	}
 	factory := awscloudwatchlogsexporter.NewFactory()
 	for name, testCase := range testCases {

@@ -116,7 +116,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if c.IsSet(endpointOverrideKey) {
-		cfg.AWSSessionSettings.Endpoint, _ = common.GetString(c, endpointOverrideKey)
+		cfg.AWSSessionSettings.Endpoint, _ = common.GetEndpointOverride(c, endpointOverrideKey)
 	}
 	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {

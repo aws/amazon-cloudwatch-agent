@@ -1362,6 +1362,49 @@ func TestTranslator(t *testing.T) {
 	}
 }
 
+func TestTranslator_EndpointOverride(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	agent.Global_Config.Role_arn = "global_arn"
+	testCases := map[string]struct {
+		endpointOverride string
+		want             string
+	}{
+		"SchemeLessVPCEndpointGetsHTTPS": {
+			endpointOverride: "vpce-0123456789abcdef0-abcdefgh.logs.us-east-1.vpce.amazonaws.com",
+			want:             "https://vpce-0123456789abcdef0-abcdefgh.logs.us-east-1.vpce.amazonaws.com",
+		},
+		"ExplicitHTTPSPreserved": {
+			endpointOverride: "https://logs-fips.us-east-1.amazonaws.com",
+			want:             "https://logs-fips.us-east-1.amazonaws.com",
+		},
+		"ExplicitHTTPPreserved": {
+			endpointOverride: "http://127.0.0.1:4566",
+			want:             "http://127.0.0.1:4566",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			originalIsEcsFunc := isEcsFunc
+			isEcsFunc = func() bool { return true }
+			defer func() { isEcsFunc = originalIsEcsFunc }()
+
+			conf := confmap.NewFromStringMap(map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"ecs": map[string]any{},
+					},
+					"endpoint_override": testCase.endpointOverride,
+				},
+			})
+			got, err := NewTranslator().Translate(conf)
+			require.NoError(t, err)
+			gotCfg, ok := got.(*awsemfexporter.Config)
+			require.True(t, ok)
+			assert.Equal(t, testCase.want, gotCfg.AWSSessionSettings.Endpoint)
+		})
+	}
+}
+
 func TestTranslatorForKueue(t *testing.T) {
 	t.Setenv(envconfig.AWS_CA_BUNDLE, "/ca/bundle")
 	agent.Global_Config.Region = "us-east-1"

@@ -51,6 +51,23 @@ func TestTranslator(t *testing.T) {
 			input: testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 		},
+		"WithSchemeLessEndpointOverride": {
+			input: map[string]interface{}{"traces": map[string]interface{}{
+				"traces_collected":  map[string]interface{}{"xray": nil},
+				"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.xray.us-east-1.vpce.amazonaws.com",
+			}},
+			want: confmap.NewFromStringMap(map[string]interface{}{
+				"endpoint":  "127.0.0.1:2000",
+				"transport": "udp",
+				"proxy_server": map[string]interface{}{
+					"endpoint":     "127.0.0.1:2000",
+					"region":       "us-east-1",
+					"role_arn":     "global_arn",
+					"imds_retries": 1,
+					"aws_endpoint": "https://vpce-0123456789abcdef0-abcdefgh.xray.us-east-1.vpce.amazonaws.com",
+				},
+			}),
+		},
 	}
 	factory := awsxrayreceiver.NewFactory()
 	for name, testCase := range testCases {
