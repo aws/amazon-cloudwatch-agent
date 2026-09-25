@@ -88,7 +88,7 @@ jobs:
           PAIR_JSON: ${{ toJson(matrix.arrays) }}
           INPUT_LOCALSTACK_HOST: ${{ inputs.localstack_host }}
         run: |
-          python3 -c 'import json, os; print("paired cases:", ", ".join(case["testName"] for case in json.loads(os.environ["PAIR_JSON"])["cases"]))'
+          python3 -c 'import json, os; entry = json.loads(os.environ["PAIR_JSON"]); cases = entry.get("cases", [entry]); print("integration cases:", ", ".join(case["testName"] for case in cases))'
           echo "localstack input $INPUT_LOCALSTACK_HOST"
 
       - name: Install Terraform
