@@ -16,7 +16,8 @@
             "event_name": "Application",
             "event_levels": ["INFORMATION"],
             "log_group_name": "/aws/windows/Application",
-            "log_stream_name": "my-stream"
+            "log_stream_name": "my-stream",
+            "timezone": "UTC"
           },
           {
             "event_name": "Security",

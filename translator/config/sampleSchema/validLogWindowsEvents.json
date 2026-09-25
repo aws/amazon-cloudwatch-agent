@@ -35,7 +35,8 @@
             ],
             "log_group_name": "Application",
             "log_stream_name": "Application",
-            "event_format": "text"
+            "event_format": "text",
+            "timezone": "UTC"
           }
         ]
       }
