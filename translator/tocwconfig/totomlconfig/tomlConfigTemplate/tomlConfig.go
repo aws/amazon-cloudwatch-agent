@@ -39,6 +39,7 @@ type (
 		Cpu             []cpuConfig
 		Disk            []diskConfig
 		DiskIo          []diskioConfig
+		Dpdk            []dpdkConfig
 		Ethtool         []ethtoolConfig
 		K8sapiserver    []k8sApiServerConfig
 		Logfile         []logFileConfig
@@ -98,6 +99,19 @@ type (
 	diskioConfig struct {
 		FieldPass []string
 		Interval  string
+	}
+
+	dpdkConfig struct {
+		AdditionalCommands []string `toml:"additional_commands"`
+		DeviceTypes        []string `toml:"device_types"`
+		Ethdev             dpdkEthdevConfig
+		FieldPass          []string
+		SocketPath         string `toml:"socket_path"`
+		Tags               map[string]string
+	}
+
+	dpdkEthdevConfig struct {
+		ExcludeCommands []string `toml:"exclude_commands"`
 	}
 
 	ethtoolConfig struct {
