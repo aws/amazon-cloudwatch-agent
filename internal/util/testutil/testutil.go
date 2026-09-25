@@ -6,6 +6,7 @@ package testutil
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -37,4 +38,21 @@ func GetConfWithOverrides(t *testing.T, path string, overrides map[string]any) *
 	err = conf.Merge(confmap.NewFromStringMap(overrides))
 	require.NoError(t, err)
 	return conf
+}
+
+// IsolateAWSSharedConfigEnv makes SDK region and profile lookups deterministic: the shared
+// credentials and config files are pointed at nonexistent paths under a temp dir, and every
+// env var that supplies a region or profile is cleared. Returns the temp dir. Use this rather
+// than HOME, which translator/util.CheckAndSetHomeDir overwrites.
+func IsolateAWSSharedConfigEnv(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "no-such-config"))
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(dir, "no-such-credentials"))
+	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+	for _, k := range []string{"AWS_PROFILE", "AWS_DEFAULT_PROFILE", "AWS_REGION", "AWS_DEFAULT_REGION"} {
+		t.Setenv(k, "")
+		require.NoError(t, os.Unsetenv(k))
+	}
+	return dir
 }
