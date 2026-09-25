@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/gpu"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/procstat"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/statsd"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/metrics/metrics_collect/win_services"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/awsnvme"
 )
@@ -47,6 +48,7 @@ var (
 	windowsInputSet = collections.NewSet[string](
 		gpu.SectionKey,
 		statsd.SectionKey,
+		win_services.SectionKey,
 	)
 	// skipWindowsInputSet contains all the supported metric input plugins that should not be included in telegraf windows plugins
 	skipWindowsInputSet = collections.NewSet[string](
