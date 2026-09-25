@@ -18,6 +18,7 @@ func TestJournaldConfig_ToMap(t *testing.T) {
 		Units:     []string{"systemd", "kernel"},
 		Priority:  "err",
 		Matches:   []map[string]string{{"_PID": "1"}},
+		Mode:      "native",
 		Filters: []*JournaldFilter{
 			{
 				Type:       "exclude",
@@ -37,6 +38,7 @@ func TestJournaldConfig_ToMap(t *testing.T) {
 		"units":           []string{"systemd", "kernel"},
 		"priority":        "err",
 		"matches":         []map[string]string{{"_PID": "1"}},
+		"mode":            "native",
 		"filters": []map[string]interface{}{
 			{
 				"type":       "exclude",

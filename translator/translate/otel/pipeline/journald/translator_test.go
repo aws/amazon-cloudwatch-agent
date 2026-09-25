@@ -109,6 +109,42 @@ func TestTranslator(t *testing.T) {
 			translator: NewTranslator(common.WithIndex(0)),
 			wantErr:    true,
 		},
+		"WithNativeMode": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "test-logs",
+									"mode":           "native",
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    false,
+		},
+		"WithInvalidModeType": {
+			input: map[string]interface{}{
+				"logs": map[string]interface{}{
+					"logs_collected": map[string]interface{}{
+						"journald": map[string]interface{}{
+							"collect_list": []interface{}{
+								map[string]interface{}{
+									"log_group_name": "test-logs",
+									"mode":           123,
+								},
+							},
+						},
+					},
+				},
+			},
+			translator: NewTranslator(common.WithIndex(0)),
+			wantErr:    true,
+		},
 		"WithInvalidPriorityType": {
 			input: map[string]interface{}{
 				"logs": map[string]interface{}{
