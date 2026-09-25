@@ -197,6 +197,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.150.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.150.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/statsdreceiver v0.150.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/syslogreceiver v0.150.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/tcplogreceiver v0.150.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/udplogreceiver v0.150.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowseventlogreceiver v0.150.0
