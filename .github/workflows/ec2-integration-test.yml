@@ -52,7 +52,7 @@ on:
 
 jobs:
   EC2IntegrationTest:
-    name: ${{ matrix.arrays.pairName }}
+    name: ${{ matrix.arrays.pairName || matrix.arrays.testName }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -144,7 +144,7 @@ jobs:
         if: ${{ cancelled() || failure() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: ec2-integration-${{ inputs.job_id }}-${{ matrix.arrays.pairId }}
+          name: ec2-integration-${{ inputs.job_id }}-${{ inputs.region }}-${{ strategy.job-index }}
           path: |
             ${{ env.PAIR_WORK_ROOT }}/logs
             ${{ env.PAIR_WORK_ROOT }}/*-results.json

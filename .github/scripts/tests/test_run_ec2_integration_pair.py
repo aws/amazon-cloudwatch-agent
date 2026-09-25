@@ -1,6 +1,8 @@
+import importlib.util
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -8,6 +10,11 @@ from pathlib import Path
 
 
 SCRIPT = Path(__file__).parents[1] / "run-ec2-integration-pair.py"
+SPEC = importlib.util.spec_from_file_location("run_ec2_integration_pair", SCRIPT)
+MODULE = importlib.util.module_from_spec(SPEC)
+assert SPEC.loader is not None
+sys.modules[SPEC.name] = MODULE
+SPEC.loader.exec_module(MODULE)
 
 
 def case(name: str, wip: bool = False) -> dict:
@@ -31,6 +38,14 @@ def case(name: str, wip: bool = False) -> dict:
 
 
 class RunEC2IntegrationPairTest(unittest.TestCase):
+    def test_normalizes_legacy_single_case_matrix_entry(self):
+        legacy_case = case("legacy")
+
+        pair = MODULE.normalize_matrix_entry(legacy_case)
+
+        self.assertEqual("legacy", pair["pairName"])
+        self.assertEqual([legacy_case], pair["cases"])
+
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary_directory.name)

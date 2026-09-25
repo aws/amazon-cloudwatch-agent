@@ -196,6 +196,12 @@ jobs:
           repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
           ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
 
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: cloudwatch-agent
+          sparse-checkout: |
+            .github/scripts
+
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
@@ -234,9 +240,11 @@ jobs:
           # step can read it from disk. Passing it via a step-level env var can
           # exceed ARG_MAX (~2 MiB) on execve and prevent bash from starting.
           apply_filters generator/resources/ec2_linux_complete_test_matrix.json > filtered_ec2_linux_matrix.json
-          echo "ec2_linux_matrix=$(cat filtered_ec2_linux_matrix.json)" >> "$GITHUB_OUTPUT"
+          python3 cloudwatch-agent/.github/scripts/pair-test-matrix.py filtered_ec2_linux_matrix.json paired_ec2_linux_matrix.json
           echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          apply_filters generator/resources/ec2_selinux_complete_test_matrix.json > filtered_ec2_selinux_matrix.json
+          python3 cloudwatch-agent/.github/scripts/pair-test-matrix.py filtered_ec2_selinux_matrix.json paired_ec2_selinux_matrix.json
+          echo "ec2_selinux_matrix=$(cat paired_ec2_selinux_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_mac_matrix=$(apply_filters generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_performance_matrix=$(apply_filters generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
@@ -254,29 +262,31 @@ jobs:
         id: paginate-matrix
         run: |
           # GitHub Actions matrix limit is 256 jobs per workflow run.
-          # Use 200 per page for headroom. Up to 5 pages supported (1000 tests).
-          # Read the filtered matrix from the file written by the "Generate matrix"
+          # Use 100 pairs per page for output-size headroom. Up to 5 pages
+          # support 1000 original tests.
+          # Read the paired matrix from the file written by the "Generate matrix"
           # step instead of a step-level env var: the matrix can exceed the
           # kernel's ARG_MAX (~2 MiB) on execve, which would prevent bash from
           # starting for this step.
-          PAGE_SIZE=200
-          FULL_MATRIX=$(cat filtered_ec2_linux_matrix.json)
-          TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
-          PAGE_COUNT=$(( (TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
+          PAGE_SIZE=100
+          FULL_MATRIX=$(cat paired_ec2_linux_matrix.json)
+          PAIR_TOTAL=$(echo "$FULL_MATRIX" | jq 'length')
+          CASE_TOTAL=$(echo "$FULL_MATRIX" | jq '[.[].cases | length] | add // 0')
+          PAGE_COUNT=$(( (PAIR_TOTAL + PAGE_SIZE - 1) / PAGE_SIZE ))
 
           if [ "$PAGE_COUNT" -gt 5 ]; then
-            echo "::error::ec2_linux_matrix has $TOTAL entries requiring $PAGE_COUNT pages, but only 5 are supported. Add more static page slots."
+            echo "::error::ec2_linux_matrix has $PAIR_TOTAL pairs requiring $PAGE_COUNT pages, but only 5 are supported. Add more static page slots."
             exit 1
           fi
 
-          echo "ec2_linux total=$TOTAL pages=$PAGE_COUNT"
+          echo "ec2_linux cases=$CASE_TOTAL pairs=$PAIR_TOTAL pages=$PAGE_COUNT"
           echo "ec2_linux_matrix_page_count=${PAGE_COUNT}" >> "$GITHUB_OUTPUT"
 
           for (( i=0; i<PAGE_COUNT; i++ )); do
             START=$(( i * PAGE_SIZE ))
             PAGE=$(echo "$FULL_MATRIX" | jq -c ".[$START:$START+$PAGE_SIZE]")
             echo "ec2_linux_matrix_${i}=${PAGE}" >> "$GITHUB_OUTPUT"
-            echo "  page $i: $(echo "$PAGE" | jq 'length') entries"
+            echo "  page $i: $(echo "$PAGE" | jq 'length') pairs"
           done
 
       - name: Echo test plan matrix
@@ -316,7 +326,7 @@ jobs:
               4) page="$EC2_LINUX_MATRIX_4" ;;
             esac
             if [ -n "$page" ]; then
-              echo "ec2_linux_matrix_$i: $(echo "$page" | jq 'length') entries"
+              echo "ec2_linux_matrix_$i: $(echo "$page" | jq 'length') pairs"
             fi
           done
           echo "ec2_linux_onprem_matrix: $EC2_LINUX_ONPREM_MATRIX"
@@ -2458,4 +2468,3 @@ jobs:
           command: |
             cd terraform/azure/aks
             terraform destroy --auto-approve -var="region=us-east-2" -var="test_mode=containerinsights" -var="test_dir=./test/azure/aks/containerinsights" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
-

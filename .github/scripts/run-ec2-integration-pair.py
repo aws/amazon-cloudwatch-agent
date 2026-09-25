@@ -102,6 +102,21 @@ def _case_name(case: dict[str, Any], index: int) -> str:
     return str(case.get("testName") or case.get("test_dir") or f"case-{index}")
 
 
+def normalize_matrix_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """Accept a paired PR matrix entry or a legacy single-case matrix entry."""
+    cases = entry.get("cases")
+    if cases is None:
+        name = _case_name(entry, 0)
+        return {
+            "pairId": "legacy-single",
+            "pairName": name,
+            "cases": [entry],
+        }
+    if not isinstance(cases, list) or not 1 <= len(cases) <= 2:
+        raise ValueError("matrix entry must contain one or two cases")
+    return entry
+
+
 def _case_working_directory(
     case_root: Path, case: dict[str, Any], default_terraform_dir: str
 ) -> Path:
@@ -452,10 +467,11 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
-    pair = json.loads(args.pair_json)
-    cases = pair.get("cases")
-    if not isinstance(cases, list) or not 1 <= len(cases) <= 2:
-        raise ValueError("pair JSON must contain one or two cases")
+    entry = json.loads(args.pair_json)
+    if not isinstance(entry, dict):
+        raise ValueError("matrix entry must be a JSON object")
+    pair = normalize_matrix_entry(entry)
+    cases = pair["cases"]
 
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
