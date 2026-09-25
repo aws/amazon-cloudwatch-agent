@@ -38,6 +38,16 @@ func SharedConfigRegion(ctx context.Context, profile string, credentialsFiles, c
 	if configFiles == nil && envCfg.SharedConfigFile != "" {
 		configFiles = []string{envCfg.SharedConfigFile}
 	}
+	// Resolve the default location here, with the SDK's DefaultShared*Filename functions,
+	// which read HOME/USERPROFILE when called. Leaving the lists nil would make the SDK use
+	// its DefaultShared*Files slices, which were computed at package init and so miss a
+	// HOME set since, such as by translator/util.CheckAndSetHomeDir just before this call.
+	if credentialsFiles == nil {
+		credentialsFiles = []string{config.DefaultSharedCredentialsFilename()}
+	}
+	if configFiles == nil {
+		configFiles = []string{config.DefaultSharedConfigFilename()}
+	}
 	shared, err := config.LoadSharedConfigProfile(ctx, profile, func(o *config.LoadSharedConfigOptions) {
 		o.CredentialsFiles = credentialsFiles
 		o.ConfigFiles = configFiles

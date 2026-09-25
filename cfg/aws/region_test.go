@@ -28,6 +28,7 @@ func TestSharedConfigRegion(t *testing.T) {
 		credsFile    string // content of an explicit credentials file; "" for none
 		configFile   string // content of an explicit config file; "" for none
 		defaultCreds string // content of the AWS_SHARED_CREDENTIALS_FILE target
+		homeCreds    string // content of $HOME/.aws/credentials, with the AWS_*_FILE variables unset
 		profile      string
 		want         string
 		wantErr      bool
@@ -48,6 +49,9 @@ func TestSharedConfigRegion(t *testing.T) {
 		"File/ConfigSlotDropsBareSection": {configFile: namedCreds, profile: profile, want: ""},
 		"File/OnlyGivenFilesAreRead":      {credsFile: namedCreds, defaultCreds: "[" + profile + "]\nregion = us-west-1\n", profile: profile, want: "eu-central-1"},
 		"File/DefaultLocationWhenNil":     {defaultCreds: namedCreds, profile: profile, want: "eu-central-1"},
+		// With no explicit files and no AWS_*_FILE variables, the lookup must follow the HOME in
+		// effect at call time (translator/util.CheckAndSetHomeDir sets it after package init).
+		"File/HomeDirAtCallTimeWhenNil": {homeCreds: namedCreds, profile: profile, want: "eu-central-1"},
 
 		"Profile/EmptyUsesAWS_PROFILE":         {env: map[string]string{"AWS_PROFILE": profile}, credsFile: defaultCreds + namedCreds, want: "eu-central-1"},
 		"Profile/EmptyUsesAWS_DEFAULT_PROFILE": {env: map[string]string{"AWS_DEFAULT_PROFILE": profile}, credsFile: defaultCreds + namedCreds, want: "eu-central-1"},
@@ -79,6 +83,17 @@ func TestSharedConfigRegion(t *testing.T) {
 			}
 			if testCase.defaultCreds != "" {
 				require.NoError(t, os.WriteFile(os.Getenv(envAwsSharedCredentialsFile), []byte(testCase.defaultCreds), 0o600))
+			}
+			if testCase.homeCreds != "" {
+				home := filepath.Join(dir, "home")
+				require.NoError(t, os.MkdirAll(filepath.Join(home, ".aws"), 0o700))
+				require.NoError(t, os.WriteFile(filepath.Join(home, ".aws", "credentials"), []byte(testCase.homeCreds), 0o600))
+				t.Setenv("HOME", home)
+				t.Setenv("USERPROFILE", home)
+				for _, k := range []string{envAwsSharedCredentialsFile, envAwsSharedConfigFile} {
+					t.Setenv(k, "")
+					require.NoError(t, os.Unsetenv(k))
+				}
 			}
 
 			region, err := SharedConfigRegion(t.Context(), testCase.profile, credsFiles, configFiles)
