@@ -569,6 +569,30 @@ func TestMiddleware(t *testing.T) {
 	require.NoError(t, cw.Shutdown(ctx))
 }
 
+func TestEndpointOverrideWithFIPSOrDualStack(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	for name, envKey := range map[string]string{"FIPS": "AWS_USE_FIPS_ENDPOINT", "DualStack": "AWS_USE_DUALSTACK_ENDPOINT"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(envKey, "true")
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("smithy-protocol", "rpc-v2-cbor")
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+			cfg := createDefaultConfig().(*Config)
+			cfg.Region = "us-east-1"
+			cfg.EndpointOverride = server.URL
+			cw := &CloudWatch{config: cfg, logger: zap.NewNop()}
+			ctx := context.Background()
+			require.NoError(t, cw.Start(ctx, nil))
+			_, err := cw.client.PutMetricData(ctx, &cloudwatch.PutMetricDataInput{Namespace: aws.String("test-namespace")})
+			assert.NoError(t, err)
+			require.NoError(t, cw.Shutdown(ctx))
+		})
+	}
+}
+
 func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{config: createDefaultConfig().(*Config)}
 	sleeps := []time.Duration{

@@ -4,10 +4,14 @@
 package cloudwatchlogs
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 
@@ -100,6 +104,30 @@ func TestDuplicateDestination(t *testing.T) {
 
 	// Then the destination for cloudwatchlogs endpoint would be the same
 	require.Equal(t, d1, d2)
+}
+
+func TestCreateClientEndpointOverrideWithFIPSOrDualStack(t *testing.T) {
+	for name, envKey := range map[string]string{"FIPS": "AWS_USE_FIPS_ENDPOINT", "DualStack": "AWS_USE_DUALSTACK_ENDPOINT"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(envKey, "true")
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/x-amz-json-1.1")
+				_, _ = w.Write([]byte(`{}`))
+			}))
+			defer server.Close()
+			c := &CloudWatchLogs{
+				Log:              testutil.Logger{Name: "test"},
+				Region:           "us-east-1",
+				AccessKey:        "access_key",
+				SecretKey:        "secret_key",
+				EndpointOverride: server.URL,
+			}
+			client, err := c.createClient(context.Background(), nil, nil)
+			require.NoError(t, err)
+			_, err = client.DescribeLogGroups(context.Background(), &cloudwatchlogs.DescribeLogGroupsInput{})
+			require.NoError(t, err)
+		})
+	}
 }
 
 // TestSharedRetryerLifecycle verifies that stopping one destination does not affect

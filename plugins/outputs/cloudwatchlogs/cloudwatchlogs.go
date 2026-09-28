@@ -237,6 +237,9 @@ func (c *CloudWatchLogs) createClient(ctx context.Context, retryer aws.Retryer, 
 	client := cloudwatchlogs.NewFromConfig(awsConfig, func(o *cloudwatchlogs.Options) {
 		if c.EndpointOverride != "" {
 			o.BaseEndpoint = aws.String(c.EndpointOverride)
+			// SDK v2 rejects a custom endpoint combined with FIPS or dual-stack; the override wins.
+			o.EndpointOptions.UseFIPSEndpoint = aws.FIPSEndpointStateDisabled
+			o.EndpointOptions.UseDualStackEndpoint = aws.DualStackEndpointStateDisabled
 		}
 		if retryer != nil {
 			o.Retryer = retryer
