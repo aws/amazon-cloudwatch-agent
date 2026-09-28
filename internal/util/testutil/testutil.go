@@ -40,6 +40,19 @@ func GetConfWithOverrides(t *testing.T, path string, overrides map[string]any) *
 	return conf
 }
 
+// SharedCredentialsPath returns the shared-credentials file path that IsolateAWSSharedConfigEnv
+// points the SDK at. The file does not exist unless a test creates it, which is how a test
+// exercises the SDK default-file path.
+func SharedCredentialsPath(dir string) string {
+	return filepath.Join(dir, "no-such-credentials")
+}
+
+// SharedConfigPath returns the shared-config file path that IsolateAWSSharedConfigEnv points the
+// SDK at. The file does not exist unless a test creates it.
+func SharedConfigPath(dir string) string {
+	return filepath.Join(dir, "no-such-config")
+}
+
 // IsolateAWSSharedConfigEnv makes SDK region and profile lookups deterministic: the shared
 // credentials and config files are pointed at nonexistent paths under a temp dir, and every
 // env var that supplies a region or profile is cleared. Returns the temp dir. Use this rather
@@ -47,8 +60,8 @@ func GetConfWithOverrides(t *testing.T, path string, overrides map[string]any) *
 func IsolateAWSSharedConfigEnv(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "no-such-config"))
-	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(dir, "no-such-credentials"))
+	t.Setenv("AWS_CONFIG_FILE", SharedConfigPath(dir))
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", SharedCredentialsPath(dir))
 	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
 	for _, k := range []string{"AWS_PROFILE", "AWS_DEFAULT_PROFILE", "AWS_REGION", "AWS_DEFAULT_REGION"} {
 		t.Setenv(k, "")

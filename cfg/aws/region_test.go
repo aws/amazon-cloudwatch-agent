@@ -82,7 +82,8 @@ func TestSharedConfigRegion(t *testing.T) {
 				configFiles = []string{path}
 			}
 			if testCase.defaultCreds != "" {
-				require.NoError(t, os.WriteFile(os.Getenv(envAwsSharedCredentialsFile), []byte(testCase.defaultCreds), 0o600))
+				path := testutil.SharedCredentialsPath(dir)
+				require.NoError(t, os.WriteFile(path, []byte(testCase.defaultCreds), 0o600))
 			}
 			if testCase.homeCreds != "" {
 				home := filepath.Join(dir, "home")

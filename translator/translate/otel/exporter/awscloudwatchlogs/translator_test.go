@@ -161,6 +161,7 @@ func TestTranslator(t *testing.T) {
 				},
 			},
 			mode: config.ModeEC2,
+			//nolint:gosec // G101: shared_credentials_file holds a path, not a credential
 			want: confmap.NewFromStringMap(map[string]any{
 				"certificate_file_path":   "/ca/bundle",
 				"emf_only":                true,

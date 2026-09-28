@@ -1400,7 +1400,7 @@ func TestTranslator_EndpointOverride(t *testing.T) {
 			require.NoError(t, err)
 			gotCfg, ok := got.(*awsemfexporter.Config)
 			require.True(t, ok)
-			assert.Equal(t, testCase.want, gotCfg.AWSSessionSettings.Endpoint)
+			assert.Equal(t, testCase.want, gotCfg.Endpoint)
 		})
 	}
 }
