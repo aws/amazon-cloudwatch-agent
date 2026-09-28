@@ -407,6 +407,57 @@ func TestContainerInsightsConfig(t *testing.T) {
 	}
 }
 
+func TestContainerInsightsAKSGKEConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		kubernetesMode string
+	}{
+		{name: "container_insights_cluster_config_aks", kubernetesMode: config.ModeAKS},
+		{name: "container_insights_cluster_config_gke", kubernetesMode: config.ModeGKE},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			context.CurrentContext().SetKubernetesMode(tc.kubernetesMode)
+
+			agent.Global_Config = *new(agent.Agent)
+			translator.SetTargetPlatform("linux")
+			var input interface{}
+			blob, err := os.ReadFile("./sampleConfig/opentelemetry/" + tc.name + ".json")
+			require.NoError(t, err)
+			require.NoError(t, json.Unmarshal(blob, &input))
+			// Side effect: repopulates agent.Global_Config (incl. Region) from the
+			// input, matching TestContainerInsightsConfig. Without it the base
+			// metrics/opentelemetry pipeline errors on the empty region and is dropped.
+			_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
+
+			cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+			require.NoError(t, err)
+			yamlConfig, err := mapstructure.Marshal(cfg)
+			require.NoError(t, err)
+			yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
+
+			goldenPath := "./sampleConfig/opentelemetry/" + tc.name + ".yaml"
+			if os.Getenv("GENERATE_GOLDEN") != "" {
+				require.NoError(t, os.WriteFile(goldenPath, []byte(yamlStr), 0644))
+			}
+
+			var expected interface{}
+			bs, err := os.ReadFile(goldenPath)
+			require.NoError(t, err)
+			require.NoError(t, yaml.Unmarshal(bs, &expected))
+
+			var actual interface{}
+			require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+
+			opt := cmpopts.SortSlices(func(x, y interface{}) bool {
+				return pretty.Sprint(x) < pretty.Sprint(y)
+			})
+			require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+		})
+	}
+}
+
 func TestPrometheusOtelPipelineConfig(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
