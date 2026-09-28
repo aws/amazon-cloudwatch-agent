@@ -224,6 +224,24 @@ processors:
     - k8s.node.label.eks.amazonaws.com/sourceLaunchTemplateVersion
     - k8s.pod.label.pod-template-hash
     - k8s.pod.label.controller-revision-hash
+    - k8s.node.label.karpenter.k8s.aws/instance-capability-flex
+    - k8s.node.label.karpenter.k8s.aws/instance-category
+    - k8s.node.label.karpenter.k8s.aws/instance-cpu
+    - k8s.node.label.karpenter.k8s.aws/instance-cpu-manufacturer
+    - k8s.node.label.karpenter.k8s.aws/instance-cpu-sustained-clock-speed-mhz
+    - k8s.node.label.karpenter.k8s.aws/instance-ebs-bandwidth
+    - k8s.node.label.karpenter.k8s.aws/instance-encryption-in-transit-supported
+    - k8s.node.label.karpenter.k8s.aws/instance-family
+    - k8s.node.label.karpenter.k8s.aws/instance-generation
+    - k8s.node.label.karpenter.k8s.aws/instance-hypervisor
+    - k8s.node.label.karpenter.k8s.aws/instance-local-nvme
+    - k8s.node.label.karpenter.k8s.aws/instance-memory
+    - k8s.node.label.karpenter.k8s.aws/instance-network-bandwidth
+    - k8s.node.label.karpenter.k8s.aws/instance-size
+    - k8s.node.label.karpenter.k8s.aws/instance-tenancy
+    - k8s.node.label.karpenter.sh/do-not-sync-taints
+    - k8s.node.label.karpenter.sh/initialized
+    - k8s.node.label.karpenter.sh/registered
     unconditional_removal_prefixes:
     - k8s.node.label.feature.node.kubernetes.io/
     - k8s.node.label.beta.kubernetes.io/
