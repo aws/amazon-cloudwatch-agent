@@ -14,7 +14,7 @@ import (
 
 func TestTranslatorID(t *testing.T) {
 	tr := NewTranslatorWithName("test", EndpointConfig{})
-	assert.Equal(t, "otlphttp/test", tr.ID().String())
+	assert.Equal(t, "otlp_http/test", tr.ID().String())
 }
 
 func TestTranslatorWithEndpoints(t *testing.T) {
@@ -44,6 +44,18 @@ func TestTranslatorWithAuthenticator(t *testing.T) {
 	require.NoError(t, err)
 
 	otlpCfg := cfg.(*otlphttpexporter.Config)
-	require.NotNil(t, otlpCfg.ClientConfig.Auth)
-	assert.Equal(t, authID, otlpCfg.ClientConfig.Auth.AuthenticatorID)
+	require.True(t, otlpCfg.ClientConfig.Auth.HasValue())
+	assert.Equal(t, authID, otlpCfg.ClientConfig.Auth.Get().AuthenticatorID)
+}
+
+func TestTranslatorDisablesQueueBatcher(t *testing.T) {
+	// Outer QueueConfig=None (not inner Batch=None) so the confmap round-trip
+	// doesn't re-enable the exporter batcher via configoptional promotion.
+	tr := NewTranslatorWithName("logs", EndpointConfig{LogsEndpoint: "https://logs.us-west-2.amazonaws.com/v1/logs"})
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	otlpCfg := cfg.(*otlphttpexporter.Config)
+	assert.False(t, otlpCfg.QueueConfig.HasValue())
 }

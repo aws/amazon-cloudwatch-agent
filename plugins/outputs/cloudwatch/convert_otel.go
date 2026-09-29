@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -16,11 +17,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution"
 	"github.com/aws/amazon-cloudwatch-agent/metric/distribution/exph"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsentity/entityattributes"
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
-// ConvertOtelDimensions will returns a sorted list of dimensions.
-func ConvertOtelDimensions(attributes pcommon.Map) []*cloudwatch.Dimension {
+// convertOtelDimensions returns a sorted list of dimensions.
+func convertOtelDimensions(attributes pcommon.Map) []types.Dimension {
 	// Loop through map, similar to EMF exporter createLabels().
 	mTags := make(map[string]string, attributes.Len())
 	attributes.Range(func(k string, v pcommon.Value) bool {
@@ -34,21 +34,22 @@ func ConvertOtelDimensions(attributes pcommon.Map) []*cloudwatch.Dimension {
 	return BuildDimensions(mTags)
 }
 
-// NumberDataPointValue converts to float64 since that is what AWS SDK will use.
-func NumberDataPointValue(dp pmetric.NumberDataPoint) float64 {
+// numberDataPointValue converts to float64 since that is what AWS SDK will use.
+func numberDataPointValue(dp pmetric.NumberDataPoint) float64 {
 	switch dp.ValueType() {
 	case pmetric.NumberDataPointValueTypeDouble:
 		return dp.DoubleValue()
 	case pmetric.NumberDataPointValueTypeInt:
 		return float64(dp.IntValue())
+	default:
 	}
 	return 0
 }
 
 // checkHighResolution removes the special attribute.
 // Return 1 if it was present and set to "true". Else return 60.
-func checkHighResolution(attributes *pcommon.Map) int64 {
-	var resolution int64 = 60
+func checkHighResolution(attributes *pcommon.Map) int32 {
+	var resolution int32 = 60
 	v, ok := attributes.Get(highResolutionTagKey)
 	if ok {
 		if strings.EqualFold(v.AsString(), "true") {
@@ -82,7 +83,7 @@ func convertOtelNumberDataPoints(
 	name string,
 	unit string,
 	scale float64,
-	entity cloudwatch.Entity,
+	entity types.Entity,
 ) []*aggregationDatum {
 	// Could make() with attrs.Len() * len(c.RollupDimensions).
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
@@ -91,16 +92,16 @@ func convertOtelNumberDataPoints(
 		attrs := dp.Attributes()
 		storageResolution := checkHighResolution(&attrs)
 		aggregationInterval := getAggregationInterval(&attrs)
-		dimensions := ConvertOtelDimensions(attrs)
-		value := NumberDataPointValue(dp) * scale
+		dimensions := convertOtelDimensions(attrs)
+		value := numberDataPointValue(dp) * scale
 		ad := aggregationDatum{
-			MetricDatum: cloudwatch.MetricDatum{
+			MetricDatum: types.MetricDatum{
 				Dimensions:        dimensions,
 				MetricName:        aws.String(name),
-				Unit:              aws.String(unit),
+				Unit:              types.StandardUnit(unit),
 				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
 				Value:             aws.Float64(value),
-				StorageResolution: aws.Int64(storageResolution),
+				StorageResolution: aws.Int32(storageResolution),
 			},
 			aggregationInterval: aggregationInterval,
 			entity:              entity,
@@ -116,8 +117,8 @@ func convertOtelHistogramDataPoints(
 	dataPoints pmetric.HistogramDataPointSlice,
 	name string,
 	unit string,
-	scale float64,
-	entity cloudwatch.Entity,
+	_ float64,
+	entity types.Entity,
 ) []*aggregationDatum {
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
 	for i := 0; i < dataPoints.Len(); i++ {
@@ -125,14 +126,14 @@ func convertOtelHistogramDataPoints(
 		attrs := dp.Attributes()
 		storageResolution := checkHighResolution(&attrs)
 		aggregationInterval := getAggregationInterval(&attrs)
-		dimensions := ConvertOtelDimensions(attrs)
+		dimensions := convertOtelDimensions(attrs)
 		ad := aggregationDatum{
-			MetricDatum: cloudwatch.MetricDatum{
+			MetricDatum: types.MetricDatum{
 				Dimensions:        dimensions,
 				MetricName:        aws.String(name),
-				Unit:              aws.String(unit),
+				Unit:              types.StandardUnit(unit),
 				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
-				StorageResolution: aws.Int64(storageResolution),
+				StorageResolution: aws.Int32(storageResolution),
 			},
 			aggregationInterval: aggregationInterval,
 			entity:              entity,
@@ -153,7 +154,7 @@ func convertOtelExponentialHistogramDataPoints(
 	name string,
 	unit string,
 	_ float64,
-	entity cloudwatch.Entity,
+	entity types.Entity,
 ) []*aggregationDatum {
 
 	datums := make([]*aggregationDatum, 0, dataPoints.Len())
@@ -162,14 +163,14 @@ func convertOtelExponentialHistogramDataPoints(
 		attrs := dp.Attributes()
 		storageResolution := checkHighResolution(&attrs)
 		aggregationInterval := getAggregationInterval(&attrs)
-		dimensions := ConvertOtelDimensions(attrs)
+		dimensions := convertOtelDimensions(attrs)
 		ad := aggregationDatum{
-			MetricDatum: cloudwatch.MetricDatum{
+			MetricDatum: types.MetricDatum{
 				Dimensions:        dimensions,
 				MetricName:        aws.String(name),
-				Unit:              aws.String(unit),
+				Unit:              types.StandardUnit(unit),
 				Timestamp:         aws.Time(dp.Timestamp().AsTime()),
-				StorageResolution: aws.Int64(storageResolution),
+				StorageResolution: aws.Int32(storageResolution),
 			},
 			aggregationInterval: aggregationInterval,
 			entity:              entity,
@@ -187,7 +188,7 @@ func convertOtelExponentialHistogramDataPoints(
 // metric and returns it. Only supports the metric DataTypes that we plan to use.
 // Intentionally not caching previous values and converting cumulative to delta.
 // Instead use cumulativetodeltaprocessor which supports monotonic cumulative sums.
-func ConvertOtelMetric(m pmetric.Metric, entity cloudwatch.Entity) []*aggregationDatum {
+func convertOtelMetric(m pmetric.Metric, entity types.Entity) []*aggregationDatum {
 	name := m.Name()
 	unit, scale, err := cloudwatchutil.ToStandardUnit(m.Unit())
 	if err != nil {
@@ -208,7 +209,7 @@ func ConvertOtelMetric(m pmetric.Metric, entity cloudwatch.Entity) []*aggregatio
 	return []*aggregationDatum{}
 }
 
-func ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
+func convertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 	datums := make([]*aggregationDatum, 0, m.DataPointCount())
 	for i := 0; i < m.ResourceMetrics().Len(); i++ {
 		entity := entityattributes.CreateCloudWatchEntityFromAttributes(m.ResourceMetrics().At(i).Resource().Attributes())
@@ -217,7 +218,7 @@ func ConvertOtelMetrics(m pmetric.Metrics) []*aggregationDatum {
 			metrics := scopeMetrics.At(j).Metrics()
 			for k := 0; k < metrics.Len(); k++ {
 				metric := metrics.At(k)
-				newDatums := ConvertOtelMetric(metric, entity)
+				newDatums := convertOtelMetric(metric, entity)
 				datums = append(datums, newDatums...)
 
 			}

@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"os"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/awsproxy"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -54,9 +54,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.ProxyConfig.Endpoint = defaultEndpoint
 	cfg.ProxyConfig.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if conf.IsSet(endpointOverrideKey) {
-		cfg.ProxyConfig.AWSEndpoint, _ = common.GetString(conf, endpointOverrideKey)
+		cfg.ProxyConfig.AWSEndpoint, _ = common.GetEndpointOverride(conf, endpointOverrideKey)
 	}
-	cfg.ProxyConfig.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.ProxyConfig.IMDSRetries = override.GetDefaultRetryNumber()
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.ProxyConfig.LocalMode = true
 	}

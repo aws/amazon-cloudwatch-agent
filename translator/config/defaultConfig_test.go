@@ -42,6 +42,9 @@ func TestDefaultJSONConfigFor_OtelK8s(t *testing.T) {
 	assert.JSONEq(t, defaultOtelK8sConfig, cfg)
 	assert.Contains(t, cfg, "container_insights")
 	assert.NotContains(t, cfg, "host_metrics")
+	// On Kubernetes the role comes from the pod's AWS_ROLE_ARN (web identity on
+	// AKS, IRSA on EKS), so the config must not carry a role_arn of its own.
+	assert.NotContains(t, cfg, "role_arn")
 }
 
 func TestDefaultJSONConfigFor_OtelECS(t *testing.T) {

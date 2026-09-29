@@ -133,12 +133,6 @@ processors:
       - set(attributes["cloudwatch.source"], "cloudwatch-agent")
       - set(attributes["cloudwatch.solution"], "k8s-otel-container-insights")
       - set(attributes["cloudwatch.pipeline"], "lis-csi")
-  transform/cw_k8s_ci_v0_clear_schema_url:
-    error_mode: ignore
-    metric_statements:
-    - context: resource
-      statements:
-      - set(resource.schema_url, "")
   transform/cw_k8s_ci_v0_set_workload:
     error_mode: ignore
     metric_statements:
@@ -194,7 +188,6 @@ service:
       - transform/cw_k8s_ci_v0_set_cloud_resource_id
       - k8sattributes/cw_k8s_ci_v0_node
       - transform/cw_k8s_ci_v0_set_scope_lis_csi
-      - transform/cw_k8s_ci_v0_clear_schema_url
       - transform/cw_k8s_ci_v0_set_workload
       - awsattributelimit/cw_k8s_ci_v0
       exporters:

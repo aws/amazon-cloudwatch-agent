@@ -9,7 +9,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
+	"go.opentelemetry.io/collector/exporter/exporterhelper"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	legacytranslator "github.com/aws/amazon-cloudwatch-agent/translator"
@@ -149,6 +151,32 @@ func TestTranslator(t *testing.T) {
 				"shared_credentials_file": "/some/credentials",
 			}),
 		},
+		"WithSchemeLessEndpointOverride": {
+			input: map[string]any{
+				"logs": map[string]any{
+					"metrics_collected": map[string]any{
+						"emf": map[string]any{},
+					},
+					"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.logs.us-east-1.vpce.amazonaws.com",
+				},
+			},
+			mode: config.ModeEC2,
+			//nolint:gosec // G101: shared_credentials_file holds a path, not a credential
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path":   "/ca/bundle",
+				"emf_only":                true,
+				"endpoint":                "https://vpce-0123456789abcdef0-abcdefgh.logs.us-east-1.vpce.amazonaws.com",
+				"imds_retries":            1,
+				"log_group_name":          "emf/logs/default",
+				"log_stream_name":         "some_instance_id",
+				"middleware":              "agenthealth/logs",
+				"profile":                 "some_profile",
+				"raw_log":                 true,
+				"region":                  "us-east-1",
+				"role_arn":                "global_arn",
+				"shared_credentials_file": "/some/credentials",
+			}),
+		},
 	}
 	factory := awscloudwatchlogsexporter.NewFactory()
 	for name, testCase := range testCases {
@@ -164,6 +192,11 @@ func TestTranslator(t *testing.T) {
 				require.True(t, ok)
 				wantCfg := factory.CreateDefaultConfig()
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
+				// The translator disables the exporter-level queue+batcher via the
+				// outer Optional. Mirror that on wantCfg so we're not comparing
+				// against the raw factory default that still carries Some(queue).
+				wantCfg.(*awscloudwatchlogsexporter.Config).QueueSettings =
+					configoptional.None[exporterhelper.QueueBatchConfig]()
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})

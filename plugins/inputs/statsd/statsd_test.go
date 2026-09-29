@@ -651,8 +651,41 @@ func TestParse_TemplateFields(t *testing.T) {
 
 // Test that fields are parsed correctly
 func TestParse_Fields(t *testing.T) {
-	if false {
-		t.Errorf("TODO")
+	tests := []struct {
+		name      string
+		templates []string
+		bucket    string
+		field     string
+	}{
+		{
+			name:      "no template defaults to value",
+			templates: nil,
+			bucket:    "cpu.idle",
+			field:     "value",
+		},
+		{
+			name:      "template with field segment",
+			templates: []string{"measurement.field"},
+			bucket:    "cpu.idle",
+			field:     "idle",
+		},
+		{
+			name:      "template with multiple measurement and field",
+			templates: []string{"measurement.measurement.field"},
+			bucket:    "my.counter.f1",
+			field:     "f1",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := NewTestStatsd()
+			s.Templates = test.templates
+			_, field, _ := s.parseName(test.bucket)
+			if field != test.field {
+				t.Errorf("Expected field %q, got %q", test.field, field)
+			}
+		})
 	}
 }
 

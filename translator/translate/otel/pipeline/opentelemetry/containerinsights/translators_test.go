@@ -54,6 +54,24 @@ func TestNewTranslators_RoleNodeWithLogs(t *testing.T) {
 	assert.Equal(t, 10, translators.Len())
 }
 
+// TestNewTranslators_RoleClusterWithLogs verifies logs.enabled is ignored for
+// cluster role (no node log sources) so no log pipelines are created.
+func TestNewTranslators_RoleClusterWithLogs(t *testing.T) {
+	cfg := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{
+					"role": "cluster",
+					"logs": map[string]interface{}{"enabled": true},
+				},
+			},
+		},
+	})
+	translators := NewTranslators(cfg)
+	assert.Equal(t, 4, translators.Len())
+}
+
 func TestNewTranslators_RoleCluster(t *testing.T) {
 	cfg := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
@@ -66,8 +84,7 @@ func TestNewTranslators_RoleCluster(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// cluster role: apiserver, kube_state_metrics = 2 pipelines
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }
 
 func TestNewTranslators_DefaultRole(t *testing.T) {
@@ -113,8 +130,7 @@ func TestNewTranslators_EnvVarFallback_Leader(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// env var LEADER -> cluster role: 2 pipelines
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }
 
 func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
@@ -131,6 +147,5 @@ func TestNewTranslators_JSONConfigOverridesEnvVar(t *testing.T) {
 		},
 	})
 	translators := NewTranslators(cfg)
-	// JSON config wins: cluster role = 2 pipelines
-	assert.Equal(t, 2, translators.Len())
+	assert.Equal(t, 4, translators.Len())
 }

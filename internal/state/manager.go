@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,6 +16,8 @@ const (
 	defaultSaveInterval = 100 * time.Millisecond
 	// defaultQueueSize is the default capacity of the offset queue
 	defaultQueueSize = 2000
+	// dropLogInterval is the minimum duration between offset range drop logs.
+	dropLogInterval = 30 * time.Second
 )
 
 type rangeManager struct {
@@ -24,6 +27,10 @@ type rangeManager struct {
 	saveInterval      time.Duration
 	maxPersistedItems int
 	replaceTrackerCh  chan RangeTracker
+
+	// dropped counts offset ranges discarded because the queue was full. Accessed atomically.
+	dropped     atomic.Uint64
+	lastDropLog atomic.Int64
 }
 
 // FileRangeManager is a state manager that handles the Range.
@@ -53,14 +60,44 @@ func (m *rangeManager) ID() string {
 }
 
 // Enqueue the Range. Will drop the oldest in the queue if full.
+//
+// Both operations are non-blocking by design: Run drains the queue concurrently, so a queue
+// observed full at the send may already be empty at the receive. Dropping the oldest keeps the
+// freshest offsets, costing duplicate records after a restart rather than lost ones. Each
+// iteration either enqueues the item or frees a slot, so the loop always terminates.
 func (m *rangeManager) Enqueue(item Range) {
-	select {
-	case m.queue <- item:
-	default:
-		old := <-m.queue
-		log.Printf("D! Offset range queue is full for %s. Dropping oldest offset range: %s", m.stateFilePath, old)
-		m.queue <- item
+	for {
+		select {
+		case m.queue <- item:
+			return
+		default:
+		}
+		select {
+		case old := <-m.queue:
+			m.reportDrop(old)
+		default:
+		}
 	}
+}
+
+// reportDrop records a dropped Range and logs at most once per dropLogInterval.
+func (m *rangeManager) reportDrop(item Range) {
+	total := m.dropped.Add(1)
+	now := time.Now()
+	last := m.lastDropLog.Load()
+	if now.UnixNano()-last < int64(dropLogInterval) {
+		return
+	}
+	// Only the CAS winner logs.
+	if !m.lastDropLog.CompareAndSwap(last, now.UnixNano()) {
+		return
+	}
+	log.Printf("D! Offset range queue is full for %s. Dropped offset range: %s (%d dropped in total)", m.stateFilePath, item, total)
+}
+
+// Dropped returns the number of offset ranges discarded because the queue was full.
+func (m *rangeManager) Dropped() uint64 {
+	return m.dropped.Load()
 }
 
 // Restore the ranges if the state file exists.

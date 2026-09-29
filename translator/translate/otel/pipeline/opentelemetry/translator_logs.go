@@ -21,6 +21,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awscloudwatchlogsprovisioner"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	ci "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributestocontext"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
@@ -53,7 +54,9 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	if runtime.GOOS == "windows" {
 		keys = append(keys, common.WindowsEventsConfigKey)
 	}
-	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil {
+	// Container Insights node-role logs forward into this pipeline, so activate it.
+	ciLogsEnabled := ci.NodeLogsEnabled(conf)
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil && !ciLogsEnabled {
 		return nil, err
 	}
 
@@ -97,12 +100,13 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	logsCleanup := transformprocessor.NewTranslatorWithName("logs_cleanup",
 		transformprocessor.WithLogResourceStatements(cleanupStmts),
 	)
+	logsMetadataKeys := []string{"aws.log.group.name", "aws.log.stream.name"}
 	batch := batchprocessor.NewTranslator(
 		common.WithName("opentelemetry_logs"),
 		batchprocessor.WithSendBatchSize(common.MaxLogsPerRequest),
 		batchprocessor.WithSendBatchMaxSize(common.MaxLogsPerRequest),
 		batchprocessor.WithTimeout(common.BatchTimeout),
-		batchprocessor.WithMetadataKeys([]string{"aws.log.group.name", "aws.log.stream.name"}),
+		batchprocessor.WithMetadataKeys(logsMetadataKeys),
 	)
 
 	// Logs routing (sets aws.log.group.name and aws.log.stream.name using aws.log.source)
@@ -115,21 +119,29 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
-	}
-	// Apply root-level cluster name if set
-	clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
-	if clusterName != "" {
-		if err := common.ValidateClusterName(clusterName); err != nil {
-			return nil, err
+		// Apply root-level cluster name if set
+		clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
+		if clusterName != "" {
+			if err := common.ValidateClusterName(clusterName); err != nil {
+				return nil, err
+			}
+			stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
+			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
+				transformprocessor.WithMetricResourceStatements([]string{stmt}),
+				transformprocessor.WithLogResourceStatements([]string{stmt}),
+				transformprocessor.WithTraceResourceStatements([]string{stmt}),
+			))
 		}
-		stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
-		processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-			transformprocessor.WithMetricResourceStatements([]string{stmt}),
-			transformprocessor.WithLogResourceStatements([]string{stmt}),
-			transformprocessor.WithTraceResourceStatements([]string{stmt}),
-		))
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
+	// resourcedetection/opentelemetry re-stamps schema_url post-fan-in; clear it here for CI.
+	// Distinct name from the metrics clear to avoid same-ID collision.
+	if conf != nil && conf.IsSet(common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)) {
+		processors.Set(transformprocessor.NewTranslatorWithName("logs_clear_schema_url",
+			transformprocessor.WithLogResourceStatements([]string{
+				`set(resource.schema_url, "")`,
+			})))
+	}
 	processors.Set(logsRouting)
 	processors.Set(attrCtx)
 	processors.Set(logsCleanup)

@@ -52,7 +52,7 @@ func TestTranslator_Translate(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tr := NewTranslator(tc.id, tc.channel, tc.raw, tc.query, tc.resource)
-			assert.Equal(t, "windowseventlog/"+tc.id, tr.ID().String())
+			assert.Equal(t, "windows_event_log/"+tc.id, tr.ID().String())
 
 			cfg, err := tr.Translate(nil)
 			require.NoError(t, err)

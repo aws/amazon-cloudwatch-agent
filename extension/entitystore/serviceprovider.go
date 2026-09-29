@@ -10,7 +10,6 @@ import (
 
 	"go.uber.org/zap"
 
-	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -85,10 +84,18 @@ func (s *serviceprovider) startServiceProvider() {
 	if s.metadataProvider == nil {
 		return
 	}
-	unlimitedRetryer := NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
-	unlimitedRetryerUntilSuccess := NewRetryer(true, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
-	go unlimitedRetryer.refreshLoop(s.scrapeIAMRole)
-	go unlimitedRetryerUntilSuccess.refreshLoop(s.scrapeImdsServiceNameAndASG)
+	go s.newIAMRoleRetryer().refreshLoop(s.scrapeIAMRole)
+	go s.newInstanceTagsRetryer().refreshLoop(s.scrapeImdsServiceNameAndASG)
+}
+
+// newIAMRoleRetryer refreshes the IAM role for the life of the process.
+func (s *serviceprovider) newIAMRoleRetryer() *Retryer {
+	return NewRetryer(false, true, defaultJitterMin, defaultJitterMax, ec2tagger.BackoffSleepArray, infRetry, s.done, s.logger)
+}
+
+// newInstanceTagsRetryer stops after the first success or after maxRetry attempts.
+func (s *serviceprovider) newInstanceTagsRetryer() *Retryer {
+	return NewRetryer(true, true, describeTagsJitterMin, describeTagsJitterMax, ec2tagger.BackoffSleepArray, maxRetry, s.done, s.logger)
 }
 
 func (s *serviceprovider) GetIAMRole() string {
@@ -317,7 +324,7 @@ func toLowerKeyMap(values []string) map[string]string {
 	return set
 }
 
-func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, providerType ec2ProviderType, ec2Credential *configaws.CredentialConfig, done chan struct{}, logger *zap.Logger) serviceProviderInterface {
+func newServiceProvider(mode string, region string, ec2Info *EC2Info, metadataProvider ec2metadataprovider.MetadataProvider, done chan struct{}, logger *zap.Logger) serviceProviderInterface {
 	return &serviceprovider{
 		mode:             mode,
 		region:           region,

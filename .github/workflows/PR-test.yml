@@ -407,15 +407,22 @@ jobs:
     if: always()
     steps:
       - name: Check Job Status
-        env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
+          # The needs context is written to a file rather than exported as an environment
+          # variable. With this many dependencies - several of which are matrix jobs - the
+          # serialised context exceeds the kernel's limit on the environment passed to
+          # execve, and the step fails before running with "Argument list too long". The
+          # quoted heredoc delimiter keeps the shell from expanding the contents.
+          cat <<'NEEDS_JSON_EOF' > "$RUNNER_TEMP/needs.json"
+          ${{ toJSON(needs) }}
+          NEEDS_JSON_EOF
+
           failed_jobs=()
           successful_jobs=()
 
           # Loop through all jobs in needs context
-          for job in $(echo "$NEEDS_JSON" | jq -r 'keys[]'); do
-            result=$(echo "$NEEDS_JSON" | jq -r ".[\"$job\"].result")
+          for job in $(jq -r 'keys[]' "$RUNNER_TEMP/needs.json"); do
+            result=$(jq -r --arg job "$job" '.[$job].result' "$RUNNER_TEMP/needs.json")
 
             if [[ "$result" == "failure" ]]; then
               failed_jobs+=("$job")

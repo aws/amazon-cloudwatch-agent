@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -21,6 +23,8 @@ const (
 	defaultCollectionInterval = 30 * time.Second
 	roleNode                  = "node"
 	roleCluster               = "cluster"
+	defaultKarpenterNamespace = "kube-system"
+	defaultKedaNamespace      = "keda"
 )
 
 var ciConfigKey = common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)
@@ -37,6 +41,15 @@ type templateData struct {
 	AppLogStream       string
 	NodeLogGroup       string
 	NodeLogStream      string
+	KarpenterNamespace string
+	KedaNamespace      string
+	// WatchReplicaSet gates k8s.deployment.name in the k8sattributes metadata.
+	// When false the pod->RS->Deployment owner walk (and its cluster-wide
+	// ReplicaSet informer) is not started. Default true.
+	WatchReplicaSet bool
+	// ApiserverTLSServerName sets tls_config.server_name on the
+	// apiserver prometheus scrape for managed control planes (AKS/GKE)
+	ApiserverTLSServerName string
 }
 
 // rawMapConfig wraps a raw config map and passes it through serialization unchanged.
@@ -98,6 +111,49 @@ func logsEnabled(conf *confmap.Conf) bool {
 	}
 	key := common.ConfigKey(ciConfigKey, "logs", "enabled")
 	return common.GetOrDefaultBool(conf, key, false)
+}
+
+// NodeLogsEnabled reports when Container Insights node-role log pipelines are enabled
+func NodeLogsEnabled(conf *confmap.Conf) bool {
+	return logsEnabled(conf) && getRole(conf) == roleNode
+}
+
+// solutions.<name>.enabled defaults to true; either being false disables it.
+func solutionEnabled(conf *confmap.Conf, name string) bool {
+	if conf == nil {
+		return false
+	}
+	if !common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", "enabled"), true) {
+		return false
+	}
+	return common.GetOrDefaultBool(conf, common.ConfigKey(ciConfigKey, "solutions", name, "enabled"), true)
+}
+
+// solutionNamespace returns container_insights.solutions.<name>.namespace or the default.
+func solutionNamespace(conf *confmap.Conf, name, defaultNamespace string) string {
+	if conf != nil {
+		if v, ok := common.GetString(conf, common.ConfigKey(ciConfigKey, "solutions", name, "namespace")); ok && v != "" {
+			return v
+		}
+	}
+	return defaultNamespace
+}
+
+// watchReplicaSet reports whether the CI k8sattributes ReplicaSet informer runs (default true;
+// disabled by either watch_replicaset key — see common.WatchReplicaSet).
+func watchReplicaSet(conf *confmap.Conf) bool {
+	return common.WatchReplicaSet(conf)
+}
+
+// apiserverTLSServerName returns the TLS server_name to set on the apiserver
+// prometheus scrape for managed control planes (AKS/GKE)
+func apiserverTLSServerName() string {
+	switch context.CurrentContext().KubernetesMode() {
+	case config.ModeAKS, config.ModeGKE:
+		return "kubernetes.default.svc"
+	default:
+		return ""
+	}
 }
 
 // getRole resolves the container insights pipeline role using the following

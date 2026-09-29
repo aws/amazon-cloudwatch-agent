@@ -9,7 +9,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ecs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ecs/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +27,7 @@ func TestAddExporterLabels(t *testing.T) {
 
 // ARN formats: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-account-settings.html#ecs-resource-ids
 func TestGeneratePrometheusTargetOldARNFormat(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(false, true, false, "")
+	fullTask := buildWorkloadFargateAWSVPC(false, true, false, "")
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 
 	config := &ServiceDiscoveryConfig{
@@ -47,8 +48,8 @@ func TestGeneratePrometheusTargetOldARNFormat(t *testing.T) {
 	assert.Equal(t, "1234567890123456789", target.Labels["TaskId"])
 }
 
-func buildWorkloadFargateAwsvpc(useNewTaskArnFormat bool, dockerLabel bool, taskDef bool, serviceName string) *DecoratedTask {
-	networkMode := ecs.NetworkModeAwsvpc
+func buildWorkloadFargateAWSVPC(useNewTaskArnFormat bool, dockerLabel bool, taskDef bool, serviceName string) *DecoratedTask {
+	networkMode := types.NetworkModeAwsvpc
 	taskAttachmentId := "775c6c63-b5f7-4a5b-8a60-8f8295a04cda"
 	taskAttachmentType := "ElasticNetworkInterface"
 	taskAttachmentStatus := "ATTACHING"
@@ -63,11 +64,11 @@ func buildWorkloadFargateAwsvpc(useNewTaskArnFormat bool, dockerLabel bool, task
 	}
 
 	taskDefinitionArn := "arn:aws:ecs:us-east-2:211220956907:task-definition/prometheus-java-tomcat-fargate-awsvpc:1"
-	var taskRevision int64 = 4
+	var taskRevision int32 = 4
 	port9404String := "9404"
 	port9406String := "9406"
-	var port9404Int64 int64 = 9404
-	var port9406Int64 int64 = 9406
+	var port9404Int32 int32 = 9404
+	var port9406Int32 int32 = 9406
 	containerNameTomcat := "bugbash-tomcat-fargate-awsvpc-with-docker-label"
 	containerNameJar := "bugbash-jar-fargate-awsvpc-with-dockerlabel"
 
@@ -78,55 +79,55 @@ func buildWorkloadFargateAwsvpc(useNewTaskArnFormat bool, dockerLabel bool, task
 		DockerLabelBased:    dockerLabel,
 		TaskDefinitionBased: taskDef,
 		ServiceName:         serviceName,
-		Task: &ecs.Task{
-			TaskArn:           &taskArn,
-			TaskDefinitionArn: &taskDefinitionArn,
-			Attachments: []*ecs.Attachment{
+		Task: &types.Task{
+			TaskArn:           aws.String(taskArn),
+			TaskDefinitionArn: aws.String(taskDefinitionArn),
+			Attachments: []types.Attachment{
 				{
-					Id:     &taskAttachmentId,
-					Type:   &taskAttachmentType,
-					Status: &taskAttachmentStatus,
-					Details: []*ecs.KeyValuePair{
+					Id:     aws.String(taskAttachmentId),
+					Type:   aws.String(taskAttachmentType),
+					Status: aws.String(taskAttachmentStatus),
+					Details: []types.KeyValuePair{
 						{
-							Name:  &taskAttachmentDetailsKey1,
-							Value: &taskAttachmentDetailsValue1,
+							Name:  aws.String(taskAttachmentDetailsKey1),
+							Value: aws.String(taskAttachmentDetailsValue1),
 						},
 						{
-							Name:  &taskAttachmentDetailsKey2,
-							Value: &taskAttachmentDetailsValue2,
+							Name:  aws.String(taskAttachmentDetailsKey2),
+							Value: aws.String(taskAttachmentDetailsValue2),
 						},
 					},
 				},
 			},
 		},
-		TaskDefinition: &ecs.TaskDefinition{
-			NetworkMode:       &networkMode,
-			TaskDefinitionArn: &taskDefinitionArn,
-			Revision:          &taskRevision,
-			ContainerDefinitions: []*ecs.ContainerDefinition{
+		TaskDefinition: &types.TaskDefinition{
+			NetworkMode:       networkMode,
+			TaskDefinitionArn: aws.String(taskDefinitionArn),
+			Revision:          taskRevision,
+			ContainerDefinitions: []types.ContainerDefinition{
 				{
-					Name: &containerNameTomcat,
-					DockerLabels: map[string]*string{
-						"FARGATE_PROMETHEUS_EXPORTER_PORT": &port9404String,
-						"FARGATE_PROMETHEUS_JOB_NAME":      &jobNameLabel,
+					Name: aws.String(containerNameTomcat),
+					DockerLabels: map[string]string{
+						"FARGATE_PROMETHEUS_EXPORTER_PORT": port9404String,
+						"FARGATE_PROMETHEUS_JOB_NAME":      jobNameLabel,
 					},
-					PortMappings: []*ecs.PortMapping{
+					PortMappings: []types.PortMapping{
 						{
-							ContainerPort: &port9404Int64,
-							HostPort:      &port9404Int64,
+							ContainerPort: aws.Int32(port9404Int32),
+							HostPort:      aws.Int32(port9404Int32),
 						},
 					},
 				},
 				{
-					Name: &containerNameJar,
-					DockerLabels: map[string]*string{
-						"FARGATE_PROMETHEUS_EXPORTER_PORT": &port9406String,
-						"ECS_PROMETHEUS_METRICS_PATH":      &metricsPathLabel,
+					Name: aws.String(containerNameJar),
+					DockerLabels: map[string]string{
+						"FARGATE_PROMETHEUS_EXPORTER_PORT": port9406String,
+						"ECS_PROMETHEUS_METRICS_PATH":      metricsPathLabel,
 					},
-					PortMappings: []*ecs.PortMapping{
+					PortMappings: []types.PortMapping{
 						{
-							ContainerPort: &port9406Int64,
-							HostPort:      &port9406Int64,
+							ContainerPort: aws.Int32(port9406Int32),
+							HostPort:      aws.Int32(port9406Int32),
 						},
 					},
 				},
@@ -136,7 +137,7 @@ func buildWorkloadFargateAwsvpc(useNewTaskArnFormat bool, dockerLabel bool, task
 }
 
 func Test_ExportDockerLabelBasedTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(true, true, false, "")
+	fullTask := buildWorkloadFargateAWSVPC(true, true, false, "")
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 
 	config := &ServiceDiscoveryConfig{
@@ -178,7 +179,7 @@ func Test_ExportDockerLabelBasedTarget_Fargate_AWSVPC(t *testing.T) {
 }
 
 func Test_ExportTaskDefBasedTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(true, false, true, "")
+	fullTask := buildWorkloadFargateAWSVPC(true, false, true, "")
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{
 		TaskDefinitions: []*TaskDefinitionConfig{
@@ -191,7 +192,7 @@ func Test_ExportTaskDefBasedTarget_Fargate_AWSVPC(t *testing.T) {
 		},
 	}
 	config.TaskDefinitions[0].init()
-	assert.Equal(t, []int{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
+	assert.Equal(t, []int32{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
 
 	targets := make(map[string]*PrometheusTarget)
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
@@ -223,7 +224,7 @@ func Test_ExportTaskDefBasedTarget_Fargate_AWSVPC(t *testing.T) {
 }
 
 func Test_exportServiceEndpointBasedTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(true, false, false, "true")
+	fullTask := buildWorkloadFargateAWSVPC(true, false, false, "true")
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{
 		ServiceNamesForTasks: []*ServiceNameForTasksConfig{
@@ -239,7 +240,7 @@ func Test_exportServiceEndpointBasedTarget_Fargate_AWSVPC(t *testing.T) {
 		},
 	}
 	config.ServiceNamesForTasks[0].init()
-	assert.Equal(t, []int{9404, 9406}, config.ServiceNamesForTasks[0].metricsPortList)
+	assert.Equal(t, []int32{9404, 9406}, config.ServiceNamesForTasks[0].metricsPortList)
 
 	targets := make(map[string]*PrometheusTarget)
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
@@ -271,7 +272,7 @@ func Test_exportServiceEndpointBasedTarget_Fargate_AWSVPC(t *testing.T) {
 }
 
 func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
-	fullTask := buildWorkloadFargateAwsvpc(true, true, true, "")
+	fullTask := buildWorkloadFargateAWSVPC(true, true, true, "")
 	log.Print(fullTask)
 	assert.Equal(t, "10.0.0.129", fullTask.getPrivateIp())
 	config := &ServiceDiscoveryConfig{
@@ -290,7 +291,7 @@ func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
 		},
 	}
 	config.TaskDefinitions[0].init()
-	assert.Equal(t, []int{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
+	assert.Equal(t, []int32{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
 
 	targets := make(map[string]*PrometheusTarget)
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
@@ -306,19 +307,19 @@ func Test_ExportMixedSDTarget_Fargate_AWSVPC(t *testing.T) {
 	assert.True(t, ok, "Missing target: 10.0.0.129:9406/metrics")
 }
 
-func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string, networkMode *string) *DecoratedTask {
+func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceName string, networkMode types.NetworkMode) *DecoratedTask {
 	taskContainersArn := "arn:aws:ecs:us-east-2:211220956907:container/3b288961-eb2c-4de5-a4c5-682c0a7cc625"
-	var taskContainersDynamicHostPort int64 = 32774
-	var taskContainersMappedHostPort int64 = 9494
+	var taskContainersDynamicHostPort int32 = 32774
+	var taskContainersMappedHostPort int32 = 9494
 
 	taskArn := "arn:aws:ecs:us-east-2:211220956907:task/ExampleCluster/1234567890123456789"
 	taskDefinitionArn := "arn:aws:ecs:us-east-2:211220956907:task-definition/prometheus-java-tomcat-ec2-awsvpc:1"
-	var taskRevision int64 = 5
+	var taskRevision int32 = 5
 	port9404String := "9404"
 	port9406String := "9406"
-	var port9404Int64 int64 = 9404
-	var port9406Int64 int64 = 9406
-	var port0Int64 int64
+	var port9404Int32 int32 = 9404
+	var port9406Int32 int32 = 9406
+	var port0Int32 int32
 
 	containerNameTomcat := "bugbash-tomcat-prometheus-workload-java-ec2-bridge-mapped-port"
 	containerNameJar := "bugbash-jar-prometheus-workload-java-ec2-bridge"
@@ -338,61 +339,61 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceNa
 			VpcId:               "vpc-03e9f55a92516a5e4",
 			SubnetId:            "subnet-0d0b0212d14b70250",
 		},
-		Task: &ecs.Task{
-			TaskArn:           &taskArn,
-			TaskDefinitionArn: &taskDefinitionArn,
-			Attachments:       []*ecs.Attachment{},
-			Containers: []*ecs.Container{
+		Task: &types.Task{
+			TaskArn:           aws.String(taskArn),
+			TaskDefinitionArn: aws.String(taskDefinitionArn),
+			Attachments:       []types.Attachment{},
+			Containers: []types.Container{
 				{
-					ContainerArn: &taskContainersArn,
-					Name:         &containerNameTomcat,
-					NetworkBindings: []*ecs.NetworkBinding{
+					ContainerArn: aws.String(taskContainersArn),
+					Name:         aws.String(containerNameTomcat),
+					NetworkBindings: []types.NetworkBinding{
 						{
-							ContainerPort: &port9404Int64,
-							HostPort:      &taskContainersMappedHostPort,
+							ContainerPort: aws.Int32(port9404Int32),
+							HostPort:      aws.Int32(taskContainersMappedHostPort),
 						},
 					},
 				},
 				{
-					ContainerArn: &taskContainersArn,
-					Name:         &containerNameJar,
-					NetworkBindings: []*ecs.NetworkBinding{
+					ContainerArn: aws.String(taskContainersArn),
+					Name:         aws.String(containerNameJar),
+					NetworkBindings: []types.NetworkBinding{
 						{
-							ContainerPort: &port9404Int64,
-							HostPort:      &taskContainersDynamicHostPort,
+							ContainerPort: aws.Int32(port9404Int32),
+							HostPort:      aws.Int32(taskContainersDynamicHostPort),
 						},
 					},
 				},
 			},
 		},
-		TaskDefinition: &ecs.TaskDefinition{
+		TaskDefinition: &types.TaskDefinition{
 			NetworkMode:       networkMode,
-			TaskDefinitionArn: &taskDefinitionArn,
-			Revision:          &taskRevision,
-			ContainerDefinitions: []*ecs.ContainerDefinition{
+			TaskDefinitionArn: aws.String(taskDefinitionArn),
+			Revision:          taskRevision,
+			ContainerDefinitions: []types.ContainerDefinition{
 				{
-					Name: &containerNameTomcat,
-					DockerLabels: map[string]*string{
-						"EC2_PROMETHEUS_EXPORTER_PORT": &port9404String,
-						"EC2_PROMETHEUS_JOB_NAME":      &jobNameLabelTomcat,
+					Name: aws.String(containerNameTomcat),
+					DockerLabels: map[string]string{
+						"EC2_PROMETHEUS_EXPORTER_PORT": port9404String,
+						"EC2_PROMETHEUS_JOB_NAME":      jobNameLabelTomcat,
 					},
-					PortMappings: []*ecs.PortMapping{
+					PortMappings: []types.PortMapping{
 						{
-							ContainerPort: &port9404Int64,
-							HostPort:      &port9404Int64,
+							ContainerPort: aws.Int32(port9404Int32),
+							HostPort:      aws.Int32(port9404Int32),
 						},
 					},
 				},
 				{
-					Name: &containerNameJar,
-					DockerLabels: map[string]*string{
-						"EC2_PROMETHEUS_EXPORTER_PORT": &port9406String,
-						"EC2_PROMETHEUS_METRICS_PATH":  &metricsPathLabel,
+					Name: aws.String(containerNameJar),
+					DockerLabels: map[string]string{
+						"EC2_PROMETHEUS_EXPORTER_PORT": port9406String,
+						"EC2_PROMETHEUS_METRICS_PATH":  metricsPathLabel,
 					},
-					PortMappings: []*ecs.PortMapping{
+					PortMappings: []types.PortMapping{
 						{
-							ContainerPort: &port9406Int64,
-							HostPort:      &port0Int64,
+							ContainerPort: aws.Int32(port9406Int32),
+							HostPort:      aws.Int32(port0Int32),
 						},
 					},
 				},
@@ -402,20 +403,19 @@ func buildWorkloadEC2BridgeDynamicPort(dockerLabel bool, taskDef bool, serviceNa
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	networkMode := ecs.NetworkModeBridge
-	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, &networkMode, 2)
+	testExportMixedSDTargetEC2BridgeDynamicPort(t, types.NetworkModeBridge, 2)
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort_With_Implicit_NetworkMode(t *testing.T) {
-	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, nil, 2)
+	testExportMixedSDTargetEC2BridgeDynamicPort(t, "", 2)
 }
 
 func Test_ExportMixedSDTarget_EC2_Bridge_DynamicPort_With_NetworkModeNone(t *testing.T) {
-	networkMode := ecs.NetworkModeNone
-	testExportMixedSDTarget_EC2_Bridge_DynamicPort(t, &networkMode, 0)
+	testExportMixedSDTargetEC2BridgeDynamicPort(t, types.NetworkModeNone, 0)
 }
 
-func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode *string, expectedTargets int) {
+func testExportMixedSDTargetEC2BridgeDynamicPort(t *testing.T, networkMode types.NetworkMode, expectedTargets int) {
+	t.Helper()
 	fullTask := buildWorkloadEC2BridgeDynamicPort(true, true, "", networkMode)
 	if expectedTargets == 0 {
 		assert.Equal(t, "", fullTask.getPrivateIp())
@@ -439,7 +439,7 @@ func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode *s
 		},
 	}
 	config.TaskDefinitions[0].init()
-	assert.Equal(t, []int{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
+	assert.Equal(t, []int32{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
 
 	targets := make(map[string]*PrometheusTarget)
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)
@@ -481,19 +481,20 @@ func testExportMixedSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode *s
 }
 
 func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T) {
-	testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeBridge, 1)
+	testExportContainerNameSDTargetEC2BridgeDynamicPort(t, types.NetworkModeBridge, 1)
 }
 
 func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort_With_Implicit_NetworkMode(t *testing.T) {
-	testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t, "", 1)
+	testExportContainerNameSDTargetEC2BridgeDynamicPort(t, "", 1)
 }
 
 func Test_ExportContainerNameSDTarget_EC2_Bridge_DynamicPort_With_NetworkModeNone(t *testing.T) {
-	testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t, ecs.NetworkModeNone, 0)
+	testExportContainerNameSDTargetEC2BridgeDynamicPort(t, types.NetworkModeNone, 0)
 }
 
-func testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networkMode string, expectedTargets int) {
-	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "", &networkMode)
+func testExportContainerNameSDTargetEC2BridgeDynamicPort(t *testing.T, networkMode types.NetworkMode, expectedTargets int) {
+	t.Helper()
+	fullTask := buildWorkloadEC2BridgeDynamicPort(false, true, "", networkMode)
 	log.Print(fullTask)
 	if expectedTargets == 0 {
 		assert.Equal(t, "", fullTask.getPrivateIp())
@@ -512,7 +513,7 @@ func testExportContainerNameSDTarget_EC2_Bridge_DynamicPort(t *testing.T, networ
 		},
 	}
 	config.TaskDefinitions[0].init()
-	assert.Equal(t, []int{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
+	assert.Equal(t, []int32{9404, 9406}, config.TaskDefinitions[0].metricsPortList)
 
 	targets := make(map[string]*PrometheusTarget)
 	dockerLabelRegex := regexp.MustCompile(prometheusLabelNamePattern)

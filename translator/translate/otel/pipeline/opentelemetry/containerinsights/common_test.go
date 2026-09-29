@@ -108,3 +108,27 @@ func TestLogsEnabled(t *testing.T) {
 		})
 	}
 }
+
+func TestNodeLogsEnabled(t *testing.T) {
+	ci := func(m map[string]interface{}) *confmap.Conf {
+		return confmap.NewFromStringMap(map[string]interface{}{
+			"opentelemetry": map[string]interface{}{"collect": map[string]interface{}{"container_insights": m}},
+		})
+	}
+	tests := []struct {
+		name string
+		cfg  *confmap.Conf
+		want bool
+	}{
+		{"nil", nil, false},
+		{"node + logs", ci(map[string]interface{}{"role": "node", "logs": map[string]interface{}{"enabled": true}}), true},
+		{"default role + logs", ci(map[string]interface{}{"logs": map[string]interface{}{"enabled": true}}), true},
+		{"node no logs", ci(map[string]interface{}{"role": "node"}), false},
+		{"cluster + logs (ignored)", ci(map[string]interface{}{"role": "cluster", "logs": map[string]interface{}{"enabled": true}}), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, NodeLogsEnabled(tt.cfg))
+		})
+	}
+}

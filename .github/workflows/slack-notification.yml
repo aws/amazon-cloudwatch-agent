@@ -21,9 +21,9 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "action": "${{ github.event.action }}",
-              "url": "${{ github.event.issue.html_url }}",
-              "title": "${{ github.event.issue.title }}"
+              "action": ${{ toJSON(github.event.action) }},
+              "url": ${{ toJSON(github.event.issue.html_url) }},
+              "title": ${{ toJSON(github.event.issue.title) }}
             }
 
       - name: Send pull request notification to Slack
@@ -34,7 +34,7 @@ jobs:
           webhook-type: incoming-webhook
           payload: |
             {
-              "action": "${{ github.event.action }}",
-              "url": "${{ github.event.pull_request.html_url }}",
-              "title": "${{ github.event.pull_request.title }}"
+              "action": ${{ toJSON(github.event.action) }},
+              "url": ${{ toJSON(github.event.pull_request.html_url) }},
+              "title": ${{ toJSON(github.event.pull_request.title) }}
             }

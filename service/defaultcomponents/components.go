@@ -77,11 +77,13 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/nopreceiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
 	"github.com/aws/amazon-cloudwatch-agent/extension/nodemetadatacache"
+	"github.com/aws/amazon-cloudwatch-agent/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/outputs/cloudwatch"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/awsapplicationsignals"
@@ -186,6 +188,7 @@ func Factories() (otelcol.Factories, error) {
 		entitystore.NewFactory(),
 		k8smetadata.NewFactory(),
 		nodemetadatacache.NewFactory(),
+		selftelemetry.NewFactory(),
 		server.NewFactory(),
 		ecsobserver.NewFactory(),
 		filestorage.NewFactory(),
@@ -207,6 +210,8 @@ func Factories() (otelcol.Factories, error) {
 	); err != nil {
 		return otelcol.Factories{}, err
 	}
+
+	factories.Telemetry = otelconftelemetry.NewFactory()
 
 	return factories, nil
 }

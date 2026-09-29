@@ -15,15 +15,15 @@ func TestFlagSet(t *testing.T) {
 	fs.OnChange(func() {
 		notifyCount++
 	})
-	assert.False(t, fs.IsSet(FlagIMDSFallbackSuccess))
-	assert.Nil(t, fs.GetString(FlagIMDSFallbackSuccess))
-	fs.Set(FlagIMDSFallbackSuccess)
-	assert.True(t, fs.IsSet(FlagIMDSFallbackSuccess))
-	assert.Nil(t, fs.GetString(FlagIMDSFallbackSuccess))
+	assert.False(t, fs.IsSet(FlagSharedConfigFallback))
+	assert.Nil(t, fs.GetString(FlagSharedConfigFallback))
+	fs.Set(FlagSharedConfigFallback)
+	assert.True(t, fs.IsSet(FlagSharedConfigFallback))
+	assert.Nil(t, fs.GetString(FlagSharedConfigFallback))
 	assert.Equal(t, 1, notifyCount)
 	// already set, so ignored
-	fs.SetValue(FlagIMDSFallbackSuccess, "ignores this")
-	assert.Nil(t, fs.GetString(FlagIMDSFallbackSuccess))
+	fs.SetValue(FlagSharedConfigFallback, "ignores this")
+	assert.Nil(t, fs.GetString(FlagSharedConfigFallback))
 	assert.Equal(t, 1, notifyCount)
 	fs.SetValues(map[Flag]any{
 		FlagMode:       "test/mode",
@@ -62,7 +62,6 @@ func TestFlag(t *testing.T) {
 	}{
 		{flag: FlagAppSignal, str: flagAppSignalsStr},
 		{flag: FlagEnhancedContainerInsights, str: flagEnhancedContainerInsightsStr},
-		{flag: FlagIMDSFallbackSuccess, str: flagIMDSFallbackSuccessStr},
 		{flag: FlagMode, str: flagModeStr},
 		{flag: FlagRegionType, str: flagRegionTypeStr},
 		{flag: FlagRunningInContainer, str: flagRunningInContainerStr},

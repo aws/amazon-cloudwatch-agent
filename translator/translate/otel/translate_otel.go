@@ -16,7 +16,8 @@ import (
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
-	"go.opentelemetry.io/collector/service/telemetry"
+	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
+	otelconfig "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/oidctoken"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/server"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	pipelinetranslator "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline"
@@ -40,6 +42,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/prometheus"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/xray"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -117,11 +120,15 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 	}
 
 	// Emit oidctoken only when a sigv4auth extension consumes it; that web-identity path needs role_arn.
-	if agent.IsAzureWebIdentity() && hasSigv4auth(pipelines.Translators.Extensions) {
+	if agent.RequiresOIDCToken() && hasSigv4auth(pipelines.Translators.Extensions) {
 		if agent.Global_Config.Role_arn == "" {
-			return nil, errors.New("credentials.role_arn is required on Azure VM for the oidctoken web-identity credential chain")
+			return nil, errors.New("credentials.role_arn is required on Azure VM / GCE for the oidctoken web-identity credential chain")
 		}
 		pipelines.Translators.Extensions.Set(oidctoken.NewTranslator())
+	}
+
+	if selftelemetry.Enabled(conf) {
+		pipelines.Translators.Extensions.Set(selftelemetry.NewTranslator())
 	}
 
 	cfg := &otelcol.Config{
@@ -131,10 +138,11 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		Connectors: map[component.ID]component.Config{},
 		Extensions: map[component.ID]component.Config{},
 		Service: service.Config{
-			Telemetry: telemetry.Config{
-				Logs:    getLoggingConfig(conf),
-				Metrics: telemetry.MetricsConfig{Level: configtelemetry.LevelNone},
-				Traces:  telemetry.TracesConfig{Level: configtelemetry.LevelNone},
+			Telemetry: &otelconftelemetry.Config{
+				Logs:     getLoggingConfig(conf),
+				Metrics:  getSelfTelemetryConfig(conf),
+				Traces:   otelconftelemetry.TracesConfig{Level: configtelemetry.LevelNone},
+				Resource: getSelfTelemetryResource(conf),
 			},
 			Pipelines:  pipelines.Pipelines,
 			Extensions: pipelines.Translators.Extensions.Keys(),
@@ -161,6 +169,60 @@ func hasSigv4auth(extensions common.ComponentTranslatorMap) bool {
 	return false
 }
 
+// getSelfTelemetryConfig turns the root self_telemetry block into the collector's own metrics reader.
+// The suffix and scope options are off so prometheus names survive the round trip through the SDK,
+// keeping series such as prometheus_target_scrape_pool_targets recognizable to a scraper.
+func getSelfTelemetryConfig(conf *confmap.Conf) otelconftelemetry.MetricsConfig {
+	if !selftelemetry.Enabled(conf) {
+		return otelconftelemetry.MetricsConfig{Level: configtelemetry.LevelNone}
+	}
+	host, port := selftelemetry.Host, selftelemetry.Port(conf)
+	without := true
+	return otelconftelemetry.MetricsConfig{
+		Level: configtelemetry.LevelBasic,
+		MeterProvider: otelconfig.MeterProvider{
+			Readers: []otelconfig.MetricReader{{
+				Pull: &otelconfig.PullMetricReader{
+					Exporter: otelconfig.PullMetricExporter{
+						Prometheus: &otelconfig.Prometheus{
+							Host:              &host,
+							Port:              &port,
+							WithoutScopeInfo:  &without,
+							WithoutTypeSuffix: &without,
+							WithoutUnits:      &without,
+							// Promote the node resource attribute onto every series as a constant label,
+							// so a DaemonSet's identical series stay distinct per node.
+							WithResourceConstantLabels: &otelconfig.IncludeExclude{
+								Included: []string{selftelemetry.NodeNameLabel},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+}
+
+// getSelfTelemetryResource tags all self telemetry with the node name via the collector's own
+// resource mechanism. The env ref is expanded per pod by the config provider's expandconverter, so
+// the same generated config yields a distinct node label on every node with no per-pod rendering.
+func getSelfTelemetryResource(conf *confmap.Conf) map[string]*string {
+	if !selftelemetry.Enabled(conf) {
+		return nil
+	}
+	// NodeName = per-host identity: K8s uses the K8S_NODE_NAME env ref; off-K8s the EC2 {instance_id},
+	// falling back to {hostname} when not on EC2 so non-EC2 hosts don't collide on i-UNKNOWN.
+	nodeName := selftelemetry.NodeNameEnvRef
+	if context.CurrentContext().KubernetesMode() == "" {
+		md := translateutil.GetMetadataInfo(translateutil.Ec2MetadataInfoProvider)
+		nodeName = translateutil.ResolvePlaceholder("{instance_id}", md)
+		if nodeName == translateutil.UnknownInstanceID {
+			nodeName = translateutil.ResolvePlaceholder("{hostname}", md)
+		}
+	}
+	return map[string]*string{selftelemetry.NodeNameLabel: &nodeName}
+}
+
 // parseAgentLogLevel returns the logging level from the JSON config, or the
 // default value.
 func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
@@ -178,7 +240,7 @@ func parseAgentLogLevel(conf *confmap.Conf) zapcore.Level {
 
 // getLoggingConfig uses the given JSON config to determine the correct
 // logging configuration that should go in the YAML.
-func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
+func getLoggingConfig(conf *confmap.Conf) otelconftelemetry.LogsConfig {
 	var outputPaths []string
 	filename := context.CurrentContext().GetAgentLogFile()
 	// A slice with an empty string causes OTEL issues, so avoid it.
@@ -186,12 +248,12 @@ func getLoggingConfig(conf *confmap.Conf) telemetry.LogsConfig {
 		outputPaths = []string{filename}
 	}
 	logLevel := parseAgentLogLevel(conf)
-	return telemetry.LogsConfig{
+	return otelconftelemetry.LogsConfig{
 		OutputPaths: outputPaths,
 		Level:       logLevel,
 		Encoding:    common.Console,
 		// enabled by default with 10 second tick
-		Sampling: &telemetry.LogsSamplingConfig{
+		Sampling: &otelconftelemetry.LogsSamplingConfig{
 			Enabled:    true,
 			Initial:    2,
 			Thereafter: 500,

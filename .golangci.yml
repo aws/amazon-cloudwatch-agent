@@ -12,6 +12,7 @@ output:
       print-issued-lines: true
 linters:
   enable:
+    - depguard
     - gosec
     - misspell
     - nonamedreturns
@@ -19,6 +20,15 @@ linters:
   disable:
     - errcheck
   settings:
+    depguard:
+      rules:
+        aws-sdk:
+          deny:
+            # Note the trailing slash: without it this also matches aws-sdk-go-v2.
+            - pkg: github.com/aws/aws-sdk-go/
+              desc: use aws-sdk-go-v2 for all AWS SDK usage.
+            - pkg: github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws/awsrulesfn
+              desc: generated partition data; use the override/aws wrappers instead.
     misspell:
       ignore-rules:
         - performancetest

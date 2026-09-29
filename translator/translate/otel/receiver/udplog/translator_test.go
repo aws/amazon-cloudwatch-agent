@@ -17,7 +17,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	acit := NewTranslator()
-	require.EqualValues(t, "udplog", acit.ID().String())
+	require.EqualValues(t, "udp_log", acit.ID().String())
 	testCases := map[string]struct {
 		input   map[string]interface{}
 		want    *udplogreceiver.UDPLogConfig

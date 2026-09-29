@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"os"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awscloudwatchlogsexporter"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/exporter/exporterhelper"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -54,6 +56,10 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*awscloudwatchlogsexporter.Config)
 	cfg.MiddlewareID = &agenthealth.LogsID
 
+	// Disable the exporter batcher; see otlphttp/translator.go for why we
+	// use the outer Optional rather than the inner Batch field.
+	cfg.QueueSettings = configoptional.None[exporterhelper.QueueBatchConfig]()
+
 	// Add more else if when otel supports log reading
 	if t.name == common.PipelineNameEmfLogs && t.isEmf(c) {
 		if err := t.setEmfFields(c, cfg); err != nil {
@@ -62,13 +68,13 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	if endpoint, ok := common.GetString(c, endpointOverrideKey); ok {
+	if endpoint, ok := common.GetEndpointOverride(c, endpointOverrideKey); ok {
 		// for some reason the exporter has an endpoint field in the config that
 		// clashes with the AWSSessionsSettings
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
 	}

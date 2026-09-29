@@ -8,13 +8,39 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
+
+func TestBaseLogsTranslatorActivatedByContainerInsightsLogs(t *testing.T) {
+	prevRegion := agent.Global_Config.Region
+	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { agent.Global_Config.Region = prevRegion })
+	tt := NewBaseLogsTranslator()
+	// container_insights logs.enabled must activate the base logs pipeline so the
+	// forward/opentelemetry connector fed by CI log pipelines has a consumer.
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"container_insights": map[string]interface{}{
+					"logs": map[string]interface{}{"enabled": true},
+				},
+			},
+		},
+	})
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
+}
 
 func TestBaseLogsTranslator(t *testing.T) {
 	tt := NewBaseLogsTranslator()
@@ -93,7 +119,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 				assert.Equal(t, 4, got.Extensions.Len())
 				assert.Equal(t, 1, got.Connectors.Len())
 				assert.Equal(t, "forward/opentelemetry", got.Receivers.Keys()[0].String())
-				assert.Equal(t, "otlphttp/logs", got.Exporters.Keys()[0].String())
+				assert.Equal(t, "otlp_http/logs", got.Exporters.Keys()[0].String())
 				assert.Equal(t, "forward/opentelemetry", got.Connectors.Keys()[0].String())
 			}
 		})
@@ -136,4 +162,88 @@ func TestBaseLogsTranslatorEmptyRegion(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, got)
 	assert.Contains(t, err.Error(), "region is required")
+}
+
+func TestBaseLogsTranslatorClusterName(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	// Cluster name is only applied in a Kubernetes environment.
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseLogsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	// Verify set_cluster_name processor is present
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.Contains(t, keys, "transform/set_cluster_name")
+}
+
+// TestLogsClusterNameSkippedNonK8s verifies the cluster name is gated on Kubernetes mode
+func TestLogsClusterNameSkippedNonK8s(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	context.CurrentContext().SetKubernetesMode("")
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseLogsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"cluster_name": "test-cluster",
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.NotContains(t, keys, "transform/set_cluster_name")
+}
+
+func TestBaseLogsTranslatorNoClusterName(t *testing.T) {
+	agent.Global_Config.Region = "us-east-1"
+	// Force the ec2 tag lookup with no network to return no cluster name.
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tagutil.SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
+		return noTagsEC2Client{}
+	})
+	t.Cleanup(tagutil.ResetEC2APIProvider)
+	t.Cleanup(tagutil.ResetTagsCache)
+
+	tt := NewBaseLogsTranslator()
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"logs": map[string]interface{}{},
+			},
+		},
+	})
+
+	got, err := tt.Translate(conf)
+	require.NoError(t, err)
+
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	assert.NotContains(t, keys, "transform/set_cluster_name")
 }

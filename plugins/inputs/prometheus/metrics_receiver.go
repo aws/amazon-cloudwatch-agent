@@ -48,8 +48,15 @@ type metricAppender struct {
 	batch    PrometheusMetricBatch
 }
 
+// Start-timestamp zero samples are intentionally not stored. This appender feeds the Telegraf
+// EMF/CloudWatch path, which has no use for synthetic zero samples, and it opts out of the scrape
+// cache entirely by returning a zero SeriesRef (see Append below). The CT-named variants are the
+// pre-v0.311 spelling of the same hooks and are kept so both interface versions are satisfied.
 func (ma *metricAppender) AppendCTZeroSample(storage.SeriesRef, labels.Labels, int64, int64) (storage.SeriesRef, error) {
-	// TODO: implement this func
+	return 0, nil
+}
+
+func (ma *metricAppender) AppendSTZeroSample(storage.SeriesRef, labels.Labels, int64, int64) (storage.SeriesRef, error) {
 	return 0, nil
 }
 
@@ -58,7 +65,10 @@ func (ma *metricAppender) SetOptions(_ *storage.AppendOptions) {
 }
 
 func (ma *metricAppender) AppendHistogramCTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
-	// Implement basic handling or return nil if not needed
+	return 0, nil
+}
+
+func (ma *metricAppender) AppendHistogramSTZeroSample(_ storage.SeriesRef, _ labels.Labels, _ int64, _ int64, _ *histogram.Histogram, _ *histogram.FloatHistogram) (storage.SeriesRef, error) {
 	return 0, nil
 }
 
@@ -78,14 +88,14 @@ func (mr *metricsReceiver) feed(batch PrometheusMetricBatch) error {
 func (ma *metricAppender) Append(_ storage.SeriesRef, ls labels.Labels, t int64, v float64) (storage.SeriesRef, error) {
 	metricName := ""
 
-	labelMap := make(map[string]string, len(ls))
-	for _, l := range ls {
+	labelMap := make(map[string]string, ls.Len())
+	ls.Range(func(l labels.Label) {
 		if l.Name == model.MetricNameLabel {
 			metricName = l.Value
-			continue
+			return
 		}
 		labelMap[l.Name] = l.Value
-	}
+	})
 
 	if metricName == "" {
 		// The error should never happen, print log here for debugging

@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/selftelemetry"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver"
 )
 
@@ -42,7 +43,9 @@ func (t *translator) ID() pipeline.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators, error) {
-	if conf == nil || !conf.IsSet(logAgentKey) {
+	// Self telemetry needs this placeholder too: a config carrying only service::telemetry has no
+	// pipeline, and a pipeline-less service fails validation, so nothing would be emitted at all.
+	if conf == nil || (!conf.IsSet(logAgentKey) && !selftelemetry.Enabled(conf)) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: fmt.Sprint(logAgentKey)}
 	}
 

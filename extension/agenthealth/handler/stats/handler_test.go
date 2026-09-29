@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/amazon-contributing/opentelemetry-collector-contrib/extension/awsmiddleware"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -38,7 +38,6 @@ func TestStatsHandler(t *testing.T) {
 		LatencyMillis:        aws.Int64(1234),
 		PayloadBytes:         aws.Int(5678),
 		StatusCode:           aws.Int(200),
-		ImdsFallbackSucceed:  aws.Int(1),
 		SharedConfigFallback: aws.Int(1),
 		StatusCodes: map[string][5]int{
 			"pmd": {1, 0, 0, 0, 0},
@@ -63,11 +62,11 @@ func TestStatsHandler(t *testing.T) {
 	assert.Equal(t, "", req.Header.Get(headerKeyAgentStats))
 	handler.filter = agent.NewOperationsFilter(agent.AllowAllOperations)
 	handler.HandleRequest(ctx, req)
-	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"lat":1234,"load":5678,"code":200,"scfb":1,"ifs":1,"codes":{"di":[0,1,0,0,0],"pmd":[1,0,0,0,0]}`, req.Header.Get(headerKeyAgentStats))
+	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"lat":1234,"load":5678,"code":200,"scfb":1,"codes":{"di":[0,1,0,0,0],"pmd":[1,0,0,0,0]}`, req.Header.Get(headerKeyAgentStats))
 	stats.StatusCode = aws.Int(404)
 	stats.LatencyMillis = nil
 	handler.HandleRequest(ctx, req)
-	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"load":5678,"code":404,"scfb":1,"ifs":1,"codes":{"di":[0,1,0,0,0],"pmd":[1,0,0,0,0]}`, req.Header.Get(headerKeyAgentStats))
+	assert.Equal(t, `"cpu":1.2,"mem":123,"fd":456,"th":789,"load":5678,"code":404,"scfb":1,"codes":{"di":[0,1,0,0,0],"pmd":[1,0,0,0,0]}`, req.Header.Get(headerKeyAgentStats))
 }
 
 func TestNewHandlersWithStatusCodeOnly(t *testing.T) {

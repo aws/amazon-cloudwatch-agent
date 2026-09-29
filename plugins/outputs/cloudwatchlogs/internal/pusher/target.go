@@ -4,15 +4,16 @@
 package pusher
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/influxdata/telegraf"
-
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatchlogs"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 
 type Target struct {
 	Group, Stream, Class string
-	Retention            int
+	Retention            int32
 }
 
 type TargetManager interface {
@@ -99,19 +100,21 @@ func (m *targetManager) PutRetentionPolicy(target Target) {
 }
 
 func (m *targetManager) createLogGroupAndStream(t Target) (bool, error) {
-	err := m.createLogStream(t)
+	ctx := context.Background()
+	err := m.createLogStream(ctx, t)
 	if m.isLogStreamCreated(err, t.Stream) {
 		return false, nil
 	}
 
 	m.logger.Debugf("creating stream %v fail due to: %v", t.Stream, err)
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceNotFoundException {
-		err = m.createLogGroup(t)
+	var resourceNotFound *types.ResourceNotFoundException
+	if errors.As(err, &resourceNotFound) {
+		err = m.createLogGroup(ctx, t)
 
 		// attempt to create stream again if group created successfully.
 		if m.isLogGroupCreated(err, t.Group) {
 			m.logger.Debugf("retrying log stream %v", t.Stream)
-			err = m.createLogStream(t)
+			err = m.createLogStream(ctx, t)
 			if m.isLogStreamCreated(err, t.Stream) {
 				return true, nil
 			}
@@ -136,26 +139,28 @@ func (m *targetManager) isResourceCreated(err error, resourceName string) bool {
 		return true
 	}
 	// if the resource already exist
-	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == cloudwatchlogs.ErrCodeResourceAlreadyExistsException {
+	var resourceAlreadyExists *types.ResourceAlreadyExistsException
+	if errors.As(err, &resourceAlreadyExists) {
 		m.logger.Debugf("%s was already created. %v\n", resourceName, err)
 		return true
 	}
 	return false
 }
 
-func (m *targetManager) createLogGroup(t Target) error {
+func (m *targetManager) createLogGroup(ctx context.Context, t Target) error {
 	var input *cloudwatchlogs.CreateLogGroupInput
 	if t.Class != "" {
+		logGroupClass := types.LogGroupClass(t.Class)
 		input = &cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName:  &t.Group,
-			LogGroupClass: &t.Class,
+			LogGroupClass: logGroupClass,
 		}
 	} else {
 		input = &cloudwatchlogs.CreateLogGroupInput{
 			LogGroupName: &t.Group,
 		}
 	}
-	_, err := m.service.CreateLogGroup(input)
+	_, err := m.service.CreateLogGroup(ctx, input)
 	if err == nil {
 		m.logger.Debugf("successfully created log group %v", t.Group)
 		return nil
@@ -163,8 +168,8 @@ func (m *targetManager) createLogGroup(t Target) error {
 	return err
 }
 
-func (m *targetManager) createLogStream(t Target) error {
-	_, err := m.service.CreateLogStream(&cloudwatchlogs.CreateLogStreamInput{
+func (m *targetManager) createLogStream(ctx context.Context, t Target) error {
+	_, err := m.service.CreateLogStream(ctx, &cloudwatchlogs.CreateLogStreamInput{
 		LogGroupName:  &t.Group,
 		LogStreamName: &t.Stream,
 	})
@@ -212,18 +217,20 @@ func (m *targetManager) updateTargets(targets map[string]Target) {
 // updateTargetsBatch will call DLG for the entire batch (single call). Will return an error if
 // DLG by identifiers is not supported.
 func (m *targetManager) updateTargetsBatch(targets map[string]Target) error {
-	identifiers := make([]*string, 0, len(targets))
+	ctx := context.Background()
+	identifiers := make([]string, 0, len(targets))
 	for logGroup := range targets {
-		identifiers = append(identifiers, aws.String(logGroup))
+		identifiers = append(identifiers, logGroup)
 	}
 	describeLogGroupsInput := &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupIdentifiers: identifiers,
-		Limit:               aws.Int64(50),
+		Limit:               aws.Int32(50),
 	}
 	for attempt := 0; attempt < numBackoffRetries; attempt++ {
-		output, err := m.service.DescribeLogGroups(describeLogGroupsInput)
+		output, err := m.service.DescribeLogGroups(ctx, describeLogGroupsInput)
 		if err != nil {
-			if aerr, ok := err.(awserr.Error); ok && aerr.Code() == cloudwatchlogs.ErrCodeInvalidParameterException && aerr.Message() == errMessageLogGroupIdentifierNotSupported {
+			var invalidParameter *types.InvalidParameterException
+			if errors.As(err, &invalidParameter) && invalidParameter.ErrorMessage() == errMessageLogGroupIdentifierNotSupported {
 				return err
 			}
 
@@ -234,7 +241,7 @@ func (m *targetManager) updateTargetsBatch(targets map[string]Target) error {
 
 		for _, logGroups := range output.LogGroups {
 			target := targets[*logGroups.LogGroupName]
-			if (logGroups.RetentionInDays == nil || target.Retention != int(*logGroups.RetentionInDays)) && target.Retention > 0 {
+			if (logGroups.RetentionInDays == nil || target.Retention != *logGroups.RetentionInDays) && target.Retention > 0 {
 				m.logger.Debugf("queueing log group %v to update retention policy", target.Group)
 				m.prp <- target
 			}
@@ -264,12 +271,13 @@ func (m *targetManager) updateTargetsIteratively(targets map[string]Target) {
 	}
 }
 
-func (m *targetManager) getRetention(target Target) (int, error) {
+func (m *targetManager) getRetention(target Target) (int32, error) {
+	ctx := context.Background()
 	input := &cloudwatchlogs.DescribeLogGroupsInput{
 		LogGroupNamePrefix: aws.String(target.Group),
 	}
 
-	output, err := m.service.DescribeLogGroups(input)
+	output, err := m.service.DescribeLogGroups(ctx, input)
 	if err != nil {
 		return 0, fmt.Errorf("describe log groups failed: %w", err)
 	}
@@ -279,7 +287,7 @@ func (m *targetManager) getRetention(target Target) (int, error) {
 			if group.RetentionInDays == nil {
 				return 0, nil
 			}
-			return int(*group.RetentionInDays), nil
+			return *group.RetentionInDays, nil
 		}
 	}
 
@@ -307,12 +315,13 @@ func (m *targetManager) processPutRetentionPolicy() {
 }
 
 func (m *targetManager) updateRetentionPolicy(target Target) error {
+	ctx := context.Background()
 	input := &cloudwatchlogs.PutRetentionPolicyInput{
 		LogGroupName:    aws.String(target.Group),
-		RetentionInDays: aws.Int64(int64(target.Retention)),
+		RetentionInDays: aws.Int32(int32(target.Retention)),
 	}
 
-	_, err := m.service.PutRetentionPolicy(input)
+	_, err := m.service.PutRetentionPolicy(ctx, input)
 	if err != nil {
 		return fmt.Errorf("put retention policy failed: %w", err)
 	}

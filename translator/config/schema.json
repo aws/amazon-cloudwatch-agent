@@ -25,6 +25,10 @@
       "type": "object",
       "description": "General configuration for Amazon CloudWatch Agent",
       "properties": {
+        "self_telemetry": {
+          "description": "Serves the agent's own metrics on a loopback prometheus endpoint for a prometheus receiver on the same host to scrape",
+          "$ref": "#/definitions/selfTelemetryDefinition"
+        },
         "metrics_collection_interval": {
           "description": "How often the metrics defined will be collected",
           "$ref": "#/definitions/timeIntervalDefinition"
@@ -1803,6 +1807,24 @@
         }
       }
     },
+    "selfTelemetryDefinition": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "port": {
+          "description": "Loopback port to bind. The endpoint is always on 127.0.0.1",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false
+    },
     "opentelemetryDefinition": {
       "type": "object",
       "properties": {
@@ -1823,6 +1845,10 @@
         "collect": {
           "type": "object",
           "properties": {
+            "watch_replicaset": {
+              "description": "Whether to watch ReplicaSets cluster-wide to attribute pods to their Deployment (sets k8s.deployment.name) for the k8sattributes enrichment shared by all opentelemetry.collect pipelines. Set to false to stop the ReplicaSet watch without enabling Container Insights; k8s.replicaset.name is unaffected. Default true.",
+              "type": "boolean"
+            },
             "database_insights": {
               "type": "object",
               "properties": {
@@ -1836,6 +1862,11 @@
                       "username": { "type": "string" },
                       "password_file": { "type": "string" },
                       "ca_file": { "type": "string" },
+                      "per_resource_collection_interval": {
+                        "description": "How often per-resource (table/index) metrics are collected, in seconds. Defaults to 60 if omitted.",
+                        "type": "integer",
+                        "minimum": 0
+                      },
                       "logs": {
                         "type": "object",
                         "properties": {
@@ -1873,12 +1904,58 @@
                   "type": "string",
                   "enum": ["node", "cluster"]
                 },
+                "watch_replicaset": {
+                  "description": "Whether to watch ReplicaSets cluster-wide to attribute pods to their Deployment (sets k8s.deployment.name). Set to false to stop the ReplicaSet watch; k8s.replicaset.name is unaffected. Default true.",
+                  "type": "boolean"
+                },
                 "logs": {
                   "type": "object",
                   "properties": {
                     "enabled": {
                       "description": "Whether to collect container and host logs",
                       "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "solutions": {
+                  "description": "Optional add-on solution scrapers for Karpenter and KEDA operator metrics",
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "description": "Master toggle for all solutions (default: true); overrides individual solution enabled flags, false disables all",
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "karpenter": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape Karpenter metrics (default: true)",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "namespace": {
+                          "description": "Namespace where the Karpenter operator runs (default: kube-system)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "keda": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "description": "Whether to scrape KEDA operator metrics (default: true).",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "namespace": {
+                          "description": "Namespace where the KEDA operator runs (default: keda)",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
                     }
                   },
                   "additionalProperties": false

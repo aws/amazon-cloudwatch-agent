@@ -9,13 +9,13 @@ import (
 	"os"
 	"strings"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -92,7 +92,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if credentialsFileKey, ok := agent.Global_Config.Credentials[agent.CredentialsFile_Key]; ok {
 		cfg.AWSSessionSettings.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
-	cfg.AWSSessionSettings.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.IMDSRetries = override.GetDefaultRetryNumber()
 
 	if configuredService.Value == eks {
 		if err := t.setClusterName(conf, cfg); err != nil {
@@ -102,6 +102,10 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.LeaderLockUsingConfigMapOnly = true
 		tagServiceKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, "tag_service")
 		cfg.TagService = common.GetOrDefaultBool(conf, tagServiceKey, true)
+		// watch_replicaset is on by default; set it to false to stop the cluster-wide
+		// ReplicaSet informer. The receiver models this as SkipReplicaSetWatch, so invert.
+		watchRSKey := common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.WatchReplicaSetKey)
+		cfg.SkipReplicaSetWatch = !common.GetOrDefaultBool(conf, watchRSKey, true)
 
 		if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 			cfg.LocalMode = true

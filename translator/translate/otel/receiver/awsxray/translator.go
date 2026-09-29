@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"os"
 
+	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsxrayreceiver"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
-	"github.com/aws/amazon-cloudwatch-agent/internal/retryer"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
@@ -66,7 +66,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ProxyServer.Endpoint = endpoint
 	}
 	if insecure, ok := common.GetBool(conf, common.ConfigKey(common.TracesKey, common.InsecureKey)); ok {
-		cfg.ProxyServer.TLSSetting.Insecure = insecure
+		cfg.ProxyServer.TLS.Insecure = insecure
 	}
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.ProxyServer.LocalMode = true
@@ -77,7 +77,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.ProxyServer.Profile = fmt.Sprintf("%v", profileKey)
 	}
-	if endpoint, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
+	if endpoint, ok := common.GetEndpointOverride(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
 		cfg.ProxyServer.AWSEndpoint = endpoint
 	}
 	if proxyAddress, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.ProxyOverrideKey)); ok {
@@ -87,7 +87,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.ProxyServer.SharedCredentialsFile = []string{fmt.Sprintf("%v", credentialsFileKey)}
 	}
 	cfg.ProxyServer.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	cfg.ProxyServer.IMDSRetries = retryer.GetDefaultRetryNumber()
+	cfg.ProxyServer.IMDSRetries = override.GetDefaultRetryNumber()
 	return cfg, nil
 }
 

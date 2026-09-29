@@ -29,7 +29,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/tocwconfig/toyamlconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
-	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
@@ -188,14 +188,10 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	assert.Empty(t, cmp.Diff(expected, actual, opt))
 }
 
-func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
+func TestDefaultOtelConfigTranslation(t *testing.T) {
 	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeAzureVM)
-	// No AWS region source exists on Azure at translation time, so region
-	// detection returns empty and the translator falls back to ${AWS_REGION}.
-	util.DetectRegion = func(string, map[string]string) (string, string) {
-		return "", ""
-	}
+	context.CurrentContext().SetMode(config.ModeEC2)
+	agent.Global_Config.Region = "us-west-2"
 
 	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
@@ -205,7 +201,7 @@ func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
 
 	translator.SetTargetPlatform("linux")
 	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
-	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_azurevm.yaml")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.yaml")
 }
 
 func TestDefaultOtelConfigECSTranslation(t *testing.T) {
@@ -225,6 +221,26 @@ func TestDefaultOtelConfigECSTranslation(t *testing.T) {
 	translator.SetTargetPlatform("linux")
 	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_ecs.yaml")
+}
+
+func TestDefaultOtelConfigAzureVMTranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeAzureVM)
+	// No AWS region source exists on Azure at translation time, so region
+	// detection returns empty and the translator falls back to ${AWS_REGION}.
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "", ""
+	}
+
+	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_azurevm.yaml")
 }
 
 func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
@@ -249,14 +265,45 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
 
 	translator.SetTargetPlatform("linux")
-	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.conf")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_k8s.conf")
 	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_aks.yaml")
 }
 
-func TestDefaultOtelConfigTranslation(t *testing.T) {
+func TestDefaultOtelConfigGKETranslation(t *testing.T) {
 	resetContext(t)
-	context.CurrentContext().SetMode(config.ModeEC2)
-	agent.Global_Config.Region = "us-west-2"
+	t.Cleanup(func() { resetContext(t) })
+	// GKE nodes are GCE VMs, so DetectAgentMode resolves host mode to GCE; mirror that here.
+	context.CurrentContext().SetMode(config.ModeGCE)
+	context.CurrentContext().SetKubernetesMode(config.ModeGKE)
+	context.CurrentContext().SetRunInContainer(true)
+	// container_insights has no cluster_name in the default config, so it falls
+	// back to the K8S_CLUSTER_NAME env var (there is no EC2 tagger on GCP).
+	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
+	// No AWS region source exists on GCP at translation time, so region
+	// detection returns empty and the translator falls back to ${AWS_REGION}.
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "", ""
+	}
+
+	cfg, ok := config.DefaultJSONConfigFor("otel", true, false)
+	require.True(t, ok)
+
+	var input any
+	require.NoError(t, json.Unmarshal([]byte(cfg), &input))
+
+	translator.SetTargetPlatform("linux")
+	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_k8s.conf")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_gke.yaml")
+}
+
+func TestDefaultOtelConfigGCETranslation(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeGCE)
+	// No AWS region source exists on GCE at translation time, so region
+	// detection returns empty and the translator falls back to ${AWS_REGION}.
+	util.DetectRegion = func(string, map[string]string) (string, string) {
+		return "", ""
+	}
 
 	cfg, ok := config.DefaultJSONConfigFor("otel", false, false)
 	require.True(t, ok)
@@ -266,7 +313,7 @@ func TestDefaultOtelConfigTranslation(t *testing.T) {
 
 	translator.SetTargetPlatform("linux")
 	verifyToTomlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.conf")
-	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config.yaml")
+	verifyToYamlTranslation(t, input, "./sampleConfig/opentelemetry/default_otel_config_gce.yaml")
 }
 
 func TestAzureVMHostMetricsConfig(t *testing.T) {
@@ -292,6 +339,7 @@ func TestAKSHostMetricsConfig(t *testing.T) {
 	// AKS nodes are Azure VMs, so DetectAgentMode resolves host mode to AzureVM; mirror that here.
 	context.CurrentContext().SetMode(config.ModeAzureVM)
 	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
+	t.Setenv("K8S_CLUSTER_NAME", "TestCluster")
 
 	checkTranslation(t, "opentelemetry/host_metrics_aks_config", "linux", nil, "")
 }

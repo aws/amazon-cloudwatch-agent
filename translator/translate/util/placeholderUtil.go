@@ -4,6 +4,7 @@
 package util
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -25,7 +26,7 @@ const (
 	datePlaceholder          = "{date}"
 	accountIdPlaceholder     = "{account_id}"
 
-	unknownInstanceID   = "i-UNKNOWN"
+	UnknownInstanceID   = "i-UNKNOWN"
 	unknownHostname     = "UNKNOWN-HOST"
 	unknownIPAddress    = "UNKNOWN-IP"
 	unknownAwsRegion    = "UNKNOWN-REGION"
@@ -88,7 +89,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	md := provider()
 	localHostname := getHostName()
 
-	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	instanceID := defaultIfEmpty(md.InstanceID, UnknownInstanceID)
 	hostname := defaultIfEmpty(md.Hostname, localHostname)
 	ipAddress := defaultIfEmpty(md.PrivateIP, getIpAddress())
 	awsRegion := defaultIfEmpty(agent.Global_Config.Region, unknownAwsRegion)
@@ -107,7 +108,7 @@ func GetMetadataInfo(provider MetadataInfoProvider) map[string]string {
 func getAWSMetadataInfo(provider MetadataInfoProvider) map[string]string {
 	md := provider()
 
-	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	instanceID := defaultIfEmpty(md.InstanceID, UnknownInstanceID)
 	instanceType := defaultIfEmpty(md.InstanceType, unknownInstanceType)
 	imageID := defaultIfEmpty(md.ImageID, unknownImageID)
 
@@ -126,14 +127,14 @@ func getTagMetadata() map[string]string {
 	}
 
 	md := Ec2MetadataInfoProvider()
-	instanceID := defaultIfEmpty(md.InstanceID, unknownInstanceID)
+	instanceID := defaultIfEmpty(md.InstanceID, UnknownInstanceID)
 
-	if instanceID == unknownInstanceID {
+	if instanceID == UnknownInstanceID {
 		return map[string]string{}
 	}
 
 	result := make(map[string]string)
-	asgName := tagutil.GetAutoScalingGroupName(instanceID)
+	asgName := tagutil.GetAutoScalingGroupName(context.Background(), instanceID)
 	if asgName != "" {
 		result[ec2tagger.SupportedAppendDimensions["AutoScalingGroupName"]] = asgName
 	}

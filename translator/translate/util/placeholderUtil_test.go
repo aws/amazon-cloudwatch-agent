@@ -37,7 +37,7 @@ func TestGetMetadataInfo(t *testing.T) {
 
 func TestGetMetadataInfoEmptyInstanceId(t *testing.T) {
 	m := GetMetadataInfo(mockMetadataProvider("", dummyHostName, dummyPrivateIp, dummyAccountId))
-	assert.Equal(t, unknownInstanceID, m[instanceIdPlaceholder])
+	assert.Equal(t, UnknownInstanceID, m[instanceIdPlaceholder])
 }
 
 func TestGetMetadataInfoUsesLocalHostname(t *testing.T) {

@@ -20,6 +20,15 @@ func TestSetMode_Azure(t *testing.T) {
 	assert.Equal(t, config.ShortModeAzureVM, ctx.ShortMode())
 }
 
+func TestSetMode_GCE(t *testing.T) {
+	ResetContext()
+	ctx := CurrentContext()
+
+	ctx.SetMode(config.ModeGCE)
+	assert.Equal(t, config.ModeGCE, ctx.Mode())
+	assert.Equal(t, config.ShortModeGCE, ctx.ShortMode())
+}
+
 func TestSetMode_ExistingModesUnchanged(t *testing.T) {
 	cases := map[string]struct {
 		mode      string
@@ -47,6 +56,15 @@ func TestSetKubernetesMode_AKS(t *testing.T) {
 	ctx.SetKubernetesMode(config.ModeAKS)
 	assert.Equal(t, config.ModeAKS, ctx.KubernetesMode())
 	assert.Equal(t, config.ShortModeAKS, ctx.ShortMode())
+}
+
+func TestSetKubernetesMode_GKE(t *testing.T) {
+	ResetContext()
+	ctx := CurrentContext()
+
+	ctx.SetKubernetesMode(config.ModeGKE)
+	assert.Equal(t, config.ModeGKE, ctx.KubernetesMode())
+	assert.Equal(t, config.ShortModeGKE, ctx.ShortMode())
 }
 
 func TestSetKubernetesMode_ExistingModesUnchanged(t *testing.T) {

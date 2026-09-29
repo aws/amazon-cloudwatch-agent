@@ -4,24 +4,35 @@
 package retryer
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
+	"github.com/aws/smithy-go"
 	"github.com/influxdata/telegraf"
+)
+
+const (
+	// DefaultMaxRetries is the number of retries after the first attempt.
+	DefaultMaxRetries = 3
 )
 
 var (
 	throttleReportTimeout     = 1 * time.Minute
 	throttleReportCheckPeriod = 5 * time.Second
 
+	// stopTimeout bounds how long Stop() waits for the watcher to finish draining,
+	// so a slow logger can't stall a caller (cloudwatchlogs holds a lock across Stop).
+	stopTimeout = 5 * time.Second
+
 	// throttleChanBufferSize is the capacity of LogThrottleRetryer.throttleChan.
 	// The original value of 1 dropped events when the watcher goroutine was
 	// preempted under load (observed ~6/200 lost under CI contention). 128 holds
 	// a full burst with headroom while bounding memory (~32 bytes/slot). The
-	// non-blocking send in ShouldRetry still guarantees the AWS SDK path never
+	// non-blocking send in IsErrorRetryable still guarantees the AWS SDK path never
 	// blocks regardless of this value.
 	throttleChanBufferSize = 128
 )
@@ -34,8 +45,11 @@ type LogThrottleRetryer struct {
 	stopped      chan struct{}
 	stopOnce     sync.Once
 
-	client.DefaultRetryer
+	// Embed the standard retryer for default behavior
+	*retry.Standard
 }
+
+var _ aws.RetryerV2 = (*LogThrottleRetryer)(nil)
 
 type throttleEvent struct {
 	Operation string
@@ -48,24 +62,27 @@ func (te throttleEvent) String() string {
 
 func NewLogThrottleRetryer(logger telegraf.Logger) *LogThrottleRetryer {
 	r := &LogThrottleRetryer{
-		Log:            logger,
-		throttleChan:   make(chan throttleEvent, throttleChanBufferSize),
-		done:           make(chan struct{}),
-		stopped:        make(chan struct{}),
-		DefaultRetryer: client.DefaultRetryer{NumMaxRetries: client.DefaultRetryerMaxNumRetries},
+		Log:          logger,
+		throttleChan: make(chan throttleEvent, throttleChanBufferSize),
+		done:         make(chan struct{}),
+		stopped:      make(chan struct{}),
+		Standard: retry.NewStandard(func(o *retry.StandardOptions) {
+			o.MaxAttempts = DefaultMaxRetries + 1 // MaxAttempts includes the first attempt
+		}),
 	}
 
 	go r.watchThrottleEvents()
 	return r
 }
 
-func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
-	if req.IsErrorThrottle() {
-		te := throttleEvent{Err: req.Error}
-		if req.Operation != nil {
-			te.Operation = req.Operation.Name
+func (r *LogThrottleRetryer) IsErrorRetryable(err error) bool {
+	if IsErrThrottle(err) {
+		te := throttleEvent{Err: err}
+		var oe *smithy.OperationError
+		if errors.As(err, &oe) {
+			te.Operation = oe.OperationName
 		}
-		// Non-blocking: never block ShouldRetry if the consumer has stopped.
+		// Non-blocking: never block IsErrorRetryable if the consumer has stopped.
 		select {
 		case r.throttleChan <- te:
 		default:
@@ -73,7 +90,7 @@ func (r *LogThrottleRetryer) ShouldRetry(req *request.Request) bool {
 	}
 
 	// Fallback to SDK's built in retry rules
-	return r.DefaultRetryer.ShouldRetry(req)
+	return r.Standard.IsErrorRetryable(err)
 }
 
 func (r *LogThrottleRetryer) Stop() {
@@ -81,9 +98,13 @@ func (r *LogThrottleRetryer) Stop() {
 		// sync.Once guards against a double Stop() panicking on close(r.done).
 		r.stopOnce.Do(func() {
 			close(r.done)
-			// Block until the watcher has exited and drained throttleChan, so callers
-			// (notably tests counting aggregated throttles) don't race the final events.
-			<-r.stopped
+			// Block until the watcher has exited after draining, so callers (notably
+			// tests counting aggregated throttles) don't race the final events. Bounded
+			// so a slow/blocking logger can't stall shutdown (one caller holds a lock here).
+			select {
+			case <-r.stopped:
+			case <-time.After(stopTimeout):
+			}
 		})
 	}
 }
@@ -125,17 +146,13 @@ func (r *LogThrottleRetryer) watchThrottleEvents() {
 				lastReportTime = time.Now()
 			}
 		case <-r.done:
-			// Drain queued events before returning: Go's select is randomized when
-			// multiple cases are ready, so a naive return can strand events enqueued
-			// between the last iteration and Stop().
-		drainLoop:
-			for {
-				select {
-				case event := <-r.throttleChan:
-					process(event)
-				default:
-					break drainLoop
-				}
+			// Drain the events already queued, then return. Go's select is randomized
+			// when multiple cases are ready, so a naive return can strand events enqueued
+			// between the last iteration and Stop(). Bound the drain to a snapshot of the
+			// current length so it terminates even if a late IsErrorRetryable enqueues
+			// more (those simply drop, as they would after the watcher exits).
+			for n := len(r.throttleChan); n > 0; n-- {
+				process(<-r.throttleChan)
 			}
 			if aggregatedCnt > 0 {
 				r.Log.Infof("AWS API call has been throttled %v times in the past %v, last throttle error message: %v", aggregatedCnt, time.Since(lastReportTime), te)
@@ -144,4 +161,9 @@ func (r *LogThrottleRetryer) watchThrottleEvents() {
 			return
 		}
 	}
+}
+
+// IsErrThrottle is a wrapper for the default throttle error code check for the AWS SDK retry logic.
+func IsErrThrottle(err error) bool {
+	return retry.IsErrorThrottles(retry.DefaultThrottles).IsErrorThrottle(err) == aws.TrueTernary
 }

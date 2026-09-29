@@ -38,6 +38,9 @@ var transformIdentityEC2Config string
 //go:embed transform_identity_azure_vm.yaml
 var transformIdentityAzureVMConfig string
 
+//go:embed transform_identity_gce.yaml
+var transformIdentityGCEConfig string
+
 //go:embed transform_identity_ecs.yaml
 var transformIdentityECSConfig string
 
@@ -201,7 +204,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	if t.name == common.Identity {
 		if context.CurrentContext().KubernetesMode() != "" {
-			return common.GetYamlFileToYamlConfig(cfg, transformIdentityK8sConfig)
+			return common.GetYamlFileToYamlConfig(cfg, injectClusterName(conf))
 		}
 		if ecsutil.GetECSUtilSingleton().IsECS() {
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityECSConfig)
@@ -209,6 +212,8 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		switch context.CurrentContext().Mode() {
 		case config.ModeAzureVM:
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityAzureVMConfig)
+		case config.ModeGCE:
+			return common.GetYamlFileToYamlConfig(cfg, transformIdentityGCEConfig)
 		default:
 			return common.GetYamlFileToYamlConfig(cfg, transformIdentityEC2Config)
 		}
@@ -224,6 +229,18 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// injectClusterName bakes the cluster name into the AKS cloud.resource_id regex literal.
+// replace_pattern's regex is compiled at load time (not a runtime getter), so the name must be a
+// literal here to anchor the node RG's MC_<clusterRG>_<cluster>_<region> split. Falls back to a single
+// underscore-free segment when unset. No escaping: ValidateClusterName already bars regex metacharacters.
+func injectClusterName(conf *confmap.Conf) string {
+	clusterNameRegex := "[^_]+"
+	if clusterName := common.GetClusterName(conf, common.OtelClusterNameKey); clusterName != "" {
+		clusterNameRegex = clusterName
+	}
+	return strings.ReplaceAll(transformIdentityK8sConfig, "%CLUSTER_NAME%", clusterNameRegex)
 }
 
 func buildResourceStatements(statements []string, errorMode string) map[string]any {

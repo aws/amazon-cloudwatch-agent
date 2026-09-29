@@ -7,8 +7,10 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configauth"
 	"go.opentelemetry.io/collector/config/configcompression"
+	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
+	"go.opentelemetry.io/collector/exporter/exporterhelper"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -71,10 +73,17 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 	cfg.ClientConfig.Compression = configcompression.TypeGzip
 	if t.authenticator.Type().String() != "" {
-		cfg.ClientConfig.Auth = &configauth.Authentication{
+		cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{
 			AuthenticatorID: t.authenticator,
-		}
+		})
 	}
+
+	// Disable the exporter batcher; CWA batches in the pipeline batchprocessor.
+	//
+	// Use the OUTER Optional. Inner Batch=None writes "batch: null" in YAML
+	// which the collector's confmap round-trip promotes back to Some(defaults),
+	// re-enabling the batcher.
+	cfg.QueueConfig = configoptional.None[exporterhelper.QueueBatchConfig]()
 
 	return cfg, nil
 }

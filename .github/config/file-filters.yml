@@ -13,3 +13,7 @@ build:
   - '!({.github,amazon-cloudwatch-container-insights})/**/*.{yml,yaml}'
   - '.github/workflows/PR-build.yml'
   - '**/*.{go,toml,json,conf}'
+
+scripts:
+  - 'scripts/**'
+  - '.github/workflows/PR-build.yml'

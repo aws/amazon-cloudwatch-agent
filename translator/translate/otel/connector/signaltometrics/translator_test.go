@@ -15,7 +15,7 @@ import (
 
 func TestTranslatorID(t *testing.T) {
 	tr := NewTranslator(common.DbiConnectorTopsql)
-	assert.Equal(t, "signaltometrics/dbi_topsql", tr.ID().String())
+	assert.Equal(t, "signal_to_metrics/dbi_topsql", tr.ID().String())
 }
 
 func TestTranslateTopsql(t *testing.T) {

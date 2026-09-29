@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/collector/extension"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -29,8 +30,12 @@ func (t *translator) ID() component.ID {
 
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*oidctokenextension.Config)
-	// Only emitted for Azure VM/AKS, so the provider is always Azure.
-	cfg.Provider = oidctokenextension.ProviderAzure
+	// The provider is pinned per cloud so the extension does not probe every metadata server on startup.
+	if agent.IsGCPWebIdentity() {
+		cfg.Provider = oidctokenextension.ProviderGCP
+	} else {
+		cfg.Provider = oidctokenextension.ProviderAzure
+	}
 	cfg.OutputTokenFile = paths.OIDCTokenPath
 	return cfg, nil
 }

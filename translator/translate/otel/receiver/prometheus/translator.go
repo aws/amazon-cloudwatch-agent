@@ -92,14 +92,31 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfg.PrometheusConfig.GlobalConfig = promCfg.GlobalConfig
 		cfg.PrometheusConfig.ScrapeConfigs = promCfg.ScrapeConfigs
 		cfg.PrometheusConfig.TracingConfig = promCfg.TracingConfig
+
+		// Reload ensures the config goes through promconfig.Load() which sets the
+		// internal `loaded` flag required by GetScrapeConfigs() in Prometheus v0.308.1+.
+		if err = cfg.PrometheusConfig.Reload(); err != nil {
+			return nil, fmt.Errorf("unable to reload prometheus config: %w", err)
+		}
 	} else {
 		// given prometheus config is in otel format so check if target allocator is being used
 		// then add the default ca, cert, and key for TargetAllocator
-		if cfg.TargetAllocator != nil && len(cfg.TargetAllocator.CollectorID) > 0 {
-			cfg.TargetAllocator.TLSSetting.CAFile = defaultTLSCaPath
-			cfg.TargetAllocator.TLSSetting.CertFile = defaultTLSCertPath
-			cfg.TargetAllocator.TLSSetting.KeyFile = defaultTLSKeyPath
-			cfg.TargetAllocator.TLSSetting.ReloadInterval = 10 * time.Second
+		if cfg.TargetAllocator.HasValue() {
+			taCfg := cfg.TargetAllocator.Get()
+			if taCfg != nil {
+				if taCfg.TLS.CAFile == "" {
+					taCfg.TLS.CAFile = defaultTLSCaPath
+				}
+				if taCfg.TLS.CertFile == "" {
+					taCfg.TLS.CertFile = defaultTLSCertPath
+				}
+				if taCfg.TLS.KeyFile == "" {
+					taCfg.TLS.KeyFile = defaultTLSKeyPath
+				}
+				if taCfg.TLS.ReloadInterval == 0 {
+					taCfg.TLS.ReloadInterval = 10 * time.Second
+				}
+			}
 		}
 	}
 

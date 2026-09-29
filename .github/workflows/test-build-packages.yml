@@ -118,16 +118,16 @@ jobs:
         working-directory: cwa
         run: |
           echo cw agent version $(cat CWAGENT_VERSION)
-          cp -r build/bin/darwin/amd64/. /tmp/
-          cp -r build/bin/darwin/arm64/. /tmp/arm64/
+          cp -Xr build/bin/darwin/amd64/. /tmp/
+          cp -Xr build/bin/darwin/arm64/. /tmp/arm64/
           cp build/bin/CWAGENT_VERSION /tmp/CWAGENT_VERSION
 
       - name: Create pkg dep folder and copy deps
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         working-directory: test
         run: |
-          cp -r pkg/tools/. /tmp/
-          cp -r pkg/tools/. /tmp/arm64/
+          cp -Xr pkg/tools/. /tmp/
+          cp -Xr pkg/tools/. /tmp/arm64/
 
       - name: Build And Upload PKG
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false

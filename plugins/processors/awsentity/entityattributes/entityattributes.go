@@ -6,10 +6,8 @@ package entityattributes
 import (
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"go.opentelemetry.io/collector/pdata/pcommon"
-
-	"github.com/aws/amazon-cloudwatch-agent/sdk/service/cloudwatch"
 )
 
 const (
@@ -135,14 +133,14 @@ func IsAllowedAttribute(key string) bool {
 	return exists
 }
 
-func CreateCloudWatchEntityFromAttributes(resourceAttributes pcommon.Map) cloudwatch.Entity {
-	keyAttributesMap := map[string]*string{}
-	attributeMap := map[string]*string{}
+func CreateCloudWatchEntityFromAttributes(resourceAttributes pcommon.Map) types.Entity {
+	keyAttributesMap := map[string]string{}
+	attributeMap := map[string]string{}
 
 	// Process KeyAttributes and return empty entity if AwsAccountId is not found
 	processEntityAttributes(keyAttributeEntityToShortNameMap, keyAttributesMap, resourceAttributes)
 	if _, ok := keyAttributesMap[AwsAccountId]; !ok {
-		return cloudwatch.Entity{}
+		return types.Entity{}
 	}
 
 	// Process Attributes and add cluster attribute if on EKS/K8s
@@ -150,24 +148,24 @@ func CreateCloudWatchEntityFromAttributes(resourceAttributes pcommon.Map) cloudw
 	if platformTypeValue, ok := resourceAttributes.Get(AttributeEntityPlatformType); ok {
 		platformType := clusterType(platformTypeValue.Str())
 		if clusterNameValue, ok := resourceAttributes.Get(AttributeEntityCluster); ok {
-			attributeMap[platformType] = aws.String(clusterNameValue.Str())
+			attributeMap[platformType] = clusterNameValue.Str()
 		}
 	}
 
 	// Remove entity fields from attributes and return the entity
 	removeEntityFields(resourceAttributes)
-	return cloudwatch.Entity{
+	return types.Entity{
 		KeyAttributes: keyAttributesMap,
 		Attributes:    attributeMap,
 	}
 }
 
 // processEntityAttributes fetches the fields with entity prefix and creates an entity to be sent at the PutMetricData call.
-func processEntityAttributes(entityMap map[string]string, targetMap map[string]*string, incomingResourceAttributes pcommon.Map) {
+func processEntityAttributes(entityMap map[string]string, targetMap map[string]string, incomingResourceAttributes pcommon.Map) {
 	for entityField, shortName := range entityMap {
 		if val, ok := incomingResourceAttributes.Get(entityField); ok {
 			if strVal := val.Str(); strVal != "" {
-				targetMap[shortName] = aws.String(strVal)
+				targetMap[shortName] = strVal
 			}
 		}
 	}
