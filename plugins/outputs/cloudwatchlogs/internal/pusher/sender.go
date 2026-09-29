@@ -90,28 +90,25 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		}
 
-		var apiErr smithy.APIError
-		if !errors.As(err, &apiErr) {
-			s.logger.Errorf("Non aws error received when sending logs to %v/%v: %v. CloudWatch agent will not retry and logs will be missing!", batch.Group, batch.Stream, err)
+		if isTerminalError(err) {
+			s.logger.Errorf("Error received when sending logs to %v/%v: %v. Will not retry the request.", batch.Group, batch.Stream, err)
 			batch.updateState()
 			return
 		}
 
 		var resourceNotFound *types.ResourceNotFoundException
-		var invalidParameter *types.InvalidParameterException
-		var dataAlreadyAccepted *types.DataAlreadyAcceptedException
+		var apiErr smithy.APIError
 		switch {
 		case errors.As(err, &resourceNotFound):
 			if targetErr := s.targetManager.InitTarget(batch.Target); targetErr != nil {
 				s.logger.Errorf("Unable to create log stream %v/%v: %v", batch.Group, batch.Stream, targetErr)
-				break
 			}
-		case errors.As(err, &invalidParameter) || errors.As(err, &dataAlreadyAccepted):
-			s.logger.Errorf("%v, will not retry the request", err)
-			batch.updateState()
-			return
-		default:
+		case errors.As(err, &apiErr):
 			s.logger.Errorf("Aws error received when sending logs to %v/%v: %v", batch.Group, batch.Stream, apiErr)
+		default:
+			// Not an API error: transport failures (connection refused/reset, DNS, TLS, timeouts), credential
+			// retrieval failures, and malformed responses all surface here. They are transient and are retried.
+			s.logger.Errorf("Error received when sending logs to %v/%v: %v. Will retry.", batch.Group, batch.Stream, err)
 		}
 
 		// retry wait strategy depends on the type of error returned
@@ -148,6 +145,25 @@ func (s *sender) Stop() {
 	}
 	close(s.stopCh)
 	s.stopped = true
+}
+
+// isTerminalError reports whether a PutLogEvents error can never succeed on retry. Every other error, including
+// transport failures, credential failures, and unrecognized service errors, is retried until RetryDuration elapses.
+//
+// Terminal errors are:
+//   - InvalidParameterException: the service rejected the batch content
+//   - DataAlreadyAcceptedException: the service already has the batch
+//   - smithy.InvalidParamsError: client-side validation of the request input failed
+//   - smithy.SerializationError: the request input could not be marshalled
+func isTerminalError(err error) bool {
+	var invalidParameter *types.InvalidParameterException
+	var dataAlreadyAccepted *types.DataAlreadyAcceptedException
+	var invalidParams smithy.InvalidParamsError
+	var serializationErr *smithy.SerializationError
+	return errors.As(err, &invalidParameter) ||
+		errors.As(err, &dataAlreadyAccepted) ||
+		errors.As(err, &invalidParams) ||
+		errors.As(err, &serializationErr)
 }
 
 // SetRetryDuration sets the maximum duration for retrying failed log sends.

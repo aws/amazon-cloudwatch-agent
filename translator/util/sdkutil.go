@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/cfg/commonconfig"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -136,24 +134,18 @@ func SDKRegionWithCredsMap(mode string, credsConfig map[string]string) string {
 
 	CheckAndSetHomeDir()
 
-	opts := []func(*config.LoadOptions) error{
-		config.WithLogger(configaws.SDKLogger{}),
-		config.WithClientLogMode(configaws.SDKLogLevel()),
-	}
-	if profileOK {
-		opts = append(opts, config.WithSharedConfigProfile(profile))
-	}
+	var credentialsFiles, configFiles []string
 	if sharedConfigFileOK {
-		exPath := filepath.Dir(sharedConfigFile)
-		opts = append(opts, config.WithSharedConfigFiles([]string{sharedConfigFile, filepath.Join(exPath, "config")}))
+		credentialsFiles = []string{sharedConfigFile}
+		configFiles = []string{filepath.Join(filepath.Dir(sharedConfigFile), "config")}
 	}
 
-	cfg, err := config.LoadDefaultConfig(context.Background(), opts...)
+	region, err := configaws.SharedConfigRegion(context.Background(), profile, credentialsFiles, configFiles)
 	if err != nil {
+		fmt.Printf("W! SDKRegionWithCredsMap: unable to read region from shared config: %v\n", err)
 		return ""
 	}
 
-	region := cfg.Region
 	if region != "" {
 		fmt.Println("I! SDKRegionWithCredsMap region: ", region)
 	}
