@@ -379,10 +379,10 @@ github.com/aws/aws-sdk-go-v2/service/xray v1.36.21/go.mod h1:CRE83ZVhLHCmgWsRgH3
 github.com/aws/smithy-go v1.8.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAmR5n+E=
 github.com/aws/smithy-go v1.27.1 h1:4T340VFndXtADGF52gYa1POyL7s9E4Z1OeZ1hCscIw8=
 github.com/aws/smithy-go v1.27.1/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
-github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d h1:WQ+YwEMyIpKQOGtAtUyqq18RhERiAQGPYSXsSckRrsg=
-github.com/aws/telegraf v0.10.2-0.20250113150713-a2dfaa4cdf6d/go.mod h1:jrcGlkX91pXbwi4r7gpfd7UPQGMJDdv6tw1mCrzmIOE=
-github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d h1:nCzziuk/prBwzhbEyP9onARem7LriIxqGrTFB9D532g=
-github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20250113150713-a2dfaa4cdf6d/go.mod h1:1W1wnODUDv+FBSAtAa878Kxto5kj8eV+kI0AF4LIjq4=
+github.com/aws/telegraf v0.10.2-0.20260929083507-8fa53b1b2aac h1:mRWY8SbX1eyM8xEzZqolr5oaYUy/+iRl6+8N3qpjFGU=
+github.com/aws/telegraf v0.10.2-0.20260929083507-8fa53b1b2aac/go.mod h1:jrcGlkX91pXbwi4r7gpfd7UPQGMJDdv6tw1mCrzmIOE=
+github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20260929083507-8fa53b1b2aac h1:aKAMGs5OA4uUSSvNrXarvALOkyS6HGUWKNmrGMVRSSk=
+github.com/aws/telegraf/patches/gopsutil/v3 v3.0.0-20260929083507-8fa53b1b2aac/go.mod h1:1W1wnODUDv+FBSAtAa878Kxto5kj8eV+kI0AF4LIjq4=
 github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f h1:Pf0BjJDga7C98f0vhw+Ip5EaiE07S3lTKpIYPNS0nMo=
 github.com/awslabs/kinesis-aggregation/go v0.0.0-20210630091500-54e17340d32f/go.mod h1:SghidfnxvX7ribW6nHI7T+IBbc9puZ9kk5Tx/88h8P4=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
