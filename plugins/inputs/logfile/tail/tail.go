@@ -91,6 +91,13 @@ type Tail struct {
 	linePool sync.Pool
 }
 
+// File returns the underlying file descriptor
+func (tail *Tail) File() *os.File {
+	tail.lk.Lock()
+	defer tail.lk.Unlock()
+	return tail.file
+}
+
 // TailFile begins tailing the file. Output stream is made available
 // via the `Tail.Lines` channel. To handle errors during tailing,
 // invoke the `Wait` or `Err` method after finishing reading from the
