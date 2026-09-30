@@ -2,11 +2,11 @@
 Amazon CloudWatch Agent 1.300074.0 (2026-09-29)
 ========================================================================
 Enhancements:
-* [OpenTelemetry] Bump OTel dependencies to v0.150.0
-* [Agent] Migrate to AWS SDK for Go v2
+* [OpenTelemetry] Upgrade OpenTelemetry dependencies to v0.150.0
+* [Agent] Move the agent from AWS SDK for Go v1 to v2
 
 Bug Fixes:
-* [ContainerInsights] Align AKS/GKE OTel Container Insights with the Helm chart: set apiserver TLS server_name and drop azure.vm.* attributes from cluster-scoped metrics
+* [ContainerInsights] Match the Helm chart for AKS and GKE OTel Container Insights: set the apiserver TLS server_name and remove azure.vm.* attributes from cluster-scoped metrics
 
 ========================================================================
 Amazon CloudWatch Agent 1.300073.1 (2026-09-18)
