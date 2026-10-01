@@ -526,11 +526,20 @@ func TestPublish(t *testing.T) {
 	}()
 	// Publishing is paced by the flush interval, so once it starts, not every
 	// batch has been sent yet -- they cannot all flush the instant they are
-	// enqueued. Read the count via the mock's atomic counter to avoid racing on
-	// svc.Calls.
-	require.Eventually(t, func() bool { return svc.putMetricDataCalls.Load() > 0 }, interval, 100*time.Millisecond,
+	// enqueued. Capture the count at the moment publishing first crosses zero
+	// (inside the poll, so the observation and the assertion are the same read,
+	// with no gap for the counter to advance) and read it via the mock's atomic
+	// counter to avoid racing on svc.Calls.
+	var firstNonZero int64
+	require.Eventually(t, func() bool {
+		if n := svc.putMetricDataCalls.Load(); n > 0 {
+			firstNonZero = n
+			return true
+		}
+		return false
+	}, interval, 100*time.Millisecond,
 		"publishing should start within one interval")
-	assert.Less(t, svc.putMetricDataCalls.Load(), int64(expectedCalls), "not all batches should publish at once")
+	assert.Less(t, firstNonZero, int64(expectedCalls), "not all batches should publish at once")
 	// All batches eventually publish.
 	require.Eventually(t, func() bool { return svc.putMetricDataCalls.Load() == int64(expectedCalls) }, 3*interval, 200*time.Millisecond,
 		"all batches should eventually publish")
