@@ -105,11 +105,22 @@ func (lw *LeaseWriter) run() {
 	}
 }
 
-func (lw *LeaseWriter) jitterSleep() {
+// jitterInterval returns the randomized delay before the next lease renewal:
+// zero when jitter is disabled (jitterMax <= 0), otherwise a value in
+// [0, jitterMax). Split out from jitterSleep so the schedule can be asserted
+// deterministically without depending on wall-clock timing.
+func (lw *LeaseWriter) jitterInterval() time.Duration {
 	if lw.jitterMax <= 0 {
+		return 0
+	}
+	return time.Duration(rand.Int63n(int64(lw.jitterMax))) // nolint:gosec
+}
+
+func (lw *LeaseWriter) jitterSleep() {
+	jitter := lw.jitterInterval()
+	if jitter == 0 {
 		return
 	}
-	jitter := time.Duration(rand.Int63n(int64(lw.jitterMax))) // nolint:gosec
 	select {
 	case <-lw.done:
 		return
