@@ -38,6 +38,7 @@ func TestComponents(t *testing.T) {
 		"prometheus",
 		"postgresql",
 		"statsd",
+		"syslog",
 		"systemmetrics",
 		"tcplog",
 		"tcp_log",
