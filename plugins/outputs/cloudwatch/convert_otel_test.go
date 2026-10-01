@@ -180,6 +180,7 @@ func checkDatum(
 	d *aggregationDatum,
 	unit string,
 ) {
+	t.Helper()
 	assert.True(t, strings.HasPrefix(*d.MetricName, namePrefix))
 	assert.Equal(t, unit, string(d.Unit))
 	if d.distribution != nil {
@@ -200,8 +201,10 @@ func checkDatum(
 		assert.Equal(t, metricValue, *d.Value)
 	}
 
-	// Assuming unit test does not take more than 1 s.
-	assert.Less(t, time.Since(*d.Timestamp), time.Second)
+	// 1-minute window: this checks the timestamp survived ConvertOtelMetrics unmodified,
+	// not wall-clock performance. Wide enough to absorb CI scheduling jitter while still
+	// catching real timestamp bugs (which drift by hours/years, not seconds).
+	assert.Less(t, time.Since(*d.Timestamp), time.Minute)
 	for _, dim := range d.Dimensions {
 		assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
 		assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))
@@ -268,8 +271,9 @@ func TestConvertOtelMetrics_ExponentialHistogram(t *testing.T) {
 			assert.Equal(t, []float64{6.0, 3.0, 1.5, 0, -1.5, -3.0, -6.0}, values)
 			assert.Equal(t, []float64{1, 2, 4, 5, 4, 2, 1}, counts)
 
-			// Assuming unit test does not take more than 1 s.
-			assert.Less(t, time.Since(*d.Timestamp), time.Second)
+			// 1min budget catches real timestamp bugs (hours/years of drift) without
+			// flaking on CI scheduling jitter; this is not a performance assertion.
+			assert.Less(t, time.Since(*d.Timestamp), time.Minute)
 			for _, dim := range d.Dimensions {
 				assert.True(t, strings.HasPrefix(*dim.Name, keyPrefix))
 				assert.True(t, strings.HasPrefix(*dim.Value, valPrefix))

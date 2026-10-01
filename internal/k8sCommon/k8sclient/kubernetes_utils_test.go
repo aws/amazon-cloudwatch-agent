@@ -291,16 +291,16 @@ func TestTimedDeleterWithIDCheck_DeleteWithDelay_NoUpdate(t *testing.T) {
 	initialVal := NewUUIDString("value")
 	m.Store(key, initialVal)
 
-	// Use a short delay to make the test run quickly.
 	td := TimedDeleterWithIDCheck{Delay: 10 * time.Millisecond}
 	td.DeleteWithDelay(m, key)
 
-	// Wait for longer than the deletion delay.
-	time.Sleep(20 * time.Millisecond)
-
-	if _, ok := m.Load(key); ok {
-		t.Errorf("Expected key %q to be deleted, but it still exists", key)
-	}
+	// Poll instead of a fixed sleep: a 10ms delay + 20ms wait leaves ~zero headroom
+	// against Windows' ~15.6ms timer tick.
+	assert.Eventually(t, func() bool {
+		_, ok := m.Load(key)
+		return !ok
+	}, 2*time.Second, 5*time.Millisecond,
+		"Expected key %q to be deleted, but it still exists", key)
 }
 
 // TestDeleteWithDelay_WithUpdate verifies that if the value is updated before the deletion delay expires,
@@ -311,20 +311,20 @@ func TestTimedDeleterWithIDCheck_DeleteWithDelay_WithUpdate(t *testing.T) {
 	initialVal := NewUUIDString("value")
 	m.Store(key, initialVal)
 
-	td := TimedDeleterWithIDCheck{Delay: 20 * time.Millisecond}
+	td := TimedDeleterWithIDCheck{Delay: 50 * time.Millisecond}
 	td.DeleteWithDelay(m, key)
 
-	// Wait a bit before updating (less than td.Delay).
-	time.Sleep(10 * time.Millisecond)
+	// Update synchronously: two sub-tick sleeps can alias to the same Windows tick
+	// and fire in the wrong order.
 	updatedVal := NewUUIDString("value") // same content, but a new instance (different UUID)
 	m.Store(key, updatedVal)
 
-	// Wait long enough for the deletion delay to expire.
-	time.Sleep(20 * time.Millisecond)
-
-	if _, ok := m.Load(key); !ok {
-		t.Errorf("Expected key %q to remain after update, but it was deleted", key)
-	}
+	// Verify the deletion goroutine respects the updated UUID and never removes the key.
+	assert.Never(t, func() bool {
+		_, ok := m.Load(key)
+		return !ok
+	}, 200*time.Millisecond, 10*time.Millisecond,
+		"Expected key %q to remain after update, but it was deleted", key)
 }
 
 // TestDeleteWithDelay_InvalidType verifies that if the value stored is not a UUIDString,
@@ -338,8 +338,11 @@ func TestTimedDeleterWithIDCheck_DeleteWithDelay_InvalidType(t *testing.T) {
 	td := TimedDeleterWithIDCheck{Delay: 10 * time.Millisecond}
 	td.DeleteWithDelay(m, key)
 
-	time.Sleep(20 * time.Millisecond)
-	if _, ok := m.Load(key); !ok {
-		t.Errorf("Expected key %q to remain since value is not a UUIDString, but it was deleted", key)
-	}
+	// DeleteWithDelay returns early for a non-UUIDString value without scheduling
+	// a goroutine, so the key must stay put.
+	assert.Never(t, func() bool {
+		_, ok := m.Load(key)
+		return !ok
+	}, 100*time.Millisecond, 10*time.Millisecond,
+		"Expected key %q to remain since value is not a UUIDString, but it was deleted", key)
 }

@@ -86,8 +86,7 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	r.Stop()
-	time.Sleep(200 * time.Millisecond)
+	r.Stop() // synchronous: drains queued events and waits for the watcher to exit
 
 	// Check debug level log messages
 	debugCnt := 0
@@ -120,23 +119,23 @@ func TestLogThrottleRetryerLogging(t *testing.T) {
 	}
 }
 
-// TestShouldRetryDoesNotBlockAfterStop verifies ShouldRetry does not block once the
-// retryer is stopped (its consumer goroutine no longer drains the throttle channel).
-func TestShouldRetryDoesNotBlockAfterStop(t *testing.T) {
+// TestIsErrorRetryableDoesNotBlockAfterStop verifies IsErrorRetryable does not block once
+// the retryer is stopped (its consumer goroutine no longer drains the throttle channel).
+func TestIsErrorRetryableDoesNotBlockAfterStop(t *testing.T) {
 	l := &testLogger{}
 	r := NewLogThrottleRetryer(l)
 
-	// Stop the retryer, which closes the done channel and exits the consumer goroutine
+	// Stop the retryer: closes done, drains queued events, and waits for the goroutine to exit
 	r.Stop()
-	time.Sleep(50 * time.Millisecond) // Give the goroutine time to exit
 
 	err := &smithy.GenericAPIError{Code: "RequestLimitExceeded", Message: "Test AWS Error"}
 
 	// Call IsErrorRetryable in a goroutine and use a timeout to detect blocking
 	done := make(chan bool, 1)
 	go func() {
-		// Call IsErrorRetryable multiple times to exceed channel capacity (1)
-		for i := 0; i < 10; i++ {
+		// Send more than throttleChanBufferSize events so the buffer fills and the
+		// non-blocking send in IsErrorRetryable must hit its default (drop) branch.
+		for i := 0; i < throttleChanBufferSize+10; i++ {
 			r.IsErrorRetryable(err)
 		}
 		done <- true
@@ -144,9 +143,14 @@ func TestShouldRetryDoesNotBlockAfterStop(t *testing.T) {
 
 	select {
 	case <-done:
-		// Success: ShouldRetry did not block
+		// Success: IsErrorRetryable did not block.
+		// Verify the buffer actually filled, so the non-blocking default branch was
+		// genuinely exercised (guards against IsErrThrottle silently classifying nothing).
+		if n := len(r.throttleChan); n != throttleChanBufferSize {
+			t.Fatalf("expected throttle buffer full (%d), got %d", throttleChanBufferSize, n)
+		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("ShouldRetry blocked after retryer was stopped - potential deadlock")
+		t.Fatal("IsErrorRetryable blocked after retryer was stopped - potential deadlock")
 	}
 }
 
