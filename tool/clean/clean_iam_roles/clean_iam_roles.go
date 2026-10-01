@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -48,6 +49,8 @@ type iamClient interface {
 }
 
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
 	log.Print("Begin to clean IAM Roles")
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -99,6 +102,9 @@ func deleteRole(ctx context.Context, client iamClient, role types.Role) error {
 		lastUsed = fmt.Sprintf("%d days ago", int(time.Since(*role.RoleLastUsed.LastUsedDate).Hours()/24))
 	}
 	log.Printf("Trying to delete role (%q) last used %s", *role.RoleName, lastUsed)
+	if clean.Skip("delete IAM role %q (detach policies, delete inline policies, remove instance profiles)", *role.RoleName) {
+		return nil
+	}
 	if err := detachPolicies(ctx, client, role); err != nil {
 		return err
 	}
