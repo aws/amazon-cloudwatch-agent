@@ -65,17 +65,8 @@ processors:
       - set(unit, "m") where IsMatch(name, ".*_meters(_total)?$")
       - set(unit, "1") where unit == "" and IsMatch(name, ".*_total$")
   metricstarttime/cw_k8s_ci_v0: {}
-  # Delete the deprecated OpenTelemetry semantic-convention attributes that the
-  # Prometheus receiver injects on every scrape target. Each one has a
-  # current-spelling twin carrying an identical value on the same series, and the
-  # twin is kept:
-  #
-  #   net.host.name -> server.address
-  #   net.host.port -> server.port
-  #   http.scheme   -> url.scheme
-  #
-  # Every CI pipeline defines this processor under the same name and they are
-  # merged into one collector config, so all copies must be identical.
+  # Drop receiver-injected deprecated semconv attributes; their current-spelling twins
+  # (server.address, server.port, url.scheme) stay. All copies must stay identical.
   transform/cw_k8s_ci_v0_drop_deprecated_semconv:
     error_mode: ignore
     metric_statements:
