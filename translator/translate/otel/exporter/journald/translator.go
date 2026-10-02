@@ -63,7 +63,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 
 	// Set AWS session configuration
 	cfg.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	if endpoint, ok := common.GetString(c, endpointOverrideKey); ok {
+	if endpoint, ok := common.GetEndpointOverride(c, endpointOverrideKey); ok {
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}

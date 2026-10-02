@@ -54,7 +54,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.ProxyConfig.Endpoint = defaultEndpoint
 	cfg.ProxyConfig.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
 	if conf.IsSet(endpointOverrideKey) {
-		cfg.ProxyConfig.AWSEndpoint, _ = common.GetString(conf, endpointOverrideKey)
+		cfg.ProxyConfig.AWSEndpoint, _ = common.GetEndpointOverride(conf, endpointOverrideKey)
 	}
 	cfg.ProxyConfig.IMDSRetries = override.GetDefaultRetryNumber()
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
