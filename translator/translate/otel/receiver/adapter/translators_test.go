@@ -27,6 +27,7 @@ func TestFindReceiversInConfig(t *testing.T) {
 	telegrafStatsdType, _ := component.NewType("telegraf_statsd")
 	telegrafProcstatType, _ := component.NewType("telegraf_procstat")
 	telegrafWinPerfCountersType, _ := component.NewType("telegraf_win_perf_counters")
+	telegrafWinServicesType, _ := component.NewType("telegraf_win_services")
 	type wantResult struct {
 		cfgKey   string
 		interval time.Duration
@@ -87,6 +88,10 @@ func TestFindReceiversInConfig(t *testing.T) {
 						"Paging File":  map[string]interface{}{},
 						"PhysicalDisk": map[string]interface{}{},
 						"nvidia_gpu":   map[string]interface{}{},
+						"statsd":       map[string]interface{}{},
+						"win_services": map[string]interface{}{
+							"service_names": []string{"AmazonSSMAgent"},
+						},
 						"procstat": []interface{}{
 							map[string]interface{}{
 								"exe":                         "amazon-cloudwatch-agent",
@@ -103,6 +108,8 @@ func TestFindReceiversInConfig(t *testing.T) {
 			os: translatorconfig.OS_TYPE_WINDOWS,
 			want: map[component.ID]wantResult{
 				component.NewID(telegrafNvidiaSmiType):                             {"metrics::metrics_collected::nvidia_gpu", time.Minute},
+				component.NewID(telegrafStatsdType):                                {"metrics::metrics_collected::statsd", 10 * time.Second},
+				component.NewID(telegrafWinServicesType):                           {"metrics::metrics_collected::win_services", time.Minute},
 				component.NewIDWithName(telegrafProcstatType, "793254176"):         {"metrics::metrics_collected::procstat", time.Minute},
 				component.NewIDWithName(telegrafProcstatType, "3599690165"):        {"metrics::metrics_collected::procstat", time.Minute},
 				component.NewIDWithName(telegrafWinPerfCountersType, "4283769065"): {"metrics::metrics_collected::LogicalDisk", time.Minute},

@@ -177,6 +177,9 @@
             },
             "prometheus": {
              "$ref": "#/definitions/metricsDefinition/definitions/prometheusDefinitions"
+            },
+            "win_services": {
+              "$ref": "#/definitions/metricsDefinition/definitions/winServicesDefinitions"
             }
           },
           "minProperties": 1,
@@ -575,6 +578,45 @@
               "items": { "type": "string" },
               "minItems": 1,
               "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "winServicesDefinitions": {
+          "type": "object",
+          "properties": {
+            "service_names": {
+              "description": "Names of the Windows services to monitor. Leave empty to monitor all available services. Globs accepted.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "excluded_service_names": {
+              "description": "Optional list of Windows service names to exclude from monitoring. Globs accepted.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              }
+            },
+            "measurement": {
+              "description": "Fields to collect from each service. Supported values are state and startup_mode.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["state", "startup_mode"]
+              },
+              "uniqueItems": true
+            },
+            "metrics_collection_interval": {
+              "$ref": "#/definitions/timeIntervalDefinition"
+            },
+            "append_dimensions": {
+              "$ref": "#/definitions/generalAppendDimensionsDefinition"
             }
           },
           "additionalProperties": false
