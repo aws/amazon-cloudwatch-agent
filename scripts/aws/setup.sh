@@ -444,15 +444,16 @@ ensure_iam_role() {
      # Sid instead, so statements for different service accounts coexist too.
      # For this statement's key: identical means nothing to do, different means
      # replace (not leave stale, e.g. a changed :sub namespace), absent means
-     # append. A same-principal statement without a Sid is claimed by the Sid
-     # match too, so a pre-Sid statement is replaced rather than left behind.
+     # append. A same-principal statement without a Sid is left untouched: it is
+     # not this script's to rewrite (the agent always writes a Sid), so a
+     # hand-authored or externally-managed statement is preserved, not replaced.
      state=$(printf '%s' "${existing}" | jq -r \
           --arg principal "${new_principal}" \
           --arg sid "${new_sid}" \
           --argjson stmt "${new_statement}" \
           '[.Statement[] | select(
                (.Principal | if type == "object" then to_entries[0].value else . end) == $principal
-               and (($sid == "") or ((.Sid // "") == $sid) or ((.Sid // "") == ""))
+               and (($sid == "") or ((.Sid // "") == $sid))
            )] as $m
            | if ($m | length) == 0 then "absent"
              elif ($m | any(. == $stmt)) then "current"
@@ -471,7 +472,7 @@ ensure_iam_role() {
                --argjson stmt "${new_statement}" \
                '.Statement = ([.Statement[] | select(
                     ((.Principal | if type == "object" then to_entries[0].value else . end) != $principal)
-                    or (($sid != "") and ((.Sid // "") != $sid) and ((.Sid // "") != ""))
+                    or (($sid != "") and ((.Sid // "") != $sid))
                 )] + [$stmt])')
      else
           logaction "Merging trust statement into '${ROLE_NAME}'"

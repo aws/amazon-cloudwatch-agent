@@ -153,16 +153,18 @@ assert_jq "${SANDBOX}/updated_trust.json" \
 assert_jq "${SANDBOX}/updated_trust.json" \
      ".Statement | any(.Condition.StringEquals[\"accounts.google.com:sub\"]? == \"${SA_ID_2}\")"
 
-t_case "pre-Sid statement for this service account: upgraded in place"
+t_case "pre-Sid statement for this service account: preserved, keyed form appended"
 aws_fake
 current_policy | jq 'del(.Statement[0].Sid)' >"${SANDBOX}/existing_trust.json"
 run_gce_trust
 assert_status 0
-assert_output_contains stdout "Updating trust statement"
-assert_jq "${SANDBOX}/updated_trust.json" '.Statement | length == 1'
-assert_jq "${SANDBOX}/updated_trust.json" ".Statement[0].Sid == \"GCE${SA_ID}\""
+assert_output_contains stdout "Merging trust statement"
+assert_not_called "iam create-role"
+assert_jq "${SANDBOX}/updated_trust.json" '.Statement | length == 2'
+assert_jq "${SANDBOX}/updated_trust.json" '.Statement | any(.Sid? == null and .Principal.Federated? == "accounts.google.com")'
+assert_jq "${SANDBOX}/updated_trust.json" ".Statement | any(.Sid? == \"GCE${SA_ID}\")"
 
-t_case "pre-Sid statement for another service account: replaced by the keyed form"
+t_case "pre-Sid statement for another service account: preserved, keyed form appended"
 aws_fake
 current_policy | jq 'del(.Statement[0].Sid)
      | .Statement[0].Condition.StringEquals["accounts.google.com:sub"] = "000000000000000000000"
@@ -170,10 +172,13 @@ current_policy | jq 'del(.Statement[0].Sid)
      >"${SANDBOX}/existing_trust.json"
 run_gce_trust
 assert_status 0
-assert_output_contains stdout "Updating trust statement"
-assert_jq "${SANDBOX}/updated_trust.json" '.Statement | length == 1'
+assert_output_contains stdout "Merging trust statement"
+assert_not_called "iam create-role"
+assert_jq "${SANDBOX}/updated_trust.json" '.Statement | length == 2'
 assert_jq "${SANDBOX}/updated_trust.json" \
-     ".Statement[0].Condition.StringEquals[\"accounts.google.com:sub\"] == \"${SA_ID}\""
+     '.Statement | any(.Sid? == null and .Condition.StringEquals["accounts.google.com:sub"]? == "000000000000000000000")'
+assert_jq "${SANDBOX}/updated_trust.json" \
+     ".Statement | any(.Sid? == \"GCE${SA_ID}\" and .Condition.StringEquals[\"accounts.google.com:sub\"]? == \"${SA_ID}\")"
 
 t_case "missing CWAGENT_GCP_SA_UNIQUE_ID: dies before touching IAM"
 aws_fake
