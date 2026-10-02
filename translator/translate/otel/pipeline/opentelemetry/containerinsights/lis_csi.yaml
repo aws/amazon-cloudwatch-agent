@@ -69,6 +69,25 @@ processors:
       - set(unit, "MHz") where name == "DCGM_FI_DEV_SM_CLOCK"
       - set(unit, "By") where IsMatch(name, "^neuroncore_memory_usage_.*")
   metricstarttime/cw_k8s_ci_v0: {}
+  # Delete the deprecated OpenTelemetry semantic-convention attributes that the
+  # Prometheus receiver injects on every scrape target. Each one has a
+  # current-spelling twin carrying an identical value on the same series, and the
+  # twin is kept:
+  #
+  #   net.host.name -> server.address
+  #   net.host.port -> server.port
+  #   http.scheme   -> url.scheme
+  #
+  # Every CI pipeline defines this processor under the same name and they are
+  # merged into one collector config, so all copies must be identical.
+  transform/cw_k8s_ci_v0_drop_deprecated_semconv:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      statements:
+      - delete_key(attributes, "net.host.name") where attributes["net.host.name"] != nil
+      - delete_key(attributes, "net.host.port") where attributes["net.host.port"] != nil
+      - delete_key(attributes, "http.scheme") where attributes["http.scheme"] != nil
   transform/cw_k8s_ci_v0_set_cluster_name:
     error_mode: ignore
     metric_statements:
@@ -178,6 +197,7 @@ service:
       - prometheus/cw_k8s_ci_v0_lis_csi_node
       processors:
       - filter/cw_k8s_ci_v0_scrape_metadata
+      - transform/cw_k8s_ci_v0_drop_deprecated_semconv
       - transform/cw_k8s_ci_v0_set_unit
       - metricstarttime/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_cluster_name
