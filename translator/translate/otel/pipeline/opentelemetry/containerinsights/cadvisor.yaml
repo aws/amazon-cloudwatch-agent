@@ -234,7 +234,6 @@ service:
       - transform/cw_k8s_ci_v0_set_cluster_name
       - filter/cw_k8s_ci_v0_cadvisor_empty
       - filter/cw_k8s_ci_v0_cadvisor_pod
-      # Before groupbyattrs: dropped datapoints never acquire the node/pod label sets.
       - filter/cw_k8s_ci_v0_cadvisor_rollup
       - groupbyattrs/cw_k8s_ci_v0_cadvisor
       - transform/cw_k8s_ci_v0_cadvisor_promote
