@@ -15,11 +15,8 @@ receivers:
         tls_config:
           ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
 processors:
-  # Collector self-telemetry. node_scrape_collector_duration_seconds and
-  # node_scrape_collector_success are node-exporter's own per-collector scrape
-  # timing and status — the same category as the five names already listed here,
-  # which were dropped when this filter was written. node_textfile_scrape_error is
-  # deliberately NOT included: the kubernetes-mixin alerting rules reference it.
+  # node-exporter's own per-collector scrape timing/status, same category as the five
+  # scrape_* names. node_textfile_scrape_error stays: kubernetes-mixin alerts on it.
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
     metrics:

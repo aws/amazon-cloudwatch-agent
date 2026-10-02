@@ -28,11 +28,8 @@ receivers:
         - source_labels: [__meta_kubernetes_pod_node_name]
           target_label: node
 processors:
-  # Every CI pipeline defines this processor under the same name and they are
-  # merged into one collector config, so all copies must list the same names or
-  # the merged result depends on pipeline order. The two node_scrape_collector_*
-  # names are emitted only by node-exporter; see node_exporter.yaml for why they
-  # are dropped and why node_textfile_scrape_error is not.
+  # All CI pipelines declare this processor under one name and it is merged, so every
+  # copy must list the same names. node_scrape_collector_* come from node-exporter.
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
     metrics:

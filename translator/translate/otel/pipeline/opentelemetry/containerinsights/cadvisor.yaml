@@ -17,11 +17,8 @@ receivers:
         tls_config:
           insecure_skip_verify: true
 processors:
-  # Every CI pipeline defines this processor under the same name and they are
-  # merged into one collector config, so all copies must list the same names or
-  # the merged result depends on pipeline order. The two node_scrape_collector_*
-  # names are emitted only by node-exporter; see node_exporter.yaml for why they
-  # are dropped and why node_textfile_scrape_error is not.
+  # All CI pipelines declare this processor under one name and it is merged, so every
+  # copy must list the same names. node_scrape_collector_* come from node-exporter.
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
     metrics:
@@ -83,19 +80,8 @@ processors:
     metrics:
       datapoint:
       - attributes["container"] == "POD"
-  # Drop the pod-scope rollup. cAdvisor reports most container_* families three
-  # times per pod: once per application container, once for the pod cgroup slice,
-  # and once for the pause/sandbox container. The latter two carry no `container`
-  # with `pod` set, and the slice value is the sum over the pod's containers, so
-  # both are duplicates of series already being sent.
-  #
-  # container_network_* is exempt and must stay: the sandbox owns the pod's network
-  # namespace, so for those eight families the sandbox series is the only series
-  # that exists, not a duplicate. Dropping them removes all pod network telemetry.
-  #
-  # `container` is tested against both nil and "" because the Prometheus receiver
-  # strips empty-valued labels before they reach the pipeline — the same reason
-  # filter/cw_k8s_ci_v0_cadvisor_empty above enumerates all four combinations.
+  # Drop the pod cgroup slice and pause/sandbox duplicates of each container_* family.
+  # container_network_* is sandbox-only so must stay; `container` arrives absent, not "".
   filter/cw_k8s_ci_v0_cadvisor_rollup:
     error_mode: ignore
     metrics:
@@ -248,10 +234,7 @@ service:
       - transform/cw_k8s_ci_v0_set_cluster_name
       - filter/cw_k8s_ci_v0_cadvisor_empty
       - filter/cw_k8s_ci_v0_cadvisor_pod
-      # Must stay ahead of groupbyattrs and k8sattributes: a datapoint dropped here
-      # never acquires the node and pod label sets, which is where almost all of its
-      # bytes are. It also reads `container`/`pod` at datapoint scope, which is where
-      # they live until groupbyattrs moves them.
+      # Before groupbyattrs: dropped datapoints never acquire the node/pod label sets.
       - filter/cw_k8s_ci_v0_cadvisor_rollup
       - groupbyattrs/cw_k8s_ci_v0_cadvisor
       - transform/cw_k8s_ci_v0_cadvisor_promote
