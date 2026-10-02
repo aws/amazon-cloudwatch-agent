@@ -90,7 +90,7 @@ processors:
         error_mode: ignore
         metrics:
             metric:
-                - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added)$")
+                - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added|node_scrape_collector_duration_seconds|node_scrape_collector_success)$")
     groupbyattrs/cw_k8s_ci_v0_ksm:
         keys:
             - pod

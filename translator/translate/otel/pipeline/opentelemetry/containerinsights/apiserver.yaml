@@ -33,11 +33,16 @@ receivers:
           server_name: {{ .ApiserverTLSServerName }}
 {{- end }}
 processors:
+  # Every CI pipeline defines this processor under the same name and they are
+  # merged into one collector config, so all copies must list the same names or
+  # the merged result depends on pipeline order. The two node_scrape_collector_*
+  # names are emitted only by node-exporter; see node_exporter.yaml for why they
+  # are dropped and why node_textfile_scrape_error is not.
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
     metrics:
       metric:
-      - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added)$")
+      - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added|node_scrape_collector_duration_seconds|node_scrape_collector_success)$")
   transform/cw_k8s_ci_v0_set_unit:
     error_mode: ignore
     metric_statements:
