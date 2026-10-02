@@ -62,6 +62,27 @@ func TestTranslator(t *testing.T) {
 			want:  testutil.GetConf(t, filepath.Join("testdata", "config.yaml")),
 			mode:  config.ModeOnPrem,
 		},
+		"WithSchemeLessEndpointOverride": {
+			input: map[string]any{
+				"traces": map[string]any{
+					"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.xray.us-east-1.vpce.amazonaws.com",
+				},
+			},
+			want: confmap.NewFromStringMap(map[string]any{
+				"certificate_file_path": "/ca/bundle",
+				"region":                "us-east-1",
+				"local_mode":            true,
+				"role_arn":              "global_arn",
+				"imds_retries":          1,
+				"endpoint":              "https://vpce-0123456789abcdef0-abcdefgh.xray.us-east-1.vpce.amazonaws.com",
+				"telemetry": map[string]any{
+					"enabled":          true,
+					"include_metadata": true,
+				},
+				"middleware": "agenthealth/traces",
+			}),
+			mode: config.ModeOnPrem,
+		},
 		"WithAppSignalsEnabledEKS": {
 			input: map[string]any{
 				"traces": map[string]any{
