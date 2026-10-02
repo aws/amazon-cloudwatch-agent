@@ -40,6 +40,10 @@ type EventConfig struct {
 	LogGroupClass string                     `toml:"log_group_class"`
 	Destination   string                     `toml:"destination"`
 	Retention     int32                      `toml:"retention_in_days"`
+	// Timezone mirrors files collect_list (UTC or LOCAL). Windows Event Log
+	// SystemTime is already an absolute UTC timestamp; this field is accepted
+	// for configuration parity with file logs.
+	Timezone string `toml:"timezone"`
 }
 type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`

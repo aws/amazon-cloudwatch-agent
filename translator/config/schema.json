@@ -1149,6 +1149,15 @@
                       "text",
                       "xml"
                     ]
+                  },
+                  "timezone": {
+                    "description": "Timezone for Windows event timestamps. Matches the files collect_list timezone values.",
+                    "type": "string",
+                    "enum": [
+                      "Local",
+                      "LOCAL",
+                      "UTC"
+                    ]
                   }
                 },
                 "required": [
@@ -2032,6 +2041,11 @@
                         "description": "Output format: xml (raw XML) or text (structured)",
                         "type": "string",
                         "enum": ["text", "xml"]
+                      },
+                      "timezone": {
+                        "description": "Timezone for Windows event timestamps",
+                        "type": "string",
+                        "enum": ["UTC", "Local", "LOCAL"]
                       },
                       "log_group_name": {
                         "description": "CloudWatch Logs group name override",
