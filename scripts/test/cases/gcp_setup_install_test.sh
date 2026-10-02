@@ -168,12 +168,12 @@ assert_output_contains stdout "Amazon CloudWatch Agent installed and running."
 assert_output_contains stdout "Agent installed on 'test-vm'"
 assert_output_lacks stdout "Installing package..."
 assert_called "compute ssh test-vm --zone us-east1-b --command powershell -NoProfile -NonInteractive -EncodedCommand"
-# The encoded script removes any stale install.ps1, stops on a failed download,
-# and reports errors as plain text on stderr.
+# The encoded script forces TLS 1.2, removes any stale install.ps1, stops on a
+# failed download, and reports errors as plain text on stderr.
 ps_script=$(sed -n 's/.*-EncodedCommand \([A-Za-z0-9+/=]*\).*/\1/p' "${CALLS}" | head -n 1 |
      base64 -d | iconv -f UTF-16LE -t UTF-8)
 case "${ps_script}" in
-*"\$ErrorActionPreference='Stop'; try {"*"Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1;"*"-OutFile \$env:TEMP\\install.ps1 -ErrorAction Stop; & \$env:TEMP\\install.ps1 } catch { [Console]::Error.WriteLine("*"exit 1 }"*) ;;
+*"\$ErrorActionPreference='Stop'; try {"*"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1; Invoke-WebRequest -UseBasicParsing "*"-OutFile \$env:TEMP\\install.ps1 -ErrorAction Stop; & \$env:TEMP\\install.ps1 } catch { [Console]::Error.WriteLine("*"exit 1 }"*) ;;
 *) fail "unexpected encoded install script: ${ps_script}" ;;
 esac
 
@@ -187,7 +187,7 @@ assert_output_contains stderr "agent did not start"
 assert_output_contains stdout "remote install on 'test-vm' failed (see the install output above)"
 assert_output_lacks stdout "may not be elevated"
 assert_output_contains stdout "To install manually"
-assert_output_contains stdout "Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1; Invoke-WebRequest"
+assert_output_contains stdout "[Net.SecurityProtocolType]::Tls12; Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1; Invoke-WebRequest -UseBasicParsing"
 assert_output_contains stdout "-OutFile \$env:TEMP\\install.ps1 -ErrorAction Stop; & \$env:TEMP\\install.ps1"
 
 t_end
