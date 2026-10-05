@@ -69,6 +69,16 @@ processors:
       - set(unit, "MHz") where name == "DCGM_FI_DEV_SM_CLOCK"
       - set(unit, "By") where IsMatch(name, "^neuroncore_memory_usage_.*")
   metricstarttime/cw_k8s_ci_v0: {}
+  # Drop receiver-injected deprecated semconv attributes; their current-spelling twins
+  # (server.address, server.port, url.scheme) stay. All copies must stay identical.
+  transform/cw_k8s_ci_v0_drop_deprecated_semconv:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      statements:
+      - delete_key(attributes, "net.host.name") where attributes["net.host.name"] != nil
+      - delete_key(attributes, "net.host.port") where attributes["net.host.port"] != nil
+      - delete_key(attributes, "http.scheme") where attributes["http.scheme"] != nil
   transform/cw_k8s_ci_v0_set_cluster_name:
     error_mode: ignore
     metric_statements:
@@ -178,6 +188,7 @@ service:
       - prometheus/cw_k8s_ci_v0_ebs_csi_node
       processors:
       - filter/cw_k8s_ci_v0_scrape_metadata
+      - transform/cw_k8s_ci_v0_drop_deprecated_semconv
       - transform/cw_k8s_ci_v0_set_unit
       - metricstarttime/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_cluster_name

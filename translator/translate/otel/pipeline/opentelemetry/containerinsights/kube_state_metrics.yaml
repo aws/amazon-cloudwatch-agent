@@ -47,6 +47,16 @@ processors:
       - set(unit, "m") where IsMatch(name, ".*_meters(_total)?$")
       - set(unit, "1") where unit == "" and IsMatch(name, ".*_total$")
   metricstarttime/cw_k8s_ci_v0: {}
+  # Drop receiver-injected deprecated semconv attributes; their current-spelling twins
+  # (server.address, server.port, url.scheme) stay. All copies must stay identical.
+  transform/cw_k8s_ci_v0_drop_deprecated_semconv:
+    error_mode: ignore
+    metric_statements:
+    - context: resource
+      statements:
+      - delete_key(attributes, "net.host.name") where attributes["net.host.name"] != nil
+      - delete_key(attributes, "net.host.port") where attributes["net.host.port"] != nil
+      - delete_key(attributes, "http.scheme") where attributes["http.scheme"] != nil
   transform/cw_k8s_ci_v0_set_scope_kube_state_metrics:
     error_mode: ignore
     metric_statements:
@@ -125,6 +135,23 @@ processors:
       - set(attributes["cronjob"], resource.attributes["cronjob"]) where resource.attributes["cronjob"] != nil
       - set(attributes["owner_name"], resource.attributes["owner_name"]) where resource.attributes["owner_name"] != nil
       - set(attributes["owner_kind"], resource.attributes["owner_kind"]) where resource.attributes["owner_kind"] != nil
+    # Drop the resource-level raw copies; the datapoint block above already copied them
+    # down. Must run after it — statement groups execute in declaration order.
+    - context: resource
+      statements:
+      - delete_key(attributes, "pod") where attributes["pod"] != nil
+      - delete_key(attributes, "namespace") where attributes["namespace"] != nil
+      - delete_key(attributes, "node") where attributes["node"] != nil
+      - delete_key(attributes, "uid") where attributes["uid"] != nil
+      - delete_key(attributes, "container") where attributes["container"] != nil
+      - delete_key(attributes, "owner_name") where attributes["owner_name"] != nil
+      - delete_key(attributes, "owner_kind") where attributes["owner_kind"] != nil
+      - delete_key(attributes, "deployment") where attributes["deployment"] != nil
+      - delete_key(attributes, "daemonset") where attributes["daemonset"] != nil
+      - delete_key(attributes, "statefulset") where attributes["statefulset"] != nil
+      - delete_key(attributes, "replicaset") where attributes["replicaset"] != nil
+      - delete_key(attributes, "job_name") where attributes["job_name"] != nil
+      - delete_key(attributes, "cronjob") where attributes["cronjob"] != nil
   k8sattributes/cw_k8s_ci_v0_pod:
     auth_type: serviceAccount
     extract:
@@ -235,6 +262,7 @@ service:
       - prometheus/cw_k8s_ci_v0_kube_state_metrics
       processors:
       - filter/cw_k8s_ci_v0_scrape_metadata
+      - transform/cw_k8s_ci_v0_drop_deprecated_semconv
       - transform/cw_k8s_ci_v0_set_unit
       - metricstarttime/cw_k8s_ci_v0
       - transform/cw_k8s_ci_v0_set_scope_kube_state_metrics
