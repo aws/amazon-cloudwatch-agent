@@ -15,11 +15,13 @@ receivers:
         tls_config:
           ca_file: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
 processors:
+  # node-exporter's own per-collector scrape timing/status, same category as the five
+  # scrape_* names. node_textfile_scrape_error stays: kubernetes-mixin alerts on it.
   filter/cw_k8s_ci_v0_scrape_metadata:
     error_mode: ignore
     metrics:
       metric:
-      - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added)$")
+      - IsMatch(name, "^(up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling|scrape_series_added|node_scrape_collector_duration_seconds|node_scrape_collector_success)$")
   transform/cw_k8s_ci_v0_set_unit:
     error_mode: ignore
     metric_statements:
