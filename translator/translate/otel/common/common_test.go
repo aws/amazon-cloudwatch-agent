@@ -464,3 +464,13 @@ func TestSanitizeName(t *testing.T) {
 	assert.Equal(t, "application", SanitizeName("Application"))
 	assert.Equal(t, "my-channel", SanitizeName("My-Channel"))
 }
+
+func TestOtlpWorkloadEnabled(t *testing.T) {
+	assert.False(t, OtlpWorkloadEnabled(nil, OtlpWorkloadVllm))
+	assert.False(t, OtlpWorkloadEnabled(confmap.New(), OtlpWorkloadVllm))
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{"collect": map[string]any{"otlp": map[string]any{"workloads": []any{"vllm"}}}},
+	})
+	assert.True(t, OtlpWorkloadEnabled(conf, OtlpWorkloadVllm))
+	assert.False(t, OtlpWorkloadEnabled(conf, "other"))
+}
