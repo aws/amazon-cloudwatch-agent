@@ -303,8 +303,10 @@ windows_install_cmd() {
 
 # PowerShell that downloads a fresh install.ps1 and runs it, stopping if the
 # download fails. Shared by the remote command and the manual instructions.
+# TLS 1.2 is forced as in install.ps1: Windows PowerShell 5.1 may default to
+# TLS 1.0, which GitHub rejects.
 windows_fetch_and_run() {
-     printf '%s' "Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1; Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1 -ErrorAction Stop; & \$env:TEMP\\install.ps1"
+     printf '%s' "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1; Invoke-WebRequest -UseBasicParsing -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1 -ErrorAction Stop; & \$env:TEMP\\install.ps1"
 }
 
 # Run a command on the GCE VM via gcloud compute ssh. $1 = command.
@@ -314,7 +316,7 @@ windows_fetch_and_run() {
 # JSON on stdout reporting "running".
 run_via_gcloud_ssh() {
      ssh_cmd="$1"
-     logaction "Running install via gcloud compute ssh"
+     logaction "Running install via gcloud compute ssh (this can take a minute)"
 
      # POSIX sh cannot capture stdout and stderr into separate variables, and
      # this avoids a temp file: stderr streams straight into one capture, and
@@ -328,6 +330,8 @@ run_via_gcloud_ssh() {
                ssh_out=$(gcloud_scoped compute ssh "${INSTANCE_NAME}" \
                     --zone "${LOCATION}" \
                     --command "${ssh_cmd}" 2>&4) || ssh_rc=$?
+               # The leading \n keeps the marker at the start of a line even if
+               # stderr lacks a trailing newline, and off line 1 (see the sed below).
                printf '\n%s %s\n%s\n' "${marker}" "${ssh_rc}" "${ssh_out}"
           } 4>&1
      )
@@ -429,6 +433,8 @@ setup_gcp_gce() {
                logwarn "could not reach '${INSTANCE_NAME}' over SSH (Windows SSH is opt-in)"
           fi
 
+          # Unlike Linux, a Windows failure is not fatal: Windows SSH is opt-in, so
+          # any failure falls back to printing the manual command and exits 0.
           printf '\n' >&3
           printf 'To install manually, run the following on %s:\n' "${INSTANCE_NAME}" >&3
           printf '\n' >&3
