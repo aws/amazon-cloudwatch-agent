@@ -1,0 +1,18 @@
+error_mode: ignore
+trace_statements:
+  - error_mode: ignore
+    context: resource
+    statements:
+      # vLLM sets no service.name, so its SDK reports unknown_service:<process>. Name it after the
+      # KServe InferenceService, which is stable across revisions; otherwise clear the placeholder
+      # so the identity transform falls back to the workload name.
+      - set(resource.attributes["service.name"], resource.attributes["inferenceservice"]) where resource.attributes["inferenceservice"] != nil and (resource.attributes["service.name"] == nil or IsMatch(resource.attributes["service.name"], "^unknown_service"))
+      - delete_key(resource.attributes, "service.name") where resource.attributes["service.name"] != nil and IsMatch(resource.attributes["service.name"], "^unknown_service")
+  - error_mode: ignore
+    context: span
+    statements:
+      # Scoped to the engine's own spans: other OTLP senders share this pipeline.
+      - set(span.attributes["gen_ai.system"], "vllm") where span.name == "llm_request" or IsMatch(span.name, "^vllm:")
+      # vLLM emits the pre-1.27 semantic-convention token names; publish the current ones too.
+      - set(span.attributes["gen_ai.usage.input_tokens"], span.attributes["gen_ai.usage.prompt_tokens"]) where span.name == "llm_request" and span.attributes["gen_ai.usage.prompt_tokens"] != nil
+      - set(span.attributes["gen_ai.usage.output_tokens"], span.attributes["gen_ai.usage.completion_tokens"]) where span.name == "llm_request" and span.attributes["gen_ai.usage.completion_tokens"] != nil
