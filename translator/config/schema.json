@@ -1893,6 +1893,7 @@
               "additionalProperties": false
             },
             "container_insights": {
+              "description": "Deprecated: this section has no effect and is ignored with a warning. Use the amazon-cloudwatch-observability Helm chart or the Amazon CloudWatch Observability EKS add-on to enable Container Insights.",
               "type": "object",
               "properties": {
                 "collection_interval": {

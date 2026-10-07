@@ -21,7 +21,6 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/awscloudwatchlogsprovisioner"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
-	ci "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/containerinsights"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/attributestocontext"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
@@ -54,9 +53,7 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 	if runtime.GOOS == "windows" {
 		keys = append(keys, common.WindowsEventsConfigKey)
 	}
-	// Container Insights node-role logs forward into this pipeline, so activate it.
-	ciLogsEnabled := ci.NodeLogsEnabled(conf)
-	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil && !ciLogsEnabled {
+	if err := common.ValidateAnySet(conf, t.ID(), keys); err != nil {
 		return nil, err
 	}
 
@@ -134,14 +131,6 @@ func (t *baseLogsTranslator) Translate(conf *confmap.Conf) (*common.ComponentTra
 		}
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
-	// resourcedetection/opentelemetry re-stamps schema_url post-fan-in; clear it here for CI.
-	// Distinct name from the metrics clear to avoid same-ID collision.
-	if conf != nil && conf.IsSet(common.ConfigKey(common.OpenTelemetryKey, common.CollectKey, common.OtelContainerInsightsKey)) {
-		processors.Set(transformprocessor.NewTranslatorWithName("logs_clear_schema_url",
-			transformprocessor.WithLogResourceStatements([]string{
-				`set(resource.schema_url, "")`,
-			})))
-	}
 	processors.Set(logsRouting)
 	processors.Set(attrCtx)
 	processors.Set(logsCleanup)

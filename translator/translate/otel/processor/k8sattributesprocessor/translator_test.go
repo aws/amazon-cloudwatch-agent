@@ -41,43 +41,24 @@ func TestTranslate(t *testing.T) {
 	assert.Len(t, k8sCfg.Extract.Labels, 3)
 }
 
-func TestTranslateWatchReplicaSetDisabled(t *testing.T) {
-	// container_insights.watch_replicaset=false drops k8s.deployment.name (stops the RS
-	// informer) while keeping k8s.replicaset.name (pod ownerRef). Key absent -> default true.
-	off := confmap.NewFromStringMap(map[string]interface{}{
+// TestTranslateWatchReplicaSetIgnoresDeprecatedContainerInsightsKey: the deprecated
+// container_insights section is a no-op, so its watch_replicaset no longer stops the
+// ReplicaSet informer. Only the collect-level key does.
+func TestTranslateWatchReplicaSetIgnoresDeprecatedContainerInsightsKey(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"collect": map[string]interface{}{
 				"container_insights": map[string]interface{}{"watch_replicaset": false},
 			},
 		},
 	})
-	cfg, err := NewTranslator("otlp").Translate(off)
+	cfg, err := NewTranslator("otlp").Translate(conf)
 	require.NoError(t, err)
-	k8sCfg := cfg.(*k8sattributesprocessor.Config)
-	assert.NotContains(t, k8sCfg.Extract.Metadata, "k8s.deployment.name")
-	assert.Contains(t, k8sCfg.Extract.Metadata, "k8s.replicaset.name")
-	assert.Len(t, k8sCfg.Extract.Metadata, 11)
-
-	// Default (key absent) keeps deployment.name.
-	baseCfg, err := NewTranslator("otlp").Translate(confmap.New())
-	require.NoError(t, err)
-	assert.Contains(t, baseCfg.(*k8sattributesprocessor.Config).Extract.Metadata, "k8s.deployment.name")
-
-	// Explicit watch_replicaset=true keeps deployment.name.
-	on := confmap.NewFromStringMap(map[string]interface{}{
-		"opentelemetry": map[string]interface{}{
-			"collect": map[string]interface{}{
-				"container_insights": map[string]interface{}{"watch_replicaset": true},
-			},
-		},
-	})
-	onCfg, err := NewTranslator("otlp").Translate(on)
-	require.NoError(t, err)
-	assert.Contains(t, onCfg.(*k8sattributesprocessor.Config).Extract.Metadata, "k8s.deployment.name")
+	assert.Contains(t, cfg.(*k8sattributesprocessor.Config).Extract.Metadata, "k8s.deployment.name")
 }
 
-// TestTranslateWatchReplicaSetCollectLevel is the decoupling contract: the collect-level key stops the
-// ReplicaSet informer with no container_insights key (which would otherwise activate CI on bare presence).
+// TestTranslateWatchReplicaSetCollectLevel: the collect-level key stops the ReplicaSet informer
+// (drops k8s.deployment.name) while keeping k8s.replicaset.name. Key absent -> default true.
 func TestTranslateWatchReplicaSetCollectLevel(t *testing.T) {
 	off := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
@@ -91,6 +72,9 @@ func TestTranslateWatchReplicaSetCollectLevel(t *testing.T) {
 	k8sCfg := cfg.(*k8sattributesprocessor.Config)
 	assert.NotContains(t, k8sCfg.Extract.Metadata, "k8s.deployment.name")
 	assert.Contains(t, k8sCfg.Extract.Metadata, "k8s.replicaset.name")
-	// No container_insights key was set, so the CI pipelines are never activated by this toggle.
-	assert.NotContains(t, off.AllKeys(), "opentelemetry::collect::container_insights")
+	assert.Len(t, k8sCfg.Extract.Metadata, 11)
+
+	baseCfg, err := NewTranslator("otlp").Translate(confmap.New())
+	require.NoError(t, err)
+	assert.Contains(t, baseCfg.(*k8sattributesprocessor.Config).Extract.Metadata, "k8s.deployment.name")
 }
