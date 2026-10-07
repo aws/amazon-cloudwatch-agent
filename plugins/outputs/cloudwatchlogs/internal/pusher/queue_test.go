@@ -482,7 +482,7 @@ func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {
 	wg.Wait()
 }
 
-func TestUnhandledErrorWouldNotResend(t *testing.T) {
+func TestTerminalErrorWouldNotResend(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup
 	var s stubLogsService
@@ -491,9 +491,10 @@ func TestUnhandledErrorWouldNotResend(t *testing.T) {
 	s.ple = func(context.Context, *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
 		if cnt.Load() == 0 {
 			cnt.Add(1)
-			return nil, errors.New("unhandled error")
+			// A request that cannot be serialized will never succeed, so the pusher must not retry it.
+			return nil, &smithy.SerializationError{Err: errors.New("unhandled error")}
 		}
-		t.Errorf("Pusher should not attempt a resend when an unhandled error has been returned")
+		t.Errorf("Pusher should not attempt a resend when a terminal error has been returned")
 		return &cloudwatchlogs.PutLogEventsOutput{}, nil
 	}
 
