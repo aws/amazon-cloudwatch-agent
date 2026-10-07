@@ -126,8 +126,12 @@ func (t translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators,
 			}
 		}
 	case common.PipelineNameHostCustomMetrics:
+		// Associate statsd/collectd custom metrics with the EC2 Resource entity.
+		// Service entity + scrape_datapoint_attribute required Application Signals
+		// service metadata that plain custom metrics never carry, which silently
+		// dropped all datapoints before PutMetricData (#2180).
 		if !currentContext.RunInContainer() {
-			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Service, "telegraf", true)
+			entityProcessor = awsentity.NewTranslatorWithEntityType(awsentity.Resource, "", ec2TaggerEnabled)
 		}
 	case common.PipelineNameHost, common.PipelineNameHostDeltaMetrics:
 		if !currentContext.RunInContainer() {

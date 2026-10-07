@@ -550,11 +550,6 @@ processors:
         kubernetes_mode: EKS
         platform: ec2
         scrape_datapoint_attribute: true
-    awsentity/service/telegraf:
-        entity_type: Service
-        kubernetes_mode: EKS
-        platform: ec2
-        scrape_datapoint_attribute: true
     awsneuron/cw_k8s_ci_v0: null
     batch/emf_logs:
         metadata_cardinality_limit: 1000
@@ -3061,7 +3056,7 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
-                - awsentity/service/telegraf
+                - awsentity/resource
             receivers:
                 - telegraf_socket_listener
                 - telegraf_statsd

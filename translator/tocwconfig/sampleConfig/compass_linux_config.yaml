@@ -100,8 +100,8 @@ processors:
                   value: otlp-level-service
                 - key: Environment
                   value: otlp-level-environment
-    awsentity/service/telegraf:
-        entity_type: Service
+    awsentity/resource:
+        entity_type: Resource
         platform: ec2
         scrape_datapoint_attribute: true
     batch/hostOtlpMetrics/cloudwatchlogs:
@@ -178,7 +178,7 @@ service:
                 - awscloudwatch
             processors:
                 - ec2tagger
-                - awsentity/service/telegraf
+                - awsentity/resource
             receivers:
                 - telegraf_socket_listener
                 - telegraf_statsd
