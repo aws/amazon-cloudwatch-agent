@@ -69,6 +69,46 @@ func TestOTLPHTTPValidator(t *testing.T) {
 			},
 		},
 		{
+			name: "valid profiles_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"profiles_endpoint": "https://monitoring.us-east-1.amazonaws.com/v1development/profiles",
+					},
+				},
+			},
+		},
+		{
+			name: "valid otlp_http endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlp_http": map[string]any{
+						"endpoint": "https://monitoring.us-east-1.amazonaws.com",
+					},
+				},
+			},
+		},
+		{
+			name: "valid otlp_http named instance profiles_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlp_http/profiles": map[string]any{
+						"profiles_endpoint": "https://monitoring.us-east-1.amazonaws.com/v1development/profiles",
+					},
+				},
+			},
+		},
+		{
+			name: "valid otlphttp named instance profiles_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp/profiles": map[string]any{
+						"profiles_endpoint": "https://monitoring.us-east-1.amazonaws.com/v1development/profiles",
+					},
+				},
+			},
+		},
+		{
 			name: "valid endpoint without scheme",
 			config: map[string]any{
 				"exporters": map[string]any{
@@ -133,11 +173,65 @@ func TestOTLPHTTPValidator(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "invalid third party profiles_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp": map[string]any{
+						"profiles_endpoint": "https://pyroscope.example.com/v1development/profiles",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid third party otlp_http endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlp_http": map[string]any{
+						"endpoint": "https://example.com/v1/metrics",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid third party otlp_http named instance profiles_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlp_http/profiles": map[string]any{
+						"profiles_endpoint": "https://pyroscope.example.com/v1development/profiles",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid third party otlphttp named instance profiles_endpoint",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttp/profiles": map[string]any{
+						"profiles_endpoint": "https://pyroscope.example.com/v1development/profiles",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "non-otlphttp exporter is ignored",
 			config: map[string]any{
 				"exporters": map[string]any{
 					"prometheus": map[string]any{
 						"endpoint": "https://example.com/metrics",
+					},
+				},
+			},
+		},
+		{
+			name: "near-miss exporter name is ignored",
+			config: map[string]any{
+				"exporters": map[string]any{
+					"otlphttpx": map[string]any{
+						"endpoint": "https://example.com/v1/metrics",
 					},
 				},
 			},
