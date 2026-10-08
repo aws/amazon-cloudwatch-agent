@@ -3,7 +3,6 @@ module github.com/aws/amazon-cloudwatch-agent/tool/clean
 go 1.24
 
 require (
-	github.com/aws/aws-sdk-go v1.48.14
 	github.com/aws/aws-sdk-go-v2 v1.43.4
 	github.com/aws/aws-sdk-go-v2/config v1.25.12
 	github.com/aws/aws-sdk-go-v2/service/amp v1.48.1
