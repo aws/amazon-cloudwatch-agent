@@ -74,7 +74,7 @@ func TestFallbackOtelConfig(t *testing.T) {
 	}{
 		"WithoutAnyFiles": {
 			tomlRelativePath: filepath.Join("config", "config.toml"),
-			want:             defaultYamlRelativePath,
+			want:             "",
 		},
 		"WithDefaultYamlPath": {
 			tomlRelativePath: filepath.Join("config", "config.toml"),
@@ -94,7 +94,7 @@ func TestFallbackOtelConfig(t *testing.T) {
 		"WithoutTomlPath": {
 			tomlRelativePath: "",
 			filesToCreate:    []string{filepath.Join("config", "config.yaml")},
-			want:             defaultYamlRelativePath,
+			want:             "",
 		},
 	}
 	for name, testCase := range testCases {
@@ -105,8 +105,33 @@ func TestFallbackOtelConfig(t *testing.T) {
 				require.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
 				require.NoError(t, os.WriteFile(path, nil, 0600))
 			}
-			got := getFallbackOtelConfig(filepath.Join(tmpDir, testCase.tomlRelativePath), filepath.Join(tmpDir, defaultYamlRelativePath))
+			tomlPath := ""
+			if testCase.tomlRelativePath != "" {
+				tomlPath = filepath.Join(tmpDir, testCase.tomlRelativePath)
+			}
+			got := getFallbackOtelConfig(tomlPath, filepath.Join(tmpDir, defaultYamlRelativePath))
+			if testCase.want == "" {
+				assert.Empty(t, got)
+				return
+			}
 			assert.Equal(t, filepath.Join(tmpDir, testCase.want), got)
 		})
 	}
+}
+
+func TestLoadableOtelConfigs(t *testing.T) {
+	dir := t.TempDir()
+	existing := filepath.Join(dir, "exists.yaml")
+	require.NoError(t, os.WriteFile(existing, nil, 0600))
+	missing := filepath.Join(dir, "missing.yaml")
+
+	got := loadableOtelConfigs([]string{
+		"",
+		missing,
+		existing,
+		"file:" + missing,
+		"file:" + existing,
+		"env:CW_CONFIG_CONTENT",
+	})
+	assert.Equal(t, []string{existing, "file:" + existing, "env:CW_CONFIG_CONTENT"}, got)
 }

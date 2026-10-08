@@ -5,6 +5,7 @@ package config
 
 import (
 	"io/fs"
+	"os"
 	"path/filepath"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/constants"
@@ -15,11 +16,14 @@ const (
 	otelConfigFlagName = "-otelconfig"
 )
 
-// GetOTELConfigArgs creates otelconfig argument pairs for all YAML paths in the directory along with the agent YAML
-// path as the last pair.
+// GetOTELConfigArgs creates otelconfig argument pairs for YAML files in dir.
+// The translated agent YAML is appended last only when that file exists;
+// config-translator omits it when there are no OTEL pipelines.
 func GetOTELConfigArgs(dir string) []string {
 	configs := getSortedYAMLs(dir)
-	configs = append(configs, paths.YamlConfigPath)
+	if _, err := os.Stat(paths.YamlConfigPath); err == nil {
+		configs = append(configs, paths.YamlConfigPath)
+	}
 	args := make([]string, 0, 2*len(configs))
 	for _, config := range configs {
 		args = append(args, otelConfigFlagName, config)
