@@ -111,7 +111,19 @@ Example with above config:
 2021-09-27T19:36:35Z GET (StatusCode: 400). // doesn't match regex, will be excluded
 ```
 ## Versioning
-It is using [Semantic versioning](https://semver.org/)
+Releases use `MAJOR.MINOR.PATCH`, for example `1.300064.1`.
+
+S3, SSM, ECR, and Docker Hub artifact names append a build id: `1.300064.1b1344`. The `b1344` segment is only that build. It is not a newer source release.
+
+Amazon Linux packages the same source without the build id and adds a dist tag on the RPM release (`1.amzn2023` on AL2023, `1.amzn2` on AL2). There is no separate AL2 or AL2023 binary.
+
+| Channel | Example | Upstream release |
+| --- | --- | --- |
+| S3, SSM, ECR, Docker Hub | `amazon-cloudwatch-agent-1.300064.1b1344-1.x86_64` | `1.300064.1` |
+| Amazon Linux 2023 | `amazon-cloudwatch-agent-1.300064.1-1.amzn2023.x86_64` | `1.300064.1` |
+| Amazon Linux 2 | `amazon-cloudwatch-agent-1.300064.1-1.amzn2.x86_64` | `1.300064.1` |
+
+Compliance checks should compare that upstream release. `1.300064.1b1344-1` and `1.300064.1-1.amzn2023` are the same agent source, so an advisory that names the Amazon Linux RPM also covers the `b1344` build of `1.300064.1`. `internal/version.UpstreamRelease` implements this mapping.
 
 ## Distributions
 You can download the official release from S3, refer to [link](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/download-cloudwatch-agent-commandline.html)
