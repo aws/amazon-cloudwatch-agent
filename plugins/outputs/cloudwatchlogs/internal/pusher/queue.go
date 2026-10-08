@@ -217,8 +217,8 @@ func (q *queue) reportTruncated(e logs.LogEvent, timestamp time.Time) {
 	// The original message is measured again only when the warning is logged, which keeps the truncation path cheap.
 	// The limit is the one for the message alone: the agent reserves perEventHeaderBytes of maxEventPayloadBytes for
 	// each event.
-	q.logger.Warnf("The log entry in (%v/%v) with timestamp (%v) has a message of %d bytes, which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); truncated and the remainder dropped.",
-		q.target.Group, q.target.Stream, timestamp, utf8EncodedLength(e.Message()), maxEventPayloadBytes-perEventHeaderBytes, perEventHeaderBytes)
+	q.logger.Warnf("The log entry in (%v/%v) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); truncated and the remainder dropped.",
+		q.target.Group, q.target.Stream, timestamp, utf8EncodedLength(e.Message()), len(e.Message()), invalidUTF8ByteSize, maxEventPayloadBytes-perEventHeaderBytes, perEventHeaderBytes)
 }
 
 // addStats adds statistics to the profiler.

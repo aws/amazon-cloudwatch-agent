@@ -509,14 +509,50 @@ func TestReportTruncatedLogEvents(t *testing.T) {
 		}
 		require.Len(t, warns, tt.expectedWarns, tt.name)
 		if tt.expectedWarns > 0 {
-			expected := fmt.Sprintf("The log entry in (%v/S) with timestamp (%v) has a message of %d bytes, which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); truncated and the remainder dropped.",
-				target.Group, firstTruncatedTime, invalidUTF8ByteSize*len(oversized), maxMessageSize, perEventHeaderBytes)
+			expected := fmt.Sprintf("The log entry in (%v/S) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); truncated and the remainder dropped.",
+				target.Group, firstTruncatedTime, invalidUTF8ByteSize*len(oversized), len(oversized), invalidUTF8ByteSize, maxMessageSize, perEventHeaderBytes)
 			assert.Contains(t, warns[0], expected, tt.name)
 		}
 	}
 
 	q.Stop()
 	wg.Wait()
+}
+
+// TestReportTruncatedLogEvents_WarningRearms checks that the truncation warning is logged again once
+// warnTruncatedLogEventInterval has passed since the last one, and that every call is counted. reportTruncated is
+// called directly on a queue whose goroutine is not started, so the test can move lastTruncatedWarnTime back without
+// a data race or waiting for the interval.
+func TestReportTruncatedLogEvents_WarningRearms(t *testing.T) {
+	t.Parallel()
+	// A log group used by this test only, as the profiler stats are global.
+	target := Target{t.Name(), "S", util.StandardLogGroupClass, -1}
+	statKey := strings.Join([]string{"cloudwatchlogs", target.Group, truncatedLogEventsStat}, "_")
+	// The stats are not cleared between runs of the test, so compare with the value at the start.
+	baseStat := profilerStat(statKey)
+
+	logSink := testutil.NewLogSink()
+	q := &queue{target: target, logger: logSink}
+	event := newStubLogEvent(string(bytes.Repeat([]byte{0xff}, maxEventPayloadBytes)), time.Now())
+	countWarns := func() int {
+		n := 0
+		for _, line := range logSink.Lines() {
+			if strings.Contains(line, "W!") {
+				n++
+			}
+		}
+		return n
+	}
+
+	q.reportTruncated(event, event.Time())
+	assert.Equal(t, 1, countWarns(), "first truncated event")
+	q.reportTruncated(event, event.Time())
+	assert.Equal(t, 1, countWarns(), "within warnTruncatedLogEventInterval of the last warning")
+	// Move the last warning back past the interval instead of waiting for it.
+	q.lastTruncatedWarnTime = time.Now().Add(-warnTruncatedLogEventInterval - time.Second)
+	q.reportTruncated(event, event.Time())
+	assert.Equal(t, 2, countWarns(), "after warnTruncatedLogEventInterval has passed")
+	assert.Equal(t, baseStat+3, profilerStat(statKey))
 }
 
 func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {

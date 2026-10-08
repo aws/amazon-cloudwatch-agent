@@ -20,11 +20,13 @@ import (
 // CloudWatch Logs PutLogEvents API limits
 // Taken from https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
 //
-// The service counts each log event as 26 bytes plus the length in UTF-8 of its message as decoded from the JSON
-// request. JSON escaping is not counted (e.g. \n or \" counts as the single character it represents), but each byte
+// The public API reference states that a batch is counted as the sum of all event messages in UTF-8 plus 26 bytes per
+// event. The per-event limit is understood to be counted the same way, on the message as decoded from the JSON
+// request: JSON escaping is not counted (e.g. \n or \" counts as the single character it represents), but each byte
 // of the message that is not valid UTF-8 is sent as \ufffd and decoded to U+FFFD, which counts as 3 bytes (see
-// utf8EncodedLength). perEventHeaderBytes intentionally reserves more than 26 bytes per event, which keeps batches
-// smaller and bounds memory usage.
+// utf8EncodedLength). This matches the behaviour reported for other shippers (aws/aws-for-fluent-bit#252,
+// aws/aws-for-fluent-bit#683, moby/moby#37986). perEventHeaderBytes intentionally reserves more than 26 bytes per
+// event, which keeps batches smaller and bounds memory usage.
 const (
 	// The maximum batch size in bytes. This size is calculated as the sum of all event messages in UTF-8,
 	// plus 26 bytes for each log event.

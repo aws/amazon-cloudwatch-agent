@@ -491,6 +491,8 @@ var utf8EncodedLengthTestCases = []struct {
 	{name: "ASCII", message: "hello world", expected: 11},
 	// JSON escaping is not counted: \", \\, \n, \t and \u001b each count as 1 byte.
 	{name: "CharactersEscapedInJSON", message: "\"\\\n\t\x1b", expected: 5},
+	// Escaped by the encoder as \u0000, which decodes back to 1 byte.
+	{name: "NUL", message: "\x00", expected: 1},
 	{name: "TwoByteUTF8", message: "héllo", expected: 6},
 	{name: "ThreeByteUTF8", message: "日本語", expected: 9},
 	{name: "FourByteUTF8", message: "😀", expected: 4},
@@ -505,6 +507,8 @@ var utf8EncodedLengthTestCases = []struct {
 	{name: "TruncatedMultiByteSequence", message: "\xe6\x97", expected: 6},
 	{name: "OverlongEncoding", message: "\xc0\xaf", expected: 6},
 	{name: "EncodedSurrogate", message: "\xed\xa0\x80", expected: 9},
+	// Above U+10FFFF, so none of the 4 bytes starts a valid sequence and each counts as 3.
+	{name: "AboveMaxRune", message: "\xf4\x90\x80\x80", expected: 12},
 	{name: "MixedValidAndInvalid", message: "a\xffé\xe6\x97日", expected: 15},
 }
 
