@@ -14,6 +14,14 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
+const (
+	// The minimum interval between logs warning that a log event was truncated, like warnOldTimeStampLogInterval.
+	warnTruncatedLogEventInterval = 5 * time.Minute
+	// truncatedLogEventsStat is the profiler stat that counts the log events whose message was over the per-event
+	// limit and so was truncated, with the rest of the message dropped. It counts each such log event once.
+	truncatedLogEventsStat = "truncatedLogEvents"
+)
+
 type Queue interface {
 	AddEvent(e logs.LogEvent)
 	AddEventNonBlocking(e logs.LogEvent)
@@ -38,6 +46,8 @@ type queue struct {
 	stopCh       chan struct{}
 	stopped      bool
 	lastSentTime atomic.Value
+	// The last time a truncated log event was logged. Only used by the start goroutine.
+	lastTruncatedWarnTime time.Time
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
@@ -137,6 +147,12 @@ func (q *queue) start() {
 				q.resetFlushTimer()
 			}
 			event := q.converter.convert(e)
+			// A message over the per-event limit was truncated and its remainder dropped. Report it, as this is
+			// otherwise silent.
+			if event.truncated {
+				// Report the converted timestamp, as it is the one sent to CloudWatch Logs and is never zero.
+				q.reportTruncated(e, event.timestamp)
+			}
 			if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.eventBytes) {
 				q.send()
 			}
@@ -187,6 +203,22 @@ func (q *queue) onSuccessCallback(bufferedSize int) func() {
 		go q.addStats("rawSize", float64(bufferedSize))
 		q.resetFlushTimer()
 	}
+}
+
+// reportTruncated counts a log event whose message was truncated, and logs a warning about it at most once per
+// warnTruncatedLogEventInterval. The stat is added before the throttle check, so every truncated event is counted.
+func (q *queue) reportTruncated(e logs.LogEvent, timestamp time.Time) {
+	q.addStats(truncatedLogEventsStat, 1)
+	now := time.Now()
+	if now.Sub(q.lastTruncatedWarnTime) <= warnTruncatedLogEventInterval {
+		return
+	}
+	q.lastTruncatedWarnTime = now
+	// The original message is measured again only when the warning is logged, which keeps the truncation path cheap.
+	// The limit is the one for the message alone: the agent reserves perEventHeaderBytes of maxEventPayloadBytes for
+	// each event.
+	q.logger.Warnf("The log entry in (%v/%v) with timestamp (%v) has a message of %d bytes, which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); truncated and the remainder dropped.",
+		q.target.Group, q.target.Stream, timestamp, utf8EncodedLength(e.Message()), maxEventPayloadBytes-perEventHeaderBytes, perEventHeaderBytes)
 }
 
 // addStats adds statistics to the profiler.

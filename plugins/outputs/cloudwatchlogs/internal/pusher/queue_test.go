@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
@@ -429,6 +431,91 @@ func TestAddMultipleEvents(t *testing.T) {
 
 	q.Stop()
 	sender.Stop()
+	wg.Wait()
+}
+
+// profilerStat returns the value of the profiler stat with the given key.
+func profilerStat(key string) float64 {
+	stats := profiler.Profiler.GetStats()
+	// GetStats returns the map the profiler updates, so read it under the profiler lock.
+	profiler.Profiler.Lock()
+	defer profiler.Profiler.Unlock()
+	return stats[key]
+}
+
+// TestReportTruncatedLogEvents checks that each truncated log event is counted, and that a warning is logged for the
+// first one but not for one truncated soon after it.
+func TestReportTruncatedLogEvents(t *testing.T) {
+	t.Parallel()
+	var wg sync.WaitGroup
+	// A log group used by this test only, as the profiler stats are global.
+	target := Target{t.Name(), "S", util.StandardLogGroupClass, -1}
+	statKey := strings.Join([]string{"cloudwatchlogs", target.Group, truncatedLogEventsStat}, "_")
+	// The stats are not cleared between runs of the test, so compare with the value at the start.
+	baseStat := profilerStat(statKey)
+
+	mockSender := &mockSender{}
+	mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
+		args.Get(0).(*logEventBatch).done()
+	}).Return()
+	logSink := testutil.NewLogSink()
+	q := newQueue(logSink, target, time.Hour, nil, mockSender, &wg).(*queue)
+
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	// Fewer raw bytes than the limit, but counted as invalidUTF8ByteSize bytes each, so it is truncated.
+	oversized := string(bytes.Repeat([]byte{0xff}, maxMessageSize))
+
+	tests := []struct {
+		name          string
+		message       string
+		expectedStat  float64
+		expectedWarns int
+	}{
+		{name: "Event that fits", message: "small message", expectedStat: 0, expectedWarns: 0},
+		{name: "First truncated", message: oversized, expectedStat: 1, expectedWarns: 1},
+		// Within warnTruncatedLogEventInterval of the first, so it is counted but not logged.
+		{name: "Second truncated", message: oversized, expectedStat: 2, expectedWarns: 1},
+		{name: "Event that fits after truncated", message: "small message", expectedStat: 2, expectedWarns: 1},
+	}
+	// The time of the first truncated event, which is the one the warning is logged for.
+	var firstTruncatedTime time.Time
+	for _, tt := range tests {
+		done := make(chan struct{})
+		eventTime := time.Now()
+		if tt.message == oversized && firstTruncatedTime.IsZero() {
+			firstTruncatedTime = eventTime
+		}
+		event := newStubLogEvent(tt.message, eventTime)
+		// The queue runs the done callback when the batch is sent, so use it to know the event was processed.
+		event.done = func() { close(done) }
+		q.AddEvent(event)
+		require.Eventually(t, func() bool {
+			// The event may not have reached the batch yet, so send until it is acknowledged.
+			triggerSend(t, q)
+			select {
+			case <-done:
+				return true
+			default:
+				return false
+			}
+		}, 5*time.Second, 10*time.Millisecond, tt.name)
+
+		assert.Equal(t, baseStat+tt.expectedStat, profilerStat(statKey), tt.name)
+		var warns []string
+		for _, line := range logSink.Lines() {
+			if strings.Contains(line, "W!") {
+				warns = append(warns, line)
+			}
+		}
+		require.Len(t, warns, tt.expectedWarns, tt.name)
+		if tt.expectedWarns > 0 {
+			expected := fmt.Sprintf("The log entry in (%v/S) with timestamp (%v) has a message of %d bytes, which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); truncated and the remainder dropped.",
+				target.Group, firstTruncatedTime, invalidUTF8ByteSize*len(oversized), maxMessageSize, perEventHeaderBytes)
+			assert.Contains(t, warns[0], expected, tt.name)
+		}
+	}
+
+	q.Stop()
 	wg.Wait()
 }
 
