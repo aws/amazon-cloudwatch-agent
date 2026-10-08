@@ -3,6 +3,12 @@
 
 name: Repackage Release Artifacts
 env:
+  # artifact_source=candidate-store (PDD 66 D83): the CWAgentCandidate pipeline's candidate store and ECR, read-only.
+  CANDIDATE_READ_ROLE: arn:aws:iam::019141478986:role/CWAgentCandidateGithubTestsReader
+  CANDIDATE_ACCOUNT: "019141478986"
+  CANDIDATE_BUCKET: cwagent-candidate-store-019141478986
+  CANDIDATE_REPOSITORY: cwagent-candidate
+  ECR_INTEGRATION_TEST_REPO: cwagent-integration-test
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
@@ -20,10 +26,32 @@ on:
         description: 'The build ID (release candidate build number or GitHub commit SHA)'
         type: string
         required: true
+      artifact_source:
+        description: 'Where the build is copied from: release-bucket (default, the release staging bucket and ECR) or candidate-store (the CWAgentCandidate candidate store and ECR)'
+        type: string
+        default: release-bucket
 
 jobs:
+  CheckArtifactSource:
+    name: 'CheckArtifactSource'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check artifact_source
+        env:
+          ARTIFACT_SOURCE: ${{ inputs.artifact_source }}
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          case "$ARTIFACT_SOURCE" in
+            release-bucket) ;;
+            candidate-store)
+              [[ "$BUILD_ID" =~ ^1\.[0-9]+\.[0-9]+b[0-9]+$ ]] || { echo "::error::$BUILD_ID is not a candidate id"; exit 1; } ;;
+            *) echo "::error::artifact_source must be release-bucket or candidate-store, not $ARTIFACT_SOURCE"; exit 1 ;;
+          esac
+
   RepackageS3Artifcats:
     name: 'RepackageS3Artifcats'
+    needs: [ CheckArtifactSource ]
+    if: ${{ inputs.artifact_source == 'release-bucket' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -136,6 +164,8 @@ jobs:
 
   RepackageECRImage:
     name: 'RepackageECRImage'
+    needs: [ CheckArtifactSource ]
+    if: ${{ inputs.artifact_source == 'release-bucket' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -176,3 +206,200 @@ jobs:
           INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
           docker buildx imagetools create -t "$INTEG_TEST_REGISTRY/cwagent-integration-test:$INPUT_BUILD_ID" "$ARTIFACTS_REGISTRY/cloudwatch-agent:$INPUT_BUILD_ID"
+
+  RepackageS3FromCandidateStore:
+    name: 'RepackageS3FromCandidateStore'
+    needs: [ CheckArtifactSource ]
+    if: ${{ inputs.artifact_source == 'candidate-store' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check the candidate id
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          [[ "$BUILD_ID" =~ ^1\.[0-9]+\.[0-9]+b[0-9]+$ ]] || { echo "::error::$BUILD_ID is not a candidate id"; exit 1; }
+
+      - name: Configure AWS Credentials (candidate store, read-only)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.CANDIDATE_READ_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: 3600
+
+      - name: Download the candidate's installers
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          set -euo pipefail
+          root="candidates/${BUILD_ID}"
+          aws s3 cp --no-progress "s3://${CANDIDATE_BUCKET}/${root}/manifest.json" manifest.json
+          fetch() {  # <key under the candidate> <local file>: download, then check the manifest's sha256
+            want="$(jq -r --arg p "$1" '.files[] | select(.path == $p) | .sha256' manifest.json)"
+            [ -n "$want" ] || { echo "::error::$1 is not in the candidate's manifest"; exit 1; }
+            mkdir -p "$(dirname "$2")"
+            aws s3 cp --no-progress "s3://${CANDIDATE_BUCKET}/${root}/$1" "$2"
+            echo "${want}  $2" | sha256sum -c -
+          }
+          for arch in amd64 arm64; do
+            fetch "s3/amazon_linux/${arch}/${BUILD_ID}/amazon-cloudwatch-agent.rpm" "linux/${arch}/amazon-cloudwatch-agent.rpm"
+            fetch "s3/debian/${arch}/${BUILD_ID}/amazon-cloudwatch-agent.deb" "linux/${arch}/amazon-cloudwatch-agent.deb"
+            fetch "s3/darwin/${arch}/${BUILD_ID}/amazon-cloudwatch-agent.pkg" "darwin/${arch}/amazon-cloudwatch-agent.pkg"
+          done
+          fetch "s3/windows/amd64/${BUILD_ID}/amazon-cloudwatch-agent.msi" "windows/amd64/amazon-cloudwatch-agent.msi"
+          cat > put.sh <<'EOF'
+          # put <bucket> <key> <file> [region]: create-only; an object already there (a re-run) is left as it is.
+          put() {
+            local region="${4:-us-west-2}"
+            if aws --region "$region" s3api head-object --bucket "$1" --key "$2" > /dev/null 2>&1; then
+              echo "s3://$1/$2 exists; left as it is"
+              return 0
+            fi
+            aws --region "$region" s3api put-object --bucket "$1" --key "$2" --body "$3" --if-none-match '*' > /dev/null
+            echo "put s3://$1/$2"
+          }
+          EOF
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Upload Artifacts
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          set -euo pipefail
+          . ./put.sh
+          b="${S3_INTEGRATION_BUCKET}"
+          put "$b" "integration-test/packaging/${BUILD_ID}/amazon-cloudwatch-agent.msi" windows/amd64/amazon-cloudwatch-agent.msi
+          for arch in amd64 arm64; do
+            put "$b" "integration-test/binary/${BUILD_ID}/linux/${arch}/amazon-cloudwatch-agent.rpm" "linux/${arch}/amazon-cloudwatch-agent.rpm"
+            put "$b" "integration-test/binary/${BUILD_ID}/linux/${arch}/amazon-cloudwatch-agent.deb" "linux/${arch}/amazon-cloudwatch-agent.deb"
+            put "$b" "integration-test/packaging/${BUILD_ID}/${arch}/amazon-cloudwatch-agent.pkg" "darwin/${arch}/amazon-cloudwatch-agent.pkg"
+          done
+
+      - name: Configure AWS Credentials (CN)
+        id: creds-cn
+        # Other partition (PDD D73, Q21): its tests are not in the blocking subset, so a failure here is a warning,
+        # not a failed repackage that would stop the blocking tests.
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_CN }}
+          aws-region: cn-north-1
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Upload Artifacts (CN)
+        if: steps.creds-cn.outcome == 'success'
+        continue-on-error: true
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          set -euo pipefail
+          . ./put.sh
+          for arch in amd64 arm64; do
+            for pkg in rpm deb; do
+              put "${S3_INTEGRATION_BUCKET_CN}" "integration-test/binary/${BUILD_ID}/linux/${arch}/amazon-cloudwatch-agent.${pkg}" \
+                "linux/${arch}/amazon-cloudwatch-agent.${pkg}" cn-north-1
+            done
+          done
+
+      - name: Configure AWS Credentials (ITAR)
+        id: creds-itar
+        # Other partition (PDD D73, Q21): its tests are not in the blocking subset, so a failure here is a warning,
+        # not a failed repackage that would stop the blocking tests.
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
+          aws-region: us-gov-east-1
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Upload Artifacts (ITAR)
+        if: steps.creds-itar.outcome == 'success'
+        continue-on-error: true
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          set -euo pipefail
+          . ./put.sh
+          for arch in amd64 arm64; do
+            for pkg in rpm deb; do
+              put "${S3_INTEGRATION_BUCKET_ITAR}" "integration-test/binary/${BUILD_ID}/linux/${arch}/amazon-cloudwatch-agent.${pkg}" \
+                "linux/${arch}/amazon-cloudwatch-agent.${pkg}" us-gov-east-1
+            done
+          done
+
+      - name: Report other partitions
+        if: always()
+        env:
+          CN: ${{ steps.creds-cn.outcome }}
+          ITAR: ${{ steps.creds-itar.outcome }}
+        run: |
+          [ "$CN" = success ] || echo "::warning::CN repackage skipped: credentials ${CN} (PDD Q21)"
+          [ "$ITAR" = success ] || echo "::warning::ITAR repackage skipped: credentials ${ITAR} (PDD Q21)"
+
+  RepackageECRFromCandidateStore:
+    name: 'RepackageECRFromCandidateStore'
+    needs: [ CheckArtifactSource ]
+    if: ${{ inputs.artifact_source == 'candidate-store' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS Credentials (candidate ECR, read-only)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.CANDIDATE_READ_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: 3600
+
+      - name: Login to candidate Amazon ECR
+        id: login-candidate-ecr
+        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
+        with:
+          registries: ${{ env.CANDIDATE_ACCOUNT }}
+
+      - name: Find the candidate's Linux image index
+        id: index
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILD_ID" =~ ^1\.[0-9]+\.[0-9]+b[0-9]+$ ]] || { echo "::error::$BUILD_ID is not a candidate id"; exit 1; }
+          aws s3 cp --no-progress "s3://${CANDIDATE_BUCKET}/candidates/${BUILD_ID}/manifest.json" manifest.json
+          digest="$(jq -r '.imageIndex.digest' manifest.json)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::no image index in the manifest"; exit 1; }
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login to Integ Test Amazon ECR
+        id: login-integ-test-ecr
+        uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
+
+      - name: Copy Image
+        env:
+          CANDIDATE_REGISTRY: ${{ steps.login-candidate-ecr.outputs.registry }}
+          INTEG_TEST_REGISTRY: ${{ steps.login-integ-test-ecr.outputs.registry }}
+          DIGEST: ${{ steps.index.outputs.digest }}
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          set -euo pipefail
+          if aws ecr describe-images --repository-name "${ECR_INTEGRATION_TEST_REPO}" --image-ids "imageTag=${BUILD_ID}" > /dev/null 2>&1; then
+            echo "${ECR_INTEGRATION_TEST_REPO}:${BUILD_ID} exists; left as it is"
+            exit 0
+          fi
+          docker buildx imagetools create -t "${INTEG_TEST_REGISTRY}/${ECR_INTEGRATION_TEST_REPO}:${BUILD_ID}" \
+            "${CANDIDATE_REGISTRY}/${CANDIDATE_REPOSITORY}@${DIGEST}"

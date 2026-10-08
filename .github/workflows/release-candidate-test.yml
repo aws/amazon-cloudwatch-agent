@@ -4,6 +4,9 @@
 name: Test Release Candidate
 env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
+  # With a request_id (PDD 66 D83): the blocking subset runs here and the Result job writes result.json for the caller.
+  RESULT_ROLE: arn:aws:iam::019141478986:role/CWAgentCandidateGithubTestsResult
+  RESULT_BUCKET: cwagent-candidate-results-019141478986
 
 on:
   workflow_dispatch:
@@ -15,6 +18,20 @@ on:
       test_repo_branch:
         description: 'Override for the test repo branch (default is main)'
         type: string
+      artifact_source:
+        description: 'release-bucket (default) or candidate-store (CWAgentCandidate)'
+        type: string
+        default: release-bucket
+      request_id:
+        description: 'Optional: 32 hex characters. When set, run blocking_set here and write result.json for the caller'
+        type: string
+      blocking_set:
+        description: 'With request_id: JSON list of {"testDir", "os", "arc"?} entries of the EC2 Linux matrix'
+        type: string
+      run_full_matrix:
+        description: 'With request_id: also start test-artifacts.yml (advisory)'
+        type: string
+        default: 'false'
 
 jobs:
   OutputEnvVariables:
@@ -23,6 +40,15 @@ jobs:
     outputs:
       CWA_GITHUB_TEST_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
     steps:
+      - name: Check request inputs
+        if: ${{ inputs.request_id != '' }}
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+          BLOCKING_SET: ${{ inputs.blocking_set }}
+        run: |
+          [[ "$REQUEST_ID" =~ ^[0-9a-f]{32}$ ]] || { echo "::error::request_id must be 32 hex characters"; exit 1; }
+          jq -e 'type == "array" and length > 0' <<< "$BLOCKING_SET" > /dev/null || { echo "::error::blocking_set must be a non-empty JSON list"; exit 1; }
+
       - name: SetOutputs
         id: set-outputs
         env:
@@ -46,9 +72,11 @@ jobs:
       contents: read
     with:
       build_id: ${{ inputs.build_id }}
+      artifact_source: ${{ inputs.artifact_source }}
 
   StartIntegrationTests:
     needs: [ RepackageArtifacts, OutputEnvVariables ]
+    if: ${{ inputs.request_id == '' || inputs.run_full_matrix == 'true' }}
     permissions:
       actions: write
     runs-on: ubuntu-latest
@@ -60,3 +88,142 @@ jobs:
           INPUT_BUILD_ID: ${{ inputs.build_id }}
           OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
         run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH"
+
+  BlockingMatrix:
+    name: 'BlockingMatrix'
+    if: ${{ inputs.request_id != '' }}
+    needs: [OutputEnvVariables]
+    runs-on: ubuntu-latest
+    outputs:
+      ec2_linux_matrix: ${{ steps.select.outputs.ec2_linux_matrix }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: aws/amazon-cloudwatch-agent-test
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        with:
+          go-version: ~1.26.4
+
+      - name: Select the blocking subset
+        id: select
+        env:
+          BLOCKING_SET: ${{ inputs.blocking_set }}
+        run: |
+          set -euo pipefail
+          go run --tags=generator generator/test_case_generator.go
+          matrix="$(jq -c --argjson set "$BLOCKING_SET" '[.[] | . as $t | select(any($set[];
+            .testDir == $t.test_dir and .os == $t.os and ((.arc // $t.arc) == $t.arc)))]' \
+            generator/resources/ec2_linux_complete_test_matrix.json)"
+          count="$(jq length <<< "$matrix")"
+          echo "blocking EC2 Linux tests: ${count}"
+          [ "$count" -ge 1 ] || { echo "::error::the blocking set matches no EC2 Linux test"; exit 1; }
+          echo "ec2_linux_matrix=${matrix}" >> "$GITHUB_OUTPUT"
+
+  StartLocalStack:
+    name: 'StartLocalStack'
+    if: ${{ inputs.request_id != '' }}
+    needs: [OutputEnvVariables]
+    uses: ./.github/workflows/start-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: aws/amazon-cloudwatch-agent-test
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      test_repo_url: https://github.com/aws/amazon-cloudwatch-agent-test.git
+      github_sha: ${{ inputs.build_id }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  BlockingEC2Linux:
+    name: 'BlockingEC2Linux'
+    if: ${{ inputs.request_id != '' }}
+    needs: [RepackageArtifacts, BlockingMatrix, StartLocalStack, OutputEnvVariables]
+    uses: ./.github/workflows/ec2-integration-test.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      build_id: ${{ inputs.build_id }}
+      test_dir: terraform/ec2/linux
+      job_id: candidate-poc-blocking-ec2-linux
+      test_props: ${{ needs.BlockingMatrix.outputs.ec2_linux_matrix }}
+      test_repo_name: aws/amazon-cloudwatch-agent-test
+      test_repo_url: https://github.com/aws/amazon-cloudwatch-agent-test.git
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      localstack_host: ${{ needs.StartLocalStack.outputs.local_stack_host_name }}
+      region: us-west-2
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+      is_selinux_test: false
+      is_onprem_test: false
+
+  StopLocalStack:
+    name: 'StopLocalStack'
+    if: ${{ always() && inputs.request_id != '' && needs.StartLocalStack.result == 'success' }}
+    needs: [StartLocalStack, BlockingEC2Linux, OutputEnvVariables]
+    uses: ./.github/workflows/stop-localstack.yml
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      region: us-west-2
+      test_repo_name: aws/amazon-cloudwatch-agent-test
+      test_repo_branch: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      terraform_assume_role: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
+      github_sha: ${{ inputs.build_id }}
+      s3_integration_bucket: ${{ vars.S3_INTEGRATION_BUCKET }}
+
+  Result:
+    name: 'Result'
+    if: ${{ always() && inputs.request_id != '' }}
+    needs: [OutputEnvVariables, RepackageArtifacts, BlockingMatrix, StartLocalStack, BlockingEC2Linux]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Check inputs
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          [[ "$BUILD_ID" =~ ^1\.[0-9]+\.[0-9]+b[0-9]+$ ]] || exit 1
+          [[ "$REQUEST_ID" =~ ^[0-9a-f]{32}$ ]] || exit 1
+
+      - name: Configure AWS Credentials (result bucket, put-only)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.RESULT_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: 900
+
+      - name: Write result.json
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+          REQUEST_ID: ${{ inputs.request_id }}
+          BLOCKING_SET: ${{ inputs.blocking_set }}
+          CONCLUSION: ${{ needs.BlockingEC2Linux.result }}
+          NEEDS: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          jq -n --arg candidate "$BUILD_ID" --arg request "$REQUEST_ID" --arg conclusion "$CONCLUSION" \
+            --arg url "$RUN_URL" --arg run "$RUN_ID" --arg attempt "$RUN_ATTEMPT" --arg sha "$GITHUB_SHA" \
+            --arg ref "$GITHUB_REF" --argjson set "$BLOCKING_SET" --argjson needs "$NEEDS" \
+            '{schemaVersion: 1, candidateId: $candidate, requestId: $request, runUrl: $url, runId: $run,
+              runAttempt: $attempt, workflowRef: $ref, workflowSha: $sha,
+              blocking: {conclusion: $conclusion, set: $set},
+              jobs: ($needs | map_values(.result))}' > result.json
+          cat result.json
+          aws s3api put-object --bucket "$RESULT_BUCKET" --key "results/${BUILD_ID}/${REQUEST_ID}/result.json" \
+            --body result.json --content-type application/json --if-none-match '*'
