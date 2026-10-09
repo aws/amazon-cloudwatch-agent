@@ -31,6 +31,24 @@ var (
 		"cwagent-monitoring-config-e2e-eks-Worker-Role",
 		"cwagent-operator-eks-Worker-Role",
 		"cwagent-operator-helm-integ-Worker-Role",
+		// Roles from the amazon-cloudwatch-agent-test terraform/eks/daemon/* dirs. They are normally removed by
+		// terraform destroy, but leak whenever destroy does not complete (e.g. otel-performance before its destroy
+		// was given cwagent_image_tag).
+		"cwagent-attr-limit-eks-Worker-Role",
+		"cwagent-attr-limit-pod-identity",
+		"cwagent-liscsi-eks-Worker-Role",
+		"cwagent-otel-ebs-csi-pod-identity",
+		"cwagent-otel-efa-pod-identity",
+		"cwagent-otel-efa-Worker-Role",
+		"cwagent-otel-eks-Worker-Role",
+		"cwagent-otel-gpu-pod-identity",
+		"cwagent-otel-gpu-Worker-Role",
+		"cwagent-otel-karpenter",
+		"cwagent-otel-liscsi-eks-Worker-Role",
+		"cwagent-otel-liscsi-pod-identity",
+		"cwagent-otel-neuron-pod-identity",
+		"cwagent-otel-neuron-Worker-Role",
+		"cwagent-otel-pod-identity",
 	}
 )
 

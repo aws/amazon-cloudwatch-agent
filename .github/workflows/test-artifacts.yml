@@ -511,7 +511,7 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
             -var="test_name=$MATRIX_OS" \
@@ -527,9 +527,9 @@ jobs:
             -var="local_stack_host_name=$LOCALSTACK_HOST" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="ssh_key_name=${KEY_NAME}" \
-            -var="test_dir=$MATRIX_TEST_DIR" ; then terraform destroy -auto-approve
+            -var="test_dir=$MATRIX_TEST_DIR" ; then terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -567,7 +567,7 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="ssh_key_name=${KEY_NAME}" \
             -var="github_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
@@ -578,9 +578,9 @@ jobs:
             -var="github_test_repo=${{env.CWA_GITHUB_TEST_REPO_URL}}" \
             -var="github_test_repo_branch=$OUT_REPO_BRANCH" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
-            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -614,7 +614,7 @@ jobs:
             else
               cd terraform/ec2/linux
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve
 
   EC2LinuxIntegrationTest-0:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
@@ -862,7 +862,7 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="ssh_key_name=${KEY_NAME}" \
@@ -874,9 +874,9 @@ jobs:
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}" \
             -var="github_test_repo_branch=$OUT_REPO_BRANCH" \
             -var="runner_ip=$RUNNER_IP" ; then
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -908,7 +908,7 @@ jobs:
             else
               cd terraform/ec2/win
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -963,7 +963,7 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}" \
             -var="ssh_key_name=${KEY_NAME}"  \
             -var="arc=$MATRIX_ARC" \
@@ -973,9 +973,9 @@ jobs:
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="license_manager_arn=${{ env.LICENSE_MANAGER_ARN }}" \
             -var="s3_bucket=${S3_INTEGRATION_BUCKET}"; then
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1007,7 +1007,7 @@ jobs:
             else
               cd terraform/ec2/mac
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve
 
   StopLocalStack:
     name: 'StopLocalStack'
@@ -1118,16 +1118,16 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=$INPUT_BUILD_ID" \
             -var="ec2_instance_type=$MATRIX_INSTANCE_TYPE" \
             -var="metadataEnabled=$MATRIX_METADATA_ENABLED" \
             -var="ami=$MATRIX_AMI"; then
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1159,7 +1159,7 @@ jobs:
             else
               cd terraform/ecs_ec2/daemon
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve
 
   ECSFargateIntegrationTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1212,13 +1212,13 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=$INPUT_BUILD_ID"; then
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1250,7 +1250,7 @@ jobs:
             else
               cd terraform/ecs_fargate/linux
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve
 
   EKSIntegrationTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1299,6 +1299,9 @@ jobs:
           MATRIX_K8S_VERSION: ${{ matrix.arrays.k8sVersion }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        # Every destroy below passes cwagent_image_tag: terraform/eks/daemon/otel-performance declares it with no
+        # default, and without it destroy prompts for the value and waits until the step times out, holding the
+        # state lock so the cleanup step cannot destroy either. All dirs in this matrix declare the variable.
         run: |
           if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
             cd "$MATRIX_TERRAFORM_DIR"
@@ -1325,7 +1328,7 @@ jobs:
             HELM_VAR="-var=helm_chart_branch=$HELM_BRANCH"
           fi
 
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=$INPUT_BUILD_ID" \
@@ -1333,9 +1336,9 @@ jobs:
             -var="instance_type=$MATRIX_INSTANCE_TYPE" \
             -var="k8s_version=$MATRIX_K8S_VERSION" \
             $HELM_VAR; then
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve -var="cwagent_image_tag=$INPUT_BUILD_ID"
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve -var="cwagent_image_tag=$INPUT_BUILD_ID" && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1357,6 +1360,7 @@ jobs:
         uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
         env:
           MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
         with:
           max_attempts: 3
           timeout_minutes: 8
@@ -1367,7 +1371,7 @@ jobs:
             else
               cd terraform/eks/daemon
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve -var="cwagent_image_tag=$INPUT_BUILD_ID"
 
   EKSPrometheusIntegrationTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1421,14 +1425,14 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=$INPUT_BUILD_ID" \
             -var="k8s_version=$MATRIX_K8S_VERSION"; then
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1459,7 +1463,7 @@ jobs:
             else
               cd terraform/eks/deployment
             fi
-            terraform destroy --auto-approve
+            terraform destroy -input=false --auto-approve
 
   PerformanceTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1511,7 +1515,7 @@ jobs:
         run: |
           cd terraform/performance
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
             -var="cwa_github_sha=$INPUT_BUILD_ID" \
             -var="cwa_github_sha_date=$COMMIT_DATE" \
@@ -1522,9 +1526,9 @@ jobs:
             -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
             -var="family=$MATRIX_FAMILY"\
             -var="test_dir=$MATRIX_TEST_DIR" \
-            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1548,7 +1552,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/performance && terraform destroy --auto-approve
+          command: cd terraform/performance && terraform destroy -input=false --auto-approve
 
   EC2WinPerformanceTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1600,7 +1604,7 @@ jobs:
         run: |
           cd terraform/performance
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
             -var="cwa_github_sha=$INPUT_BUILD_ID" \
             -var="cwa_github_sha_date=$COMMIT_DATE" \
@@ -1611,9 +1615,9 @@ jobs:
             -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
             -var="family=$MATRIX_FAMILY"\
             -var="test_dir=$MATRIX_TEST_DIR" \
-            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1637,7 +1641,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/performance && terraform destroy --auto-approve
+          command: cd terraform/performance && terraform destroy -input=false --auto-approve
 
   StressTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1695,7 +1699,7 @@ jobs:
         run: |
           cd terraform/stress
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
             -var="cwa_github_sha=$INPUT_BUILD_ID" \
             -var="ami=$MATRIX_AMI" \
@@ -1704,9 +1708,9 @@ jobs:
             -var="ssh_key_name=${KEY_NAME}" \
             -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
             -var="test_dir=$MATRIX_TEST_DIR" \
-            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1730,7 +1734,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/stress && terraform destroy --auto-approve
+          command: cd terraform/stress && terraform destroy -input=false --auto-approve
 
   EC2WinStressTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
@@ -1789,7 +1793,7 @@ jobs:
         run: |
           cd terraform/stress
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="ssh_key_value=${PRIVATE_KEY}"  \
             -var="cwa_github_sha=$INPUT_BUILD_ID" \
             -var="ami=$MATRIX_AMI" \
@@ -1799,9 +1803,9 @@ jobs:
             -var="values_per_minute=$MATRIX_VALUES_PER_MINUTE"\
             -var="family=$MATRIX_FAMILY"\
             -var="test_dir=$MATRIX_TEST_DIR" \
-            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -auto-approve
+            -var="runner_ip=$RUNNER_IP" ; then terraform destroy -input=false -auto-approve
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1825,7 +1829,7 @@ jobs:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
-          command: cd terraform/stress && terraform destroy --auto-approve
+          command: cd terraform/stress && terraform destroy -input=false --auto-approve
 
   GPUEndToEndTest:
     name:  ${{matrix.arrays.testName}}
@@ -1880,7 +1884,7 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=$INPUT_BUILD_ID" \
@@ -1889,7 +1893,7 @@ jobs:
             -var="k8s_version=$MATRIX_K8S_VERSION"; then
             echo "Terraform apply successful."
           else
-            terraform destroy -auto-approve && exit 1
+            terraform destroy -input=false -auto-approve && exit 1
           fi
 
       - name: "[WIP] ✅ Passed"
@@ -1921,7 +1925,7 @@ jobs:
             else
               cd terraform/eks/addon/gpu
             fi
-            terraform destroy -auto-approve
+            terraform destroy -input=false -auto-approve
 
   AzureVMIntegrationTest:
     needs: [OutputEnvVariables]
@@ -1995,7 +1999,7 @@ jobs:
           AZURE_TOKEN_AUDIENCE: ${{ vars.AZURE_TOKEN_AUDIENCE }}
         run: |
           terraform init
-          terraform apply --auto-approve \
+          terraform apply -input=false --auto-approve \
             -var="region=us-east-2" \
             -var="runner_ip=$RUNNER_IP" \
             -var="cwa_github_sha=$BUILD_ID" \
@@ -2043,7 +2047,7 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/vm/linux
-            terraform destroy --auto-approve \
+            terraform destroy -input=false --auto-approve \
               -var="region=us-east-2" \
               -var="runner_ip=$RUNNER_IP" \
               -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
@@ -2140,7 +2144,7 @@ jobs:
           AZURE_TOKEN_AUDIENCE: ${{ vars.AZURE_TOKEN_AUDIENCE }}
         run: |
           terraform init
-          terraform apply --auto-approve \
+          terraform apply -input=false --auto-approve \
             -var="region=us-east-2" \
             -var="runner_ip=$RUNNER_IP" \
             -var="cwa_github_sha=$BUILD_ID" \
@@ -2189,7 +2193,7 @@ jobs:
           command: |
             cd terraform/azure/vm/win
             # State is local to the runner; a timed-out apply leaves a stale lock that otherwise blocks cleanup (run 35537032697 leaked 5 resources).
-            terraform destroy --auto-approve \
+            terraform destroy -input=false --auto-approve \
               -lock=false \
               -var="region=us-east-2" \
               -var="runner_ip=$RUNNER_IP" \
@@ -2283,7 +2287,7 @@ jobs:
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           terraform init
-          terraform apply --auto-approve \
+          terraform apply -input=false --auto-approve \
             -var="region=us-east-2" \
             -var="cwa_github_sha=$BUILD_ID" \
             -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
@@ -2326,7 +2330,7 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/aks
-            terraform destroy --auto-approve -var="region=us-east-2" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
+            terraform destroy -input=false --auto-approve -var="region=us-east-2" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
 
   AKSContainerInsightsIntegrationTest:
     needs: [OutputEnvVariables]
@@ -2412,7 +2416,7 @@ jobs:
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
         run: |
           terraform init
-          terraform apply --auto-approve \
+          terraform apply -input=false --auto-approve \
             -var="region=us-east-2" \
             -var="test_mode=containerinsights" \
             -var="test_dir=./test/azure/aks/containerinsights" \
@@ -2457,5 +2461,5 @@ jobs:
           retry_wait_seconds: 5
           command: |
             cd terraform/azure/aks
-            terraform destroy --auto-approve -var="region=us-east-2" -var="test_mode=containerinsights" -var="test_dir=./test/azure/aks/containerinsights" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
+            terraform destroy -input=false --auto-approve -var="region=us-east-2" -var="test_mode=containerinsights" -var="test_dir=./test/azure/aks/containerinsights" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
 
