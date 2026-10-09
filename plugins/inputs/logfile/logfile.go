@@ -268,6 +268,7 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 				fileconfig.MaxEventSize,
 				fileconfig.RetentionInDays,
 				fileconfig.BackpressureMode,
+				fileconfig.KmsKeyId,
 			)
 
 			src.AddCleanUpFn(func(ts *tailerSrc) func() {

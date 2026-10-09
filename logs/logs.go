@@ -52,6 +52,7 @@ type LogSrc interface {
 	Description() string
 	Retention() int32
 	Class() string
+	KmsKey() string
 	Stop()
 }
 

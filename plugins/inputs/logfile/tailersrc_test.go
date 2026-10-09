@@ -88,6 +88,7 @@ func TestTailerSrc(t *testing.T) {
 		constants.DefaultMaxEventSize,
 		1,
 		"",
+		"",
 	)
 
 	multilineWaitPeriod = 100 * time.Millisecond
@@ -199,6 +200,7 @@ func TestEventDoneCallback(t *testing.T) {
 		nil, // encoding
 		constants.DefaultMaxEventSize,
 		1,
+		"",
 		"",
 	)
 	multilineWaitPeriod = 100 * time.Millisecond
@@ -431,6 +433,7 @@ func setupTailer(t *testing.T, multiLineFn func(string) bool, maxEventSize int, 
 		maxEventSize,
 		1,
 		backpressureDrop,
+		"",
 	)
 
 	ts.SetOutput(func(evt logs.LogEvent) {

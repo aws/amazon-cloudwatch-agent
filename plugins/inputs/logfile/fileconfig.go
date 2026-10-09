@@ -82,6 +82,8 @@ type FileConfig struct {
 
 	//Indicate retention in days for log group
 	RetentionInDays int32 `toml:"retention_in_days"`
+	// KmsKeyId encrypts the log group when the agent creates it. Alias (alias/name) or key ARN.
+	KmsKeyId string `toml:"kms_key_id"`
 
 	Filters []*LogFilter `toml:"filters"`
 

@@ -40,6 +40,7 @@ type EventConfig struct {
 	LogGroupClass string                     `toml:"log_group_class"`
 	Destination   string                     `toml:"destination"`
 	Retention     int32                      `toml:"retention_in_days"`
+	KmsKeyId      string                     `toml:"kms_key_id"`
 }
 type Plugin struct {
 	FileStateFolder string          `toml:"file_state_folder"`
@@ -118,6 +119,7 @@ func (s *Plugin) Start(acc telegraf.Accumulator) error {
 			eventConfig.BatchReadSize,
 			eventConfig.Retention,
 			eventConfig.LogGroupClass,
+			eventConfig.KmsKeyId,
 		)
 		err = eventLog.Init()
 		if err != nil {

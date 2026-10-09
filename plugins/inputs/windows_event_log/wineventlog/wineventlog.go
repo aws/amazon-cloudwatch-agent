@@ -66,13 +66,14 @@ type windowsEventLog struct {
 	eventOffset   uint64
 	gapsToRead    state.RangeList
 	retention     int32
+	kmsKeyID      string
 	outputFn      func(logs.LogEvent)
 	done          chan struct{}
 	startOnce     sync.Once
 	resubscribeCh chan struct{}
 }
 
-func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventFilter, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int32, logGroupClass string) *windowsEventLog {
+func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventFilter, logGroupName, logStreamName, renderFormat, destination string, stateManager state.FileRangeManager, maximumToRead int, retention int32, logGroupClass, kmsKeyID string) *windowsEventLog {
 	eventLog := &windowsEventLog{
 		name:          name,
 		levels:        levels,
@@ -86,6 +87,7 @@ func NewEventLog(name string, levels []string, eventIDs []int, filters []*EventF
 		destination:   destination,
 		stateManager:  stateManager,
 		retention:     retention,
+		kmsKeyID:      kmsKeyID,
 
 		gapsToRead: nil,
 
@@ -157,6 +159,10 @@ func (w *windowsEventLog) Retention() int32 {
 
 func (w *windowsEventLog) Class() string {
 	return w.logGroupClass
+}
+
+func (w *windowsEventLog) KmsKey() string {
+	return w.kmsKeyID
 }
 
 func (w *windowsEventLog) Stop() {

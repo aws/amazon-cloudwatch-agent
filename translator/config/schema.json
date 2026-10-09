@@ -1046,6 +1046,9 @@
                   "retention_in_days": {
                     "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
                   },
+                  "kms_key_id": {
+                    "$ref": "#/definitions/logsDefinition/definitions/kmsKeyIdDefinition"
+                  },
                   "filters": {
                     "type": "array",
                     "items": {
@@ -1142,6 +1145,9 @@
                   },
                   "retention_in_days": {
                     "$ref": "#/definitions/logsDefinition/definitions/retentionInDaysDefinition"
+                  },
+                  "kms_key_id": {
+                    "$ref": "#/definitions/logsDefinition/definitions/kmsKeyIdDefinition"
                   },
                   "event_format": {
                     "type": "string",
@@ -1259,6 +1265,12 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 512
+        },
+        "kmsKeyIdDefinition": {
+          "type": "string",
+          "description": "KMS key used to encrypt the log group when the agent creates it. Use an alias (alias/key-name) or a key ARN.",
+          "minLength": 1,
+          "maxLength": 256
         },
         "retentionInDaysDefinition": {
           "type": "integer",
