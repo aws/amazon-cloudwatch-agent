@@ -198,7 +198,9 @@ func GenerateMergedJsonConfigMap(ctx *context.Context) (map[string]interface{}, 
 			return nil
 		})
 	if err != nil {
-		log.Printf("unable to scan config dir %v with error: %v", ctx.InputJsonDirPath(), err)
+		// A present but unreadable file is not "no config". Falling through
+		// loads the default document, which then validates successfully.
+		return nil, fmt.Errorf("unable to scan config dir %v with error: %v", ctx.InputJsonDirPath(), err)
 	}
 
 	if len(jsonConfigMapMap) == 0 {

@@ -388,6 +388,35 @@ func TestGenerateMergedJsonConfigMap_DefaultModeWithTmpJSONAndYAML(t *testing.T)
 	assert.NotNil(t, result)
 }
 
+func TestGenerateMergedJsonConfigMap_MalformedJSON(t *testing.T) {
+	testCases := map[string]struct {
+		name string
+		mode string
+	}{
+		"DefaultTmp": {name: "file_config.json.tmp", mode: "default"},
+		"Append":     {name: "file_config.json", mode: "append"},
+		"Remove":     {name: "file_config.json", mode: "remove"},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			require.NoError(t, os.WriteFile(filepath.Join(tmpDir, tc.name), []byte("a"), 0600))
+
+			translatorcontext.ResetContext()
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetInputJsonDirPath(tmpDir)
+			ctx.SetMultiConfig(tc.mode)
+
+			got, err := GenerateMergedJsonConfigMap(ctx)
+
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "unable to parse json")
+			assert.ErrorContains(t, err, "invalid character 'a'")
+			assert.Nil(t, got)
+		})
+	}
+}
+
 func TestGenerateMergedJsonConfigMap_EnvVarJSONWithYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(tmpDir, "otel.yaml"), nil, 0600))

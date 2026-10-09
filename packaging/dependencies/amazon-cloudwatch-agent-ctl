@@ -310,8 +310,12 @@ cwa_config() {
           rm -f "${OTEL_YAML}"
      else
           echo "Start configuration validation..."
-          runTranslatorCommand=$("${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config})
-          echo "${runTranslatorCommand}" || return
+          if ! runTranslatorCommand=$("${CMDDIR}/config-translator" --input "${JSON}" --input-dir "${JSON_DIR}" --output "${TOML}" --mode ${param_mode} --config "${COMMON_CONIG}" --multi-config ${multi_config}); then
+               echo "${runTranslatorCommand}"
+               echo "Configuration validation first phase failed"
+               exit 1
+          fi
+          echo "${runTranslatorCommand}"
 
           runAgentSchemaTestCommand="${CMDDIR}/amazon-cloudwatch-agent -schematest -config ${TOML}"
           echo "${runAgentSchemaTestCommand}"
