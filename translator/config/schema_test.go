@@ -4,12 +4,20 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPublishedSchemaIdentity(t *testing.T) {
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal([]byte(GetJsonSchema()), &doc))
+	assert.Equal(t, "http://json-schema.org/draft-04/schema#", doc["$schema"])
+	assert.Equal(t, SchemaURL, doc["$id"])
+}
 
 func TestGetJsonSchema(t *testing.T) {
 	jsonFile, err := os.ReadFile("./schema.json")
