@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "https://github.com/aws/amazon-cloudwatch-agent/raw/main/translator/config/schema.json",
   "type": "object",
   "description": "Amazon CloudWatch Agent JSON Schema",
   "properties": {

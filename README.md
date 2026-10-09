@@ -17,6 +17,7 @@ It operates by starting an opentelemetry collector and is capable of operating p
 * [Configuring IAM Roles](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-iam-roles-for-cloudwatch-agent.html)
 * [Installation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-on-EC2-Instance.html)
 * [Configuring the CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/create-cloudwatch-agent-configuration-file.html)
+* [JSON Schema for the agent config](translator/config/schema.json) ([raw](https://github.com/aws/amazon-cloudwatch-agent/raw/main/translator/config/schema.json)). The same file is installed as `amazon-cloudwatch-agent-schema.json`. Use it to validate generated configs or to generate types. The document on `main` is the current schema.
 
 ### Troubleshooting
 * [Troubleshooting CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/troubleshooting-CloudWatch-Agent.html)
