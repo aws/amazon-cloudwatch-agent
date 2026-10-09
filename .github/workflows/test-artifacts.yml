@@ -187,6 +187,7 @@ jobs:
       ecs_fargate_matrix: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
       eks_daemon_matrix: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
       eks_deployment_matrix: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
+      aks_matrix: ${{ steps.set-matrix.outputs.aks_matrix }}
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
@@ -247,6 +248,7 @@ jobs:
           echo "ecs_fargate_matrix=$(apply_filters generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "eks_daemon_matrix=$(apply_filters generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "eks_deployment_matrix=$(apply_filters generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "aks_matrix=$(apply_filters generator/resources/aks_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
 
@@ -301,6 +303,7 @@ jobs:
           ECS_FARGATE_MATRIX: ${{ steps.set-matrix.outputs.ecs_fargate_matrix }}
           EKS_DAEMON_MATRIX: ${{ steps.set-matrix.outputs.eks_daemon_matrix }}
           EKS_DEPLOYMENT_MATRIX: ${{ steps.set-matrix.outputs.eks_deployment_matrix }}
+          AKS_MATRIX: ${{ steps.set-matrix.outputs.aks_matrix }}
           EC2_LINUX_ITAR_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
           EC2_LINUX_CHINA_MATRIX: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
         run: |
@@ -331,6 +334,7 @@ jobs:
           echo "ecs_fargate_matrix: $ECS_FARGATE_MATRIX"
           echo "eks_daemon_matrix: $EKS_DAEMON_MATRIX"
           echo "eks_deployment_matrix: $EKS_DEPLOYMENT_MATRIX"
+          echo "aks_matrix: $AKS_MATRIX"
           echo "ec2_linux_itar_matrix: $EC2_LINUX_ITAR_MATRIX"
           echo "ec2_linux_china_matrix: $EC2_LINUX_CHINA_MATRIX"
 
@@ -2199,15 +2203,14 @@ jobs:
               -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
 
   AKSIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: inputs.test_dir_filter == './test/azure/aks' || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
-    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AKS-default-otel
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.aks_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        arrays: [{ wip: false }]
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.aks_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -2266,11 +2269,28 @@ jobs:
           go-version: ~1.26.4
           cache: false
 
+      - name: Resolve Helm chart branch
+        id: helm_branch
+        env:
+          HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
+        run: |
+          branch="${HELM_CHART_BRANCH_INPUT}"
+          if [ -z "$branch" ]; then
+            branch=$(curl -sL "https://api.github.com/repos/aws-observability/helm-charts/git/matching-refs/heads/release-" \
+              | jq -r '.[].ref | ltrimstr("refs/heads/")' \
+              | sort -V | tail -n 1)
+          fi
+          if [ -z "$branch" ]; then
+            branch="main"
+          fi
+          echo "Using helm chart branch: $branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
       - name: Terraform apply
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
-        working-directory: terraform/azure/aks
+        working-directory: ${{ matrix.arrays.terraform_dir }}
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
@@ -2281,16 +2301,22 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          HELM_CHART_BRANCH: ${{ steps.helm_branch.outputs.branch }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
         run: |
           terraform init
           terraform apply --auto-approve \
             -var="region=us-east-2" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="aks_node_vm_size=$MATRIX_INSTANCE_TYPE" \
             -var="cwa_github_sha=$BUILD_ID" \
             -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
             -var="cwagent_image_tag=$BUILD_ID" \
             -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
             -var="azure_vnet_name=$AZURE_VNET_NAME" \
-            -var="runner_ip=$RUNNER_IP"
+            -var="runner_ip=$RUNNER_IP" \
+            -var="helm_chart_branch=$HELM_CHART_BRANCH"
 
       - name: "[WIP] ✅ Passed"
         if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
@@ -2320,142 +2346,14 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
           AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          HELM_CHART_BRANCH: ${{ steps.helm_branch.outputs.branch }}
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            cd terraform/azure/aks
-            terraform destroy --auto-approve -var="region=us-east-2" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
-
-  AKSContainerInsightsIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: inputs.test_dir_filter == './test/azure/aks/containerinsights' || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
-    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AKS-container-insights
-    runs-on: ubuntu-latest
-    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
-    strategy:
-      fail-fast: false
-      matrix:
-        arrays: [{ wip: false }]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
-          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
-        with:
-          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
-          aws-region: us-east-2
-          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
-
-      - name: Login ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
-
-      # Fail fast if the build hasn't published the image yet, before the ~60-min
-      # cluster provision. The build publishes to us-west-2 only.
-      - name: Verify agent image exists
-        env:
-          IMAGE_TAG: ${{ inputs.build_id }}
-          ECR_REGION: us-west-2
-        run: |
-          if ! aws ecr describe-images \
-            --region "$ECR_REGION" \
-            --repository-name "${{ env.ECR_INTEGRATION_TEST_REPO }}" \
-            --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
-            echo "::error::No agent image ${{ env.ECR_INTEGRATION_TEST_REPO }}:$IMAGE_TAG in $ECR_REGION ECR (build job not finished or failed?)"
-            exit 1
-          fi
-
-      - name: Get Runner IP
-        id: runner_ip
-        run: |
-          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
-          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
-            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
-            exit 1
-          fi
-          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: 1.12.0
-          terraform_wrapper: false
-
-      - name: Setup Go
-        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
-        with:
-          go-version: ~1.26.4
-          cache: false
-
-      - name: Terraform apply
-        id: terraform_apply
-        continue-on-error: true
-        timeout-minutes: 60
-        working-directory: terraform/azure/aks
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          BUILD_ID: ${{ inputs.build_id }}
-          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
-          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
-          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
-        run: |
-          terraform init
-          terraform apply --auto-approve \
-            -var="region=us-east-2" \
-            -var="test_mode=containerinsights" \
-            -var="test_dir=./test/azure/aks/containerinsights" \
-            -var="cwa_github_sha=$BUILD_ID" \
-            -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
-            -var="cwagent_image_tag=$BUILD_ID" \
-            -var="azure_resource_group=$AZURE_RESOURCE_GROUP" \
-            -var="azure_vnet_name=$AZURE_VNET_NAME" \
-            -var="runner_ip=$RUNNER_IP"
-
-      - name: "[WIP] ✅ Passed"
-        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
-        run: echo "::notice::WIP test passed"
-
-      - name: "[WIP] ⚠️ Failed (Overruled)"
-        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
-        run: |
-          echo "::warning::WIP test failed but allowed to continue"
-          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
-
-      - name: Fail if not WIP
-        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
-        run: exit 1
-
-      # cwagent_image_repo/_tag have no defaults, so destroy still has to resolve them.
-      - name: Terraform destroy
-        if: always()
-        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          BUILD_ID: ${{ inputs.build_id }}
-          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
-          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-          AZURE_VNET_NAME: ${{ vars.AZURE_VNET_NAME }}
-          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
-        with:
-          max_attempts: 3
-          timeout_minutes: 8
-          retry_wait_seconds: 5
-          command: |
-            cd terraform/azure/aks
-            terraform destroy --auto-approve -var="region=us-east-2" -var="test_mode=containerinsights" -var="test_dir=./test/azure/aks/containerinsights" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
-
+            cd "$MATRIX_TERRAFORM_DIR"
+            terraform destroy --auto-approve -var="region=us-east-2" -var="test_dir=$MATRIX_TEST_DIR" -var="aks_node_vm_size=$MATRIX_INSTANCE_TYPE" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP" -var="helm_chart_branch=$HELM_CHART_BRANCH"
