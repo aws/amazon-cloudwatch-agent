@@ -190,6 +190,7 @@ jobs:
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+      gke_matrix: ${{ steps.set-matrix.outputs.gke_matrix }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -230,6 +231,7 @@ jobs:
           
           echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "gke_matrix=$(apply_filters generator/resources/gke_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           # ec2_linux_matrix is large — write to a file so the downstream Paginate
           # step can read it from disk. Passing it via a step-level env var can
           # exceed ARG_MAX (~2 MiB) on execve and prevent bash from starting.
@@ -283,6 +285,7 @@ jobs:
         env:
           EC2_GPU_MATRIX: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
           EKS_ADDON_MATRIX: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+          GKE_MATRIX: ${{ steps.set-matrix.outputs.gke_matrix }}
           EC2_LINUX_PAGE_COUNT: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
           EC2_LINUX_MATRIX_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
           EC2_LINUX_MATRIX_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
@@ -306,6 +309,7 @@ jobs:
         run: |
           echo "ec2_gpu_matrix: $EC2_GPU_MATRIX"
           echo "eks_addon_matrix: $EKS_ADDON_MATRIX"
+          echo "gke_matrix: $GKE_MATRIX"
           echo "ec2_linux_matrix pages: $EC2_LINUX_PAGE_COUNT"
           for i in 0 1 2 3 4; do
             page="$EC2_LINUX_MATRIX_0"
@@ -2459,3 +2463,282 @@ jobs:
             cd terraform/azure/aks
             terraform destroy --auto-approve -var="region=us-east-2" -var="test_mode=containerinsights" -var="test_dir=./test/azure/aks/containerinsights" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
 
+
+  GCEIntegrationTest:
+    needs: [OutputEnvVariables]
+    if: contains(inputs.test_dir_filter, './test/gcp/gce') || inputs.test_dir_filter == './test/gcp' || inputs.test_dir_filter == ''
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}GCE-default-otel
+    runs-on: ubuntu-latest
+    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: [{ wip: false }]
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+      - name: Download pre-built agent .deb
+        env:
+          DEB_S3_URI: "s3://${{ env.S3_INTEGRATION_BUCKET }}/integration-test/binary/${{ inputs.build_id }}/linux/amd64/amazon-cloudwatch-agent.deb"
+        run: |
+          if ! aws s3 ls "$DEB_S3_URI" >/dev/null 2>&1; then
+            echo "::error::No agent .deb at $DEB_S3_URI"
+            exit 1
+          fi
+          aws s3 cp "$DEB_S3_URI" "${{ github.workspace }}/amazon-cloudwatch-agent.deb" --no-progress
+      - name: Get Runner IP
+        id: runner_ip
+        run: |
+          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
+            exit 1
+          fi
+          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.0
+      # Keyless GCP auth: the job's GitHub OIDC token is exchanged via Workload Identity
+      # Federation for short-lived credentials impersonating the CI service account
+      # (service-account keys are disabled by org policy). The action writes ADC that the
+      # google provider and the destroy step pick up automatically.
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: projects/172692301120/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: otel-collector-integ-tests@omnihorizonteam.iam.gserviceaccount.com
+      - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
+        timeout-minutes: 45
+        working-directory: terraform/gcp/gce
+        env:
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          BUILD_ID: ${{ inputs.build_id }}
+          AGENT_DEB_PATH: ${{ github.workspace }}/amazon-cloudwatch-agent.deb
+          TEST_REPO_URL: ${{ env.CWA_GITHUB_TEST_REPO_URL }}
+          TEST_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+          GCP_NETWORK_NAME: ${{ vars.GCP_NETWORK_NAME }}
+        run: |
+          terraform init
+          terraform apply --auto-approve \
+            -var="region=us-east-2" \
+            -var="runner_ip=$RUNNER_IP" \
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="agent_deb_path=$AGENT_DEB_PATH" \
+            -var="github_test_repo=$TEST_REPO_URL" \
+            -var="github_test_repo_branch=$TEST_REPO_BRANCH" \
+            -var="gcp_project=$GCP_PROJECT" \
+            -var="gcp_network_name=$GCP_NETWORK_NAME"
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+      # Only the vars destroy actually resolves: runner_ip has no default, the provider needs the
+      # project, and the network/subnetwork data sources are read during the destroy plan. The
+      # build/test-repo vars feed provisioners only, which do not run on destroy.
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+          GCP_NETWORK_NAME: ${{ vars.GCP_NETWORK_NAME }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/gcp/gce
+            terraform destroy --auto-approve \
+              -var="region=us-east-2" \
+              -var="runner_ip=$RUNNER_IP" \
+              -var="gcp_project=$GCP_PROJECT" \
+              -var="gcp_network_name=$GCP_NETWORK_NAME"
+
+  GKEIntegrationTest:
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.gke_matrix != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.gke_matrix) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_NAME }}
+          ref: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-east-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
+
+      # Fail fast if the build hasn't published the image yet, before the cluster
+      # provision (mirrors the VM job's .deb pre-check). The build publishes to
+      # us-west-2 only, so query there rather than this job's us-east-2 credentials.
+      - name: Verify agent image exists
+        env:
+          IMAGE_TAG: ${{ inputs.build_id }}
+          ECR_REGION: us-west-2
+        run: |
+          if ! aws ecr describe-images \
+            --region "$ECR_REGION" \
+            --repository-name "${{ env.ECR_INTEGRATION_TEST_REPO }}" \
+            --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "::error::No agent image ${{ env.ECR_INTEGRATION_TEST_REPO }}:$IMAGE_TAG in $ECR_REGION ECR (build job not finished or failed?)"
+            exit 1
+          fi
+
+      - name: Get Runner IP
+        id: runner_ip
+        run: |
+          ip="$(curl -sf --retry 3 --retry-delay 2 --max-time 15 https://checkip.amazonaws.com)"
+          if [[ ! "$ip" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then
+            echo "::error::Could not resolve a valid runner IPv4 (got: '$ip')"
+            exit 1
+          fi
+          echo "ip=${ip}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.12.0
+          terraform_wrapper: false
+
+      - name: Setup Go
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
+        with:
+          go-version: ~1.26.4
+          cache: false
+
+      # Keyless GCP auth: the job's GitHub OIDC token is exchanged via Workload Identity
+      # Federation for short-lived credentials impersonating the CI service account
+      # (service-account keys are disabled by org policy). The action writes ADC that the
+      # google provider and the destroy step pick up automatically.
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: projects/172692301120/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: otel-collector-integ-tests@omnihorizonteam.iam.gserviceaccount.com
+
+      - name: Resolve Helm chart branch
+        id: helm_branch
+        env:
+          HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
+        run: |
+          branch="${HELM_CHART_BRANCH_INPUT}"
+          if [ -z "$branch" ]; then
+            branch=$(curl -sL "https://api.github.com/repos/aws-observability/helm-charts/git/matching-refs/heads/release-" \
+              | jq -r '.[].ref | ltrimstr("refs/heads/")' \
+              | sort -V | tail -n 1)
+          fi
+          if [ -z "$branch" ]; then
+            branch="main"
+          fi
+          echo "Using helm chart branch: $branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform apply
+        id: terraform_apply
+        continue-on-error: true
+        timeout-minutes: 60
+        working-directory: ${{ matrix.arrays.terraform_dir }}
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+          GCP_NETWORK_NAME: ${{ vars.GCP_NETWORK_NAME }}
+          HELM_CHART_BRANCH: ${{ steps.helm_branch.outputs.branch }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+        run: |
+          terraform init
+          terraform apply --auto-approve \
+            -var="region=us-east-2" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="gke_node_machine_type=$MATRIX_INSTANCE_TYPE" \
+            -var="cwa_github_sha=$BUILD_ID" \
+            -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
+            -var="cwagent_image_tag=$BUILD_ID" \
+            -var="gcp_project=$GCP_PROJECT" \
+            -var="gcp_network_name=$GCP_NETWORK_NAME" \
+            -var="runner_ip=$RUNNER_IP" \
+            -var="helm_chart_branch=$HELM_CHART_BRANCH"
+
+      - name: "[WIP] ✅ Passed"
+        if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
+        run: echo "::notice::WIP test passed"
+
+      - name: "[WIP] ⚠️ Failed (Overruled)"
+        if: steps.terraform_apply.outcome == 'failure' && matrix.arrays.wip
+        run: |
+          echo "::warning::WIP test failed but allowed to continue"
+          echo "### ⚠️ WIP Test Failed (Overruled)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if not WIP
+        if: steps.terraform_apply.outcome == 'failure' && !matrix.arrays.wip
+        run: exit 1
+
+      # cwagent_image_repo/_tag have no defaults, so destroy still has to resolve them.
+      - name: Terraform destroy
+        if: always()
+        uses: nick-fields/retry@14672906e672a08bd6eeb15720e9ed3ce869cdd4 # v2.9.0
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+          CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
+          RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+          GCP_NETWORK_NAME: ${{ vars.GCP_NETWORK_NAME }}
+          HELM_CHART_BRANCH: ${{ steps.helm_branch.outputs.branch }}
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 8
+          retry_wait_seconds: 5
+          command: |
+            cd "$MATRIX_TERRAFORM_DIR"
+            terraform destroy --auto-approve \
+              -var="region=us-east-2" \
+              -var="test_dir=$MATRIX_TEST_DIR" \
+              -var="gke_node_machine_type=$MATRIX_INSTANCE_TYPE" \
+              -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
+              -var="cwagent_image_tag=$BUILD_ID" \
+              -var="gcp_project=$GCP_PROJECT" \
+              -var="gcp_network_name=$GCP_NETWORK_NAME" \
+              -var="runner_ip=$RUNNER_IP" \
+              -var="helm_chart_branch=$HELM_CHART_BRANCH"
