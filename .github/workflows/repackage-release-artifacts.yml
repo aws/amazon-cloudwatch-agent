@@ -6,7 +6,10 @@ env:
   TERRAFORM_AWS_ASSUME_ROLE: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE }}
   TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
   S3_INTEGRATION_BUCKET: ${{ vars.S3_INTEGRATION_BUCKET }}
-  S3_RELEASE_BUCKET: amazon-cloud-watch-agent
+  # artifact_source=candidate-store: the same artifacts, in the same layout, under a per-build prefix of another bucket.
+  S3_RELEASE_BUCKET: ${{ inputs.artifact_source == 'candidate-store' && format('{0}/candidates/{1}/s3', vars.CANDIDATE_STORE_BUCKET, inputs.build_id) || 'amazon-cloud-watch-agent' }}
+  ARTIFACTS_REGISTRY_ID: ${{ inputs.artifact_source == 'candidate-store' && vars.CANDIDATE_STORE_REGISTRY_ID || secrets.RELEASE_ARTIFACTS_ACCOUNT_ID }}
+  ARTIFACTS_REPOSITORY: ${{ inputs.artifact_source == 'candidate-store' && vars.CANDIDATE_STORE_REPOSITORY || 'cloudwatch-agent' }}
   S3_RELEASE_REPO: cloudwatch-agent
   TERRAFORM_AWS_ASSUME_ROLE_ITAR: ${{ vars.TERRAFORM_AWS_ASSUME_ROLE_ITAR }}
   S3_INTEGRATION_BUCKET_ITAR: ${{ vars.S3_INTEGRATION_BUCKET_ITAR }}
@@ -20,6 +23,10 @@ on:
         description: 'The build ID (release candidate build number or GitHub commit SHA)'
         type: string
         required: true
+      artifact_source:
+        description: 'Where to copy the artifacts from: release-bucket (default) or candidate-store'
+        type: string
+        default: release-bucket
 
 jobs:
   RepackageS3Artifcats:
@@ -37,6 +44,13 @@ jobs:
           role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Configure AWS Credentials (candidate store)
+        if: ${{ inputs.artifact_source == 'candidate-store' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.CANDIDATE_STORE_ROLE }}
+          aws-region: us-west-2
 
       - name: Download Artifacts
         id: download-artifacts
@@ -57,6 +71,14 @@ jobs:
 
           mkdir -p darwin/arm64
           aws s3 cp --no-progress "s3://${{ env.S3_RELEASE_BUCKET }}/darwin/arm64/${BUILD_ID}/AmazonCloudWatchAgent.zip" ./darwin/arm64
+
+      - name: Configure AWS Credentials (integration test account)
+        if: ${{ inputs.artifact_source == 'candidate-store' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Re-upload Artifacts
         id: upload-artifacts
@@ -150,11 +172,18 @@ jobs:
           aws-region: us-west-2
           role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
+      - name: Configure AWS Credentials (candidate store)
+        if: ${{ inputs.artifact_source == 'candidate-store' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.CANDIDATE_STORE_ROLE }}
+          aws-region: us-west-2
+
       - name: Login to Release Artifacts Amazon ECR
         id: login-artifacts-ecr
         uses: aws-actions/amazon-ecr-login@183a1442edf41672e66566b7fc560e297a290896 # v2.1.1
         with:
-          registries: ${{ secrets.RELEASE_ARTIFACTS_ACCOUNT_ID }}
+          registries: ${{ env.ARTIFACTS_REGISTRY_ID }}
 
       - name: Pull Image
         id: pull-image
@@ -162,7 +191,15 @@ jobs:
           ARTIFACTS_REGISTRY: ${{ steps.login-artifacts-ecr.outputs.registry }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
-          docker pull "$ARTIFACTS_REGISTRY/cloudwatch-agent:$INPUT_BUILD_ID"
+          docker pull "$ARTIFACTS_REGISTRY/$ARTIFACTS_REPOSITORY:$INPUT_BUILD_ID"
+
+      - name: Configure AWS Credentials (integration test account)
+        if: ${{ inputs.artifact_source == 'candidate-store' }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ env.TERRAFORM_AWS_ASSUME_ROLE }}
+          aws-region: us-west-2
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
 
       - name: Login to Integ Test Amazon ECR
         id: login-integ-test-ecr
@@ -175,4 +212,4 @@ jobs:
           INTEG_TEST_REGISTRY: ${{ steps.login-integ-test-ecr.outputs.registry }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
-          docker buildx imagetools create -t "$INTEG_TEST_REGISTRY/cwagent-integration-test:$INPUT_BUILD_ID" "$ARTIFACTS_REGISTRY/cloudwatch-agent:$INPUT_BUILD_ID"
+          docker buildx imagetools create -t "$INTEG_TEST_REGISTRY/cwagent-integration-test:$INPUT_BUILD_ID" "$ARTIFACTS_REGISTRY/$ARTIFACTS_REPOSITORY:$INPUT_BUILD_ID"
