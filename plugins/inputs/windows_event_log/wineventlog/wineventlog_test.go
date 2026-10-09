@@ -396,7 +396,7 @@ func newTestEventLogWithState(t *testing.T, name string, levels []string, rl sta
 		MaxPersistedItems: 10,
 	})
 	return NewEventLog(name, levels, EVENTIDS, FILTERS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
-		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS), file.Name()
+		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS, ""), file.Name()
 }
 
 func newTestEventLog(t *testing.T, name string, levels []string, eventids []int) *windowsEventLog {
@@ -407,7 +407,7 @@ func newTestEventLog(t *testing.T, name string, levels []string, eventids []int)
 		Name:            GROUP_NAME + "_" + STREAM_NAME + "_" + name,
 	})
 	return NewEventLog(name, levels, eventids, FILTERS, GROUP_NAME, STREAM_NAME, RENDER_FMT, DEST,
-		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS)
+		manager, BATCH_SIZE, RETENTION, LOG_GROUP_CLASS, "")
 }
 
 // MockWindowsEventAPI provides a mock implementation for testing

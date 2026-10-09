@@ -16,11 +16,39 @@ const (
 	logRetentionKey  = "retention_in_days"
 	logGroupKey      = "log_group_name"
 	logGroupClassKey = "log_group_class"
+	kmsKeyIdKey      = "kms_key_id"
 )
 
 func ValidateLogGroupFields(logConfigs []interface{}, currPath string) []interface{} {
 	logConfigs = validateLogRetentionSettings(logConfigs, currPath)
 	logConfigs = validateLogGroupClassSettings(logConfigs, currPath)
+	logConfigs = validateKmsKeySettings(logConfigs, currPath)
+	return logConfigs
+}
+
+func validateKmsKeySettings(logConfigs []interface{}, currPath string) []interface{} {
+	seen := make(map[string]string)
+	present := make(map[string]bool)
+	for _, logConfig := range logConfigs {
+		logConfigMap, ok := logConfig.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		logGroup, ok := logConfigMap[logGroupKey].(string)
+		if !ok || logGroup == "" {
+			continue
+		}
+		logGroup = strings.ToLower(logGroup)
+		kmsKey, _ := logConfigMap[kmsKeyIdKey].(string)
+		if present[logGroup] && seen[logGroup] != kmsKey {
+			translator.AddErrorMessages(
+				currPath,
+				fmt.Sprintf("Different kms_key_id values can't be set for the same log group: %v", logGroup))
+			continue
+		}
+		seen[logGroup] = kmsKey
+		present[logGroup] = true
+	}
 	return logConfigs
 }
 

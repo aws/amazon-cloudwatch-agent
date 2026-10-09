@@ -718,7 +718,7 @@ func testPreparationWithLogger(
 	s := newSender(logger, service, tm, retryDuration)
 	q := newQueue(
 		logger,
-		Target{"G", "S", util.StandardLogGroupClass, retention},
+		Target{"G", "S", util.StandardLogGroupClass, retention, ""},
 		flushTimeout,
 		entityProvider,
 		s,
@@ -752,10 +752,10 @@ func TestQueueCallbackRegistration(t *testing.T) {
 
 		logger := testutil.NewNopLogger()
 		q := &queue{
-			target:          Target{"G", "S", util.StandardLogGroupClass, -1},
+			target:          Target{"G", "S", util.StandardLogGroupClass, -1, ""},
 			logger:          logger,
-			converter:       newConverter(logger, Target{"G", "S", util.StandardLogGroupClass, -1}),
-			batch:           newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1}, nil),
+			converter:       newConverter(logger, Target{"G", "S", util.StandardLogGroupClass, -1, ""}),
+			batch:           newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1, ""}, nil),
 			sender:          mockSender,
 			eventsCh:        make(chan logs.LogEvent, 100),
 			flushCh:         make(chan struct{}),
@@ -794,10 +794,10 @@ func TestQueueCallbackRegistration(t *testing.T) {
 
 		logger := testutil.NewNopLogger()
 		q := &queue{
-			target:          Target{"G", "S", util.StandardLogGroupClass, -1},
+			target:          Target{"G", "S", util.StandardLogGroupClass, -1, ""},
 			logger:          logger,
-			converter:       newConverter(logger, Target{"G", "S", util.StandardLogGroupClass, -1}),
-			batch:           newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1}, nil),
+			converter:       newConverter(logger, Target{"G", "S", util.StandardLogGroupClass, -1, ""}),
+			batch:           newLogEventBatch(Target{"G", "S", util.StandardLogGroupClass, -1, ""}, nil),
 			sender:          mockSender,
 			eventsCh:        make(chan logs.LogEvent, 100),
 			flushCh:         make(chan struct{}),

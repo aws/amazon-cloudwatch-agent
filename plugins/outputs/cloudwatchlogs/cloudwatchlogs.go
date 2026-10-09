@@ -128,11 +128,16 @@ func (c *CloudWatchLogs) CreateDest(group, stream string, retention int32, logGr
 		retention = -1
 	}
 
+	kmsKey := ""
+	if logSrc != nil {
+		kmsKey = logSrc.KmsKey()
+	}
 	t := pusher.Target{
 		Group:     group,
 		Stream:    stream,
 		Retention: retention,
 		Class:     logGroupClass,
+		KmsKey:    kmsKey,
 	}
 	// getDest may return a nil *cwDest on client-creation failure. Explicitly return
 	// a nil LogDest interface (not a typed-nil box) so callers can `dest == nil` check.

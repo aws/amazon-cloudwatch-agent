@@ -32,6 +32,8 @@ const (
 type Target struct {
 	Group, Stream, Class string
 	Retention            int32
+	// KmsKey is a KMS key alias (alias/name) or ARN applied when the log group is created.
+	KmsKey string
 }
 
 type TargetManager interface {
@@ -148,17 +150,14 @@ func (m *targetManager) isResourceCreated(err error, resourceName string) bool {
 }
 
 func (m *targetManager) createLogGroup(ctx context.Context, t Target) error {
-	var input *cloudwatchlogs.CreateLogGroupInput
+	input := &cloudwatchlogs.CreateLogGroupInput{
+		LogGroupName: &t.Group,
+	}
 	if t.Class != "" {
-		logGroupClass := types.LogGroupClass(t.Class)
-		input = &cloudwatchlogs.CreateLogGroupInput{
-			LogGroupName:  &t.Group,
-			LogGroupClass: logGroupClass,
-		}
-	} else {
-		input = &cloudwatchlogs.CreateLogGroupInput{
-			LogGroupName: &t.Group,
-		}
+		input.LogGroupClass = types.LogGroupClass(t.Class)
+	}
+	if t.KmsKey != "" {
+		input.KmsKeyId = aws.String(t.KmsKey)
 	}
 	_, err := m.service.CreateLogGroup(ctx, input)
 	if err == nil {

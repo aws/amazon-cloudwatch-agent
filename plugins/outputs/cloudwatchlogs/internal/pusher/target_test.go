@@ -613,6 +613,24 @@ func TestCalculateBackoff(t *testing.T) {
 	assert.True(t, totalDelay <= 30*time.Second, "Total delay across all attempts should not exceed 30 seconds, but was %v", totalDelay)
 }
 
+func TestCreateLogGroupUsesKmsKey(t *testing.T) {
+	logger := testutil.NewNopLogger()
+	target := Target{Group: "G", Stream: "S", KmsKey: "alias/app-logs"}
+
+	mockService := new(mockLogsService)
+	mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+		Return(&cloudwatchlogs.CreateLogStreamOutput{}, &types.ResourceNotFoundException{}).Once()
+	mockService.On("CreateLogGroup", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.CreateLogGroupInput) bool {
+		return input.KmsKeyId != nil && *input.KmsKeyId == "alias/app-logs" && *input.LogGroupName == "G"
+	}), mock.Anything).Return(&cloudwatchlogs.CreateLogGroupOutput{}, nil).Once()
+	mockService.On("CreateLogStream", mock.Anything, mock.Anything, mock.Anything).
+		Return(&cloudwatchlogs.CreateLogStreamOutput{}, nil).Once()
+
+	manager := NewTargetManager(logger, mockService)
+	assert.NoError(t, manager.InitTarget(target))
+	mockService.AssertExpectations(t)
+}
+
 func assertCacheLen(t *testing.T, manager TargetManager, count int) {
 	t.Helper()
 	tm := manager.(*targetManager)

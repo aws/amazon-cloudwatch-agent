@@ -72,6 +72,7 @@ type tailerSrc struct {
 	enc                encoding.Encoding
 	maxEventSize       int
 	retentionInDays    int32
+	kmsKeyID           string
 
 	outputFn           func(logs.LogEvent)
 	isMLStart          func(string) bool
@@ -101,6 +102,7 @@ func NewTailerSrc(
 	maxEventSize int,
 	retentionInDays int32,
 	backpressureMode logscommon.BackpressureMode,
+	kmsKeyID string,
 ) *tailerSrc {
 	ts := &tailerSrc{
 		group:              group,
@@ -118,6 +120,7 @@ func NewTailerSrc(
 		enc:                enc,
 		maxEventSize:       maxEventSize,
 		retentionInDays:    retentionInDays,
+		kmsKeyID:           kmsKeyID,
 		backpressureFdDrop: !autoRemoval && backpressureMode == logscommon.LogBackpressureModeFDRelease,
 		done:               make(chan struct{}),
 	}
@@ -163,6 +166,10 @@ func (ts *tailerSrc) Destination() string {
 
 func (ts *tailerSrc) Retention() int32 {
 	return ts.retentionInDays
+}
+
+func (ts *tailerSrc) KmsKey() string {
+	return ts.kmsKeyID
 }
 
 func (ts *tailerSrc) Class() string {
