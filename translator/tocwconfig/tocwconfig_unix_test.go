@@ -152,9 +152,7 @@ func TestCombinedV1V2EKSConfig(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeEC2)
 	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
 
-	// Cannot use checkTranslation here because the container_insights prometheus
-	// receiver references /var/run/secrets/kubernetes.io/serviceaccount/token
-	// which only exists inside K8s pods. Translate without collector validation.
+	// Translate without collector validation; the golden holds the unvalidated config.
 	agent.Global_Config = *new(agent.Agent)
 	translator.SetTargetPlatform("linux")
 	var input interface{}
@@ -249,7 +247,7 @@ func TestDefaultOtelConfigAKSTranslation(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeAzureVM)
 	context.CurrentContext().SetKubernetesMode(config.ModeAKS)
 	context.CurrentContext().SetRunInContainer(true)
-	// container_insights has no cluster_name in the default config, so it falls
+	// The default config has no cluster_name, so it falls
 	// back to the K8S_CLUSTER_NAME env var (there is no EC2 tagger on Azure).
 	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
 	// No AWS region source exists on Azure at translation time, so region
@@ -276,7 +274,7 @@ func TestDefaultOtelConfigGKETranslation(t *testing.T) {
 	context.CurrentContext().SetMode(config.ModeGCE)
 	context.CurrentContext().SetKubernetesMode(config.ModeGKE)
 	context.CurrentContext().SetRunInContainer(true)
-	// container_insights has no cluster_name in the default config, so it falls
+	// The default config has no cluster_name, so it falls
 	// back to the K8S_CLUSTER_NAME env var (there is no EC2 tagger on GCP).
 	t.Setenv("K8S_CLUSTER_NAME", "test-cluster")
 	// No AWS region source exists on GCP at translation time, so region

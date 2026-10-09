@@ -437,14 +437,12 @@ func GetOrDefaultBool(conf *confmap.Conf, key string, defaultVal bool) bool {
 }
 
 // WatchReplicaSet reports whether the cluster-wide ReplicaSet informer (sets k8s.deployment.name) runs.
-// Default true; disabled when the collect-level or container_insights-level watch_replicaset key is false.
+// Default true; disabled when the collect-level watch_replicaset key is false.
 func WatchReplicaSet(conf *confmap.Conf) bool {
 	if conf == nil {
 		return true
 	}
-	collectKey := ConfigKey(OpenTelemetryKey, CollectKey, WatchReplicaSetKey)
-	ciKey := ConfigKey(OpenTelemetryKey, CollectKey, OtelContainerInsightsKey, WatchReplicaSetKey)
-	return GetOrDefaultBool(conf, collectKey, true) && GetOrDefaultBool(conf, ciKey, true)
+	return GetOrDefaultBool(conf, ConfigKey(OpenTelemetryKey, CollectKey, WatchReplicaSetKey), true)
 }
 
 // GetNumber gets the number value for the key. The switch works through
@@ -611,7 +609,7 @@ func GetClusterName(conf *confmap.Conf, key string) string {
 // confmap resolver's escapeDollarSigns pass and the expandconverter pass.
 //
 // Handles two syntaxes:
-//   - $1  → $$$$1  (bare dollar — used by both CI and Prometheus)
+//   - $1  → $$$$1  (bare dollar — used in Prometheus relabel configs)
 //   - ${1} → $$$${1} (brace notation — used in Prometheus customer configs)
 func EscapeDollarDigit(s string) string {
 	var out []byte
