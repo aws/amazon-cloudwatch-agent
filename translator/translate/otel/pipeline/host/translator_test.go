@@ -227,7 +227,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostCustomMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"awsentity/service/telegraf"},
+				processors: []string{"awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
