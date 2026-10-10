@@ -220,6 +220,18 @@ func (t *translator) translateAsRawMap() (component.Config, error) {
 // buildTimestampOperatorMap returns a regex_parser operator config as a raw map.
 // Using a raw map avoids the operator.Config marshaling bug when round-tripping through confmap.
 func buildTimestampOperatorMap(format, timezone string) map[string]any {
+	if layout, ok := timestamp.EpochStanzaLayout(format); ok {
+		return map[string]any{
+			"type":  "regex_parser",
+			"regex": timestamp.BuildRegexWithNamedCaptureGroup(format),
+			"timestamp": map[string]any{
+				"parse_from":  "attributes.timestamp",
+				"layout":      layout,
+				"layout_type": "epoch",
+			},
+		}
+	}
+
 	location := "Local"
 	if strings.EqualFold(timezone, "UTC") {
 		location = "UTC"

@@ -57,6 +57,52 @@ func TestBuildRegexWithNamedCaptureGroup(t *testing.T) {
 	}
 }
 
+func TestParseEpoch(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  time.Time
+	}{
+		{name: "seconds", value: "1700000000", want: time.Unix(1700000000, 0).UTC()},
+		{name: "milliseconds", value: "1700000000123", want: time.UnixMilli(1700000000123).UTC()},
+		{name: "microseconds", value: "1700000000123456", want: time.UnixMicro(1700000000123456).UTC()},
+		{name: "nanoseconds", value: "1700000000123456789", want: time.Unix(0, 1700000000123456789).UTC()},
+		{name: "fractional seconds", value: "1700000000.5", want: time.Unix(1700000000, 500000000).UTC()},
+		{name: "negative seconds", value: "-10", want: time.Unix(-10, 0).UTC()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseEpoch(tt.value)
+			require.NoError(t, err)
+			assert.True(t, tt.want.Equal(got), "got %s want %s", got, tt.want)
+		})
+	}
+}
+
+func TestParseEpochJSON(t *testing.T) {
+	line := `{"code":200,"time":1,"timestamp":1700000000123,"msg":"ok"}`
+	got, ok := ParseEpochJSON(line)
+	require.True(t, ok)
+	assert.True(t, time.UnixMilli(1700000000123).UTC().Equal(got))
+
+	line = `{"code":200,"time":"1700000000","msg":"ok"}`
+	got, ok = ParseEpochJSON(line)
+	require.True(t, ok)
+	assert.True(t, time.Unix(1700000000, 0).UTC().Equal(got))
+
+	_, ok = ParseEpochJSON("1700000000 plain")
+	assert.False(t, ok)
+}
+
+func TestBuildRegexEpoch(t *testing.T) {
+	assert.Equal(t, `-?\d+(?:\.\d+)?`, BuildRegex("%s"))
+	assert.Equal(t, `(?P<timestamp>-?\d+(?:\.\d+)?)`, BuildRegexWithNamedCaptureGroup("%s"))
+	assert.Equal(t, LayoutEpoch, BuildLayout("%s"))
+	layout, ok := EpochStanzaLayout("%s.%f")
+	require.True(t, ok)
+	assert.Equal(t, "s.ns", layout)
+}
+
 func TestBuildRegex(t *testing.T) {
 	result := BuildRegex("%Y-%m-%d %H:%M:%S")
 	assert.Equal(t, `\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2} \d{2}:\d{2}:\d{2}`, result)

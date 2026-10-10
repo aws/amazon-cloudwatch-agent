@@ -1004,6 +1004,7 @@
                     "maxLength": 4096
                   },
                   "timestamp_format": {
+                    "description": "Strftime format for the timestamp in each log line. %s reads a Unix epoch value (seconds, milliseconds, microseconds, or nanoseconds). On a JSON line, the timestamp, time, or @timestamp field is used.",
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 4096
@@ -2086,7 +2087,7 @@
                         "type": "string"
                       },
                       "timestamp_format": {
-                        "description": "Strftime format for parsing timestamps from log lines (e.g. %Y-%m-%d %H:%M:%S)",
+                        "description": "Strftime format for parsing timestamps from log lines (e.g. %Y-%m-%d %H:%M:%S). %s is Unix epoch seconds; %s.%f is epoch seconds with a fractional part.",
                         "type": "string"
                       },
                       "timezone": {
