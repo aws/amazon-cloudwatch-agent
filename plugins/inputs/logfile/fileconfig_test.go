@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/timestamp"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
 
@@ -679,6 +680,34 @@ func assertNotPublishedForFilters(t *testing.T, filters []*LogFilter, msg string
 		msg: msg,
 	})
 	assert.False(t, res)
+}
+
+func TestEpochTimestamp(t *testing.T) {
+	re := regexp.MustCompile("(" + timestamp.BuildRegex("%s") + ")")
+	fileConfig := &FileConfig{
+		TimestampRegexP: re,
+		TimestampLayout: []string{timestamp.LayoutEpoch},
+		TimezoneLoc:     time.UTC,
+	}
+
+	got, line := fileConfig.timestampFromLogLine("1700000000 hello")
+	assert.True(t, time.Unix(1700000000, 0).Equal(got))
+	assert.Equal(t, "1700000000 hello", line)
+
+	fileConfig.TrimTimestamp = true
+	got, line = fileConfig.timestampFromLogLine("1700000000 hello")
+	assert.True(t, time.Unix(1700000000, 0).Equal(got))
+	assert.Equal(t, "hello", line)
+
+	fileConfig.TrimTimestamp = false
+	entry := `{"code":200,"timestamp":1700000000123,"msg":"ok"}`
+	got, line = fileConfig.timestampFromLogLine(entry)
+	assert.True(t, time.UnixMilli(1700000000123).Equal(got))
+	assert.Equal(t, entry, line)
+
+	got, line = fileConfig.timestampFromLogLine("1700000000.5 event")
+	assert.True(t, time.Unix(1700000000, 500_000_000).Equal(got))
+	assert.Equal(t, "1700000000.5 event", line)
 }
 
 func initializeLogFilters(t *testing.T, filters []*LogFilter) []*LogFilter {

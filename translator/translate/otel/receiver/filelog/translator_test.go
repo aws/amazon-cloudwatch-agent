@@ -205,6 +205,26 @@ func TestTranslator_WithTimestampFormat_UppercaseUTC(t *testing.T) {
 	assert.Equal(t, "UTC", ts["location"])
 }
 
+func TestTranslator_WithEpochTimestamp(t *testing.T) {
+	tr := NewTranslator(
+		WithFilePath("/var/log/app.log"),
+		WithName("test_receiver"),
+		WithTimestampFormat("%s", "UTC"),
+	)
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	raw := cfg.(*rawMapConfig)
+	operators := raw.data["operators"].([]any)
+	op := operators[0].(map[string]any)
+	assert.Equal(t, "regex_parser", op["type"])
+	ts := op["timestamp"].(map[string]any)
+	assert.Equal(t, "s", ts["layout"])
+	assert.Equal(t, "epoch", ts["layout_type"])
+	assert.Equal(t, `(?P<timestamp>-?\d+(?:\.\d+)?)`, op["regex"])
+}
+
 func TestTranslator_WithSeverityOnly(t *testing.T) {
 	tr := NewTranslator(
 		WithFilePath("/var/log/test.log"),

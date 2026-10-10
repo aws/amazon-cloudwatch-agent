@@ -3,7 +3,13 @@
 
 package timestamp
 
-import "strings"
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+)
 
 /*
 Strftime-to-regex and strftime-to-Go-layout mappings for timestamp parsing.
@@ -34,7 +40,130 @@ Directive | Go layout   | Regex              | Meaning
 %Z        | MST         | \w{3}              | Timezone name
 %z        | -0700       | [+-]\d{4}          | Timezone offset
 %f        | .000        | \d{1,9}            | Fractional seconds
+%s        | epoch       | -?\d+(?:\.\d+)?    | Unix epoch (see ParseEpoch)
 */
+
+const (
+	// LayoutEpoch is the timestamp_layout value for a Unix epoch timestamp_format (%s).
+	// time.Parse cannot read epoch numbers, so callers must use ParseEpoch.
+	LayoutEpoch = "epoch"
+	// epochNumber matches an integer or fractional Unix timestamp.
+	epochNumber = `-?\d+(?:\.\d+)?`
+	// Unit boundaries for an integer epoch value. A fractional value is always seconds.
+	epochMillis int64 = 100_000_000_000         // 1e11
+	epochMicros int64 = 100_000_000_000_000     // 1e14
+	epochNanos  int64 = 100_000_000_000_000_000 // 1e17
+)
+
+var epochJSONKeys = []string{"timestamp", "time", "@timestamp"}
+
+// IsEpochFormat reports whether format is a Unix epoch timestamp_format.
+func IsEpochFormat(format string) bool {
+	switch strings.TrimSpace(format) {
+	case "%s", "%s.%f", "%s%f":
+		return true
+	default:
+		return false
+	}
+}
+
+// EpochStanzaLayout maps an epoch timestamp_format to a stanza epoch layout.
+// %s is integer seconds. %s.%f and %s%f are seconds with a fractional part.
+func EpochStanzaLayout(format string) (string, bool) {
+	switch strings.TrimSpace(format) {
+	case "%s":
+		return "s", true
+	case "%s.%f", "%s%f":
+		return "s.ns", true
+	default:
+		return "", false
+	}
+}
+
+// ParseEpoch converts a Unix epoch string into a UTC time.
+// A value containing '.' is seconds plus a fractional part.
+// An integer is seconds, milliseconds, microseconds, or nanoseconds,
+// chosen from its magnitude.
+func ParseEpoch(value string) (time.Time, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}, fmt.Errorf("empty epoch timestamp")
+	}
+	if dot := strings.IndexByte(value, '.'); dot >= 0 {
+		sec, err := strconv.ParseInt(value[:dot], 10, 64)
+		if err != nil || dot == len(value)-1 {
+			return time.Time{}, fmt.Errorf("invalid epoch timestamp %q", value)
+		}
+		frac := value[dot+1:]
+		if len(frac) > 9 {
+			frac = frac[:9]
+		}
+		nsec, err := strconv.ParseInt(frac, 10, 64)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid epoch timestamp %q", value)
+		}
+		for i := len(frac); i < 9; i++ {
+			nsec *= 10
+		}
+		return time.Unix(sec, nsec).UTC(), nil
+	}
+	n, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid epoch timestamp %q", value)
+	}
+	mag := n
+	if mag < 0 {
+		mag = -mag
+	}
+	switch {
+	case mag < epochMillis:
+		return time.Unix(n, 0).UTC(), nil
+	case mag < epochMicros:
+		return time.UnixMilli(n).UTC(), nil
+	case mag < epochNanos:
+		return time.UnixMicro(n).UTC(), nil
+	default:
+		return time.Unix(0, n).UTC(), nil
+	}
+}
+
+// ParseEpochJSON reads an epoch timestamp from a JSON object.
+// The first usable value among "timestamp", "time", and "@timestamp" wins.
+func ParseEpochJSON(line string) (time.Time, bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" || trimmed[0] != '{' {
+		return time.Time{}, false
+	}
+	dec := json.NewDecoder(strings.NewReader(trimmed))
+	dec.UseNumber()
+	var obj map[string]any
+	if err := dec.Decode(&obj); err != nil {
+		return time.Time{}, false
+	}
+	for _, key := range epochJSONKeys {
+		v, ok := obj[key]
+		if !ok {
+			continue
+		}
+		if t, ok := epochValue(v); ok {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
+func epochValue(v any) (time.Time, bool) {
+	switch n := v.(type) {
+	case json.Number:
+		t, err := ParseEpoch(n.String())
+		return t, err == nil
+	case string:
+		t, err := ParseEpoch(n)
+		return t, err == nil
+	default:
+		return time.Time{}, false
+	}
+}
 
 // FormatRegexMap maps strftime directives to regex patterns for timestamp extraction.
 var FormatRegexMap = map[string]string{
@@ -116,6 +245,9 @@ func BuildRegexWithNamedCaptureGroup(format string) string {
 //	and layout "1 _2 15:04:05". The timestamp " 2 1 07:10:06" matches the regex but not the
 //	layout. Stripping the prefix makes the regex and layout consistent.
 func BuildRegex(format string) string {
+	if IsEpochFormat(format) {
+		return epochNumber
+	}
 	res := ReplaceAll(format, RegexEscapeMap)
 	res = ReplaceAll(res, FormatRegexMap)
 	res = strings.TrimPrefix(res, `\s{0,1}`)
@@ -124,6 +256,9 @@ func BuildRegex(format string) string {
 
 // BuildLayout converts a strftime format string to a Go time layout string.
 func BuildLayout(format string) string {
+	if IsEpochFormat(format) {
+		return LayoutEpoch
+	}
 	res := format
 	// %f needs variable-width fractional seconds (".999999999") instead of FormatLayoutMap's
 	// fixed ".000". Handle both ".%f" and "%f" since %f includes the dot separator.

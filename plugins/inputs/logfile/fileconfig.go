@@ -17,6 +17,7 @@ import (
 	"golang.org/x/text/encoding/ianaindex"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
+	"github.com/aws/amazon-cloudwatch-agent/internal/util/timestamp"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/constants"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
@@ -169,49 +170,68 @@ func (config *FileConfig) init() error {
 // Try to parse the timestampFromLogLine value from the log entry line.
 // The parser logic will be based on the timestampFromLogLine regex, and time zone info.
 // If the parsing operation encounters any issue, int64(0) is returned.
+func (config *FileConfig) hasEpochLayout() bool {
+	for _, layout := range config.TimestampLayout {
+		if layout == timestamp.LayoutEpoch {
+			return true
+		}
+	}
+	return false
+}
+
 func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, string) {
+	epoch := config.hasEpochLayout()
+	if epoch {
+		if ts, ok := timestamp.ParseEpochJSON(logValue); ok {
+			return ts, logValue
+		}
+	}
 	if config.TimestampRegexP == nil {
 		return time.Time{}, logValue
 	}
 	index := config.TimestampRegexP.FindStringSubmatchIndex(logValue)
 	if len(index) > 3 {
 		timestampContent := (logValue)[index[2]:index[3]]
-		if len(index) > 5 {
-			start := index[4] - index[2]
-			end := index[5] - index[2]
-			//append "000" to 2nd submatch in order to guarantee the fractional second at least has 3 digits
-			fracSecond := fmt.Sprintf("%s000", timestampContent[start:end])
-			replacement := fmt.Sprintf(".%s", fracSecond[:3])
-			timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
-		}
 		var err error
-		var timestamp time.Time
-		for _, timestampLayout := range config.TimestampLayout {
-			timestamp, err = time.ParseInLocation(timestampLayout, timestampContent, config.TimezoneLoc)
-			if err == nil {
-				break
+		var parsed time.Time
+		if epoch {
+			parsed, err = timestamp.ParseEpoch(timestampContent)
+		} else {
+			if len(index) > 5 {
+				start := index[4] - index[2]
+				end := index[5] - index[2]
+				//append "000" to 2nd submatch in order to guarantee the fractional second at least has 3 digits
+				fracSecond := fmt.Sprintf("%s000", timestampContent[start:end])
+				replacement := fmt.Sprintf(".%s", fracSecond[:3])
+				timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
+			}
+			for _, timestampLayout := range config.TimestampLayout {
+				parsed, err = time.ParseInLocation(timestampLayout, timestampContent, config.TimezoneLoc)
+				if err == nil {
+					break
+				}
 			}
 		}
 		if err != nil {
 			log.Printf("E! Error parsing timestampFromLogLine: %s", err)
 			return time.Time{}, logValue
 		}
-		if timestamp.Year() == 0 {
+		if !epoch && parsed.Year() == 0 {
 			now := time.Now()
-			timestamp = timestamp.AddDate(now.Year(), 0, 0)
+			parsed = parsed.AddDate(now.Year(), 0, 0)
 			// If now is very early January and we are pushing logs from very late
 			// December, there will be a very large number of hours different
 			// between the dates. 30 * 24 hours will be sufficient.
-			if timestamp.Sub(now) > 30*24*time.Hour {
-				timestamp = timestamp.AddDate(-1, 0, 0)
+			if parsed.Sub(now) > 30*24*time.Hour {
+				parsed = parsed.AddDate(-1, 0, 0)
 			}
 		}
 		if config.TrimTimestamp {
 			// Trim the entire timestamp portion and leading whitespaces
 			// The whitespace characters being removed are: space, tab, newline, and carriage return ( " \t\n\r")
-			return timestamp, strings.TrimLeft(logValue[:index[0]]+logValue[index[1]:], " \t\n\r")
+			return parsed, strings.TrimLeft(logValue[:index[0]]+logValue[index[1]:], " \t\n\r")
 		}
-		return timestamp, logValue
+		return parsed, logValue
 	}
 	return time.Time{}, logValue
 }

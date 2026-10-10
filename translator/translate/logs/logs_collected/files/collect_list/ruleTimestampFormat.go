@@ -54,6 +54,8 @@ func (t *TimestampLayout) ApplyRule(input interface{}) (returnKey string, return
 	} else if m["file_path"] == context.CurrentContext().GetAgentLogFile() {
 		fmt.Printf("timestamp_format set file_path : %s is the same as agent log file %s thus do not use timestamp_layout \n", m["file_path"], context.CurrentContext().GetAgentLogFile())
 		return "", ""
+	} else if timestamp.IsEpochFormat(val.(string)) {
+		return "timestamp_layout", []string{timestamp.LayoutEpoch}
 	} else {
 		res := timestamp.ReplaceAll(val.(string), timestamp.FormatLayoutMap)
 		//If user provide with the specific timestamp_format, use the one that user provide
