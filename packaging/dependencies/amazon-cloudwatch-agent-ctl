@@ -281,6 +281,80 @@ config_all() {
      fi
 }
 
+# file_identity prints "device:inode" for path, following symlinks.
+file_identity() {
+     if stat --version >/dev/null 2>&1; then
+          if stat -Lc '%d:%i' "$1" 2>/dev/null; then
+               return 0
+          fi
+          return 1
+     fi
+     if stat -Lf '%d:%i' "$1" 2>/dev/null; then
+          return 0
+     fi
+     return 1
+}
+
+absolute_file_path() {
+     target="$1"
+     dir=$(dirname "${target}")
+     base=$(basename "${target}")
+     if [ ! -d "${dir}" ]; then
+          return 1
+     fi
+     dir_abs=$(cd "${dir}" && pwd -P) || return 1
+     printf '%s/%s\n' "${dir_abs}" "${base}"
+}
+
+# True when -c file: names the legacy single-file config.
+config_source_is_legacy_json() {
+     location="${1:-}"
+     legacy_json="${2:-}"
+
+     case "${location}" in
+     file:*)
+          source_path="${location#file:}"
+          ;;
+     *)
+          return 1
+          ;;
+     esac
+
+     if [ -z "${source_path}" ] || [ -z "${legacy_json}" ]; then
+          return 1
+     fi
+
+     if [ "${source_path}" = "${legacy_json}" ]; then
+          return 0
+     fi
+
+     if [ -e "${source_path}" ] && [ -e "${legacy_json}" ]; then
+          source_id=$(file_identity "${source_path}") || source_id=''
+          legacy_id=$(file_identity "${legacy_json}") || legacy_id=''
+          if [ -n "${source_id}" ] && [ "${source_id}" = "${legacy_id}" ]; then
+               return 0
+          fi
+     fi
+
+     source_abs=$(absolute_file_path "${source_path}") || return 1
+     legacy_abs=$(absolute_file_path "${legacy_json}") || return 1
+     if [ "${source_abs}" = "${legacy_abs}" ]; then
+          return 0
+     fi
+     return 1
+}
+
+# A replace drops the legacy json so a stale file is not merged on the next
+# start. Keep it when that file is the source fetch-config just applied.
+remove_replaced_legacy_json() {
+     location="${1:-}"
+     legacy_json="${2:-}"
+     if config_source_is_legacy_json "${location}" "${legacy_json}"; then
+          return 0
+     fi
+     rm -f "${legacy_json}"
+}
+
 cwa_config() {
      cwa_config_location="${1:-}"
      restart="${2:-}"
@@ -340,7 +414,7 @@ cwa_config() {
           #       append:     rename .tmp file
           #       remove:     no-op
           if [ "${multi_config}" = 'default' ]; then
-               rm -f "${JSON}"
+               remove_replaced_legacy_json "${cwa_config_location}" "${JSON}"
                for file in "${JSON_DIR}"/*; do
                     base="${JSON_DIR}/$(basename "${file}" .tmp)"
                     if [ "${file}" = "${base}" ]; then
@@ -486,4 +560,6 @@ main() {
      exit 0
 }
 
-main "$@"
+if [ "${AMAZON_CLOUDWATCH_AGENT_CTL_SOURCE_ONLY:-}" != "1" ]; then
+     main "$@"
+fi
