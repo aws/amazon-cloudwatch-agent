@@ -31,7 +31,7 @@ processors:
     error_mode: ignore
     metrics:
       metric:
-      - IsMatch(name, "^(neuron|execution_|hardware_ecc_)") != true
+      - IsMatch(name, "^(neuron|system_|execution_|hardware_ecc_)") != true
   awsneuron/cw_k8s_ci_v0: {}
   transform/cw_k8s_ci_v0_set_unit:
     error_mode: ignore

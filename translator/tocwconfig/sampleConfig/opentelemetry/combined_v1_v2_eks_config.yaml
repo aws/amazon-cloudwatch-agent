@@ -623,7 +623,7 @@ processors:
         error_mode: ignore
         metrics:
             metric:
-                - IsMatch(name, "^(neuron|execution_|hardware_ecc_)") != true
+                - IsMatch(name, "^(neuron|system_|execution_|hardware_ecc_)") != true
     filter/cw_k8s_ci_v0_scrape_metadata:
         error_mode: ignore
         metrics:
