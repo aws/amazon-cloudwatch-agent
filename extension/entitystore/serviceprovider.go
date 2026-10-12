@@ -284,19 +284,12 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 		return err
 	}
 
-	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order (case insensitive)
 	lowerTagKeys := toLowerKeyMap(tagKeys)
-	for _, potentialServiceProviderKey := range serviceProviderPriorities {
-		if originalCaseKey, exists := lowerTagKeys[potentialServiceProviderKey]; exists {
-			serviceName, err := s.metadataProvider.InstanceTagValue(context.Background(), originalCaseKey)
-			if err != nil {
-				continue
-			}
-			s.mutex.Lock()
-			s.imdsServiceName = serviceName
-			s.mutex.Unlock()
-			break
-		}
+	// This will check whether the tags contains SERVICE, APPLICATION, APP, in that order (case insensitive)
+	if serviceName, ok := ServiceNameFromInstanceTags(context.Background(), s.metadataProvider, tagKeys); ok {
+		s.mutex.Lock()
+		s.imdsServiceName = serviceName
+		s.mutex.Unlock()
 	}
 	// case sensitive
 	if originalCaseKey := lowerTagKeys[strings.ToLower(ec2tagger.Ec2InstanceTagKeyASG)]; originalCaseKey == ec2tagger.Ec2InstanceTagKeyASG {
@@ -314,6 +307,22 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 		s.logger.Debug("AutoScalingGroup name not found through IMDS")
 	}
 	return nil
+}
+
+func ServiceNameFromInstanceTags(ctx context.Context, provider ec2metadataprovider.MetadataProvider, tagKeys []string) (string, bool) {
+	lowerTagKeys := toLowerKeyMap(tagKeys)
+	for _, potentialServiceProviderKey := range serviceProviderPriorities {
+		originalCaseKey, exists := lowerTagKeys[potentialServiceProviderKey]
+		if !exists {
+			continue
+		}
+		serviceName, err := provider.InstanceTagValue(ctx, originalCaseKey)
+		if err != nil {
+			continue
+		}
+		return serviceName, true
+	}
+	return "", false
 }
 
 func toLowerKeyMap(values []string) map[string]string {

@@ -22,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/transformprocessor"
 )
 
@@ -61,24 +62,18 @@ func (t *baseMetricsTranslator) Translate(conf *confmap.Conf) (*common.Component
 	fwdConnector := forward.NewTranslator(common.OpenTelemetryKey)
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
-	if resourceAttrs := resourceAttributesProcessor(conf); resourceAttrs != nil {
+	if resourceAttrs := resourceprocessor.NewResourceAttributesTranslator(conf); resourceAttrs != nil {
 		processors.Set(resourceAttrs)
 	}
 	processors.Set(resourcedetection.NewTranslator(resourcedetection.WithName(common.OpenTelemetryKey)))
 	if context.CurrentContext().KubernetesMode() != "" {
 		processors.Set(k8sattributesprocessor.NewTranslator(common.OpenTelemetryKey))
-		// Apply root-level cluster name if set
-		clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
-		if clusterName != "" {
-			if err := common.ValidateClusterName(clusterName); err != nil {
-				return nil, err
-			}
-			stmt := fmt.Sprintf(`set(resource.attributes["k8s.cluster.name"], "%s")`, clusterName)
-			processors.Set(transformprocessor.NewTranslatorWithName("set_cluster_name",
-				transformprocessor.WithMetricResourceStatements([]string{stmt}),
-				transformprocessor.WithLogResourceStatements([]string{stmt}),
-				transformprocessor.WithTraceResourceStatements([]string{stmt}),
-			))
+		setClusterName, err := transformprocessor.NewSetClusterNameTranslator(conf)
+		if err != nil {
+			return nil, err
+		}
+		if setClusterName != nil {
+			processors.Set(setClusterName)
 		}
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
