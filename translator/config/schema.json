@@ -1988,6 +1988,12 @@
                 "span_metrics_enabled": {
                   "description": "Enable span metrics connector to derive request, error, and duration metrics from traces.",
                   "type": "boolean"
+                },
+                "workloads": {
+                  "description": "Workload-specific enrichment for OTLP traces. \"vllm\" names vLLM spans after their KServe InferenceService or workload and adds GenAI attributes.",
+                  "type": "array",
+                  "items": {"type": "string", "enum": ["vllm"]},
+                  "uniqueItems": true
                 }
               },
               "additionalProperties": false
