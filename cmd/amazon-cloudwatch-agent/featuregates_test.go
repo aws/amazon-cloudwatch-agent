@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/featuregate"
+
+	"github.com/aws/amazon-cloudwatch-agent/internal/featuregates"
 )
 
 func TestCollectorFeatureGateArgs(t *testing.T) {
@@ -19,20 +21,20 @@ func TestCollectorFeatureGateArgs(t *testing.T) {
 	}{
 		"GateRegistered": {
 			register: func(t *testing.T, reg *featuregate.Registry) {
-				_, err := reg.Register(profilesSupportGateID, featuregate.StageAlpha)
+				_, err := reg.Register(featuregates.ProfilesSupportGateID, featuregate.StageAlpha)
 				require.NoError(t, err)
 			},
-			want: []string{"--feature-gates=+" + profilesSupportGateID},
+			want: []string{"--feature-gates=+" + featuregates.ProfilesSupportGateID},
 		},
 		// A gate that graduated to stable is still enableable, so keep passing it until
 		// it is removed from the registry entirely.
 		"GateStable": {
 			register: func(t *testing.T, reg *featuregate.Registry) {
-				_, err := reg.Register(profilesSupportGateID, featuregate.StageStable,
+				_, err := reg.Register(featuregates.ProfilesSupportGateID, featuregate.StageStable,
 					featuregate.WithRegisterToVersion("v1.0.0"))
 				require.NoError(t, err)
 			},
-			want: []string{"--feature-gates=+" + profilesSupportGateID},
+			want: []string{"--feature-gates=+" + featuregates.ProfilesSupportGateID},
 		},
 		// The gate graduated and was deleted upstream: emit nothing rather than an arg
 		// the collector would reject at startup.
@@ -44,7 +46,7 @@ func TestCollectorFeatureGateArgs(t *testing.T) {
 		// absent one.
 		"GateDeprecated": {
 			register: func(t *testing.T, reg *featuregate.Registry) {
-				_, err := reg.Register(profilesSupportGateID, featuregate.StageDeprecated,
+				_, err := reg.Register(featuregates.ProfilesSupportGateID, featuregate.StageDeprecated,
 					featuregate.WithRegisterToVersion("v1.0.0"))
 				require.NoError(t, err)
 			},
@@ -70,7 +72,7 @@ func TestCollectorFeatureGateArgs(t *testing.T) {
 
 func TestCollectorFeatureGateArgsEnablesGate(t *testing.T) {
 	reg := featuregate.NewRegistry()
-	gate, err := reg.Register(profilesSupportGateID, featuregate.StageAlpha)
+	gate, err := reg.Register(featuregates.ProfilesSupportGateID, featuregate.StageAlpha)
 	require.NoError(t, err)
 	require.False(t, gate.IsEnabled())
 
@@ -79,13 +81,4 @@ func TestCollectorFeatureGateArgsEnablesGate(t *testing.T) {
 	require.NoError(t, flagSet.Parse(collectorFeatureGateArgs(reg)))
 
 	assert.True(t, gate.IsEnabled())
-}
-
-func TestCanEnableFeatureGate(t *testing.T) {
-	reg := featuregate.NewRegistry()
-	_, err := reg.Register("other.gate", featuregate.StageAlpha)
-	require.NoError(t, err)
-
-	assert.False(t, canEnableFeatureGate(reg, profilesSupportGateID))
-	assert.True(t, canEnableFeatureGate(reg, "other.gate"))
 }

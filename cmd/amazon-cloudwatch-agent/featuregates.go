@@ -8,16 +8,13 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/collector/featuregate"
-)
 
-// profilesSupportGateID is the collector gate that unlocks profiles pipelines. The
-// agent enables it so operators get profiles support without having to pass
-// --feature-gates themselves.
-const profilesSupportGateID = "service.profilesSupport"
+	"github.com/aws/amazon-cloudwatch-agent/internal/featuregates"
+)
 
 // defaultEnabledFeatureGates are the collector feature gates the agent turns on at
 // startup.
-var defaultEnabledFeatureGates = []string{profilesSupportGateID}
+var defaultEnabledFeatureGates = []string{featuregates.ProfilesSupportGateID}
 
 // collectorFeatureGateArgs builds the --feature-gates arguments for the collector
 // command. A gate is only requested when the registry still holds it and still
@@ -28,7 +25,7 @@ var defaultEnabledFeatureGates = []string{profilesSupportGateID}
 func collectorFeatureGateArgs(reg *featuregate.Registry) []string {
 	var gates []string
 	for _, id := range defaultEnabledFeatureGates {
-		if !canEnableFeatureGate(reg, id) {
+		if !featuregates.CanEnable(reg, id) {
 			log.Printf("I! Feature gate %q cannot be enabled in this collector build, skipping", id)
 			continue
 		}
@@ -38,17 +35,4 @@ func collectorFeatureGateArgs(reg *featuregate.Registry) []string {
 		return nil
 	}
 	return []string{"--feature-gates=" + strings.Join(gates, ",")}
-}
-
-// canEnableFeatureGate reports whether reg holds a gate with the given id that can be
-// enabled. A deprecated gate is treated the same as a missing one because
-// featuregate.Registry.Set rejects enabling it.
-func canEnableFeatureGate(reg *featuregate.Registry, id string) bool {
-	var enableable bool
-	reg.VisitAll(func(g *featuregate.Gate) {
-		if g.ID() == id {
-			enableable = g.Stage() != featuregate.StageDeprecated
-		}
-	})
-	return enableable
 }
