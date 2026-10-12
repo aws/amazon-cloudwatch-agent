@@ -65,3 +65,36 @@ func TestServiceNameFromInstanceTags_TagValueErrorContinues(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "application-value", got)
 }
+
+func TestServiceNameFromIMDS(t *testing.T) {
+	testCases := map[string]struct {
+		provider *mockMetadataProvider
+		want     string
+	}{
+		"ServiceTagWins": {
+			provider: &mockMetadataProvider{Tags: map[string]string{"Service": "svc-from-tag", "app": "app-from-tag"}},
+			want:     "svc-from-tag",
+		},
+		"TrimsValue": {
+			provider: &mockMetadataProvider{Tags: map[string]string{"app": " app-value "}},
+			want:     "app-value",
+		},
+		"BlankTagFallsThroughToNextKey": {
+			provider: &mockMetadataProvider{Tags: map[string]string{"service": "  ", "application": "application-value"}},
+			want:     "application-value",
+		},
+		"NoPriorityTagFallsBackToIamRole": {
+			provider: &mockMetadataProvider{Tags: map[string]string{"Name": "ignored"}},
+			want:     "TestRole",
+		},
+		"TagsErrorFallsBackToIamRole": {
+			provider: &mockMetadataProvider{InstanceTagError: true},
+			want:     "TestRole",
+		},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, testCase.want, ServiceNameFromIMDS(context.Background(), testCase.provider))
+		})
+	}
+}

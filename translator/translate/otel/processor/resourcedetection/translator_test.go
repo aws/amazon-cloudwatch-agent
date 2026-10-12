@@ -17,6 +17,7 @@ import (
 
 	translatorconfig "github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
 )
 
@@ -276,6 +277,24 @@ func TestTranslate_NonOpenTelemetryKey_HasMiddleware(t *testing.T) {
 	require.NotNil(t, got)
 	gotCfg := got.(*resourcedetectionprocessor.Config)
 	assert.NotNil(t, gotCfg.MiddlewareID)
+}
+
+func TestTranslate_ECSConfigOverride(t *testing.T) {
+	context.CurrentContext().SetMode(translatorconfig.ModeEC2)
+	ecsutil.GetECSUtilSingleton().Region = "us-east-1"
+	t.Cleanup(func() { ecsutil.GetECSUtilSingleton().Region = "" })
+	conf := confmap.NewFromStringMap(map[string]interface{}{})
+
+	got, err := NewTranslator(WithName("profiles"), WithECSConfig(ProfilesECSResourceDetectionConfig)).Translate(conf)
+	require.NoError(t, err)
+	gotCfg := got.(*resourcedetectionprocessor.Config)
+	assert.Equal(t, []string{"env", "ecs", "ec2"}, gotCfg.Detectors)
+	assert.True(t, gotCfg.DetectorConfig.ECSConfig.ResourceAttributes.AwsEcsTaskFamily.Enabled)
+
+	got, err = NewTranslator(WithName(common.OpenTelemetryKey)).Translate(conf)
+	require.NoError(t, err)
+	gotCfg = got.(*resourcedetectionprocessor.Config)
+	assert.False(t, gotCfg.DetectorConfig.ECSConfig.ResourceAttributes.AwsEcsTaskFamily.Enabled)
 }
 
 // TestAllEmbeddedConfigsIgnoreDetectorErrors is a process guard: v0.150 removed the

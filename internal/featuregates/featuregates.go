@@ -24,3 +24,10 @@ func CanEnable(reg *featuregate.Registry, id string) bool {
 	})
 	return enableable
 }
+
+func Enable(reg *featuregate.Registry, id string) error {
+	if !CanEnable(reg, id) {
+		return nil
+	}
+	return reg.Set(id, true)
+}

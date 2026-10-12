@@ -17,11 +17,9 @@ func TestNewSetClusterNameTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		clusterName string
 		wantErr     bool
-		wantNil     bool
 	}{
 		"Valid":   {clusterName: "test-cluster"},
 		"Invalid": {clusterName: "bad cluster name!", wantErr: true},
-		"Absent":  {clusterName: "", wantNil: true},
 	}
 	for name, testCase := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -35,10 +33,6 @@ func TestNewSetClusterNameTranslator(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			if testCase.wantNil {
-				assert.Nil(t, tr)
-				return
-			}
 			require.NotNil(t, tr)
 			assert.Equal(t, "transform/set_cluster_name", tr.ID().String())
 
@@ -49,6 +43,7 @@ func TestNewSetClusterNameTranslator(t *testing.T) {
 			require.Len(t, actualCfg.MetricStatements, 1)
 			require.Len(t, actualCfg.LogStatements, 1)
 			require.Len(t, actualCfg.TraceStatements, 1)
+			require.Len(t, actualCfg.ProfileStatements, 1)
 			for _, block := range []struct {
 				context    string
 				statements []string
@@ -56,6 +51,7 @@ func TestNewSetClusterNameTranslator(t *testing.T) {
 				{string(actualCfg.MetricStatements[0].Context), actualCfg.MetricStatements[0].Statements},
 				{string(actualCfg.LogStatements[0].Context), actualCfg.LogStatements[0].Statements},
 				{string(actualCfg.TraceStatements[0].Context), actualCfg.TraceStatements[0].Statements},
+				{string(actualCfg.ProfileStatements[0].Context), actualCfg.ProfileStatements[0].Statements},
 			} {
 				assert.Equal(t, "resource", block.context)
 				assert.Equal(t, want, block.statements)

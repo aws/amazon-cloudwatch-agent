@@ -28,6 +28,9 @@ var appSignalsECSResourceDetectionConfig string
 //go:embed configs/ecs_config.yaml
 var ecsResourceDetectionConfig string
 
+//go:embed configs/profiles_ecs_config.yaml
+var ProfilesECSResourceDetectionConfig string
+
 //go:embed configs/azure_config.yaml
 var azureVMResourceDetectionConfig string
 
@@ -38,9 +41,10 @@ var aksResourceDetectionConfig string
 var gcpResourceDetectionConfig string
 
 type translator struct {
-	name    string
-	signal  pipeline.Signal
-	factory processor.Factory
+	name      string
+	signal    pipeline.Signal
+	ecsConfig string
+	factory   processor.Factory
 }
 
 type Option interface {
@@ -65,6 +69,12 @@ func WithSignal(signal pipeline.Signal) Option {
 func WithName(name string) Option {
 	return optionFunc(func(t *translator) {
 		t.name = name
+	})
+}
+
+func WithECSConfig(ecsConfig string) Option {
+	return optionFunc(func(t *translator) {
+		t.ecsConfig = ecsConfig
 	})
 }
 
@@ -99,6 +109,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 
 	switch mode {
 	case config.ModeECS:
+		if t.ecsConfig != "" {
+			return common.GetYamlFileToYamlConfig(cfg, t.ecsConfig)
+		}
 		if t.name == common.OpenTelemetryKey {
 			return common.GetYamlFileToYamlConfig(cfg, ecsResourceDetectionConfig)
 		}

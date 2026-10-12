@@ -14,9 +14,23 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
+const (
+	podIPAttribute       = "k8s.pod.ip"
+	containerIDAttribute = "container.id"
+)
+
+type Option func(*translator)
+
+func WithPodIPAssociation() Option {
+	return func(t *translator) {
+		t.podIPAssociation = true
+	}
+}
+
 type translator struct {
-	name    string
-	factory processor.Factory
+	name             string
+	factory          processor.Factory
+	podIPAssociation bool
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -24,11 +38,15 @@ var _ common.ComponentTranslator = (*translator)(nil)
 // NewTranslator creates a k8sattributes processor that enriches telemetry with
 // K8s pod metadata (pod name, namespace, node, workload owners).
 // Only intended for use when running in a K8s environment.
-func NewTranslator(name string) common.ComponentTranslator {
-	return &translator{
+func NewTranslator(name string, opts ...Option) common.ComponentTranslator {
+	t := &translator{
 		name:    name,
 		factory: k8sattributesprocessor.NewFactory(),
 	}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 func (t *translator) ID() component.ID {
@@ -81,6 +99,16 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		"exclude": map[string]interface{}{
 			"pods": []interface{}{},
 		},
+	}
+	if t.podIPAssociation {
+		cfgMap["pod_association"] = []map[string]interface{}{
+			{"sources": []map[string]interface{}{
+				{"from": "resource_attribute", "name": containerIDAttribute},
+			}},
+			{"sources": []map[string]interface{}{
+				{"from": "resource_attribute", "name": podIPAttribute},
+			}},
+		}
 	}
 
 	if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {

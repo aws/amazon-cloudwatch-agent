@@ -26,5 +26,6 @@ func NewSetClusterNameTranslator(conf *confmap.Conf) (common.ComponentTranslator
 		WithMetricResourceStatements([]string{stmt}),
 		WithLogResourceStatements([]string{stmt}),
 		WithTraceResourceStatements([]string{stmt}),
+		WithProfileResourceStatements([]string{stmt}),
 	), nil
 }
