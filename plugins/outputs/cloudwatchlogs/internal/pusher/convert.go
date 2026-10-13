@@ -33,8 +33,10 @@ func newConverter(logger telegraf.Logger, target Target) *converter {
 	}
 }
 
-// convert sets a timestamp if not set in the logs.LogEvent.
-func (c *converter) convert(e logs.LogEvent) *logEvent {
+// convert sets a timestamp if not set in the logs.LogEvent. It returns the events that carry the message: one, or
+// several with the same timestamp if the message is over the per-event limit (see newStatefulLogEvents). Only the last
+// of them carries the state and done callback of e.
+func (c *converter) convert(e logs.LogEvent) []*logEvent {
 	message := e.Message()
 
 	now := time.Now()
@@ -68,5 +70,5 @@ func (c *converter) convert(e logs.LogEvent) *logEvent {
 			queue: sle.RangeQueue(),
 		}
 	}
-	return newStatefulLogEvent(t, message, e.Done, state)
+	return newStatefulLogEvents(t, message, e.Done, state)
 }

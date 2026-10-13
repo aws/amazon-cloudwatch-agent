@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -98,7 +99,9 @@ func TestConverter(t *testing.T) {
 		now := time.Now()
 
 		conv := newConverter(logger, target)
-		le := conv.convert(newStubLogEvent("Test message", now))
+		les := conv.convert(newStubLogEvent("Test message", now))
+		require.Len(t, les, 1)
+		le := les[0]
 
 		assert.Equal(t, now, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
@@ -113,7 +116,9 @@ func TestConverter(t *testing.T) {
 		conv := newConverter(logger, target)
 		conv.lastValidTime = testTimestampMs
 
-		le := conv.convert(newStubLogEvent("Test message", time.Time{}))
+		les := conv.convert(newStubLogEvent("Test message", time.Time{}))
+		require.Len(t, les, 1)
+		le := les[0]
 
 		assert.Equal(t, testTimestampMs, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
@@ -128,7 +133,9 @@ func TestConverter(t *testing.T) {
 		conv.lastValidTime = oldTime
 		conv.lastUpdateTime = oldTime
 
-		le := conv.convert(newStubLogEvent("Test message", time.Time{}))
+		les := conv.convert(newStubLogEvent("Test message", time.Time{}))
+		require.Len(t, les, 1)
+		le := les[0]
 
 		assert.Equal(t, oldTime, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
@@ -148,10 +155,47 @@ func TestConverter(t *testing.T) {
 		r := state.NewRange(5, 10)
 		mrq := &mockRangeQueue{}
 		le := newStubStatefulLogEvent("Test message", now, r, mrq)
-		got := conv.convert(le)
+		gots := conv.convert(le)
+		require.Len(t, gots, 1)
+		got := gots[0]
 		assert.NotNil(t, got.state)
 		assert.NotNil(t, got.state.queue)
 		assert.Equal(t, mrq, got.state.queue)
 		assert.Equal(t, r, got.state.r)
+	})
+
+	// A message over the per-event limit is converted to several events with the source timestamp, and only the
+	// last one carries the state and the done callback.
+	t.Run("SplitWithState", func(t *testing.T) {
+		t.Parallel()
+		now := time.Now()
+
+		conv := newConverter(logger, target)
+		r := state.NewRange(5, 10)
+		mrq := &mockRangeQueue{}
+		message := strings.Repeat("a", 2*maxEventMessageBytes+1)
+		le := newStubStatefulLogEvent(message, now, r, mrq)
+		var doneCalls int
+		le.done = func() { doneCalls++ }
+		gots := conv.convert(le)
+		require.Len(t, gots, 3)
+		var reassembled strings.Builder
+		for i, got := range gots {
+			assert.Equal(t, now, got.timestamp, "event %d", i)
+			assert.False(t, got.truncated, "event %d", i)
+			reassembled.WriteString(got.message)
+			if i < len(gots)-1 {
+				assert.Nil(t, got.state, "event %d", i)
+				assert.Nil(t, got.doneCallback, "event %d", i)
+			}
+		}
+		assert.Equal(t, message, reassembled.String())
+		last := gots[len(gots)-1]
+		require.NotNil(t, last.state)
+		assert.Equal(t, mrq, last.state.queue)
+		assert.Equal(t, r, last.state.r)
+		require.NotNil(t, last.doneCallback)
+		last.doneCallback()
+		assert.Equal(t, 1, doneCalls)
 	})
 }

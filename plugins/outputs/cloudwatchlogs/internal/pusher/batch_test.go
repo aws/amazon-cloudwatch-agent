@@ -359,15 +359,42 @@ func TestEventValidation_1MB(t *testing.T) {
 }
 
 func TestEventValidation_Over1MB(t *testing.T) {
-	// Test event over 1MB - should be truncated with truncation suffix
+	// Test event over 1MB - split into events within the limit, with nothing dropped and no suffix
 	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
 	oversizeMessage := strings.Repeat("a", maxEventPayloadBytes+1000)
 
+	events := assertSplitsLosslessly(t, oversizeMessage)
+	require.Len(t, events, 2)
+	assert.Equal(t, oversizeMessage[:maxMessageSize], events[0].message)
+	assert.Equal(t, maxMessageSize+perEventHeaderBytes, events[0].eventBytes)
+	assert.Equal(t, oversizeMessage[maxMessageSize:], events[1].message)
+
+	// The unsplit path, used for EMF messages, still truncates with the truncation suffix.
 	event := newStatefulLogEvent(time.Now(), oversizeMessage, nil, nil)
 	// The total length should still be maxMessageSize
 	assert.Equal(t, maxMessageSize, len(event.message))
 	assert.Equal(t, oversizeMessage[:maxMessageSize-len(defaultTruncationSuffix)]+defaultTruncationSuffix, event.message)
 	assert.True(t, event.truncated)
+}
+
+// assertSplitsLosslessly checks the path a message that is not EMF takes (newStatefulLogEvents): every event is
+// within the per-event limit and sized by its counted size, nothing is truncated, the events concatenate to the
+// message, and the message is split exactly when its counted size is over the limit. It returns the events.
+func assertSplitsLosslessly(t *testing.T, message string) []*logEvent {
+	t.Helper()
+	require.False(t, IsEMFMessage(message))
+	events := newStatefulLogEvents(time.Now(), message, nil, nil)
+	var reassembled strings.Builder
+	for i, event := range events {
+		size := utf8EncodedLength(event.message)
+		assert.LessOrEqual(t, size, maxEventMessageBytes, "event %d", i)
+		assert.Equal(t, size+perEventHeaderBytes, event.eventBytes, "event %d", i)
+		assert.False(t, event.truncated, "event %d", i)
+		reassembled.WriteString(event.message)
+	}
+	assert.True(t, reassembled.String() == message, "the events concatenate to the message")
+	assert.Equal(t, utf8EncodedLength(message) > maxEventMessageBytes, len(events) > 1)
+	return events
 }
 
 func TestEventValidation_Between256KBand1MB(t *testing.T) {
@@ -407,9 +434,13 @@ func TestValidateAndTruncateMessage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// The unsplit (EMF) path truncates a message over the limit.
 			result, _, truncated := validateAndTruncateMessage(tt.input)
 			assert.Equal(t, tt.expectedOutput, result)
 			assert.Equal(t, tt.expectedTruncated, truncated)
+			// Any other message over the limit is split instead, with nothing dropped.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, tt.expectedTruncated, len(events) > 1)
 		})
 	}
 }
@@ -451,6 +482,11 @@ func TestValidateAndTruncateMessage_Truncated(t *testing.T) {
 			event := newLogEvent(time.Now(), tt.input, nil)
 			assert.Equal(t, tt.expectedTruncated, event.truncated)
 			assert.Equal(t, size+perEventHeaderBytes, event.eventBytes)
+
+			// A message that is not EMF is split rather than truncated: it is over the limit, and so split, exactly
+			// when the unsplit path truncates it, whatever its raw length.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, tt.expectedTruncated, len(events) > 1)
 		})
 	}
 }
@@ -703,6 +739,16 @@ func TestValidateAndTruncateMessage_UTF8(t *testing.T) {
 			assert.Equal(t, size+perEventHeaderBytes, event.eventBytes)
 			assert.Equal(t, truncated, event.truncated)
 			assert.LessOrEqual(t, event.eventBytes, maxEventPayloadBytes)
+
+			// A message that is not EMF is split where the unsplit path truncates it, and nothing is dropped.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, truncated, len(events) > 1)
+			if len(events) > 1 {
+				// The first event holds the longest prefix that fits, cut on a rune boundary.
+				kept, keptSize := truncateToUTF8EncodedLength(tt.input, maxMessageSize)
+				assert.Equal(t, kept, events[0].message)
+				assert.Equal(t, keptSize+perEventHeaderBytes, events[0].eventBytes)
+			}
 		})
 	}
 
@@ -721,6 +767,16 @@ func TestValidateAndTruncateMessage_UTF8(t *testing.T) {
 		assert.Equal(t, input[:budget-1], kept)
 		assert.Equal(t, len(result), size)
 		assert.LessOrEqual(t, utf8EncodedLength(result), maxMessageSize)
+
+		// Split instead of truncated, each event is valid UTF-8: no cut splits a rune.
+		events := assertSplitsLosslessly(t, input)
+		require.Len(t, events, 2)
+		for _, e := range events {
+			assert.True(t, utf8.ValidString(e.message))
+		}
+		// The first event is the ASCII padding plus as many whole runes as fit.
+		pad := (budget - 1) % runeBytes
+		assert.Equal(t, input[:pad+(maxMessageSize-pad)/runeBytes*runeBytes], events[0].message)
 	})
 }
 
@@ -782,6 +838,10 @@ func TestValidateAndTruncateMessage_LengthBoundary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// A message that is not EMF is split exactly when the unsplit path truncates it.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, tt.wantTruncated, len(events) > 1)
+
 			result, size, truncated := validateAndTruncateMessage(tt.input)
 			assert.Equal(t, tt.wantTruncated, truncated)
 			if tt.wantTruncated {
