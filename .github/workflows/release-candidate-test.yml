@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 name: Test Release Candidate
+run-name: Test Release Candidate ${{ inputs.build_id }}
 env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
@@ -14,6 +15,16 @@ on:
         required: true
       test_repo_branch:
         description: 'Override for the test repo branch (default is main)'
+        type: string
+      artifact_source:
+        description: 'Where to copy the artifacts from: release-bucket (default) or candidate-store'
+        type: string
+        default: release-bucket
+      test_os_filter:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
+      test_dir_filter:
+        description: 'Optional, passed to test-artifacts.yml'
         type: string
 
 jobs:
@@ -46,6 +57,7 @@ jobs:
       contents: read
     with:
       build_id: ${{ inputs.build_id }}
+      artifact_source: ${{ inputs.artifact_source }}
 
   StartIntegrationTests:
     needs: [ RepackageArtifacts, OutputEnvVariables ]
@@ -59,4 +71,6 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
           OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-        run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH"
+          TEST_OS_FILTER: ${{ inputs.test_os_filter }}
+          TEST_DIR_FILTER: ${{ inputs.test_dir_filter }}
+        run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH" -f "test_os_filter=$TEST_OS_FILTER" -f "test_dir_filter=$TEST_DIR_FILTER"
