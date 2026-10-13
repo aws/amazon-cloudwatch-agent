@@ -125,6 +125,14 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		t.setHostName(conf, cfg)
 		t.setHostIP(conf, cfg)
 		cfg.RunOnSystemd = !context.CurrentContext().RunInContainer()
+
+		// Recover container-scope metrics for VM-isolated pods (e.g. RuntimeClass
+		// isolated-sandbox / confidential-sandbox) via the kubelet Summary API.
+		// The receiver gates this strictly to isolated RuntimeClasses at runtime,
+		// so normal pods and their metering are unaffected. Enabled here for the
+		// EKS path so it activates on the isolated-pod (piso) cluster without an
+		// additional agent-config key.
+		cfg.EnableIsolatedPodSummaryMetrics = true
 	}
 	cfg.MiddlewareID = &agenthealth.StatusCodeID
 	cfg.PrefFullPodName = cfg.PrefFullPodName || common.GetOrDefaultBool(conf, common.ConfigKey(common.LogsKey, common.MetricsCollectedKey, common.KubernetesKey, common.PreferFullPodName), false)
