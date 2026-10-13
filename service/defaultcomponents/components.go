@@ -76,7 +76,6 @@ import (
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/nopreceiver"
-	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
@@ -95,6 +94,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/otlp"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 )
 
@@ -119,7 +119,7 @@ func Factories() (otelcol.Factories, error) {
 		kafkareceiver.NewFactory(),
 		kubeletstatsreceiver.NewFactory(),
 		nopreceiver.NewFactory(),
-		otlpreceiver.NewFactory(),
+		otlp.NewFactory(),
 		prometheusreceiver.NewFactory(),
 		postgresqlreceiver.NewFactory(),
 		statsdreceiver.NewFactory(),
