@@ -261,8 +261,8 @@ func TestIsTranslationStale_EnvConfigOlderThanToml(t *testing.T) {
 	// The threshold is the older of the two outputs, so an input at base+1 s
 	// should still trigger re-translation.
 	writeFile(t, paths.TomlConfigPath, base.Add(2*time.Second))
-	writeFile(t, paths.EnvConfigPath, base)                      // older output → sets threshold
-	writeFile(t, paths.JsonConfigPath, base.Add(time.Second))    // newer than env-config
+	writeFile(t, paths.EnvConfigPath, base)                   // older output → sets threshold
+	writeFile(t, paths.JsonConfigPath, base.Add(time.Second)) // newer than env-config
 
 	if !isTranslationStale() {
 		t.Error("expected stale=true when an input is newer than the older output (env-config.json)")
