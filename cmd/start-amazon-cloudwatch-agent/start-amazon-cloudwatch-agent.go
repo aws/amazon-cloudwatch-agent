@@ -1,6 +1,5 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
-
 package main
 
 import (
@@ -10,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -19,7 +19,84 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
+// isTranslationStale reports whether the config-translator subprocess chain
+// must run. It returns false (fresh) when both always-produced outputs
+// (paths.TomlConfigPath and paths.EnvConfigPath) exist and neither has any
+// config source that is strictly newer than itself, so that an automatic
+// service start after a reboot without config changes can skip the translation
+// entirely.
+//
+// The comparison uses the older of the two output mtimes as the threshold:
+// an input that post-dates any output signals a stale translation.
+//
+// The Configs directory is walked recursively to mirror the depth used by the
+// translator itself (filepath.Walk in cmdutil.GenerateMergedJsonConfigMap).
+// An unreadable Configs directory is silently treated as empty.
+//
+// Known limitations:
+//   - Config files or the agent binary restored from backup with preserved
+//     timestamps (older than the outputs) are treated as fresh even if their
+//     contents changed. Re-translation can be forced by removing the TOML.
+//
+// isTranslationStale is never called in container mode; containers always run
+// the full translation.
+func isTranslationStale() bool {
+	// Both outputs are always produced by a successful translation.
+	// If either is absent, the previous translation was incomplete.
+	tomlInfo, err := os.Stat(paths.TomlConfigPath)
+	if err != nil {
+		return true
+	}
+	envConfigInfo, err := os.Stat(paths.EnvConfigPath)
+	if err != nil {
+		return true
+	}
+
+	// Use the older of the two outputs as the comparison threshold so that
+	// an input newer than the earliest output triggers re-translation.
+	outMod := tomlInfo.ModTime()
+	if envConfigInfo.ModTime().Before(outMod) {
+		outMod = envConfigInfo.ModTime()
+	}
+
+	// Primary input files.
+	inputPaths := []string{
+		paths.JsonConfigPath,
+		paths.CommonConfigPath,
+		paths.AgentBinaryPath, // binary upgrade triggers retranslation
+	}
+
+	// Walk the Configs directory recursively (mirrors the translator's own
+	// filepath.Walk over the same directory). An unreadable directory is
+	// silently treated as empty.
+	_ = filepath.WalkDir(paths.ConfigDirPath, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		inputPaths = append(inputPaths, path)
+		return nil
+	})
+
+	for _, input := range inputPaths {
+		info, err := os.Stat(input)
+		if err != nil {
+			// Input does not exist; skip it.
+			continue
+		}
+		if info.ModTime().After(outMod) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func translateConfig() error {
+	if !envconfig.IsRunningInContainer() && !isTranslationStale() {
+		log.Printf("I! Config translation skipped: TOML is up-to-date\n")
+		return nil
+	}
+
 	args := []string{"--output", paths.TomlConfigPath, "--mode", "auto"}
 	if envconfig.IsRunningInContainer() {
 		args = append(args, "--input-dir", paths.CONFIG_DIR_IN_CONTAINER)
@@ -36,7 +113,6 @@ func translateConfig() error {
 			switch {
 			case status.Exited():
 				log.Printf("I! Return exit error: exit code=%d\n", status.ExitStatus())
-
 				if status.ExitStatus() == constants.ExitCodeNoJSONFile {
 					log.Printf("I! No json config files found, please provide config, exit now\n")
 					os.Exit(0)
@@ -46,7 +122,6 @@ func translateConfig() error {
 			log.Printf("Return other error: %s\n", err)
 		}
 	}
-
 	return err
 }
 

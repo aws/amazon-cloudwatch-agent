@@ -40,4 +40,11 @@ New-Item -ItemType Directory -Force -Path "${CWAProgramData}\Configs" | Out-Null
 "common-config.toml"
 ) | ForEach-Object { Copy-Item ".\$_" -Destination "${CWAProgramData}" -Force }
 
+
+# Force one fresh translation after any install/upgrade. The new binaries are
+# copied with their build timestamps, which can predate the runtime-generated
+# TOML, so the mtime check in isTranslationStale() cannot reliably detect the
+# upgrade. Removing the TOML is deterministic: the next start will retranslate
+# unconditionally, then skip translation on subsequent reboots as intended.
+Remove-Item "${CWAProgramData}\amazon-cloudwatch-agent.toml" -Force -ErrorAction SilentlyContinue
 & "${Cmd}" -Action cond-restart
