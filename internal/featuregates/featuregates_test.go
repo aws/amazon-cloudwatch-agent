@@ -27,3 +27,10 @@ func TestCanEnable_Deprecated(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, CanEnable(reg, ProfilesSupportGateID))
 }
+
+func TestCanEnable_OtherGateOnly(t *testing.T) {
+	reg := featuregate.NewRegistry()
+	_, err := reg.Register("service.someOtherGate", featuregate.StageAlpha)
+	require.NoError(t, err)
+	assert.False(t, CanEnable(reg, ProfilesSupportGateID))
+}
