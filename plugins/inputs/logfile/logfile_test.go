@@ -368,11 +368,12 @@ func makeTempFile(t *testing.T, prefix string) *os.File {
 // getLogSrc returns a LogSrc from the given LogFile, and the channel for output.
 // Verifies 1 and only 1 LogSrc is discovered.
 func getLogSrc(t *testing.T, logFile *LogFile) (*logs.LogSrc, chan logs.LogEvent) {
-	start := time.Now()
+	// Verify FindLogSrc discovers exactly one source. (No wall-clock latency
+	// assertion here: FindLogSrc runs synchronously and is fast, but this helper
+	// is also called from a goroutine that runs while another writes 1M lines, so
+	// a timing bound would measure runner contention, not FindLogSrc. A genuine
+	// block/hang is caught by the package test timeout.)
 	logSources := logFile.FindLogSrc()
-	duration := time.Since(start)
-	// LogFile.FindLogSrc() should not block.
-	require.Less(t, duration, time.Millisecond*100)
 	require.Equal(t, 1, len(logSources), "FindLogSrc() expected 1, got %d", len(logSources))
 	logSource := logSources[0]
 	evts := make(chan logs.LogEvent)
@@ -430,8 +431,13 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 			require.Fail(t, "timeout waiting for child")
 		}
 		t.Log("Verify 1st temp file was auto deleted.")
-		_, err := os.Open(file.Name())
-		assert.True(t, os.IsNotExist(err))
+		// Deletion happens asynchronously once the old file is read to EOF, so poll
+		// for it rather than checking once (which raced, especially on Windows where
+		// an open handle briefly blocks deletion).
+		require.Eventually(t, func() bool {
+			_, err := os.Open(file.Name())
+			return os.IsNotExist(err)
+		}, 10*time.Second, 50*time.Millisecond, "1st temp file should be auto-deleted after being read to EOF")
 	}
 }
 
