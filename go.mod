@@ -718,3 +718,11 @@ require (
 )
 
 require github.com/go-openapi/swag/pools v0.27.1 // indirect
+
+exclude (
+	google.golang.org/grpc v1.82.0
+	google.golang.org/grpc v1.82.1
+	google.golang.org/grpc v1.82.2
+	google.golang.org/grpc v1.83.0
+	google.golang.org/grpc v1.83.1
+)
