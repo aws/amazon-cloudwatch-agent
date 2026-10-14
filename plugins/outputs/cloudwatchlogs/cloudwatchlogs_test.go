@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -143,4 +144,40 @@ func TestSharedRetryerLifecycle(t *testing.T) {
 
 	// Clean up
 	c.Close()
+}
+
+func TestRetryHeapCreation(t *testing.T) {
+	t.Run("ConcurrencyEnabled", func(t *testing.T) {
+		c := &CloudWatchLogs{
+			Log:         testutil.Logger{Name: "test"},
+			AccessKey:   "access_key",
+			SecretKey:   "secret_key",
+			Concurrency: 2, // > 1 enables concurrency
+			cwDests:     sync.Map{},
+		}
+
+		c.CreateDest("FILENAME", "", -1, util.StandardLogGroupClass, nil)
+
+		// Should create RetryHeap and processor
+		assert.NotNil(t, c.retryHeap)
+		assert.NotNil(t, c.retryHeapProcessor)
+		assert.NotNil(t, c.workerPool)
+	})
+
+	t.Run("ConcurrencyDisabled", func(t *testing.T) {
+		c := &CloudWatchLogs{
+			Log:         testutil.Logger{Name: "test"},
+			AccessKey:   "access_key",
+			SecretKey:   "secret_key",
+			Concurrency: 1, // <= 1 disables concurrency
+			cwDests:     sync.Map{},
+		}
+
+		c.CreateDest("FILENAME", "", -1, util.StandardLogGroupClass, nil)
+
+		// Should not create RetryHeap and processor
+		assert.Nil(t, c.retryHeap)
+		assert.Nil(t, c.retryHeapProcessor)
+		assert.Nil(t, c.workerPool)
+	})
 }
