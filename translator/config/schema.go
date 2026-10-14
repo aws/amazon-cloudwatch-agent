@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// SchemaURL is the published JSON Schema for the agent config (#1219).
+// The installed copy is amazon-cloudwatch-agent-schema.json; this URL is the same document.
+const SchemaURL = "https://github.com/aws/amazon-cloudwatch-agent/raw/main/translator/config/schema.json"
+
 //go:embed schema.json
 var schema string
 
