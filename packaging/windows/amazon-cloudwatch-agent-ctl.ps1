@@ -323,6 +323,50 @@ Function ConfigAll() {
     }
 }
 
+Function Test-ConfigSourceIsLegacyJson {
+    Param (
+        [Parameter(Mandatory = $false)]
+        [string]$ConfigLocation = '',
+        [Parameter(Mandatory = $false)]
+        [string]$LegacyJson = ''
+    )
+
+    if (-not $ConfigLocation.StartsWith('file:', [System.StringComparison]::Ordinal)) {
+        return $false
+    }
+    $sourcePath = $ConfigLocation.Substring(5)
+    if ([string]::IsNullOrWhiteSpace($sourcePath) -or [string]::IsNullOrWhiteSpace($LegacyJson)) {
+        return $false
+    }
+
+    try {
+        $sourceFull = [System.IO.Path]::GetFullPath($sourcePath)
+        $legacyFull = [System.IO.Path]::GetFullPath($LegacyJson)
+    } catch {
+        return $false
+    }
+    return [string]::Equals($sourceFull, $legacyFull, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+# A replace drops the legacy json so a stale file is not merged on the next
+# start. Keep it when that file is the source fetch-config just applied.
+Function Remove-ReplacedLegacyJson {
+    Param (
+        [Parameter(Mandatory = $false)]
+        [string]$ConfigLocation = '',
+        [Parameter(Mandatory = $false)]
+        [string]$LegacyJson = ''
+    )
+
+    if (Test-ConfigSourceIsLegacyJson -ConfigLocation $ConfigLocation -LegacyJson $LegacyJson) {
+        return
+    }
+    if ([string]::IsNullOrWhiteSpace($LegacyJson)) {
+        return
+    }
+    Remove-Item -LiteralPath $LegacyJson -Force -ErrorAction SilentlyContinue
+}
+
 Function CWAConfig() {
     Param (
         [Parameter(Mandatory = $false)]
@@ -381,7 +425,7 @@ Function CWAConfig() {
         #       append:     rename .tmp file
         #       remove:     no-op
         if ($multi_config -eq 'default') {
-            Remove-Item "${JSON}" -Force -ErrorAction SilentlyContinue
+            Remove-ReplacedLegacyJson -ConfigLocation $ConfigLocation -LegacyJson $JSON
             Remove-Item -Path "${JSON_DIR}\*" -Exclude "*.tmp" -Force -ErrorAction SilentlyContinue
             Get-ChildItem "${JSON_DIR}\*.tmp" | Rename-Item -NewName { $_.name -Replace '\.tmp$','' }
         } elseif ($multi_config -eq 'append') {
@@ -489,4 +533,6 @@ Function main() {
     Exit 0
 }
 
-main
+if ($env:AMAZON_CLOUDWATCH_AGENT_CTL_SOURCE_ONLY -ne '1') {
+    main
+}
