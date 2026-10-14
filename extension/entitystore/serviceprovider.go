@@ -316,6 +316,25 @@ func (s *serviceprovider) scrapeImdsServiceNameAndASG() error {
 	return nil
 }
 
+func ServiceNameFromIMDS(ctx context.Context, provider ec2metadataprovider.MetadataProvider) string {
+	if tagKeys, err := provider.InstanceTags(ctx); err == nil {
+		lowerTagKeys := toLowerKeyMap(tagKeys)
+		for _, potentialServiceProviderKey := range serviceProviderPriorities {
+			originalCaseKey, exists := lowerTagKeys[potentialServiceProviderKey]
+			if !exists {
+				continue
+			}
+			if serviceName, err := provider.InstanceTagValue(ctx, originalCaseKey); err == nil && strings.TrimSpace(serviceName) != "" {
+				return strings.TrimSpace(serviceName)
+			}
+		}
+	}
+	if iamRole, err := provider.ClientIAMRole(ctx); err == nil && strings.TrimSpace(iamRole) != "" {
+		return strings.TrimSpace(iamRole)
+	}
+	return ""
+}
+
 func toLowerKeyMap(values []string) map[string]string {
 	set := make(map[string]string, len(values))
 	for _, v := range values {

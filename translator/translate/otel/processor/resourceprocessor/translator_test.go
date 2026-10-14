@@ -211,39 +211,6 @@ func TestTranslateStaticAttributes(t *testing.T) {
 	assert.Equal(t, "upsert", string(gotCfg.AttributesActions[0].Action))
 }
 
-func TestTranslateStaticAttributes_ActionOverride(t *testing.T) {
-	tt := NewTranslator(
-		common.WithName("test_action"),
-		WithAttributes(map[string]string{
-			"service.name": "unknown_service",
-		}),
-		WithAttributesAction(ActionInsert),
-	)
-
-	got, err := tt.Translate(nil)
-	require.NoError(t, err)
-
-	gotCfg, ok := got.(*resourceprocessor.Config)
-	require.True(t, ok)
-	require.Len(t, gotCfg.AttributesActions, 1)
-	assert.Equal(t, "service.name", gotCfg.AttributesActions[0].Key)
-	assert.Equal(t, "unknown_service", gotCfg.AttributesActions[0].Value)
-	assert.Equal(t, "insert", string(gotCfg.AttributesActions[0].Action))
-}
-
-func TestTranslateStaticAttributes_InvalidActionRejected(t *testing.T) {
-	tt := NewTranslator(
-		common.WithName("test_bad_action"),
-		WithAttributes(map[string]string{"key1": "value1"}),
-		WithAttributesAction(Action("delete")),
-	)
-
-	got, err := tt.Translate(nil)
-	require.Error(t, err)
-	assert.Nil(t, got)
-	assert.ErrorContains(t, err, `unsupported resource attributes action "delete"`)
-}
-
 func TestTranslateStaticAttributes_MultipleKeys(t *testing.T) {
 	tt := NewTranslator(
 		common.WithName("test_multi"),
@@ -328,6 +295,67 @@ func TestTranslateStaticAttributes_AllErrorsReported(t *testing.T) {
 	// both the empty-key and reserved-key violations surface at once
 	assert.Contains(t, err.Error(), "must not be empty")
 	assert.Contains(t, err.Error(), "reserved")
+}
+
+func TestTranslateOrderedActions(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_ordered"),
+		WithOrderedActions([]AttributeAction{
+			{Action: ActionInsert, Key: "service.name", FromAttribute: "aws.ecs.task.family"},
+			{Action: ActionInsert, Key: "service.name", Value: "unknown_service"},
+		}),
+	)
+
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+
+	gotCfg, ok := got.(*resourceprocessor.Config)
+	require.True(t, ok)
+	require.Len(t, gotCfg.AttributesActions, 2)
+	assert.Equal(t, "service.name", gotCfg.AttributesActions[0].Key)
+	assert.Equal(t, "aws.ecs.task.family", gotCfg.AttributesActions[0].FromAttribute)
+	assert.Empty(t, gotCfg.AttributesActions[0].Value)
+	assert.Equal(t, "insert", string(gotCfg.AttributesActions[0].Action))
+	assert.Equal(t, "service.name", gotCfg.AttributesActions[1].Key)
+	assert.Equal(t, "unknown_service", gotCfg.AttributesActions[1].Value)
+	assert.Equal(t, "insert", string(gotCfg.AttributesActions[1].Action))
+}
+
+func TestTranslateOrderedActions_TakesPrecedenceOverAttributes(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_ordered_precedence"),
+		WithAttributes(map[string]string{"key1": "value1"}),
+		WithOrderedActions([]AttributeAction{{Action: ActionUpsert, Key: "key2", Value: "value2"}}),
+	)
+
+	got, err := tt.Translate(nil)
+	require.NoError(t, err)
+
+	gotCfg, ok := got.(*resourceprocessor.Config)
+	require.True(t, ok)
+	require.Len(t, gotCfg.AttributesActions, 1)
+	assert.Equal(t, "key2", gotCfg.AttributesActions[0].Key)
+}
+
+func TestTranslateOrderedActions_AllErrorsReported(t *testing.T) {
+	tt := NewTranslator(
+		common.WithName("test_ordered_errors"),
+		WithReservedKeys("aws.log.source"),
+		WithOrderedActions([]AttributeAction{
+			{Action: ActionInsert, Key: "", Value: "v1"},
+			{Action: ActionInsert, Key: "aws.log.source", Value: "v2"},
+			{Action: Action("delete"), Key: "key3", Value: "v3"},
+			{Action: ActionInsert, Key: "key5", Value: "v5", FromAttribute: "other"},
+		}),
+	)
+
+	got, err := tt.Translate(nil)
+	require.Error(t, err)
+	assert.Nil(t, got)
+	assert.Contains(t, err.Error(), "must not be empty")
+	assert.Contains(t, err.Error(), "reserved")
+	assert.Contains(t, err.Error(), `unsupported resource attributes action "delete"`)
+	assert.Contains(t, err.Error(), `"key5" cannot set both value and from_attribute`)
 }
 
 func TestContainerInsightsJmx(t *testing.T) {

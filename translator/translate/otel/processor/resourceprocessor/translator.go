@@ -38,10 +38,17 @@ const (
 	ActionUpsert Action = "upsert"
 )
 
-func WithAttributesAction(action Action) common.TranslatorOption {
+type AttributeAction struct {
+	Action        Action
+	Key           string
+	Value         string
+	FromAttribute string
+}
+
+func WithOrderedActions(actions []AttributeAction) common.TranslatorOption {
 	return func(target any) {
 		if t, ok := target.(*translator); ok {
-			t.attributesAction = action
+			t.orderedActions = actions
 		}
 	}
 }
@@ -60,10 +67,10 @@ func WithReservedKeys(keys ...string) common.TranslatorOption {
 type translator struct {
 	common.NameProvider
 	common.IndexProvider
-	factory          processor.Factory
-	attributes       map[string]string
-	attributesAction Action
-	reservedKeys     collections.Set[string]
+	factory        processor.Factory
+	attributes     map[string]string
+	orderedActions []AttributeAction
+	reservedKeys   collections.Set[string]
 }
 
 var _ common.ComponentTranslator = (*translator)(nil)
@@ -85,50 +92,62 @@ func (t *translator) ID() component.ID {
 }
 
 func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
+	if len(t.orderedActions) > 0 {
+		return t.translateActions(t.orderedActions)
+	}
 	if len(t.attributes) > 0 {
-		return t.translateStaticAttributes()
+		return t.translateActions(t.staticAttributeActions())
 	}
 	return t.translateJMX(conf)
 }
 
-func (t *translator) translateStaticAttributes() (component.Config, error) {
-	// Emit in sorted key order so the generated config is deterministic, and
-	// collect all validation errors so a misconfiguration surfaces every bad key.
+func (t *translator) staticAttributeActions() []AttributeAction {
 	keys := make([]string, 0, len(t.attributes))
-	var errs error
 	for k := range t.attributes {
-		if strings.TrimSpace(k) == "" {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	actions := make([]AttributeAction, 0, len(keys))
+	for _, k := range keys {
+		actions = append(actions, AttributeAction{Action: ActionUpsert, Key: k, Value: t.attributes[k]})
+	}
+	return actions
+}
+
+func (t *translator) translateActions(actions []AttributeAction) (component.Config, error) {
+	var errs error
+	attrs := make([]any, 0, len(actions))
+	for _, action := range actions {
+		if strings.TrimSpace(action.Key) == "" {
 			errs = errors.Join(errs, fmt.Errorf("%s: resource attribute keys must not be empty", t.ID()))
 			continue
 		}
-		if t.reservedKeys.Contains(k) {
-			errs = errors.Join(errs, fmt.Errorf("%s: resource attribute key %q is reserved and cannot be overridden", t.ID(), k))
+		if t.reservedKeys.Contains(action.Key) {
+			errs = errors.Join(errs, fmt.Errorf("%s: resource attribute key %q is reserved and cannot be overridden", t.ID(), action.Key))
 			continue
 		}
-		keys = append(keys, k)
-	}
-	action := t.attributesAction
-	switch action {
-	case "":
-		action = ActionUpsert
-	case ActionInsert, ActionUpdate, ActionUpsert:
-	default:
-		errs = errors.Join(errs, fmt.Errorf("%s: unsupported resource attributes action %q", t.ID(), action))
+		switch action.Action {
+		case ActionInsert, ActionUpdate, ActionUpsert:
+		default:
+			errs = errors.Join(errs, fmt.Errorf("%s: unsupported resource attributes action %q", t.ID(), action.Action))
+			continue
+		}
+		if action.Value != "" && action.FromAttribute != "" {
+			errs = errors.Join(errs, fmt.Errorf("%s: resource attribute %q cannot set both value and from_attribute", t.ID(), action.Key))
+			continue
+		}
+		attr := map[string]any{"action": string(action.Action), "key": action.Key}
+		if action.FromAttribute != "" {
+			attr["from_attribute"] = action.FromAttribute
+		} else {
+			attr["value"] = action.Value
+		}
+		attrs = append(attrs, attr)
 	}
 	if errs != nil {
 		return nil, errs
 	}
-	sort.Strings(keys)
-
 	cfg := t.factory.CreateDefaultConfig().(*resourceprocessor.Config)
-	attrs := make([]any, 0, len(keys))
-	for _, k := range keys {
-		attrs = append(attrs, map[string]any{
-			"action": string(action),
-			"key":    k,
-			"value":  t.attributes[k],
-		})
-	}
 	c := confmap.NewFromStringMap(map[string]any{"attributes": attrs})
 	if err := c.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal resource processor: %w", err)

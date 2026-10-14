@@ -41,6 +41,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	otel "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
+	otlppipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/otlp"
 	systemmetricspipeline "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/systemmetrics"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
@@ -958,6 +959,25 @@ func TestOpenTelemetryOtlpConfig(t *testing.T) {
 	checkTranslation(t, "opentelemetry_otlp_config", "linux", nil, "")
 }
 
+func TestOpenTelemetryOtlpInferenceConfig(t *testing.T) {
+	for _, targetPlatform := range []string{"linux", "windows"} {
+		t.Run(targetPlatform, func(t *testing.T) {
+			resetContext(t)
+			context.CurrentContext().SetMode(config.ModeEC2)
+			readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+			stubEC2ServiceName(t, "my-ec2-service")
+			checkTranslation(t, "opentelemetry_otlp_inference_config", targetPlatform, nil, "_"+targetPlatform)
+		})
+	}
+}
+
+func stubEC2ServiceName(t *testing.T, name string) {
+	t.Helper()
+	previous := otlppipeline.EC2ServiceNameProvider
+	t.Cleanup(func() { otlppipeline.EC2ServiceNameProvider = previous })
+	otlppipeline.EC2ServiceNameProvider = func() string { return name }
+}
+
 func TestAppendDimensionsHostMetrics(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)
@@ -1166,6 +1186,8 @@ func resetContext(t *testing.T) {
 
 	// Clear OTLP config cache to avoid conflicts between tests
 	otlp.ClearConfigCache()
+
+	stubEC2ServiceName(t, "")
 
 	t.Setenv("ProgramData", "c:\\ProgramData")
 }
