@@ -1,0 +1,14 @@
+type: awscloudwatchlogsprovisioner
+
+status:
+  class: extension
+  stability:
+    alpha: [extension]
+  distributions: []
+  codeowners:
+    active: [jj22ee]
+
+tests:
+  config:
+    region: "us-east-1"
+    logs_provision_timeout: 10s
