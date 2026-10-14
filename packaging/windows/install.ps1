@@ -46,5 +46,6 @@ New-Item -ItemType Directory -Force -Path "${CWAProgramData}\Configs" | Out-Null
 # TOML, so the mtime check in isTranslationStale() cannot reliably detect the
 # upgrade. Removing the TOML is deterministic: the next start will retranslate
 # unconditionally, then skip translation on subsequent reboots as intended.
+Write-Host "Removing cached config translation to force retranslation after install/upgrade."
 Remove-Item "${CWAProgramData}\amazon-cloudwatch-agent.toml" -Force -ErrorAction SilentlyContinue
 & "${Cmd}" -Action cond-restart
