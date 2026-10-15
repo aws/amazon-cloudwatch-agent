@@ -68,15 +68,17 @@ func getBackoffDuration(i int) time.Duration {
 
 // encapsulate the retry logic in this separate method.
 func callFuncWithRetries(fn func() (*ec2.DescribeTagsOutput, error), errorMsg string) (*ec2.DescribeTagsOutput, error) {
+	var err error
 	for i := 0; i <= defaultRetryCount; i++ {
-		result, err := fn()
+		var result *ec2.DescribeTagsOutput
+		result, err = fn()
 		if err == nil {
 			return result, nil
 		}
 		log.Printf("%s Will retry the request: %s", errorMsg, err.Error())
 		backoffSleep(i)
 	}
-	return nil, nil
+	return nil, err
 }
 
 var ec2ClientFactory = createDescribeTagsClient
