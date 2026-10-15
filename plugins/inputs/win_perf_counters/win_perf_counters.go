@@ -82,6 +82,9 @@ type Win_PerfCounters struct {
 	gItemList        map[int]*item
 	testConfigParsed bool
 	testObject       string
+	// consecutiveFailedScrapes counts Gather passes where every configured
+	// counter failed to init/collect (e.g. PDH handles invalidated by Windows Update).
+	consecutiveFailedScrapes int
 }
 
 type perfobject struct {
@@ -134,6 +137,17 @@ func (item *item) init() error {
 	item.initialized = true
 
 	return nil
+}
+
+// reset closes PDH handles so the next Gather can re-open them after Windows
+// Update or similar invalidates the counter registry.
+func (item *item) reset() {
+	if item.handle != 0 {
+		_ = PdhCloseQuery(item.handle)
+	}
+	item.handle = 0
+	item.counterHandle = 0
+	item.initialized = false
 }
 
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
@@ -261,78 +275,94 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	var size uint32 = uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
 	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
+	outcome := scrapeOutcome{total: len(m.gItemList)}
+
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.gItemList {
 		if !metric.initialized {
 			if err := metric.init(); err != nil {
-				log.Printf("D! metric init has error: %v", err)
+				outcome.failed++
+				outcome.lastErr = err
 				continue
 			}
 		}
 		// collect
 		ret := PdhCollectQueryData(metric.handle)
-		if ret == ERROR_SUCCESS {
-			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
-				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
-			if ret == PDH_MORE_DATA {
-				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
-				if len(filledBuf) == 0 {
-					continue
+		if ret != ERROR_SUCCESS {
+			outcome.failed++
+			outcome.lastErr = errors.New(PdhFormatError(ret))
+			// Handles go stale after Windows Update / MSI reconfig; drop them so
+			// the next scrape re-opens fresh PDH queries.
+			metric.reset()
+			continue
+		}
+
+		ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
+			&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
+		if ret != PDH_MORE_DATA {
+			continue
+		}
+		filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
+		if len(filledBuf) == 0 {
+			continue
+		}
+		ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
+			&bufSize, &bufCount, &filledBuf[0])
+		for i := 0; i < int(bufCount); i++ {
+			c := filledBuf[i]
+			var s string = UTF16PtrToString(c.SzName)
+
+			var add bool
+
+			if metric.include_total {
+				// If IncludeTotal is set, include all.
+				add = true
+			} else if metric.instance == "*" && !strings.Contains(s, "_Total") {
+				// Catch if set to * and that it is not a '*_Total*' instance.
+				add = true
+			} else if metric.instance == s {
+				// Catch if we set it to total or some form of it
+				add = true
+			} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
+				// If you are using a multiple instance identifier such as "w3wp#1"
+				// phd.dll returns only the first 2 characters of the identifier.
+				add = true
+				s = metric.instance
+			} else if metric.instance == "------" {
+				add = true
+			}
+
+			if add {
+				fields := make(map[string]interface{})
+				tags := make(map[string]string)
+				if s != "" {
+					tags["instance"] = s
 				}
-				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
-					&bufSize, &bufCount, &filledBuf[0])
-				for i := 0; i < int(bufCount); i++ {
-					c := filledBuf[i]
-					var s string = UTF16PtrToString(c.SzName)
+				tags["objectname"] = metric.objectName
+				fields[m.convertName(metric.counter)] =
+					float32(c.FmtValue.DoubleValue)
 
-					var add bool
-
-					if metric.include_total {
-						// If IncludeTotal is set, include all.
-						add = true
-					} else if metric.instance == "*" && !strings.Contains(s, "_Total") {
-						// Catch if set to * and that it is not a '*_Total*' instance.
-						add = true
-					} else if metric.instance == s {
-						// Catch if we set it to total or some form of it
-						add = true
-					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
-						// If you are using a multiple instance identifier such as "w3wp#1"
-						// phd.dll returns only the first 2 characters of the identifier.
-						add = true
-						s = metric.instance
-					} else if metric.instance == "------" {
-						add = true
-					}
-
-					if add {
-						fields := make(map[string]interface{})
-						tags := make(map[string]string)
-						if s != "" {
-							tags["instance"] = s
-						}
-						tags["objectname"] = metric.objectName
-						fields[m.convertName(metric.counter)] =
-							float32(c.FmtValue.DoubleValue)
-
-						measurement := m.convertName(metric.measurement)
-						if measurement == "" {
-							measurement = "win_perf_counters"
-						}
-						acc.AddFields(measurement, fields, tags)
-					}
+				measurement := m.convertName(metric.measurement)
+				if measurement == "" {
+					measurement = "win_perf_counters"
 				}
-
-				filledBuf = nil
-				// Need to at least set bufSize to zero, because if not, the function will not
-				// return PDH_MORE_DATA and will not set the bufSize.
-				bufCount = 0
-				bufSize = 0
+				acc.AddFields(measurement, fields, tags)
 			}
 		}
+
+		filledBuf = nil
+		// Need to at least set bufSize to zero, because if not, the function will not
+		// return PDH_MORE_DATA and will not set the bufSize.
+		bufCount = 0
+		bufSize = 0
 	}
 
-	return nil
+	m.consecutiveFailedScrapes = nextFailureCount(m.consecutiveFailedScrapes, outcome)
+	if prefix := failureLogPrefix(m.consecutiveFailedScrapes); prefix != "" {
+		log.Printf("%s win_perf_counters: %v (consecutive failed scrapes=%d)",
+			prefix, outcome.error(), m.consecutiveFailedScrapes)
+	}
+	return outcome.error()
 }
 
 func init() {
