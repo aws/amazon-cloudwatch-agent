@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -304,24 +303,13 @@ func runAgent(ctx context.Context,
 		logAgent := logs.NewLogAgent(c)
 		// Always run logAgent as goroutine regardless of whether starting OTEL or Telegraf.
 		go logAgent.Run(ctx)
-
-		// If only a single YAML is provided and does not exist, then ASSUME the agent is
-		// just monitoring logs since this is the default when no OTEL config flag is provided.
-		// So just start Telegraf.
-		if len(fOtelConfigs) == 1 {
-			_, err = os.Stat(fOtelConfigs[0])
-			if errors.Is(err, os.ErrNotExist) {
-				log.Println("I! running in logs-only mode")
-				useragent.Get().SetComponents(&otelcol.Config{}, c)
-				return ag.Run(ctx)
-			}
-		}
 	}
-	// Else start OTEL and rely on adapter package to start the logfile plugin.
-	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
-	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
 
-	otelConfigs := fOtelConfigs
+	otelConfigs := loadableOtelConfigs(fOtelConfigs)
+	if skipped := len(fOtelConfigs) - len(otelConfigs); skipped > 0 {
+		log.Printf("I! Skipping %d missing OTEL config file(s)", skipped)
+	}
+
 	// try merging configs together, will return nil if nothing to merge
 	merged, err := mergeConfigs(otelConfigs, envconfig.IsUsageDataEnabled())
 	if err != nil {
@@ -338,6 +326,19 @@ func runAgent(ctx context.Context,
 	} else {
 		_ = os.Unsetenv(envconfig.CWAgentMergedOtelConfig)
 	}
+
+	// Translator deletes amazon-cloudwatch-agent.yaml when there are no OTEL
+	// pipelines (logs-only / Fluent Bit sidecar). Stay up so the process does
+	// not CrashLoopBackOff.
+	if len(otelConfigs) == 0 {
+		log.Println("I! running without OTEL pipelines")
+		useragent.Get().SetComponents(&otelcol.Config{}, c)
+		return ag.Run(ctx)
+	}
+
+	// Else start OTEL and rely on adapter package to start the logfile plugin.
+	level := cwaLogger.ConvertToAtomicLevel(wlog.LogLevel())
+	logger, loggerOptions := cwaLogger.NewLogger(writer, level)
 
 	providerSettings := configprovider.GetSettings(otelConfigs, logger)
 	provider, err := otelcol.NewConfigProvider(providerSettings)
@@ -486,7 +487,9 @@ func main() {
 
 	flag.Parse()
 	if len(fOtelConfigs) == 0 {
-		_ = fOtelConfigs.Set(getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath))
+		if fallback := getFallbackOtelConfig(*fTomlConfig, paths.YamlConfigPath); fallback != "" {
+			_ = fOtelConfigs.Set(fallback)
+		}
 	}
 	args := flag.Args()
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
@@ -727,6 +730,8 @@ func checkRightForBinariesFileWithInputPlugins(inputPlugins []string) (string, e
 //  1. Default YAML path
 //  2. Default YAML in the provided TOML directory
 //  3. YAML with the same name as the provided TOML
+//
+// Returns an empty string when none of the candidates exist.
 func getFallbackOtelConfig(tomlPath, defaultYamlPath string) string {
 	candidatePaths := []string{defaultYamlPath}
 	if tomlPath != "" {
@@ -737,13 +742,38 @@ func getFallbackOtelConfig(tomlPath, defaultYamlPath string) string {
 			samePathYAML,
 		)
 	}
-	fallbackPath := defaultYamlPath
 	for _, candidatePath := range candidatePaths {
-		_, err := os.Stat(candidatePath)
-		if err == nil {
-			fallbackPath = candidatePath
-			break
+		if _, err := os.Stat(candidatePath); err == nil {
+			return candidatePath
 		}
 	}
-	return fallbackPath
+	return ""
+}
+
+// loadableOtelConfigs drops missing file URIs. env: URIs are kept.
+func loadableOtelConfigs(uris []string) []string {
+	var out []string
+	for _, uri := range uris {
+		if otelConfigURIExists(uri) {
+			out = append(out, uri)
+		}
+	}
+	return out
+}
+
+func otelConfigURIExists(uri string) bool {
+	if uri == "" {
+		return false
+	}
+	if strings.HasPrefix(uri, "env:") {
+		return true
+	}
+	path := uri
+	if rest, ok := strings.CutPrefix(uri, "file://"); ok {
+		path = rest
+	} else if rest, ok := strings.CutPrefix(uri, "file:"); ok {
+		path = rest
+	}
+	_, err := os.Stat(path)
+	return err == nil
 }
