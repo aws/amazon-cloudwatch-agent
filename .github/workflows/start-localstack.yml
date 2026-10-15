@@ -88,7 +88,7 @@ jobs:
           INPUT_REGION: ${{ inputs.region }}
         run: >
           echo run terraform and execute test code &&
-          terraform apply --auto-approve
+          terraform apply -input=false --auto-approve
           -var="ssh_key_value=$PRIVATE_KEY"
           -var="github_test_repo=$INPUT_TEST_REPO_URL"
           -var="github_test_repo_branch=$INPUT_TEST_REPO_BRANCH"
