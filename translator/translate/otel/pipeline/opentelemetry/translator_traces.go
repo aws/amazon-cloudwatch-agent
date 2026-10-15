@@ -18,6 +18,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	otelotlp "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/pipeline/opentelemetry/otlp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/batchprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
@@ -69,6 +70,9 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 		if setClusterName != nil {
 			processors.Set(setClusterName)
 		}
+	}
+	if inferred := otelotlp.NewInferredServiceNameTranslator("traces"); inferred != nil {
+		processors.Set(inferred)
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_traces"), batchprocessor.WithSendBatchSize(common.MaxSpansPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxSpansPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
