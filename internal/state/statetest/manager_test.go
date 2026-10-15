@@ -30,7 +30,10 @@ func TestNewFileManagerSink(t *testing.T) {
 	assert.Equal(t, "sink", sink.ID())
 	sink.Enqueue(state.NewRange(0, 5))
 	sink.Enqueue(state.NewRange(5, 10))
-	time.Sleep(time.Millisecond)
+	// 200ms (~13 Windows ticks) lets the Run goroutine consume both queued ranges
+	// before shutdown. The original 1ms was below Windows' ~15.6ms scheduling tick,
+	// so close(done) could win and persist an empty state.
+	time.Sleep(200 * time.Millisecond)
 	close(done)
 	wg.Wait()
 
