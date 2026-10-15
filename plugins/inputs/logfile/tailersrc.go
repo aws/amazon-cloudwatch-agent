@@ -18,10 +18,13 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/plugins/inputs/logfile/tail"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 )
 
 const (
 	tailCloseThreshold = 3 * time.Second
+	// The minimum interval between logs that a multi-line group was split into several events, per tailer.
+	warnMultiLineSplitInterval = 5 * time.Minute
 )
 
 var (
@@ -82,6 +85,8 @@ type tailerSrc struct {
 	backpressureFdDrop bool
 	buffer             chan *LogEvent
 	stopOnce           sync.Once
+	// The last time a split multi-line group was logged. Only used by the runTail goroutine.
+	lastMultiLineSplitWarnTime time.Time
 }
 
 // Verify tailerSrc implements LogSrc
@@ -201,7 +206,6 @@ func (ts *tailerSrc) runTail() {
 	if ts.initialStateOffset > 0 {
 		fo.SetInt64(0, ts.initialStateOffset)
 	}
-	ignoreUntilNextEvent := false
 
 	for {
 		select {
@@ -234,14 +238,16 @@ func (ts *tailerSrc) runTail() {
 				msgBuf.WriteString(text)
 				fo.ShiftInt64(line.Offset)
 				init = ""
-			} else if ts.isMLStart(text) || (!ignoreUntilNextEvent && msgBuf.Len() == 0) {
+			} else if ts.isMLStart(text) || msgBuf.Len() == 0 {
 				init = text
-				ignoreUntilNextEvent = false
-			} else if ignoreUntilNextEvent || msgBuf.Len() >= ts.maxEventSize {
-				ignoreUntilNextEvent = true
-				fo.ShiftInt64(line.Offset)
-				ts.tailer.ReleaseLine(line)
-				continue
+			} else if msgBuf.Len()+1+len(text) > ts.maxEventSize {
+				// Appending this continuation line ("\n" plus the line) would take the event past maxEventSize. Rather
+				// than drop it and the rest of the group, publish the event so far and start a new event with this
+				// line, as for a start line below. The group is cut on a line boundary and nothing is dropped. The
+				// check runs before the append, so an event never grows past maxEventSize unless a single line is
+				// longer than that; the cloudwatchlogs output splits such an event further if needed.
+				ts.reportMultiLineSplit()
+				init = text
 			} else {
 				msgBuf.WriteString("\n")
 				msgBuf.WriteString(text)
@@ -270,6 +276,19 @@ func (ts *tailerSrc) runTail() {
 			return
 		}
 	}
+}
+
+// reportMultiLineSplit counts a multi-line group that was split into several events because it would have exceeded
+// maxEventSize, and logs it at most once per warnMultiLineSplitInterval. The stat is added before the throttle check,
+// so every split is counted, with a key like the one for filtered messages (see ShouldPublish).
+func (ts *tailerSrc) reportMultiLineSplit() {
+	profiler.Profiler.AddStats([]string{"logfile", ts.group, ts.stream, "messages", "multiLineSplit"}, 1)
+	now := time.Now()
+	if now.Sub(ts.lastMultiLineSplitWarnTime) <= warnMultiLineSplitInterval {
+		return
+	}
+	ts.lastMultiLineSplitWarnTime = now
+	log.Printf("W! [logfile] A multi-line log event in file %s would exceed the max_event_size of %d bytes, so it was split into several log events at line boundaries.", ts.tailer.Filename, ts.maxEventSize)
 }
 
 func (ts *tailerSrc) publishEvent(msgBuf bytes.Buffer, fo state.Range) {

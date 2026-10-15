@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
+	"github.com/aws/amazon-cloudwatch-agent/profiler"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/util"
 )
@@ -77,6 +79,15 @@ type mockSender struct {
 
 func (m *mockSender) Send(batch *logEventBatch) {
 	m.Called(batch)
+}
+
+// SendOrdered records the call, then sends the batches in order through Send, as the real sender does, so that
+// expectations on Send cover the batches of split log events too. Tests that do not check it set it up with Maybe.
+func (m *mockSender) SendOrdered(batches []*logEventBatch) {
+	m.Called(batches)
+	for _, batch := range batches {
+		m.Send(batch)
+	}
 }
 
 func (m *mockSender) SetRetryDuration(d time.Duration) {
@@ -265,6 +276,36 @@ func TestLongMessageHandling(t *testing.T) {
 	q.Stop()
 	sender.Stop()
 	wg.Wait()
+
+	// A message over the per-event limit is not modified either: it is sent as several events that concatenate to it.
+	t.Run("OverLimit", func(t *testing.T) {
+		var wg sync.WaitGroup
+		var s stubLogsService
+		overLimitMsg := strings.Repeat("x", maxEventMessageBytes+10000)
+		var mu sync.Mutex
+		var received strings.Builder
+		var requests int
+		s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+			mu.Lock()
+			defer mu.Unlock()
+			requests++
+			for _, le := range in.LogEvents {
+				received.WriteString(*le.Message)
+			}
+			return &cloudwatchlogs.PutLogEventsOutput{}, nil
+		}
+		q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, nil, &wg)
+		q.AddEvent(newStubLogEvent(overLimitMsg, time.Now()))
+		require.Eventually(t, func() bool {
+			mu.Lock()
+			defer mu.Unlock()
+			return requests == 2
+		}, 5*time.Second, 10*time.Millisecond)
+		q.Stop()
+		sender.Stop()
+		wg.Wait()
+		assert.True(t, received.String() == overLimitMsg, "the events concatenate to the message")
+	})
 }
 
 func TestRequestIsLessThan1MB(t *testing.T) {
@@ -430,6 +471,285 @@ func TestAddMultipleEvents(t *testing.T) {
 	q.Stop()
 	sender.Stop()
 	wg.Wait()
+}
+
+// profilerStat returns the value of the profiler stat with the given key.
+func profilerStat(key string) float64 {
+	stats := profiler.Profiler.GetStats()
+	// GetStats returns the map the profiler updates, so read it under the profiler lock.
+	profiler.Profiler.Lock()
+	defer profiler.Profiler.Unlock()
+	return stats[key]
+}
+
+// countWarns returns the warnings in the log sink that contain substr.
+func countWarns(logSink *testutil.LogSink, substr string) []string {
+	var warns []string
+	for _, line := range logSink.Lines() {
+		if strings.Contains(line, "W!") && strings.Contains(line, substr) {
+			warns = append(warns, line)
+		}
+	}
+	return warns
+}
+
+// oversizedEMFMessage returns an EMF document over the per-event limit, which is truncated rather than split.
+func oversizedEMFMessage() string {
+	return `{"_aws":{"CloudWatchMetrics":[]},"data":"` + strings.Repeat("x", maxEventMessageBytes) + `"}`
+}
+
+// TestReportTruncatedLogEvents checks that each truncated log event is counted, and that a warning is logged for the
+// first one but not for one truncated soon after it. Truncated means content was dropped: an EMF message over the
+// limit, or a message past maxSplitChunks events. A message that is split without loss is counted as split instead
+// (see TestReportSplitLogEvents).
+func TestReportTruncatedLogEvents(t *testing.T) {
+	t.Parallel()
+	var wg sync.WaitGroup
+	// A log group used by this test only, as the profiler stats are global.
+	target := Target{t.Name(), "S", util.StandardLogGroupClass, -1}
+	statKey := strings.Join([]string{"cloudwatchlogs", target.Group, truncatedLogEventsStat}, "_")
+	splitStatKey := strings.Join([]string{"cloudwatchlogs", target.Group, splitLogEventsStat}, "_")
+	// The stats are not cleared between runs of the test, so compare with the value at the start.
+	baseStat := profilerStat(statKey)
+	baseSplitStat := profilerStat(splitStatKey)
+
+	mockSender := &mockSender{}
+	mockSender.On("SendOrdered", mock.Anything).Return().Maybe()
+	mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
+		args.Get(0).(*logEventBatch).done()
+	}).Return()
+	logSink := testutil.NewLogSink()
+	q := newQueue(logSink, target, time.Hour, nil, mockSender, &wg).(*queue)
+
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	// Fewer raw bytes than the limit, but counted as invalidUTF8ByteSize bytes each, so it is over the limit. It is
+	// split without loss.
+	oversized := string(bytes.Repeat([]byte{0xff}, maxMessageSize))
+	emf := oversizedEMFMessage()
+	// Counted as 9 times the limit, so it needs more than maxSplitChunks events and loses content.
+	pastCap := string(bytes.Repeat([]byte{0xff}, 3*maxMessageSize))
+	pastCapEvents := newStatefulLogEvents(time.Now(), pastCap, nil, nil)
+	require.Len(t, pastCapEvents, maxSplitChunks)
+	pastCapKept := -len(defaultTruncationSuffix)
+	for _, e := range pastCapEvents {
+		pastCapKept += e.eventBytes - perEventHeaderBytes
+	}
+
+	tests := []struct {
+		name          string
+		message       string
+		expectedStat  float64
+		expectedSplit float64
+		expectedWarns int
+	}{
+		{name: "Event that fits", message: "small message", expectedStat: 0, expectedWarns: 0},
+		{name: "Split without loss", message: oversized, expectedStat: 0, expectedSplit: 1, expectedWarns: 0},
+		{name: "First truncated", message: emf, expectedStat: 1, expectedSplit: 1, expectedWarns: 1},
+		// Within warnTruncatedLogEventInterval of the first, so it is counted but not logged.
+		{name: "Second truncated", message: emf, expectedStat: 2, expectedSplit: 1, expectedWarns: 1},
+		// Past the cap: counted as truncated and as split.
+		{name: "Truncated past the cap", message: pastCap, expectedStat: 3, expectedSplit: 2, expectedWarns: 1},
+		{name: "Event that fits after truncated", message: "small message", expectedStat: 3, expectedSplit: 2, expectedWarns: 1},
+	}
+	// The time of the first truncated event, which is the one the warning is logged for.
+	var firstTruncatedTime time.Time
+	for _, tt := range tests {
+		done := make(chan struct{})
+		eventTime := time.Now()
+		if tt.message == emf && firstTruncatedTime.IsZero() {
+			firstTruncatedTime = eventTime
+		}
+		event := newStubLogEvent(tt.message, eventTime)
+		// The queue runs the done callback when the batch is sent, so use it to know the event was processed.
+		event.done = func() { close(done) }
+		q.AddEvent(event)
+		require.Eventually(t, func() bool {
+			// The event may not have reached the batch yet, so send until it is acknowledged.
+			triggerSend(t, q)
+			select {
+			case <-done:
+				return true
+			default:
+				return false
+			}
+		}, 5*time.Second, 10*time.Millisecond, tt.name)
+
+		assert.Equal(t, baseStat+tt.expectedStat, profilerStat(statKey), tt.name)
+		assert.Equal(t, baseSplitStat+tt.expectedSplit, profilerStat(splitStatKey), tt.name)
+		warns := countWarns(logSink, "truncated")
+		require.Len(t, warns, tt.expectedWarns, tt.name)
+		if tt.expectedWarns > 0 {
+			expected := fmt.Sprintf("The log entry in (%v/S) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); it looks like embedded metric format, so it was truncated, not split, and the remainder dropped.",
+				target.Group, firstTruncatedTime, len(emf), len(emf), invalidUTF8ByteSize, maxMessageSize, perEventHeaderBytes)
+			assert.Contains(t, warns[0], expected, tt.name)
+		}
+	}
+
+	// The past-cap variant of the warning, logged once the interval has passed.
+	q.Stop()
+	wg.Wait()
+	q.lastTruncatedWarnTime = time.Time{}
+	pastCapEvent := newStubLogEvent(pastCap, time.Now())
+	q.reportTruncated(pastCapEvent, newStatefulLogEvents(pastCapEvent.Time(), pastCap, nil, nil))
+	warns := countWarns(logSink, "truncated")
+	require.Len(t, warns, 1, "the past-cap variant does not say truncated")
+	warns = countWarns(logSink, "counted bytes dropped")
+	require.Len(t, warns, 1)
+	expected := fmt.Sprintf("The log entry in (%v/S) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); the message was sent as %d log events and the remaining %d counted bytes dropped.",
+		target.Group, pastCapEvent.Time(), invalidUTF8ByteSize*len(pastCap), len(pastCap), invalidUTF8ByteSize, maxMessageSize, perEventHeaderBytes, maxSplitChunks, invalidUTF8ByteSize*len(pastCap)-pastCapKept)
+	assert.Contains(t, warns[0], expected)
+	assert.Equal(t, baseStat+4, profilerStat(statKey))
+}
+
+// TestReportTruncatedLogEvents_WarningRearms checks that the truncation warning is logged again once
+// warnTruncatedLogEventInterval has passed since the last one, and that every call is counted. reportTruncated is
+// called directly on a queue whose goroutine is not started, so the test can move lastTruncatedWarnTime back without
+// a data race or waiting for the interval.
+func TestReportTruncatedLogEvents_WarningRearms(t *testing.T) {
+	t.Parallel()
+	// A log group used by this test only, as the profiler stats are global.
+	target := Target{t.Name(), "S", util.StandardLogGroupClass, -1}
+	statKey := strings.Join([]string{"cloudwatchlogs", target.Group, truncatedLogEventsStat}, "_")
+	// The stats are not cleared between runs of the test, so compare with the value at the start.
+	baseStat := profilerStat(statKey)
+
+	logSink := testutil.NewLogSink()
+	q := &queue{target: target, logger: logSink}
+	event := newStubLogEvent(oversizedEMFMessage(), time.Now())
+	events := newStatefulLogEvents(event.Time(), event.Message(), nil, nil)
+	require.Len(t, events, 1)
+	require.True(t, events[0].truncated)
+	countAllWarns := func() int { return len(countWarns(logSink, "")) }
+
+	q.reportTruncated(event, events)
+	assert.Equal(t, 1, countAllWarns(), "first truncated event")
+	q.reportTruncated(event, events)
+	assert.Equal(t, 1, countAllWarns(), "within warnTruncatedLogEventInterval of the last warning")
+	// A split does not mute the truncation warning, and the truncation warning does not mute the split warning: they
+	// have separate timers.
+	q.reportSplit(event, event.Time(), 2)
+	assert.Equal(t, 2, countAllWarns(), "the split warning has its own timer")
+	// Move the last warning back past the interval instead of waiting for it.
+	q.lastTruncatedWarnTime = time.Now().Add(-warnTruncatedLogEventInterval - time.Second)
+	q.reportTruncated(event, events)
+	assert.Equal(t, 3, countAllWarns(), "after warnTruncatedLogEventInterval has passed")
+	assert.Equal(t, baseStat+3, profilerStat(statKey))
+}
+
+// TestReportSplitLogEvents checks that each log event split into several events is counted, with the number of
+// events, and that a warning is logged for the first one but not for one split soon after it, without counting the
+// split as truncated.
+func TestReportSplitLogEvents(t *testing.T) {
+	t.Parallel()
+	var wg sync.WaitGroup
+	// A log group used by this test only, as the profiler stats are global.
+	target := Target{t.Name(), "S", util.StandardLogGroupClass, -1}
+	key := func(stat string) string { return strings.Join([]string{"cloudwatchlogs", target.Group, stat}, "_") }
+	// The stats are not cleared between runs of the test, so compare with the value at the start.
+	baseSplit := profilerStat(key(splitLogEventsStat))
+	baseChunks := profilerStat(key(splitLogEventChunksStat))
+	baseTruncated := profilerStat(key(truncatedLogEventsStat))
+
+	var sent atomic.Int32
+	mockSender := &mockSender{}
+	mockSender.On("SendOrdered", mock.Anything).Return().Maybe()
+	mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
+		sent.Add(1)
+		args.Get(0).(*logEventBatch).done()
+	}).Return()
+	logSink := testutil.NewLogSink()
+	q := newQueue(logSink, target, time.Hour, nil, mockSender, &wg).(*queue)
+
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	// Counted as 3 times the limit (all invalid). A chunk holds a whole number of invalid bytes, maxMessageSize/3,
+	// so it is split into 4 events.
+	oversized := string(bytes.Repeat([]byte{0xff}, maxMessageSize))
+	numEvents := len(newStatefulLogEvents(time.Now(), oversized, nil, nil))
+	require.Equal(t, 4, numEvents)
+
+	tests := []struct {
+		name           string
+		message        string
+		expectedSplit  float64
+		expectedChunks float64
+		expectedWarns  int
+	}{
+		{name: "Event that fits", message: "small message", expectedWarns: 0},
+		{name: "First split", message: oversized, expectedSplit: 1, expectedChunks: 4, expectedWarns: 1},
+		// Within warnSplitLogEventInterval of the first split, so it is counted but not logged.
+		{name: "Second split", message: oversized, expectedSplit: 2, expectedChunks: 8, expectedWarns: 1},
+		{name: "Event that fits after split", message: "small message", expectedSplit: 2, expectedChunks: 8, expectedWarns: 1},
+	}
+	var firstSplitTime time.Time
+	splits := 0
+	for _, tt := range tests {
+		done := make(chan struct{})
+		eventTime := time.Now()
+		if tt.message == oversized {
+			splits++
+		}
+		if tt.message == oversized && firstSplitTime.IsZero() {
+			firstSplitTime = eventTime
+		}
+		event := newStubLogEvent(tt.message, eventTime)
+		// The queue runs the done callback when the last batch is sent, so use it to know the event was processed.
+		event.done = func() { close(done) }
+		q.AddEvent(event)
+		require.Eventually(t, func() bool {
+			triggerSend(t, q)
+			select {
+			case <-done:
+				return true
+			default:
+				return false
+			}
+		}, 5*time.Second, 10*time.Millisecond, tt.name)
+		// Each split event is handed to the sender with a single SendOrdered call; an event that fits is not.
+		mockSender.AssertNumberOfCalls(t, "SendOrdered", splits)
+
+		assert.Equal(t, baseSplit+tt.expectedSplit, profilerStat(key(splitLogEventsStat)), tt.name)
+		assert.Equal(t, baseChunks+tt.expectedChunks, profilerStat(key(splitLogEventChunksStat)), tt.name)
+		assert.Equal(t, baseTruncated, profilerStat(key(truncatedLogEventsStat)), tt.name)
+		warns := countWarns(logSink, "")
+		require.Len(t, warns, tt.expectedWarns, tt.name)
+		if tt.expectedWarns > 0 {
+			expected := fmt.Sprintf("The log entry in (%v/S) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); it was sent as %d log events with the same timestamp.",
+				target.Group, firstSplitTime, invalidUTF8ByteSize*len(oversized), len(oversized), invalidUTF8ByteSize, maxMessageSize, perEventHeaderBytes, numEvents)
+			assert.Contains(t, warns[0], expected, tt.name)
+		}
+	}
+	// One batch per small event and one per event of each split.
+	assert.EqualValues(t, 2+2*numEvents, sent.Load())
+
+	q.Stop()
+	wg.Wait()
+	// Each SendOrdered call carried all the events of one split event, one batch each.
+	for _, call := range mockSender.Calls {
+		if call.Method == "SendOrdered" {
+			assert.Len(t, call.Arguments.Get(0).([]*logEventBatch), numEvents)
+		}
+	}
+}
+
+// TestReportSplitLogEvents_WarningRearms checks that the split warning is logged again once warnSplitLogEventInterval
+// has passed, and that a truncation warning does not mute it.
+func TestReportSplitLogEvents_WarningRearms(t *testing.T) {
+	t.Parallel()
+	target := Target{t.Name(), "S", util.StandardLogGroupClass, -1}
+	logSink := testutil.NewLogSink()
+	q := &queue{target: target, logger: logSink}
+	event := newStubLogEvent(strings.Repeat("x", 2*maxEventMessageBytes), time.Now())
+	splitWarns := func() int { return len(countWarns(logSink, "log events with the same timestamp")) }
+
+	q.reportSplit(event, event.Time(), 2)
+	assert.Equal(t, 1, splitWarns())
+	q.reportSplit(event, event.Time(), 2)
+	assert.Equal(t, 1, splitWarns(), "within warnSplitLogEventInterval of the last warning")
+	q.reportTruncated(event, newStatefulLogEvents(event.Time(), oversizedEMFMessage(), nil, nil))
+	assert.Len(t, countWarns(logSink, "truncated"), 1, "the truncation warning has its own timer")
+	q.lastSplitWarnTime = time.Now().Add(-warnSplitLogEventInterval - time.Second)
+	q.reportSplit(event, event.Time(), 2)
+	assert.Equal(t, 2, splitWarns(), "after warnSplitLogEventInterval has passed")
 }
 
 func TestSendReqWhenEventsSpanMoreThan24Hrs(t *testing.T) {
@@ -740,6 +1060,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 		}
 
 		mockSender := &mockSender{}
+		mockSender.On("SendOrdered", mock.Anything).Return().Maybe()
 		mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
 			batch := args.Get(0).(*logEventBatch)
 
@@ -781,6 +1102,7 @@ func TestQueueCallbackRegistration(t *testing.T) {
 		mrq.On("Enqueue", mock.Anything).Return()
 
 		mockSender := &mockSender{}
+		mockSender.On("SendOrdered", mock.Anything).Return().Maybe()
 		mockSender.On("Send", mock.AnythingOfType("*pusher.logEventBatch")).Run(func(args mock.Arguments) {
 			batch := args.Get(0).(*logEventBatch)
 
@@ -810,8 +1132,9 @@ func TestQueueCallbackRegistration(t *testing.T) {
 
 		event := newStubStatefulLogEvent("test message", time.Now(), state.NewRange(10, 20), mrq)
 
-		convertedEvent := q.converter.convert(event)
-		q.batch.append(convertedEvent)
+		convertedEvents := q.converter.convert(event)
+		require.Len(t, convertedEvents, 1)
+		q.batch.append(convertedEvents[0])
 
 		q.send()
 
@@ -865,7 +1188,9 @@ func TestForceFlushTimerRearmsAfterHeldSend(t *testing.T) {
 	q.AddEvent(newStubLogEvent("small", time.Now()))
 	time.Sleep(100 * time.Millisecond)
 
-	q.AddEvent(newStubLogEvent(strings.Repeat("X", 1024*1024), time.Now()))
+	// The largest message that fits in one event, which fills a request, so the small event is sent first. A larger
+	// message would be split and sent at once, leaving no trailing event for the flush timer.
+	q.AddEvent(newStubLogEvent(strings.Repeat("X", maxEventMessageBytes), time.Now()))
 
 	select {
 	case <-firstEntered:
@@ -915,4 +1240,235 @@ func TestForceFlushTimer_SingleLowVolumeEventFlushes(t *testing.T) {
 
 	require.GreaterOrEqual(t, sendCount.Load(), int32(1),
 		"a single low-volume event must be flushed by the timer within %v", 3*flushTimeout)
+}
+
+// uniqueMessage returns an ASCII message of at least n bytes made of numbered runs, so that events reassembled out of
+// order would not match it, with a space every 8 bytes for the natural cuts.
+func uniqueMessage(n int) string {
+	var sb strings.Builder
+	for i := 0; sb.Len() < n; i++ {
+		fmt.Fprintf(&sb, "%07d ", i)
+	}
+	return sb.String()
+}
+
+// splitRecorder is a PutLogEvents stub that records the requests and whether the source range was enqueued before
+// the last one.
+type splitRecorder struct {
+	mu       sync.Mutex
+	requests [][]types.InputLogEvent
+	// The number of requests made when the range was enqueued, or -1.
+	requestsAtEnqueue int
+	// The request whose first message is delayMessage is delayed by delay before it is recorded.
+	delayMessage string
+	delay        time.Duration
+	// The request whose first message is failMessage fails with a terminal error.
+	failMessage string
+}
+
+func newSplitRecorder() *splitRecorder {
+	return &splitRecorder{requestsAtEnqueue: -1}
+}
+
+func (r *splitRecorder) putLogEvents(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+	first := *in.LogEvents[0].Message
+	if r.delayMessage != "" && first == r.delayMessage {
+		// A slow request: without the ordered sequence, a free worker would send the next chunk meanwhile.
+		time.Sleep(r.delay)
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.requests = append(r.requests, in.LogEvents)
+	if r.failMessage != "" && first == r.failMessage {
+		return nil, &types.InvalidParameterException{Message: aws.String("rejected")}
+	}
+	return &cloudwatchlogs.PutLogEventsOutput{}, nil
+}
+
+func (r *splitRecorder) onEnqueue(mock.Arguments) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.requestsAtEnqueue = len(r.requests)
+}
+
+// TestSplitLogEventSentInOrder checks that a message over the per-event limit is sent as an ordered sequence of
+// single-event requests, with the source timestamp on every event and the events concatenating to the message; that
+// the open batch is sent before them and the next event after them; and that the source range is enqueued once, after
+// the last request, with or without a worker pool, including when a request in the middle of the sequence is
+// rejected.
+func TestSplitLogEventSentInOrder(t *testing.T) {
+	message := uniqueMessage(3*maxEventMessageBytes + 1)
+	chunks := newStatefulLogEvents(time.Now(), message, nil, nil)
+	require.Len(t, chunks, 4)
+
+	tests := []struct {
+		name        string
+		concurrency int
+		slowFirst   bool
+		rejectChunk bool
+	}{
+		{name: "NoPool"},
+		{name: "NoPoolWithSlowFirstChunk", slowFirst: true},
+		// The first chunk's request is slow, so with a batch per task a free worker would send the next chunk first.
+		{name: "PoolWithSlowFirstChunk", concurrency: 4, slowFirst: true},
+		// The second chunk is rejected: it is dropped as any rejected batch is, and the rest is still sent in order.
+		{name: "NoPoolWithRejectedChunk", rejectChunk: true},
+		{name: "PoolWithRejectedChunk", concurrency: 4, rejectChunk: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			rec := newSplitRecorder()
+			if tt.slowFirst {
+				rec.delayMessage, rec.delay = chunks[0].message, 300*time.Millisecond
+			}
+			if tt.rejectChunk {
+				rec.failMessage = chunks[1].message
+			}
+			var s stubLogsService
+			s.ple = rec.putLogEvents
+
+			var workerPool WorkerPool
+			if tt.concurrency > 1 {
+				workerPool = NewWorkerPool(tt.concurrency)
+				defer workerPool.Stop()
+			}
+			logger := testutil.NewNopLogger()
+			sender := createSender(logger, &s, NewTargetManager(logger, &s), workerPool, time.Hour)
+			var wg sync.WaitGroup
+			q := newQueue(logger, Target{"G", "S", util.StandardLogGroupClass, -1}, time.Hour, nil, sender, &wg).(*queue)
+
+			r := state.NewRange(100, 200)
+			mrq := &mockRangeQueue{}
+			mrq.On("ID").Return("file")
+			mrq.On("Enqueue", r).Run(rec.onEnqueue).Return().Once()
+
+			eventTime := time.Now()
+			q.AddEvent(newStubLogEvent("before", eventTime.Add(-time.Millisecond)))
+			q.AddEvent(newStubStatefulLogEvent(message, eventTime, r, mrq))
+			q.AddEvent(newStubLogEvent("after", eventTime.Add(time.Millisecond)))
+			// "after" stays in the open batch until it is flushed.
+			require.Eventually(t, func() bool {
+				rec.mu.Lock()
+				defer rec.mu.Unlock()
+				return len(rec.requests) == 1+len(chunks)
+			}, 5*time.Second, 10*time.Millisecond)
+			triggerSend(t, q)
+			q.Stop()
+			wg.Wait()
+			sender.Stop()
+			require.Eventually(t, func() bool {
+				rec.mu.Lock()
+				defer rec.mu.Unlock()
+				return len(rec.requests) == 2+len(chunks)
+			}, 5*time.Second, 10*time.Millisecond)
+			// The range is enqueued after the last chunk's request returns, so wait for it too.
+			require.Eventually(t, func() bool {
+				rec.mu.Lock()
+				defer rec.mu.Unlock()
+				return rec.requestsAtEnqueue >= 0
+			}, 5*time.Second, 10*time.Millisecond)
+
+			rec.mu.Lock()
+			defer rec.mu.Unlock()
+			requests := rec.requests
+			// With a pool, the open batch is sent by another task, so it may land before or after the sequence; the
+			// sequence itself is never interleaved with it.
+			var sequence [][]types.InputLogEvent
+			for _, req := range requests {
+				require.NotEmpty(t, req)
+				switch *req[0].Message {
+				case "before", "after":
+					require.Len(t, req, 1)
+				default:
+					sequence = append(sequence, req)
+				}
+			}
+			if tt.concurrency == 0 {
+				assert.Equal(t, "before", *requests[0][0].Message)
+			}
+			assert.Equal(t, "after", *requests[len(requests)-1][0].Message)
+			require.Len(t, sequence, len(chunks))
+			var reassembled strings.Builder
+			for i, req := range sequence {
+				require.Len(t, req, 1, "each chunk is sent in a request of its own")
+				assert.Equal(t, chunks[i].message, *req[0].Message, "chunk %d", i)
+				assert.Equal(t, eventTime.UnixMilli(), *req[0].Timestamp, "chunk %d", i)
+				reassembled.WriteString(*req[0].Message)
+			}
+			assert.True(t, reassembled.String() == message, "the chunks concatenate to the message")
+			mrq.AssertExpectations(t)
+			// The range was enqueued once the last chunk's request had been made, so after every chunk. With a pool,
+			// the request of another batch can be made in between.
+			lastChunk := 0
+			for i, req := range requests {
+				if *req[0].Message == chunks[len(chunks)-1].message {
+					lastChunk = i
+				}
+			}
+			assert.GreaterOrEqual(t, rec.requestsAtEnqueue, lastChunk+1)
+			if tt.concurrency == 0 {
+				assert.Equal(t, lastChunk+1, rec.requestsAtEnqueue)
+			}
+		})
+	}
+}
+
+// TestSplitLogEventDoneOnce checks that the done callback of a split log event without state runs once, after the
+// last chunk's request has completed.
+func TestSplitLogEventDoneOnce(t *testing.T) {
+	t.Parallel()
+	rec := newSplitRecorder()
+	var s stubLogsService
+	s.ple = rec.putLogEvents
+	var wg sync.WaitGroup
+	q, sender := testPreparation(t, -1, &s, time.Hour, time.Hour, nil, &wg)
+
+	message := uniqueMessage(2*maxEventMessageBytes + 1)
+	var doneCalls atomic.Int32
+	var requestsAtDone atomic.Int64
+	event := newStubLogEvent(message, time.Now())
+	event.done = func() {
+		rec.mu.Lock()
+		requestsAtDone.Store(int64(len(rec.requests)))
+		rec.mu.Unlock()
+		doneCalls.Add(1)
+	}
+	q.AddEvent(event)
+	require.Eventually(t, func() bool { return doneCalls.Load() > 0 }, 5*time.Second, 10*time.Millisecond)
+	q.Stop()
+	sender.Stop()
+	wg.Wait()
+	assert.EqualValues(t, 1, doneCalls.Load())
+	assert.EqualValues(t, 3, requestsAtDone.Load())
+}
+
+// TestSplitLogEventEMFNotSplit checks that an EMF message over the limit is sent as one truncated event.
+func TestSplitLogEventEMFNotSplit(t *testing.T) {
+	t.Parallel()
+	rec := newSplitRecorder()
+	var s stubLogsService
+	s.ple = rec.putLogEvents
+	var wg sync.WaitGroup
+	q, sender := testPreparation(t, -1, &s, time.Hour, time.Hour, nil, &wg)
+
+	message := oversizedEMFMessage()
+	q.AddEventNonBlocking(newStubLogEvent(message, time.Now()))
+	require.Eventually(t, func() bool {
+		triggerSend(t, q)
+		rec.mu.Lock()
+		defer rec.mu.Unlock()
+		return len(rec.requests) > 0
+	}, 5*time.Second, 10*time.Millisecond)
+	q.Stop()
+	sender.Stop()
+	wg.Wait()
+
+	rec.mu.Lock()
+	defer rec.mu.Unlock()
+	require.Len(t, rec.requests, 1)
+	require.Len(t, rec.requests[0], 1)
+	expected, _, truncated := validateAndTruncateMessage(message)
+	require.True(t, truncated)
+	assert.Equal(t, expected, *rec.requests[0][0].Message)
 }

@@ -227,6 +227,13 @@ func (t *LogFile) FindLogSrc() []logs.LogSrc {
 					Poll:        true,
 					MaxLineSize: fileconfig.MaxEventSize,
 					IsUTF16:     isutf16,
+					// Enable UTF-8 rune-boundary backoff when the file is
+					// treated as UTF-8 (default/ascii/utf-8 aliases leave
+					// fileconfig.Enc == nil, see fileconfig.go) and is not
+					// UTF-16. Declared non-UTF-8 encodings (Shift-JIS, GBK,
+					// ...) are decoded later in tailersrc.go and must keep
+					// raw byte cuts.
+					IsUTF8: fileconfig.Enc == nil && !isutf16,
 				})
 
 			if err != nil {

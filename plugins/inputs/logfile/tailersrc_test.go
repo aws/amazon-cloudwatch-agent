@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -575,4 +576,168 @@ func TestTailerSrcCloseFileDescriptorOnBufferBlock(t *testing.T) {
 	// Final check of OpenFileCount
 	finalCount := tail.OpenFileCount.Load()
 	assert.LessOrEqual(t, finalCount, initialCount, "File count should not increase")
+}
+
+// syncBuffer is a bytes.Buffer that is safe to write from the tailer goroutine while the test reads it.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// TestTailerSrcMultiLineGroupSplitAtLineBoundaries checks that a multi-line group that would exceed maxEventSize is
+// published as several events, each within maxEventSize and cut between lines, with no line dropped, including a
+// whitespace-led tail chunk of a line longer than maxEventSize. It also checks the offsets, the stat and the log.
+func TestTailerSrcMultiLineGroupSplitAtLineBoundaries(t *testing.T) {
+	original := multilineWaitPeriod
+	defer resetState(original)
+	// log.SetOutput is process-global, so this test must not run in parallel (it does not call t.Parallel).
+	logOutput := &syncBuffer{}
+	log.SetOutput(logOutput)
+	defer log.SetOutput(os.Stderr)
+
+	const maxEventSize = 100
+	file, err := createTempFile("", "tailsrctest-*.log")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+	statefile, err := createTempFile("", "tailsrctest-state-*.log")
+	require.NoError(t, err)
+	defer os.Remove(statefile.Name())
+
+	tailer, err := tail.TailFile(file.Name(), tail.Config{
+		ReOpen:      false,
+		Follow:      true,
+		Location:    &tail.SeekInfo{Whence: io.SeekStart, Offset: 0},
+		MustExist:   true,
+		Pipe:        false,
+		Poll:        true,
+		MaxLineSize: maxEventSize,
+		IsUTF16:     false,
+	})
+	require.NoError(t, err)
+	m := state.NewFileRangeManager(state.ManagerConfig{
+		StateFileDir: filepath.Dir(statefile.Name()),
+		Name:         filepath.Base(statefile.Name()),
+	})
+	isMLStart := regexp.MustCompile(`^[\S]`).MatchString
+	ts := NewTailerSrc(
+		t.Name(), t.Name(), "destination", m, 0,
+		util.InfrequentAccessLogGroupClass, "tailsrctest-*.log", tailer,
+		false, // AutoRemoval
+		isMLStart,
+		nil,
+		parseRFC3339Timestamp,
+		nil, // encoding
+		maxEventSize,
+		1,
+		"",
+	)
+	multilineWaitPeriod = 50 * time.Millisecond
+
+	// A group of 30 short lines (about 400 bytes), a line longer than maxEventSize whose tail chunk starts with a
+	// space, and a final group.
+	var lines []string
+	lines = append(lines, "START one")
+	for i := 0; i < 30; i++ {
+		lines = append(lines, fmt.Sprintf(" continuation %02d", i))
+	}
+	lines = append(lines, strings.Repeat("L", maxEventSize)+" tail of a long line")
+	lines = append(lines, "START two", " last continuation")
+
+	eventCh := make(chan logs.LogEvent, 100)
+	ts.SetOutput(func(evt logs.LogEvent) {
+		if evt != nil {
+			eventCh <- evt
+		}
+	})
+	written := 0
+	for _, line := range lines {
+		n, err := file.WriteString(line + "\n")
+		require.NoError(t, err)
+		written += n
+	}
+	require.NoError(t, file.Sync())
+
+	// The tailer delivers a line longer than maxEventSize as chunks of maxEventSize bytes.
+	var chunks []string
+	for _, line := range lines {
+		for len(line) > maxEventSize {
+			chunks = append(chunks, line[:maxEventSize])
+			line = line[maxEventSize:]
+		}
+		chunks = append(chunks, line)
+	}
+	// The expected events: a continuation line is appended unless that would exceed maxEventSize, in which case it
+	// starts a new event.
+	var expected []string
+	cuts := 0
+	buf := ""
+	for _, chunk := range chunks {
+		switch {
+		case isMLStart(chunk) || buf == "":
+			if buf != "" {
+				expected = append(expected, buf)
+			}
+			buf = chunk
+		case len(buf)+1+len(chunk) > maxEventSize:
+			expected = append(expected, buf)
+			buf = chunk
+			cuts++
+		default:
+			buf += "\n" + chunk
+		}
+	}
+	expected = append(expected, buf)
+	require.Greater(t, cuts, 3, "the test must split the first group several times")
+
+	var received []logs.LogEvent
+	require.Eventually(t, func() bool {
+		for {
+			select {
+			case evt := <-eventCh:
+				received = append(received, evt)
+			default:
+				return len(received) >= len(expected)
+			}
+		}
+	}, 10*time.Second, 50*time.Millisecond)
+
+	var messages []string
+	var receivedLines []string
+	lastEnd := int64(-1)
+	for i, evt := range received {
+		msg := evt.Message()
+		messages = append(messages, msg)
+		assert.LessOrEqual(t, len(msg), maxEventSize, "event %d", i)
+		receivedLines = append(receivedLines, strings.Split(msg, "\n")...)
+		// Offsets never move back. The chunks of a long line from one read share its offset, so they can be equal.
+		end := evt.(*LogEvent).Range().EndOffsetInt64()
+		assert.GreaterOrEqual(t, end, lastEnd, "event %d", i)
+		lastEnd = end
+	}
+	assert.Equal(t, expected, messages)
+	// No line is dropped: the events hold every chunk the tailer delivered, in order.
+	assert.Equal(t, chunks, receivedLines)
+	// Every event that starts with a continuation line was cut from the event before it.
+	assert.True(t, strings.HasPrefix(messages[1], " continuation"))
+	assert.Contains(t, messages, " tail of a long line")
+	assert.EqualValues(t, written, lastEnd, "the last event ends at the end of the file")
+
+	statKey := fmt.Sprintf("logfile_%s_%s_messages_multiLineSplit", t.Name(), t.Name())
+	assert.EqualValues(t, cuts, profiler.Profiler.GetStats()[statKey])
+	// The log line is throttled: once for all the cuts.
+	assert.Equal(t, 1, strings.Count(logOutput.String(), "so it was split into several log events at line boundaries"))
+
+	require.NoError(t, os.Remove(file.Name()))
 }
