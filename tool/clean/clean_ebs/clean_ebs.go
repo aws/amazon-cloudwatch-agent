@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 
 // Clean ebs volumes if they have been open longer than 7 day and unused
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
 	err := cleanVolumes()
 	if err != nil {
 		log.Fatalf("errors cleaning %v", err)
@@ -39,6 +42,10 @@ func cleanVolumes() error {
 
 func deleteUnusedVolumes(ctx context.Context, client *ec2.Client) error {
 
+	// KeepDurationOneWeek is negative, so expirationDate is "now minus one week".
+	// A volume created before that is older than the retention window.
+	expirationDate := time.Now().UTC().Add(clean.KeepDurationOneWeek)
+
 	input := &ec2.DescribeVolumesInput{
 		Filters: []types.Filter{
 			{
@@ -54,14 +61,17 @@ func deleteUnusedVolumes(ctx context.Context, client *ec2.Client) error {
 		return err
 	}
 	for _, volume := range volumes.Volumes {
-		if time.Since(*volume.CreateTime) > clean.KeepDurationOneWeek && len(volume.Attachments) == 0 {
+		if expirationDate.After(*volume.CreateTime) && len(volume.Attachments) == 0 {
+			if clean.Skip("delete unused volume %s", *volume.VolumeId) {
+				continue
+			}
 			log.Printf("Deleting unused volume %s", *volume.VolumeId)
 			_, err = client.DeleteVolume(ctx, &ec2.DeleteVolumeInput{
 				VolumeId: volume.VolumeId,
 			})
-		}
-		if err != nil {
-			log.Printf("Error deleting volume %s: %v", *volume.VolumeId, err)
+			if err != nil {
+				log.Printf("Error deleting volume %s: %v", *volume.VolumeId, err)
+			}
 		}
 	}
 	return nil

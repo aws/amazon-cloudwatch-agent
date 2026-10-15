@@ -8,8 +8,8 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -23,15 +23,23 @@ import (
 
 // Clean ECS clusters if they have been running longer than 7 days
 
-var expirationTimeOneWeek = time.Now().UTC().Add(-clean.KeepDurationOneWeek)
+// KeepDurationOneWeek is negative, so this is "now minus one week"; a task that
+// started after this cutoff is younger than a week and keeps its cluster alive.
+var expirationTimeOneWeek = time.Now().UTC().Add(clean.KeepDurationOneWeek)
 
 const clusterPrefix = "cwagent-integ-test-cluster-"
 
 var taskdefPrefixes = []string{"cwagent-integ-test-", "extra-apps-family-", "cwagent-task-family-"}
 
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
+	region := flag.Arg(0)
+	if region == "" {
+		log.Fatal("Region argument is required, e.g. clean_ecs.go <region>")
+	}
 	ctx := context.Background()
-	defaultConfig, err := config.LoadDefaultConfig(ctx, config.WithRegion(os.Args[1]))
+	defaultConfig, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		log.Fatalf("Error loading AWS config for ECS cleanup: %v", err)
 	}
@@ -98,6 +106,9 @@ func terminateClusters(ctx context.Context, client *ecs.Client) {
 	// Deletion Logic
 	for _, clusterId := range clusterIds {
 		log.Printf("Cluster to terminate: %s", *clusterId)
+		if clean.Skip("delete ECS cluster %s (scale down and delete its services, deregister container instances)", *clusterId) {
+			continue
+		}
 
 		// Delete cluster services
 		serviceInput := ecs.ListServicesInput{Cluster: clusterId}
@@ -189,6 +200,10 @@ func deleteInactiveTaskDefinitions(ctx context.Context, client *ecs.Client) {
 	}
 
 	log.Printf("Found %d inactive task definitions to delete", len(taskDefsToDelete))
+
+	if clean.Skip("delete %d inactive task definitions", len(taskDefsToDelete)) {
+		return
+	}
 
 	// Batch delete task definitions (API supports up to 10 at a time)
 	const batchSize = 10

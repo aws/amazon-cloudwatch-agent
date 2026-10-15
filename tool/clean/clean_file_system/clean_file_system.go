@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 )
 
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
 	log.Printf("Begin to clean EFS resources")
 	expirationDate := time.Now().UTC().Add(clean.KeepDurationOneDay)
 	cxt := context.Background()
@@ -39,14 +42,15 @@ func main() {
 		for _, fileSystem := range describeFileSystemsOutput.FileSystems {
 			if expirationDate.After(*fileSystem.CreationTime) {
 				log.Printf("Trying to delete file system %s launch-date %v", *fileSystem.FileSystemId, fileSystem.CreationTime)
+				var mtErr error
 				if fileSystem.NumberOfMountTargets > 0 {
-					err = deleteMountTargets(cxt, efsclient, fileSystem.FileSystemId)
+					mtErr = deleteMountTargets(cxt, efsclient, fileSystem.FileSystemId)
 				}
 
-				if err == nil {
+				if mtErr == nil {
 					fileSystemIdSlice = append(fileSystemIdSlice, fileSystem.FileSystemId)
 				} else {
-					log.Printf("Unable to delete all the mount targets for %s due to %v", *fileSystem.FileSystemId, err)
+					log.Printf("Unable to delete all the mount targets for %s due to %v", *fileSystem.FileSystemId, mtErr)
 				}
 			}
 		}
@@ -56,6 +60,9 @@ func main() {
 		nextToken = describeFileSystemsOutput.NextMarker
 	}
 	for _, fileSystemId := range fileSystemIdSlice {
+		if clean.Skip("delete file system %s", *fileSystemId) {
+			continue
+		}
 		terminateFileSystemsInput := efs.DeleteFileSystemInput{FileSystemId: fileSystemId}
 		if _, err = efsclient.DeleteFileSystem(cxt, &terminateFileSystemsInput); err != nil {
 			log.Printf("Unable to delete file system %s due to %v", *fileSystemId, err)
@@ -74,6 +81,9 @@ func deleteMountTargets(cxt context.Context, client *efs.Client, fileSystemId *s
 			return err
 		}
 		for _, mountTarget := range dmto.MountTargets {
+			if clean.Skip("delete mount target %s for %s", *mountTarget.MountTargetId, *fileSystemId) {
+				continue
+			}
 			dlmti := &efs.DeleteMountTargetInput{MountTargetId: mountTarget.MountTargetId}
 			if _, err = client.DeleteMountTarget(cxt, dlmti); err != nil {
 				return err
