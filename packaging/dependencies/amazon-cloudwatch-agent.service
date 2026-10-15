@@ -14,7 +14,11 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/opt/aws/amazon-cloudwatch-agent/bin/start-amazon-cloudwatch-agent
-KillMode=process
+# mixed: SIGTERM the main process, then SIGKILL remaining cgroup members.
+# process left session dbus-daemon children alive across restarts (#2195),
+# exhausting inotify ("too many open files") when Prometheus/AppInsights
+# configs cause glib/godbus to auto-launch a session bus.
+KillMode=mixed
 Restart=on-failure
 RestartSec=60s
 
