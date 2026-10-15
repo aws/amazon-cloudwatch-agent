@@ -609,6 +609,14 @@ func (tail *Tail) openReader() {
 	} else {
 		tail.reader = bufio.NewReaderSize(tail.file, constants.DefaultReaderBufferSize)
 	}
+	// Drop any UTF-8 bytes carried from the previous reader. On rotation,
+	// truncation, or any other reopen, the new file is discontinuous with
+	// those bytes — prepending them would corrupt the first line of the
+	// new file. The curOffset decrement that was paired with the carry is
+	// implicitly undone by callers: Reopen(true) resets curOffset to 0,
+	// and Reopen(false) immediately follows with seekTo() which recomputes
+	// curOffset via Tell().
+	tail.pending = tail.pending[:0]
 	tail.lk.Unlock()
 }
 
@@ -682,8 +690,15 @@ func (tail *Tail) seekTo(pos SeekInfo) error {
 	if err != nil {
 		return fmt.Errorf("Seek error on %s: %s", tail.Filename, err)
 	}
-	// Reset the read buffer whenever the file is re-seek'ed
+	// Reset the read buffer whenever the file is re-seek'ed, and drop any
+	// UTF-8 bytes carried from the pre-seek position: they belong to a line
+	// at the old offset and are discontinuous with the new one. The paired
+	// curOffset decrement is implicitly undone by the Tell() call below,
+	// which recomputes curOffset from the file's new position.
+	tail.lk.Lock()
 	tail.reader.Reset(tail.file)
+	tail.pending = tail.pending[:0]
+	tail.lk.Unlock()
 	tail.curOffset, err = tail.Tell()
 	return err
 }

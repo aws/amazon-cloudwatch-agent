@@ -5,6 +5,7 @@ package tail
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -392,4 +393,141 @@ func TestUTF8BoundaryBackoffsCounter(t *testing.T) {
 	}
 	assert.GreaterOrEqual(t, tail.UTF8BoundaryBackoffs(), int64(1),
 		"backoff counter should have ticked at least once")
+}
+
+// --- Pending-cleared-on-reopen regression tests ----------------------------
+//
+// Regression for a bug where tail.pending (1-3 UTF-8 continuation bytes
+// carried from a previous ErrBufferFull-driven rune-boundary backoff) was
+// not cleared when the underlying file was rotated, truncated, or
+// otherwise re-seek'd. Without the fix those stale bytes would be
+// prepended by the next readSlice to the first line of the new file.
+//
+// These tests exercise the state transitions directly: they inject a
+// pending carry and then invoke the paths that re-open the reader or
+// re-seek it, asserting that pending is empty afterwards. This avoids
+// racing the tailFileSync goroutine, which would consume pending on its
+// very next readSlice.
+
+// newBareTail builds a Tail bound to filename and opens its reader
+// without starting tailFileSync. It mirrors the subset of TailFile setup
+// that openReader / Reopen / seekTo require, so these tests can drive
+// those paths without a live tailer goroutine racing their state.
+func newBareTail(t *testing.T, filename string, maxLineSize int) *Tail {
+	t.Helper()
+	f, err := OpenFile(filename)
+	require.NoError(t, err)
+	tail := &Tail{
+		Filename: filename,
+		Lines:    make(chan *Line, 1),
+		Config: Config{
+			IsUTF8:      true,
+			MaxLineSize: maxLineSize,
+		},
+		file: f,
+	}
+	tail.openReader()
+	return tail
+}
+
+// TestPendingClearedOnReopenRotation — rotation case. The waitForChanges
+// Deleted branch calls Reopen(true) after re-creating the file, which in
+// turn calls openReader(). Any UTF-8 bytes carried from the previous
+// file must be dropped before the first readSlice on the new file.
+func TestPendingClearedOnReopenRotation(t *testing.T) {
+	tempDir := t.TempDir()
+	filename := filepath.Join(tempDir, "rot.log")
+	// Original file content is irrelevant to the state transition: the
+	// point is that Reopen reopens the file handle and openReader builds
+	// a fresh reader, both of which must drop any carried bytes.
+	require.NoError(t, os.WriteFile(filename, []byte("init\n"), 0600))
+
+	tail := newBareTail(t, filename, 1024)
+	defer tail.CloseFile()
+
+	// Simulate a prior UTF-8 rune-boundary backoff: pending holds the
+	// first 2 bytes of 中 (0xE4 0xB8), and curOffset was decremented to
+	// match. Reopen(true) will reset curOffset to 0, so the ghost
+	// decrement is clobbered implicitly.
+	carry := []byte{0xE4, 0xB8}
+	tail.lk.Lock()
+	tail.pending = append(tail.pending[:0], carry...)
+	tail.curOffset -= int64(len(carry))
+	tail.lk.Unlock()
+
+	require.NoError(t, tail.Reopen(true))
+
+	tail.lk.Lock()
+	defer tail.lk.Unlock()
+	assert.Empty(t, tail.pending,
+		"pending must be cleared after Reopen(true); otherwise stale bytes "+
+			"would be prepended to the new file's first line")
+	assert.Equal(t, int64(0), tail.curOffset,
+		"curOffset must be reset to 0 on rotation (resetOffset=true)")
+}
+
+// TestPendingClearedOnReopenTruncation — truncation case. The
+// waitForChanges Truncated branch also calls Reopen(true) and then
+// openReader() a second time. Pending must still be empty afterwards
+// (an idempotent clear), and no stale bytes may survive.
+func TestPendingClearedOnReopenTruncation(t *testing.T) {
+	tempDir := t.TempDir()
+	filename := filepath.Join(tempDir, "trunc.log")
+	require.NoError(t, os.WriteFile(filename, []byte(strings.Repeat("x", 32)+"\n"), 0600))
+
+	tail := newBareTail(t, filename, 1024)
+	defer tail.CloseFile()
+
+	// Carry 3 bytes (a full-width 3-byte sequence) and decrement
+	// curOffset by that amount.
+	carry := []byte{0xE4, 0xB8, 0xAD}
+	tail.lk.Lock()
+	tail.pending = append(tail.pending[:0], carry...)
+	tail.curOffset -= int64(len(carry))
+	tail.lk.Unlock()
+
+	// Mimic the Truncated path: truncate the file on disk, then Reopen,
+	// then call openReader() a second time (waitForChanges does this
+	// redundant second call).
+	require.NoError(t, os.Truncate(filename, 0))
+	require.NoError(t, tail.Reopen(true))
+	tail.openReader()
+
+	tail.lk.Lock()
+	defer tail.lk.Unlock()
+	assert.Empty(t, tail.pending,
+		"pending must be cleared when the file is truncated and reopened")
+	assert.Equal(t, int64(0), tail.curOffset,
+		"curOffset must be reset to 0 after truncation reopen")
+}
+
+// TestPendingClearedOnSeekTo — a seek to a position discontinuous with
+// the carried bytes must drop pending. All seeks are treated as
+// discontinuous because curOffset is unconditionally recomputed via
+// Tell() after Seek, so the carried-bytes decrement would otherwise be
+// silently lost while the carried bytes themselves were still queued
+// to prepend on the next readSlice.
+func TestPendingClearedOnSeekTo(t *testing.T) {
+	tempDir := t.TempDir()
+	filename := filepath.Join(tempDir, "seek.log")
+	require.NoError(t, os.WriteFile(filename, []byte(strings.Repeat("x", 64)+"\n"), 0600))
+
+	tail := newBareTail(t, filename, 1024)
+	defer tail.CloseFile()
+
+	carry := []byte{0xE4, 0xB8, 0xAD}
+	tail.lk.Lock()
+	tail.pending = append(tail.pending[:0], carry...)
+	tail.curOffset -= int64(len(carry))
+	tail.lk.Unlock()
+
+	require.NoError(t, tail.seekTo(SeekInfo{Offset: 0, Whence: io.SeekStart}))
+
+	tail.lk.Lock()
+	defer tail.lk.Unlock()
+	assert.Empty(t, tail.pending,
+		"pending must be cleared on seekTo; stale bytes from the pre-seek "+
+			"line would otherwise be prepended at the new offset")
+	assert.Equal(t, int64(0), tail.curOffset,
+		"curOffset must be re-derived from the file after seekTo")
 }
