@@ -179,10 +179,15 @@ func (config *FileConfig) timestampFromLogLine(logValue string) (time.Time, stri
 		if len(index) > 5 {
 			start := index[4] - index[2]
 			end := index[5] - index[2]
-			//append "000" to 2nd submatch in order to guarantee the fractional second at least has 3 digits
-			fracSecond := fmt.Sprintf("%s000", timestampContent[start:end])
-			replacement := fmt.Sprintf(".%s", fracSecond[:3])
-			timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
+			// %f layouts include the decimal point. ".%f" already has one in the
+			// log line; inserting another produced ".." and the parse failed (#2000).
+			// Other separators (for example ",%f") still need the dot the layout expects,
+			// padded to 3 digits for fixed ".000" layouts.
+			if start == 0 || timestampContent[start-1] != '.' {
+				fracSecond := fmt.Sprintf("%s000", timestampContent[start:end])
+				replacement := fmt.Sprintf(".%s", fracSecond[:3])
+				timestampContent = fmt.Sprintf("%s%s%s", timestampContent[:start], replacement, timestampContent[end:])
+			}
 		}
 		var err error
 		var timestamp time.Time

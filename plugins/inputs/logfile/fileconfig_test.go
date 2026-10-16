@@ -681,6 +681,29 @@ func assertNotPublishedForFilters(t *testing.T, filters []*LogFilter, msg string
 	assert.False(t, res)
 }
 
+func TestSyslogHighPrecisionTimestamp(t *testing.T) {
+	// timestamp_format "%Y-%m-%dT%H:%M:%S.%f+00:00" (#2000)
+	timestampRegex := `(\d{4}-\s{0,1}\d{1,2}-\s{0,1}\d{1,2}T\d{2}:\d{2}:\d{2}\.(\d{1,9})\+00:00)`
+	timestampRegexP, err := regexp.Compile(timestampRegex)
+	require.NoError(t, err)
+	fileConfig := &FileConfig{
+		TimestampRegex:  timestampRegex,
+		TimestampRegexP: timestampRegexP,
+		TimestampLayout: []string{
+			"2006-01-_2T15:04:05.999999999+00:00",
+			"2006-1-_2T15:04:05.999999999+00:00",
+		},
+		TimezoneLoc:   time.UTC,
+		TrimTimestamp: true,
+	}
+
+	logEntry := "2026-02-04T11:27:44.945314+00:00 hostname systemd[1]: Started foo."
+	got, message := fileConfig.timestampFromLogLine(logEntry)
+	want := time.Date(2026, 2, 4, 11, 27, 44, 945314000, time.UTC)
+	assert.True(t, want.Equal(got), "got %v", got)
+	assert.Equal(t, "hostname systemd[1]: Started foo.", message)
+}
+
 func initializeLogFilters(t *testing.T, filters []*LogFilter) []*LogFilter {
 	for _, f := range filters {
 		err := f.init()

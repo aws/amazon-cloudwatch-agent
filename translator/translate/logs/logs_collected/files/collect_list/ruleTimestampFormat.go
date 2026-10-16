@@ -55,7 +55,7 @@ func (t *TimestampLayout) ApplyRule(input interface{}) (returnKey string, return
 		fmt.Printf("timestamp_format set file_path : %s is the same as agent log file %s thus do not use timestamp_layout \n", m["file_path"], context.CurrentContext().GetAgentLogFile())
 		return "", ""
 	} else {
-		res := timestamp.ReplaceAll(val.(string), timestamp.FormatLayoutMap)
+		res := timestampLayout(val.(string))
 		//If user provide with the specific timestamp_format, use the one that user provide
 		returnKey = "timestamp_layout"
 		timestampInput := val.(string)
@@ -63,12 +63,10 @@ func (t *TimestampLayout) ApplyRule(input interface{}) (returnKey string, return
 		// timestamp_layout with 2 strings which support %m and %-m
 		if strings.Contains(timestampInput, "%m") {
 			timestampInput = strings.ReplaceAll(timestampInput, "%m", "%-m")
-			alternativeLayout := timestamp.ReplaceAll(timestampInput, timestamp.FormatLayoutMap)
-			returnVal = []string{res, alternativeLayout}
+			returnVal = []string{res, timestampLayout(timestampInput)}
 		} else if strings.Contains(timestampInput, "%-m") {
 			timestampInput = strings.ReplaceAll(timestampInput, "%-m", "%m")
-			alternativeLayout := timestamp.ReplaceAll(timestampInput, timestamp.FormatLayoutMap)
-			returnVal = []string{res, alternativeLayout}
+			returnVal = []string{res, timestampLayout(timestampInput)}
 		} else {
 			returnVal = []string{res}
 		}
@@ -95,6 +93,16 @@ func (t *Timezone) ApplyRule(input interface{}) (returnKey string, returnVal int
 	}
 	return
 }
+
+// timestampLayout maps a strftime format to a Go layout.
+// ".%f" already contains the decimal point, and %f's layout token contains one
+// too. Replacing %f first avoids a ".." layout that does not match the log line (#2000).
+func timestampLayout(format string) string {
+	format = strings.ReplaceAll(format, ".%f", ".999999999")
+	format = strings.ReplaceAll(format, "%f", ".999999999")
+	return timestamp.ReplaceAll(format, timestamp.FormatLayoutMap)
+}
+
 func init() {
 	t1 := new(TimestampLayout)
 	t2 := new(TimestampRegex)

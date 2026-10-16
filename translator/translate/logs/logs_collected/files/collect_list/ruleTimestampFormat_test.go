@@ -202,7 +202,7 @@ func TestTimestampLayoutRule(t *testing.T) {
 			},
 			want: &want{
 				key:   "timestamp_layout",
-				value: []string{"2006-01-_2T15:04:05..000+00:00", "2006-1-_2T15:04:05..000+00:00"},
+				value: []string{"2006-01-_2T15:04:05.999999999+00:00", "2006-1-_2T15:04:05.999999999+00:00"},
 			},
 		},
 	}
