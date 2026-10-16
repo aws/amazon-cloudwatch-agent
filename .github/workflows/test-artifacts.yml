@@ -190,6 +190,7 @@ jobs:
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+      gke_matrix: ${{ steps.set-matrix.outputs.gke_matrix }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -230,6 +231,7 @@ jobs:
           
           echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "gke_matrix=$(apply_filters generator/resources/gke_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           # ec2_linux_matrix is large — write to a file so the downstream Paginate
           # step can read it from disk. Passing it via a step-level env var can
           # exceed ARG_MAX (~2 MiB) on execve and prevent bash from starting.
@@ -283,6 +285,7 @@ jobs:
         env:
           EC2_GPU_MATRIX: ${{ steps.set-matrix.outputs.ec2_gpu_matrix }}
           EKS_ADDON_MATRIX: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+          GKE_MATRIX: ${{ steps.set-matrix.outputs.gke_matrix }}
           EC2_LINUX_PAGE_COUNT: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_page_count }}
           EC2_LINUX_MATRIX_0: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_0 }}
           EC2_LINUX_MATRIX_1: ${{ steps.paginate-matrix.outputs.ec2_linux_matrix_1 }}
@@ -306,6 +309,7 @@ jobs:
         run: |
           echo "ec2_gpu_matrix: $EC2_GPU_MATRIX"
           echo "eks_addon_matrix: $EKS_ADDON_MATRIX"
+          echo "gke_matrix: $GKE_MATRIX"
           echo "ec2_linux_matrix pages: $EC2_LINUX_PAGE_COUNT"
           for i in 0 1 2 3 4; do
             page="$EC2_LINUX_MATRIX_0"
@@ -2573,15 +2577,14 @@ jobs:
               -var="gcp_network_name=$GCP_NETWORK_NAME"
 
   GKEIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: contains(inputs.test_dir_filter, './test/gcp/gke') || inputs.test_dir_filter == './test/gcp' || inputs.test_dir_filter == ''
-    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}GKE-default-otel
+    name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
-    # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
+    needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.gke_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
-        arrays: [{ wip: false }]
+        arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.gke_matrix) }}
     permissions:
       id-token: write
       contents: read
@@ -2650,27 +2653,50 @@ jobs:
           workload_identity_provider: projects/172692301120/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: otel-collector-integ-tests@omnihorizonteam.iam.gserviceaccount.com
 
+      - name: Resolve Helm chart branch
+        id: helm_branch
+        env:
+          HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
+        run: |
+          branch="${HELM_CHART_BRANCH_INPUT}"
+          if [ -z "$branch" ]; then
+            branch=$(curl -sL "https://api.github.com/repos/aws-observability/helm-charts/git/matching-refs/heads/release-" \
+              | jq -r '.[].ref | ltrimstr("refs/heads/")' \
+              | sort -V | tail -n 1)
+          fi
+          if [ -z "$branch" ]; then
+            branch="main"
+          fi
+          echo "Using helm chart branch: $branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
       - name: Terraform apply
         id: terraform_apply
         continue-on-error: true
         timeout-minutes: 60
-        working-directory: terraform/gcp/gke
+        working-directory: ${{ matrix.arrays.terraform_dir }}
         env:
           BUILD_ID: ${{ inputs.build_id }}
           CWAGENT_IMAGE_REPO: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_INTEGRATION_TEST_REPO }}
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
           GCP_PROJECT: ${{ vars.GCP_PROJECT }}
           GCP_NETWORK_NAME: ${{ vars.GCP_NETWORK_NAME }}
+          HELM_CHART_BRANCH: ${{ steps.helm_branch.outputs.branch }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
         run: |
           terraform init
           terraform apply --auto-approve \
             -var="region=us-east-2" \
+            -var="test_dir=$MATRIX_TEST_DIR" \
+            -var="gke_node_machine_type=$MATRIX_INSTANCE_TYPE" \
             -var="cwa_github_sha=$BUILD_ID" \
             -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
             -var="cwagent_image_tag=$BUILD_ID" \
             -var="gcp_project=$GCP_PROJECT" \
             -var="gcp_network_name=$GCP_NETWORK_NAME" \
-            -var="runner_ip=$RUNNER_IP"
+            -var="runner_ip=$RUNNER_IP" \
+            -var="helm_chart_branch=$HELM_CHART_BRANCH"
 
       - name: "[WIP] ✅ Passed"
         if: steps.terraform_apply.outcome == 'success' && matrix.arrays.wip
@@ -2696,16 +2722,23 @@ jobs:
           RUNNER_IP: ${{ steps.runner_ip.outputs.ip }}
           GCP_PROJECT: ${{ vars.GCP_PROJECT }}
           GCP_NETWORK_NAME: ${{ vars.GCP_NETWORK_NAME }}
+          HELM_CHART_BRANCH: ${{ steps.helm_branch.outputs.branch }}
+          MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
+          MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
+          MATRIX_INSTANCE_TYPE: ${{ matrix.arrays.instanceType }}
         with:
           max_attempts: 3
           timeout_minutes: 8
           retry_wait_seconds: 5
           command: |
-            cd terraform/gcp/gke
+            cd "$MATRIX_TERRAFORM_DIR"
             terraform destroy --auto-approve \
               -var="region=us-east-2" \
+              -var="test_dir=$MATRIX_TEST_DIR" \
+              -var="gke_node_machine_type=$MATRIX_INSTANCE_TYPE" \
               -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" \
               -var="cwagent_image_tag=$BUILD_ID" \
               -var="gcp_project=$GCP_PROJECT" \
               -var="gcp_network_name=$GCP_NETWORK_NAME" \
-              -var="runner_ip=$RUNNER_IP"
+              -var="runner_ip=$RUNNER_IP" \
+              -var="helm_chart_branch=$HELM_CHART_BRANCH"
