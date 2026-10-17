@@ -44,6 +44,22 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
+      test_families:
+        description: 'Optional comma-separated job families to run, e.g. eks_daemon,eks_addon (default: all)'
+        type: string
+        required: false
+      exclude_test_dirs:
+        description: 'Optional comma-separated test directories to skip, e.g. ./test/metric_value_benchmark'
+        type: string
+        required: false
+      test_include:
+        description: 'Optional JSON list of {"os", "test_dir"} pairs to run, e.g. [{"os":"al2023","test_dir":"./test/ca_bundle"}]'
+        type: string
+        required: false
+      test_repo_commit:
+        description: 'Optional full commit SHA of the test repository to use; overrides test_repo_branch'
+        type: string
+        required: false
   workflow_call:
     inputs:
       build_id:
@@ -63,6 +79,22 @@ on:
         required: false
       helm_chart_branch:
         description: 'Override helm chart branch (default: latest release-* branch)'
+        type: string
+        required: false
+      test_families:
+        description: 'Optional comma-separated job families to run, e.g. eks_daemon,eks_addon (default: all)'
+        type: string
+        required: false
+      exclude_test_dirs:
+        description: 'Optional comma-separated test directories to skip, e.g. ./test/metric_value_benchmark'
+        type: string
+        required: false
+      test_include:
+        description: 'Optional JSON list of {"os", "test_dir"} pairs to run, e.g. [{"os":"al2023","test_dir":"./test/ca_bundle"}]'
+        type: string
+        required: false
+      test_repo_commit:
+        description: 'Optional full commit SHA of the test repository to use; overrides test_repo_branch'
         type: string
         required: false
 
@@ -92,8 +124,19 @@ jobs:
         id: set-outputs
         env:
           TEST_REPO_BRANCH: ${{ inputs.test_repo_branch }}
+          TEST_REPO_COMMIT: ${{ inputs.test_repo_commit }}
         run: |
           CWA_GITHUB_TEST_REPO_BRANCH="$TEST_REPO_BRANCH"
+          # A commit pins every job, and every test host, to the same test code. The value travels
+          # in the branch output because each consumer (actions/checkout and the test repository's
+          # terraform) accepts any ref there.
+          if [ -n "$TEST_REPO_COMMIT" ]; then
+            if [[ ! "$TEST_REPO_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::test_repo_commit must be a full 40-character lowercase commit SHA, got '$TEST_REPO_COMMIT'"
+              exit 1
+            fi
+            CWA_GITHUB_TEST_REPO_BRANCH="$TEST_REPO_COMMIT"
+          fi
 
           echo "CWA_GITHUB_TEST_REPO_NAME=${{ env.CWA_GITHUB_TEST_REPO_NAME }}" >> "$GITHUB_OUTPUT"
           echo "CWA_GITHUB_TEST_REPO_URL=${{ env.CWA_GITHUB_TEST_REPO_URL }}" >> "$GITHUB_OUTPUT"
@@ -190,6 +233,14 @@ jobs:
       ec2_linux_itar_matrix: ${{ steps.set-matrix.outputs.ec2_linux_itar_matrix }}
       ec2_linux_china_matrix: ${{ steps.set-matrix.outputs.ec2_linux_china_matrix }}
       eks_addon_matrix: ${{ steps.set-matrix.outputs.eks_addon_matrix }}
+      run_start_localstack: ${{ steps.set-matrix.outputs.run_start_localstack }}
+      run_cloudformation: ${{ steps.set-matrix.outputs.run_cloudformation }}
+      run_azure_vm: ${{ steps.set-matrix.outputs.run_azure_vm }}
+      run_azure_vm_windows: ${{ steps.set-matrix.outputs.run_azure_vm_windows }}
+      run_aks: ${{ steps.set-matrix.outputs.run_aks }}
+      run_aks_containerinsights: ${{ steps.set-matrix.outputs.run_aks_containerinsights }}
+      run_gce: ${{ steps.set-matrix.outputs.run_gce }}
+      run_gke: ${{ steps.set-matrix.outputs.run_gke }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -206,12 +257,72 @@ jobs:
         env:
           TEST_OS_FILTER: ${{ inputs.test_os_filter }}
           TEST_DIR_FILTER: ${{ inputs.test_dir_filter }}
+          TEST_FAMILIES: ${{ inputs.test_families }}
+          EXCLUDE_TEST_DIRS: ${{ inputs.exclude_test_dirs }}
+          TEST_INCLUDE: ${{ inputs.test_include }}
         run: |
           go run --tags=generator generator/test_case_generator.go
-          
-          # Function to apply filters to a matrix
+
+          # Job families, named after their matrix outputs without the _matrix suffix. The jobs
+          # without a matrix are listed separately; each gets a run_<family> output instead.
+          MATRIX_FAMILIES="ec2_gpu eks_addon ec2_linux ec2_linux_onprem ec2_selinux ec2_windows ec2_mac
+            ec2_performance ec2_windows_performance ec2_stress ec2_windows_stress ecs_ec2_launch_daemon
+            ecs_fargate eks_daemon eks_deployment ec2_linux_itar ec2_linux_china"
+          JOB_FAMILIES="cloudformation azure_vm azure_vm_windows aks aks_containerinsights gce gke"
+
+          # Turns a comma- or whitespace-separated list into a JSON array of strings.
+          to_json_list() {
+            printf '%s' "$1" | tr -s ',[:space:]' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))'
+          }
+
+          SELECTED_FAMILIES=$(to_json_list "$TEST_FAMILIES")
+          if [ "$SELECTED_FAMILIES" = "[]" ]; then
+            SELECTED_FAMILIES=$(to_json_list "$MATRIX_FAMILIES $JOB_FAMILIES")
+          fi
+          UNKNOWN_FAMILIES=$(jq -r -n --argjson s "$SELECTED_FAMILIES" --argjson k "$(to_json_list "$MATRIX_FAMILIES $JOB_FAMILIES")" '$s - $k | join(", ")')
+          if [ -n "$UNKNOWN_FAMILIES" ]; then
+            echo "::error::Unknown test_families: $UNKNOWN_FAMILIES. Known families: $MATRIX_FAMILIES $JOB_FAMILIES"
+            exit 1
+          fi
+
+          EXCLUDED_DIRS=$(to_json_list "$EXCLUDE_TEST_DIRS")
+
+          INCLUDED_PAIRS="${TEST_INCLUDE:-[]}"
+          if ! printf '%s' "$INCLUDED_PAIRS" | jq -e 'type == "array" and all(.[]; type == "object" and (keys - ["os", "test_dir"] | length == 0) and all(.[]; type == "string"))' > /dev/null 2>&1; then
+            echo "::error::test_include must be a JSON list of objects with optional string keys os and test_dir, got: $INCLUDED_PAIRS"
+            exit 1
+          fi
+          INCLUDED_PAIRS=$(printf '%s' "$INCLUDED_PAIRS" | jq -c '.')
+
+          echo "Selected families: $SELECTED_FAMILIES"
+          echo "Excluded test directories: $EXCLUDED_DIRS"
+          echo "Included OS and test directory pairs: $INCLUDED_PAIRS"
+
+          family_selected() {
+            jq -e -n --argjson s "$SELECTED_FAMILIES" --arg f "$1" 'any($s[]; . == $f)' > /dev/null
+          }
+
+          # Drops the rows in an excluded test directory and, when test_include is set, the rows
+          # that match none of its pairs. A pair without os or test_dir matches any value there.
+          select_rows() {
+            jq -c --argjson ex "$EXCLUDED_DIRS" --argjson inc "$INCLUDED_PAIRS" '
+              [.[]
+                | select(.test_dir as $d | any($ex[]; . == $d) | not)
+                | select(. as $r | ($inc | length == 0) or any($inc[];
+                    (.os == null or .os == $r.os) and (.test_dir == null or .test_dir == $r.test_dir)))]'
+          }
+
+          # Function to apply filters to a matrix. An unselected family yields [], and so does a
+          # family whose rows are all filtered out; the job of an empty matrix is skipped.
           apply_filters() {
-            local matrix_file=$1
+            local family=$1
+            local matrix_file=$2
+
+            if ! family_selected "$family"; then
+              echo "[]"
+              return
+            fi
+
             local matrix_content=$(cat "$matrix_file")
             
             # Apply OS filter if provided
@@ -225,30 +336,61 @@ jobs:
             fi
             
             # Output compact JSON (single line) for GITHUB_OUTPUT compatibility
-            echo "$matrix_content" | jq -c '.'
+            echo "$matrix_content" | select_rows
           }
-          
-          echo "ec2_gpu_matrix=$(apply_filters generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_addon_matrix=$(apply_filters generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+
+          # A job without a matrix is treated as one row with no OS, so test_include selects it
+          # only through a pair that names its test directory and no OS. test_os_filter and
+          # test_dir_filter keep acting on these jobs through their own if conditions.
+          job_selected() {
+            local family=$1
+            local test_dir=$2
+            if family_selected "$family" \
+              && [ "$(jq -c -n --arg d "$test_dir" '[{os: "", test_dir: $d}]' | select_rows)" != "[]" ]; then
+              echo "true"
+            else
+              echo "false"
+            fi
+          }
+
+          echo "ec2_gpu_matrix=$(apply_filters ec2_gpu generator/resources/ec2_gpu_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "eks_addon_matrix=$(apply_filters eks_addon generator/resources/eks_addon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
           # ec2_linux_matrix is large — write to a file so the downstream Paginate
           # step can read it from disk. Passing it via a step-level env var can
           # exceed ARG_MAX (~2 MiB) on execve and prevent bash from starting.
-          apply_filters generator/resources/ec2_linux_complete_test_matrix.json > filtered_ec2_linux_matrix.json
+          apply_filters ec2_linux generator/resources/ec2_linux_complete_test_matrix.json > filtered_ec2_linux_matrix.json
           echo "ec2_linux_matrix=$(cat filtered_ec2_linux_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_onprem_matrix=$(apply_filters generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_selinux_matrix=$(apply_filters generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_matrix=$(apply_filters generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_mac_matrix=$(apply_filters generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_performance_matrix=$(apply_filters generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_performance_matrix=$(apply_filters generator/resources/ec2_windows_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_stress_matrix=$(apply_filters generator/resources/ec2_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_windows_stress_matrix=$(apply_filters generator/resources/ec2_windows_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ecs_ec2_launch_daemon_matrix=$(apply_filters generator/resources/ecs_ec2_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ecs_fargate_matrix=$(apply_filters generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_daemon_matrix=$(apply_filters generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "eks_deployment_matrix=$(apply_filters generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_itar_matrix=$(apply_filters generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
-          echo "ec2_linux_china_matrix=$(apply_filters generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_onprem_matrix=$(apply_filters ec2_linux_onprem generator/resources/ec2_linux_onprem_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_selinux_matrix=$(apply_filters ec2_selinux generator/resources/ec2_selinux_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_matrix=$(apply_filters ec2_windows generator/resources/ec2_windows_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_mac_matrix=$(apply_filters ec2_mac generator/resources/ec2_mac_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_performance_matrix=$(apply_filters ec2_performance generator/resources/ec2_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_performance_matrix=$(apply_filters ec2_windows_performance generator/resources/ec2_windows_performance_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_stress_matrix=$(apply_filters ec2_stress generator/resources/ec2_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_windows_stress_matrix=$(apply_filters ec2_windows_stress generator/resources/ec2_windows_stress_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ecs_ec2_launch_daemon_matrix=$(apply_filters ecs_ec2_launch_daemon generator/resources/ecs_ec2_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ecs_fargate_matrix=$(apply_filters ecs_fargate generator/resources/ecs_fargate_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "eks_daemon_matrix=$(apply_filters eks_daemon generator/resources/eks_daemon_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "eks_deployment_matrix=$(apply_filters eks_deployment generator/resources/eks_deployment_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_itar_matrix=$(apply_filters ec2_linux_itar generator/resources/ec2_linux_itar_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "ec2_linux_china_matrix=$(apply_filters ec2_linux_china generator/resources/ec2_linux_china_complete_test_matrix.json)" >> "$GITHUB_OUTPUT"
+
+          echo "run_cloudformation=$(job_selected cloudformation ./test/cloudformation)" >> "$GITHUB_OUTPUT"
+          echo "run_azure_vm=$(job_selected azure_vm ./test/azure/vm)" >> "$GITHUB_OUTPUT"
+          echo "run_azure_vm_windows=$(job_selected azure_vm_windows ./test/azure/vm)" >> "$GITHUB_OUTPUT"
+          echo "run_aks=$(job_selected aks ./test/azure/aks)" >> "$GITHUB_OUTPUT"
+          echo "run_aks_containerinsights=$(job_selected aks_containerinsights ./test/azure/aks/containerinsights)" >> "$GITHUB_OUTPUT"
+          echo "run_gce=$(job_selected gce ./test/gcp/gce)" >> "$GITHUB_OUTPUT"
+          echo "run_gke=$(job_selected gke ./test/gcp/gke)" >> "$GITHUB_OUTPUT"
+
+          # LocalStack serves the EC2 Linux, SELinux and EC2 GPU tests in us-west-2.
+          if jq -e -s 'map(length) | add > 0' filtered_ec2_linux_matrix.json \
+            <(apply_filters ec2_selinux generator/resources/ec2_selinux_complete_test_matrix.json) \
+            <(apply_filters ec2_gpu generator/resources/ec2_gpu_complete_test_matrix.json) > /dev/null; then
+            echo "run_start_localstack=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_start_localstack=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Paginate ec2_linux_matrix
         id: paginate-matrix
@@ -336,6 +478,7 @@ jobs:
 
   CloudformationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: ${{ needs.GenerateTestMatrix.outputs.run_cloudformation == 'true' }}
     name: 'CFTest'
     runs-on: ubuntu-latest
     strategy:
@@ -371,7 +514,8 @@ jobs:
 
   StartLocalStack:
     name: 'StartLocalStack'
-    needs: [OutputEnvVariables]
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: ${{ needs.GenerateTestMatrix.outputs.run_start_localstack == 'true' }}
     uses: ./.github/workflows/start-localstack.yml
     secrets: inherit
     permissions:
@@ -445,6 +589,7 @@ jobs:
 
   EC2NvidiaGPUIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_gpu_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -618,6 +763,7 @@ jobs:
 
   EC2LinuxIntegrationTest-0:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_matrix_page_count > 0 }}
     name: 'EC2Linux-0'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -722,6 +868,7 @@ jobs:
 
   LinuxOnPremIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_linux_onprem_matrix != '[]' }}
     name: 'OnpremLinux'
     uses: ./.github/workflows/ec2-integration-test.yml
     with:
@@ -783,6 +930,7 @@ jobs:
 
   EC2SELinuxIntegrationTest:
     needs: [ StartLocalStack, GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_selinux_matrix != '[]' }}
     name: 'EC2SELinux'
     uses:  ./.github/workflows/ec2-integration-test.yml
     with:
@@ -801,6 +949,7 @@ jobs:
 
   EC2WinIntegrationTest:
     needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_matrix != '[]' }}
     name:  ${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -911,6 +1060,7 @@ jobs:
             terraform destroy --auto-approve
   EC2DarwinIntegrationTest:
     needs: [GenerateTestMatrix, OutputEnvVariables]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_mac_matrix != '[]' }}
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     strategy:
@@ -1068,6 +1218,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1165,6 +1316,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ecs_fargate_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1256,6 +1408,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_daemon_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1373,6 +1526,7 @@ jobs:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     runs-on: ubuntu-latest
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_deployment_matrix != '[]' }}
     strategy:
       fail-fast: false
       matrix:
@@ -1464,6 +1618,7 @@ jobs:
   PerformanceTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_performance_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1553,6 +1708,7 @@ jobs:
   EC2WinPerformanceTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1642,6 +1798,7 @@ jobs:
   StressTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_stress_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1735,6 +1892,7 @@ jobs:
   EC2WinStressTrackingTest:
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}${{matrix.arrays.testName}}
     needs: [GenerateTestMatrix, OutputEnvVariables]
+    if: ${{ needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1830,6 +1988,7 @@ jobs:
   GPUEndToEndTest:
     name:  ${{matrix.arrays.testName}}
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
+    if: ${{ needs.GenerateTestMatrix.outputs.eks_addon_matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -1924,8 +2083,8 @@ jobs:
             terraform destroy -auto-approve
 
   AzureVMIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: needs.GenerateTestMatrix.outputs.run_azure_vm == 'true' && (contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == '')
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel-Linux
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
@@ -2052,8 +2211,8 @@ jobs:
               -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
 
   AzureVMWindowsIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: needs.GenerateTestMatrix.outputs.run_azure_vm_windows == 'true' && (contains(inputs.test_dir_filter, './test/azure/vm') || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == '')
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AzureVM-default-otel-Windows
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
@@ -2199,8 +2358,8 @@ jobs:
               -var="azure_token_audience=$AZURE_TOKEN_AUDIENCE"
 
   AKSIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: inputs.test_dir_filter == './test/azure/aks' || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: needs.GenerateTestMatrix.outputs.run_aks == 'true' && (inputs.test_dir_filter == './test/azure/aks' || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == '')
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AKS-default-otel
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
@@ -2329,8 +2488,8 @@ jobs:
             terraform destroy --auto-approve -var="region=us-east-2" -var="cwagent_image_repo=$CWAGENT_IMAGE_REPO" -var="cwagent_image_tag=$BUILD_ID" -var="azure_resource_group=$AZURE_RESOURCE_GROUP" -var="azure_vnet_name=$AZURE_VNET_NAME" -var="runner_ip=$RUNNER_IP"
 
   AKSContainerInsightsIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: inputs.test_dir_filter == './test/azure/aks/containerinsights' || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == ''
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: needs.GenerateTestMatrix.outputs.run_aks_containerinsights == 'true' && (inputs.test_dir_filter == './test/azure/aks/containerinsights' || inputs.test_dir_filter == './test/azure' || inputs.test_dir_filter == '')
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}AKS-container-insights
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
@@ -2461,8 +2620,8 @@ jobs:
 
 
   GCEIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: contains(inputs.test_dir_filter, './test/gcp/gce') || inputs.test_dir_filter == './test/gcp' || inputs.test_dir_filter == ''
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: needs.GenerateTestMatrix.outputs.run_gce == 'true' && (contains(inputs.test_dir_filter, './test/gcp/gce') || inputs.test_dir_filter == './test/gcp' || inputs.test_dir_filter == '')
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}GCE-default-otel
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.
@@ -2573,8 +2732,8 @@ jobs:
               -var="gcp_network_name=$GCP_NETWORK_NAME"
 
   GKEIntegrationTest:
-    needs: [OutputEnvVariables]
-    if: contains(inputs.test_dir_filter, './test/gcp/gke') || inputs.test_dir_filter == './test/gcp' || inputs.test_dir_filter == ''
+    needs: [OutputEnvVariables, GenerateTestMatrix]
+    if: needs.GenerateTestMatrix.outputs.run_gke == 'true' && (contains(inputs.test_dir_filter, './test/gcp/gke') || inputs.test_dir_filter == './test/gcp' || inputs.test_dir_filter == '')
     name: ${{ matrix.arrays.wip && '[WIP] ' || '' }}GKE-default-otel
     runs-on: ubuntu-latest
     # Matches the other suites' wip handling: flip to true to stop failures blocking CI.

@@ -26,6 +26,18 @@ on:
       test_dir_filter:
         description: 'Optional, passed to test-artifacts.yml'
         type: string
+      test_families:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
+      exclude_test_dirs:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
+      test_include:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
+      test_repo_commit:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
 
 jobs:
   OutputEnvVariables:
@@ -73,4 +85,17 @@ jobs:
           OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
           TEST_OS_FILTER: ${{ inputs.test_os_filter }}
           TEST_DIR_FILTER: ${{ inputs.test_dir_filter }}
-        run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH" -f "test_os_filter=$TEST_OS_FILTER" -f "test_dir_filter=$TEST_DIR_FILTER"
+          TEST_FAMILIES: ${{ inputs.test_families }}
+          EXCLUDE_TEST_DIRS: ${{ inputs.exclude_test_dirs }}
+          TEST_INCLUDE: ${{ inputs.test_include }}
+          TEST_REPO_COMMIT: ${{ inputs.test_repo_commit }}
+        run: |
+          gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            -f "build_id=$INPUT_BUILD_ID" \
+            -f "test_repo_branch=$OUT_REPO_BRANCH" \
+            -f "test_os_filter=$TEST_OS_FILTER" \
+            -f "test_dir_filter=$TEST_DIR_FILTER" \
+            -f "test_families=$TEST_FAMILIES" \
+            -f "exclude_test_dirs=$EXCLUDE_TEST_DIRS" \
+            -f "test_include=$TEST_INCLUDE" \
+            -f "test_repo_commit=$TEST_REPO_COMMIT"
