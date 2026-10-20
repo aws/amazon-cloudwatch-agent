@@ -81,6 +81,7 @@ jobs:
     uses: ./.github/workflows/test-artifacts.yml
     secrets: inherit
     permissions:
+      actions: read
       id-token: write
       contents: read
     with:
