@@ -423,3 +423,84 @@ func TestResolveK8sIdentityConfig(t *testing.T) {
 	assert.NotContains(t, got, "%CLUSTER_NAME%")
 	assert.Contains(t, got, `"^MC_(.+)_my_cluster_[^_]+$"`, "cluster name must be injected into the regex literal")
 }
+
+func TestProfileResourceStatements(t *testing.T) {
+	stmt := `set(resource.attributes["k8s.cluster.name"], "test-cluster")`
+	transl := NewTranslatorWithName("test_profile_resource",
+		WithMetricResourceStatements([]string{stmt}),
+		WithLogResourceStatements([]string{stmt}),
+		WithTraceResourceStatements([]string{stmt}),
+		WithProfileResourceStatements([]string{stmt}),
+	)
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.ProfileStatements, 1)
+	assert.Equal(t, "resource", string(actualCfg.ProfileStatements[0].Context))
+	assert.Equal(t, "ignore", string(actualCfg.ProfileStatements[0].ErrorMode))
+	assert.Equal(t, []string{stmt}, actualCfg.ProfileStatements[0].Statements)
+	assert.Equal(t, actualCfg.MetricStatements, actualCfg.ProfileStatements)
+	assert.Equal(t, actualCfg.LogStatements, actualCfg.ProfileStatements)
+	assert.Equal(t, actualCfg.TraceStatements, actualCfg.ProfileStatements)
+	require.NoError(t, actualCfg.Validate())
+}
+
+func TestProfileResourceStatementsOnly(t *testing.T) {
+	stmt := `set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil`
+	transl := NewTranslatorWithName("test_profile_only", WithProfileResourceStatements([]string{stmt}))
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+
+	require.Len(t, actualCfg.ProfileStatements, 1)
+	assert.Equal(t, []string{stmt}, actualCfg.ProfileStatements[0].Statements)
+	assert.Empty(t, actualCfg.MetricStatements)
+	assert.Empty(t, actualCfg.LogStatements)
+	assert.Empty(t, actualCfg.TraceStatements)
+	require.NoError(t, actualCfg.Validate())
+}
+
+func TestIdentityProfileStatements(t *testing.T) {
+	testCases := map[string]struct {
+		mode    string
+		k8sMode string
+	}{
+		"EC2":     {mode: translatorconfig.ModeEC2},
+		"AzureVM": {mode: translatorconfig.ModeAzureVM},
+		"GCE":     {mode: translatorconfig.ModeGCE},
+		"EKS":     {mode: translatorconfig.ModeEC2, k8sMode: translatorconfig.ModeEKS},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctx := translatorcontext.CurrentContext()
+			ctx.SetMode(testCase.mode)
+			ctx.SetKubernetesMode(testCase.k8sMode)
+			t.Cleanup(func() {
+				ctx.SetMode(translatorconfig.ModeEC2)
+				ctx.SetKubernetesMode("")
+			})
+			cfg, err := NewTranslatorWithName(common.Identity).Translate(confmap.New())
+			require.NoError(t, err)
+			assertIdentityProfileStatements(t, cfg.(*transformprocessor.Config))
+		})
+	}
+}
+
+func TestIdentityECSProfileStatements(t *testing.T) {
+	cfg := transformprocessor.NewFactory().CreateDefaultConfig()
+	cfg, err := common.GetYamlFileToYamlConfig(cfg, transformIdentityECSConfig)
+	require.NoError(t, err)
+	assertIdentityProfileStatements(t, cfg.(*transformprocessor.Config))
+}
+
+func assertIdentityProfileStatements(t *testing.T, actualCfg *transformprocessor.Config) {
+	t.Helper()
+	require.Len(t, actualCfg.MetricStatements, 1)
+	require.Len(t, actualCfg.ProfileStatements, 1)
+	assert.Equal(t, "resource", string(actualCfg.ProfileStatements[0].Context))
+	assert.Equal(t, actualCfg.MetricStatements, actualCfg.ProfileStatements)
+	assert.Equal(t, actualCfg.LogStatements, actualCfg.ProfileStatements)
+	assert.Equal(t, actualCfg.TraceStatements, actualCfg.ProfileStatements)
+	require.NoError(t, actualCfg.Validate())
+}

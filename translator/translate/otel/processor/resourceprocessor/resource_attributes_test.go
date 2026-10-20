@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 )
 
-func TestResourceAttributesProcessor(t *testing.T) {
+func TestNewResourceAttributesTranslator(t *testing.T) {
 	// nil conf -> no processor
 	assert.Nil(t, NewResourceAttributesTranslator(nil))
 
