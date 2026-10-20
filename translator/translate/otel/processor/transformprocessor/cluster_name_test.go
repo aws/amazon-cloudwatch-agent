@@ -49,6 +49,7 @@ func TestNewSetClusterNameTranslator(t *testing.T) {
 			require.Len(t, actualCfg.MetricStatements, 1)
 			require.Len(t, actualCfg.LogStatements, 1)
 			require.Len(t, actualCfg.TraceStatements, 1)
+			require.Len(t, actualCfg.ProfileStatements, 1)
 			for _, block := range []struct {
 				context    string
 				statements []string
@@ -56,6 +57,7 @@ func TestNewSetClusterNameTranslator(t *testing.T) {
 				{string(actualCfg.MetricStatements[0].Context), actualCfg.MetricStatements[0].Statements},
 				{string(actualCfg.LogStatements[0].Context), actualCfg.LogStatements[0].Statements},
 				{string(actualCfg.TraceStatements[0].Context), actualCfg.TraceStatements[0].Statements},
+				{string(actualCfg.ProfileStatements[0].Context), actualCfg.ProfileStatements[0].Statements},
 			} {
 				assert.Equal(t, "resource", block.context)
 				assert.Equal(t, want, block.statements)

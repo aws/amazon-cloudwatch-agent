@@ -76,6 +76,12 @@ func WithTraceResourceStatements(statements []string) Option {
 	}
 }
 
+func WithProfileResourceStatements(statements []string) Option {
+	return func(t *translator) {
+		t.profileStatements = statements
+	}
+}
+
 // WithErrorMode sets the error mode for dynamic statements. Defaults to "propagate".
 func WithErrorMode(mode string) Option {
 	return func(t *translator) {
@@ -118,6 +124,7 @@ type translator struct {
 	logContextStatements  []string
 	metricStatements      []string
 	traceStatements       []string
+	profileStatements     []string
 	scopeStatements       []string
 	logScopeStatements    []string
 	metricScopeStatements []string
@@ -143,6 +150,7 @@ func (t *translator) hasDynamicStatements() bool {
 		len(t.logContextStatements) > 0 ||
 		len(t.metricStatements) > 0 ||
 		len(t.traceStatements) > 0 ||
+		len(t.profileStatements) > 0 ||
 		len(t.scopeStatements) > 0 ||
 		len(t.logScopeStatements) > 0 ||
 		len(t.metricScopeStatements) > 0
@@ -167,6 +175,9 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		}
 		if len(t.traceStatements) > 0 {
 			cfgMap["trace_statements"] = []any{buildResourceStatements(t.traceStatements, errorMode)}
+		}
+		if len(t.profileStatements) > 0 {
+			cfgMap["profile_statements"] = []any{buildResourceStatements(t.profileStatements, errorMode)}
 		}
 		if len(t.scopeStatements) > 0 {
 			scopeBlock := buildScopeStatements(t.scopeStatements, errorMode)
