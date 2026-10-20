@@ -44,8 +44,8 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
-      dcgm_image_tag:
-        description: 'Optional dcgm-exporter image tag for tests that support it'
+      dcgm_image:
+        description: 'Optional full dcgm-exporter image reference for tests that support it'
         type: string
         required: false
   workflow_call:
@@ -69,8 +69,8 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
-      dcgm_image_tag:
-        description: 'Optional dcgm-exporter image tag for tests that support it'
+      dcgm_image:
+        description: 'Optional full dcgm-exporter image reference for tests that support it'
         type: string
         required: false
 
@@ -1300,7 +1300,7 @@ jobs:
         timeout-minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
         env:
           HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
-          DCGM_IMAGE_TAG_INPUT: ${{ inputs.dcgm_image_tag }}
+          DCGM_IMAGE_INPUT: ${{ inputs.dcgm_image }}
           MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
           MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
           MATRIX_AMI: ${{ matrix.arrays.ami }}
@@ -1334,8 +1334,13 @@ jobs:
             HELM_VAR="-var=helm_chart_branch=$HELM_BRANCH"
           fi
           DCGM_VAR=""
-          if [ -n "$DCGM_IMAGE_TAG_INPUT" ] && grep -q 'dcgm_image_tag' *.tf 2>/dev/null; then
-            DCGM_VAR="-var=dcgm_image_tag=$DCGM_IMAGE_TAG_INPUT"
+          if [ -n "$DCGM_IMAGE_INPUT" ]; then
+            if grep -q 'dcgm_image' *.tf 2>/dev/null; then
+              DCGM_VAR="-var=dcgm_image=$DCGM_IMAGE_INPUT"
+              echo "::notice::Overriding dcgm-exporter image to $DCGM_IMAGE_INPUT for $MATRIX_TEST_DIR"
+            else
+              echo "::warning::dcgm_image '$DCGM_IMAGE_INPUT' ignored for $MATRIX_TEST_DIR (this test's terraform has no dcgm_image variable)"
+            fi
           fi
 
           if terraform apply --auto-approve \
@@ -1885,6 +1890,7 @@ jobs:
           MATRIX_K8S_VERSION: ${{ matrix.arrays.k8sVersion }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          DCGM_IMAGE_INPUT: ${{ inputs.dcgm_image }}
         run: |
           if [ -n "$MATRIX_TERRAFORM_DIR" ]; then
             cd "$MATRIX_TERRAFORM_DIR"
@@ -1893,13 +1899,23 @@ jobs:
           fi
 
           terraform init
+          DCGM_VAR=""
+          if [ -n "$DCGM_IMAGE_INPUT" ]; then
+            if grep -q 'dcgm_image' *.tf 2>/dev/null; then
+              DCGM_VAR="-var=dcgm_image=$DCGM_IMAGE_INPUT"
+              echo "::notice::Overriding dcgm-exporter image to $DCGM_IMAGE_INPUT for $MATRIX_TEST_DIR"
+            else
+              echo "::warning::dcgm_image '$DCGM_IMAGE_INPUT' ignored for $MATRIX_TEST_DIR (this test's terraform has no dcgm_image variable)"
+            fi
+          fi
           if terraform apply --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
             -var="cwagent_image_repo=$ECR_REGISTRY/${{ env.ECR_INTEGRATION_TEST_REPO }}" \
             -var="cwagent_image_tag=$INPUT_BUILD_ID" \
             -var="ami_type=$MATRIX_AMI" \
             -var="instance_type=$MATRIX_INSTANCE_TYPE" \
-            -var="k8s_version=$MATRIX_K8S_VERSION"; then
+            -var="k8s_version=$MATRIX_K8S_VERSION" \
+            $DCGM_VAR; then
             echo "Terraform apply successful."
           else
             terraform destroy -auto-approve && exit 1
