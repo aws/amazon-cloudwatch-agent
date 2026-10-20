@@ -27,9 +27,11 @@ import (
 )
 
 const (
-	profilesExporterName = "profiles"
-	monitoringService    = "monitoring"
-	profilesPath         = "/v1development/profiles"
+	profilesExporterName   = "profiles"
+	monitoringService      = "monitoring"
+	profilesPath           = "/v1development/profiles"
+	serviceNameAttribute   = "service.name"
+	ecsTaskFamilyAttribute = "aws.ecs.task.family"
 
 	platformKubernetes = "kubernetes"
 	platformECS        = "ecs"
@@ -76,6 +78,9 @@ func (t *profilesPipelineTranslator) Translate(conf *confmap.Conf) (*common.Comp
 			processors.Set(setClusterName)
 		}
 	}
+	if inferred := newInferredServiceNameTranslator(profilesExporterName, platform); inferred != nil {
+		processors.Set(inferred)
+	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 
 	return &common.ComponentTranslators{
@@ -100,4 +105,32 @@ func inferencePlatform() string {
 		return platformECS
 	}
 	return platformEC2
+}
+
+// NewInferredServiceNameTranslator returns the resource processor that inserts the service.name
+// inferred for the current platform (EC2 instance tag or IAM role, ECS task family), or nil when
+// there is nothing to infer. It runs ahead of transform/identity so the insert beats the
+// unknown_service fallback while never overwriting a sender-supplied value.
+func NewInferredServiceNameTranslator(name string) common.ComponentTranslator {
+	return newInferredServiceNameTranslator(name, inferencePlatform())
+}
+
+func newInferredServiceNameTranslator(name, platform string) common.ComponentTranslator {
+	actions := inferredServiceNameActions(platform)
+	if len(actions) == 0 {
+		return nil
+	}
+	return resourceprocessor.NewTranslator(resourceprocessor.WithOrderedActions(actions), common.WithName(name))
+}
+
+func inferredServiceNameActions(platform string) []resourceprocessor.AttributeAction {
+	switch platform {
+	case platformECS:
+		return []resourceprocessor.AttributeAction{{Action: resourceprocessor.ActionInsert, Key: serviceNameAttribute, FromAttribute: ecsTaskFamilyAttribute}}
+	case platformEC2:
+		if inferred := EC2ServiceNameProvider(); inferred != "" {
+			return []resourceprocessor.AttributeAction{{Action: resourceprocessor.ActionInsert, Key: serviceNameAttribute, Value: inferred}}
+		}
+	}
+	return nil
 }

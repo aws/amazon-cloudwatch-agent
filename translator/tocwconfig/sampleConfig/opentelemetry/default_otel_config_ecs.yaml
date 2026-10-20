@@ -221,6 +221,38 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
+    resource/logs:
+        attributes:
+            - action: insert
+              converted_type: ""
+              from_attribute: aws.ecs.task.family
+              from_context: ""
+              key: service.name
+              pattern: ""
+    resource/metrics:
+        attributes:
+            - action: insert
+              converted_type: ""
+              from_attribute: aws.ecs.task.family
+              from_context: ""
+              key: service.name
+              pattern: ""
+    resource/profiles:
+        attributes:
+            - action: insert
+              converted_type: ""
+              from_attribute: aws.ecs.task.family
+              from_context: ""
+              key: service.name
+              pattern: ""
+    resource/traces:
+        attributes:
+            - action: insert
+              converted_type: ""
+              from_attribute: aws.ecs.task.family
+              from_context: ""
+              key: service.name
+              pattern: ""
     resourcedetection/opentelemetry:
         akamai:
             resource_attributes:
@@ -367,7 +399,7 @@ processors:
                 aws.ecs.task.arn:
                     enabled: true
                 aws.ecs.task.family:
-                    enabled: false
+                    enabled: true
                 aws.ecs.task.id:
                     enabled: false
                 aws.ecs.task.revision:
@@ -885,6 +917,7 @@ receivers:
 service:
     extensions:
         - sigv4auth/monitoring
+        - agenthealth/opentelemetry_profiles
         - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
@@ -892,13 +925,13 @@ service:
         - agenthealth/opentelemetry_logs
         - sigv4auth/xray
         - agenthealth/opentelemetry_traces
-        - agenthealth/opentelemetry_profiles
     pipelines:
         logs/opentelemetry:
             exporters:
                 - otlp_http/logs
             processors:
                 - resourcedetection/opentelemetry
+                - resource/logs
                 - transform/identity
                 - transform/logs_routing
                 - attributestocontext/opentelemetry
@@ -920,6 +953,7 @@ service:
                 - otlp_http/metrics
             processors:
                 - resourcedetection/opentelemetry
+                - resource/metrics
                 - transform/identity
                 - awsattributelimit/opentelemetry_metrics
                 - batch/opentelemetry_metrics
@@ -940,6 +974,7 @@ service:
             processors:
                 - transform/otlp_scope
                 - resourcedetection/opentelemetry
+                - resource/profiles
                 - transform/identity
             receivers:
                 - otlp/grpc_127_0_0_1_4317
@@ -950,6 +985,7 @@ service:
                 - spanmetrics/opentelemetry
             processors:
                 - resourcedetection/opentelemetry
+                - resource/traces
                 - transform/identity
                 - batch/opentelemetry_traces
             receivers:

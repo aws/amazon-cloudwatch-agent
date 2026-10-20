@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,16 +33,131 @@ import (
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
 
-const serviceNameAttribute = "service.name"
-
 type profilesBehaviorCase struct {
-	mode        string
-	k8sMode     string
-	ecs         bool
-	attributes  map[string]string
-	want        map[string]string
-	wantPresent []string
-	wantAbsent  []string
+	mode           string
+	k8sMode        string
+	ecs            bool
+	ec2ServiceName string
+	attributes     map[string]string
+	want           map[string]string
+	wantPresent    []string
+	wantAbsent     []string
+}
+
+func TestProfilesServiceNameBehavior(t *testing.T) {
+	testCases := map[string]profilesBehaviorCase{
+		"EC2/Absent":             {want: map[string]string{serviceNameAttribute: "unknown_service"}},
+		"EC2/SDKUnknownService":  {attributes: map[string]string{serviceNameAttribute: "unknown_service:java"}, want: map[string]string{serviceNameAttribute: "unknown_service:java"}},
+		"EC2/BareUnknownService": {attributes: map[string]string{serviceNameAttribute: "unknown_service"}, want: map[string]string{serviceNameAttribute: "unknown_service"}},
+		"EC2/SenderStamped":      {attributes: map[string]string{serviceNameAttribute: "payments"}, want: map[string]string{serviceNameAttribute: "payments"}},
+		"EC2/PrefixIsNotUnknown": {attributes: map[string]string{serviceNameAttribute: "my-unknown_service:java"}, want: map[string]string{serviceNameAttribute: "my-unknown_service:java"}},
+		"EKS/Absent":             {k8sMode: config.ModeEKS, want: map[string]string{serviceNameAttribute: "unknown_service"}},
+		"EKS/SDKUnknownService":  {k8sMode: config.ModeEKS, attributes: map[string]string{serviceNameAttribute: "unknown_service:dotnet"}, want: map[string]string{serviceNameAttribute: "unknown_service:dotnet"}},
+		"EKS/SenderStamped":      {k8sMode: config.ModeEKS, attributes: map[string]string{serviceNameAttribute: "checkout"}, want: map[string]string{serviceNameAttribute: "checkout"}},
+		"EKS/PodMetadataCleanedUp": {
+			k8sMode: config.ModeEKS,
+			attributes: map[string]string{
+				serviceNameAttribute:                            "checkout",
+				"app.kubernetes.io/name":                        "payments",
+				"app.kubernetes.io/instance":                    "payments-1",
+				"app.kubernetes.io/version":                     "1.2.3",
+				"resource.opentelemetry.io/service.name":        "payments",
+				"resource.opentelemetry.io/service.namespace":   "shop",
+				"resource.opentelemetry.io/service.instance.id": "shop/payments-1/app",
+				"resource.opentelemetry.io/service.version":     "1.2.3",
+				"k8s.namespace.name":                            "shop",
+			},
+			want:        map[string]string{serviceNameAttribute: "checkout"},
+			wantPresent: []string{"k8s.namespace.name"},
+			wantAbsent: []string{
+				"app.kubernetes.io/name",
+				"app.kubernetes.io/instance",
+				"app.kubernetes.io/version",
+				"resource.opentelemetry.io/service.name",
+				"resource.opentelemetry.io/service.namespace",
+				"resource.opentelemetry.io/service.instance.id",
+				"resource.opentelemetry.io/service.version",
+			},
+		},
+		"EKS/AnnotationNamesService": {
+			k8sMode: config.ModeEKS,
+			attributes: map[string]string{
+				"resource.opentelemetry.io/service.name":      "payments",
+				"resource.opentelemetry.io/service.namespace": "shop-ns",
+				"app.kubernetes.io/name":                      "payments-label",
+				"k8s.deployment.name":                         "payments-deploy",
+				"k8s.namespace.name":                          "shop",
+			},
+			want:       map[string]string{serviceNameAttribute: "payments", "service.namespace": "shop-ns"},
+			wantAbsent: []string{"resource.opentelemetry.io/service.name", "resource.opentelemetry.io/service.namespace", "app.kubernetes.io/name"},
+		},
+		"EKS/InstanceLabelBeforeNameLabel": {
+			k8sMode:    config.ModeEKS,
+			attributes: map[string]string{"app.kubernetes.io/instance": "payments-1", "app.kubernetes.io/name": "payments", "k8s.namespace.name": "shop"},
+			want:       map[string]string{serviceNameAttribute: "payments-1", "service.namespace": "shop"},
+			wantAbsent: []string{"app.kubernetes.io/instance", "app.kubernetes.io/name"},
+		},
+		"EKS/NameLabelBeforeWorkload": {
+			k8sMode:    config.ModeEKS,
+			attributes: map[string]string{"app.kubernetes.io/name": "payments", "k8s.deployment.name": "payments-deploy"},
+			want:       map[string]string{serviceNameAttribute: "payments"},
+		},
+		"EKS/WorkloadBeforePod": {
+			k8sMode:    config.ModeEKS,
+			attributes: map[string]string{"k8s.statefulset.name": "payments-db", "k8s.pod.name": "payments-db-0"},
+			want:       map[string]string{serviceNameAttribute: "payments-db"},
+		},
+		"EKS/PodBeforeContainer": {
+			k8sMode:    config.ModeEKS,
+			attributes: map[string]string{"k8s.pod.name": "payments-db-0", "k8s.container.name": "app"},
+			want:       map[string]string{serviceNameAttribute: "payments-db-0"},
+		},
+		"EKS/SenderBeatsPodMetadata": {
+			k8sMode:    config.ModeEKS,
+			attributes: map[string]string{serviceNameAttribute: "checkout", "service.namespace": "front", "resource.opentelemetry.io/service.name": "payments", "k8s.namespace.name": "shop"},
+			want:       map[string]string{serviceNameAttribute: "checkout", "service.namespace": "front"},
+		},
+		"EKS/SDKUnknownServiceNotReInferred": {
+			k8sMode:    config.ModeEKS,
+			attributes: map[string]string{serviceNameAttribute: "unknown_service:java", "resource.opentelemetry.io/service.name": "payments", "app.kubernetes.io/name": "payments"},
+			want:       map[string]string{serviceNameAttribute: "unknown_service:java"},
+			wantAbsent: []string{"resource.opentelemetry.io/service.name", "app.kubernetes.io/name"},
+		},
+		"ECS/TaskFamilyNamesService": {
+			ecs:        true,
+			attributes: map[string]string{"aws.ecs.task.family": "payments-task"},
+			want:       map[string]string{serviceNameAttribute: "payments-task"},
+		},
+		"ECS/SenderBeatsTaskFamily": {
+			ecs:        true,
+			attributes: map[string]string{serviceNameAttribute: "payments", "aws.ecs.task.family": "payments-task"},
+			want:       map[string]string{serviceNameAttribute: "payments"},
+		},
+		"ECS/SDKUnknownServiceBeatsTaskFamily": {
+			ecs:        true,
+			attributes: map[string]string{serviceNameAttribute: "unknown_service:java", "aws.ecs.task.family": "payments-task"},
+			want:       map[string]string{serviceNameAttribute: "unknown_service:java"},
+		},
+		"ECS/Absent": {
+			ecs:  true,
+			want: map[string]string{serviceNameAttribute: "unknown_service"},
+		},
+		"EC2/InferredFromHost": {
+			ec2ServiceName: "web-tier",
+			want:           map[string]string{serviceNameAttribute: "web-tier"},
+		},
+		"EC2/SenderBeatsInferred": {
+			ec2ServiceName: "web-tier",
+			attributes:     map[string]string{serviceNameAttribute: "payments"},
+			want:           map[string]string{serviceNameAttribute: "payments"},
+		},
+		"EC2/SDKUnknownServiceBeatsInferred": {
+			ec2ServiceName: "web-tier",
+			attributes:     map[string]string{serviceNameAttribute: "unknown_service:java"},
+			want:           map[string]string{serviceNameAttribute: "unknown_service:java"},
+		},
+	}
+	runProfilesBehaviorCases(t, testCases)
 }
 
 func TestProfilesEnrichmentBehavior(t *testing.T) {
@@ -187,6 +303,7 @@ func runProfilesBehaviorCases(t *testing.T, testCases map[string]profilesBehavio
 		t.Run(name, func(t *testing.T) {
 			t.Cleanup(otlpreceiver.ClearConfigCache)
 			resetGlobalConfig(t, "us-east-1")
+			stubEC2ServiceName(t, testCase.ec2ServiceName)
 			setMode(t, testCase.mode)
 			setKubernetesMode(t, testCase.k8sMode)
 			setECS(t, testCase.ecs)
@@ -206,6 +323,8 @@ func runProfilesBehaviorCases(t *testing.T, testCases map[string]profilesBehavio
 			keys := got.Processors.Keys()
 			for i := len(keys) - 1; i >= 0; i-- {
 				switch keys[i] {
+				case component.MustNewIDWithName("resource", profilesExporterName):
+					first = newProfilesProcessor(t, resourceprocessor.NewFactory(), loaded, "resource", profilesExporterName, first)
 				case component.MustNewIDWithName("transform", common.Identity):
 					first = newProfilesProcessor(t, transformprocessor.NewFactory(), loaded, "transform", common.Identity, first)
 				}
