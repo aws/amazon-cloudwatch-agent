@@ -44,6 +44,10 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
+      dcgm_image_tag:
+        description: 'Optional dcgm-exporter image tag for tests that support it'
+        type: string
+        required: false
   workflow_call:
     inputs:
       build_id:
@@ -63,6 +67,10 @@ on:
         required: false
       helm_chart_branch:
         description: 'Override helm chart branch (default: latest release-* branch)'
+        type: string
+        required: false
+      dcgm_image_tag:
+        description: 'Optional dcgm-exporter image tag for tests that support it'
         type: string
         required: false
 
@@ -1292,6 +1300,7 @@ jobs:
         timeout-minutes: 90 # EKS takes about 20 minutes to spin up a cluster and service on the cluster
         env:
           HELM_CHART_BRANCH_INPUT: ${{ inputs.helm_chart_branch }}
+          DCGM_IMAGE_TAG_INPUT: ${{ inputs.dcgm_image_tag }}
           MATRIX_TERRAFORM_DIR: ${{ matrix.arrays.terraform_dir }}
           MATRIX_TEST_DIR: ${{ matrix.arrays.test_dir }}
           MATRIX_AMI: ${{ matrix.arrays.ami }}
@@ -1324,6 +1333,10 @@ jobs:
           if [ -n "$HELM_BRANCH" ]; then
             HELM_VAR="-var=helm_chart_branch=$HELM_BRANCH"
           fi
+          DCGM_VAR=""
+          if [ -n "$DCGM_IMAGE_TAG_INPUT" ] && grep -q 'dcgm_image_tag' *.tf 2>/dev/null; then
+            DCGM_VAR="-var=dcgm_image_tag=$DCGM_IMAGE_TAG_INPUT"
+          fi
 
           if terraform apply --auto-approve \
             -var="test_dir=$MATRIX_TEST_DIR" \
@@ -1332,7 +1345,7 @@ jobs:
             -var="ami_type=$MATRIX_AMI" \
             -var="instance_type=$MATRIX_INSTANCE_TYPE" \
             -var="k8s_version=$MATRIX_K8S_VERSION" \
-            $HELM_VAR; then
+            $HELM_VAR $DCGM_VAR; then
             terraform destroy -auto-approve
           else
             terraform destroy -auto-approve && exit 1
