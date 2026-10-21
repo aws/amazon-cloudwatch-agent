@@ -1,0 +1,382 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+
+name: Reusable ROSA E2E Test
+
+env:
+  TERRAFORM_AWS_ASSUME_ROLE_DURATION: 14400 # 4 hours
+
+on:
+  workflow_call:
+    inputs:
+      terraform_dir:
+        required: true
+        type: string
+      job_id:
+        required: true
+        type: string
+      test_props:
+        required: true
+        type: string
+      test_repo_name:
+        required: true
+        type: string
+      test_repo_url:
+        required: true
+        type: string
+      test_repo_branch:
+        required: true
+        type: string
+      cloudwatch_agent_repository:
+        required: true
+        type: string
+      cloudwatch_agent_tag:
+        required: true
+        type: string
+      cloudwatch_agent_operator_repository:
+        required: true
+        type: string
+      cloudwatch_agent_target_allocator_repository:
+        required: false
+        type: string
+      cloudwatch_agent_operator_tag:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      helm_charts_branch:
+        required: true
+        type: string
+      terraform_assume_role:
+        required: true
+        type: string
+      agent_config:
+        required: true
+        type: string
+      prometheus_config:
+        required: false
+        type: string
+        default: ""
+      otel_config:
+        required: false
+        type: string
+        default: ""
+      sample_app:
+        required: true
+        type: string
+      s3_integration_bucket:
+        default: ${{vars.S3_INTEGRATION_BUCKET}}
+        type: string
+
+jobs:
+  CreateCluster:
+    name: "Create ROSA HCP Cluster"
+    runs-on: ubuntu-latest
+    outputs:
+      cluster_id: ${{ steps.terraform.outputs.cluster_id }}
+      cluster_name: ${{ steps.terraform.outputs.cluster_name }}
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: ${{inputs.test_repo_name}}
+        ref: ${{inputs.test_repo_branch}}
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ inputs.terraform_assume_role}}
+        aws-region: ${{ inputs.region }}
+        role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+    - name: Verify Terraform version
+      run: terraform --version
+
+    - name: Terraform apply
+      id: terraform
+      uses: nick-fields/retry@v2
+      env:
+        TF_VAR_rhcs_token: ${{secrets.RHCS_ACCOUNT_TOKEN}}
+        TF_VAR_billing_account_id: ${{secrets.ROSA_BILLING_ACCOUNT}}
+        TF_VAR_aws_region: ${{inputs.region}}
+        TF_VAR_cluster_name: cwa-rosa-test-${{github.run_id}}-${{github.run_attempt}}
+      with:
+        max_attempts: 1
+        timeout_minutes: 80
+        retry_wait_seconds: 5
+        command: |
+          cd terraform/rosa/e2e
+
+          terraform init
+          if terraform apply --auto-approve; then
+            echo "cluster_id=$(terraform output -raw cluster_id)" >> $GITHUB_OUTPUT
+            echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+            aws s3 cp terraform.tfstate s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate
+          else
+            terraform destroy --auto-approve && exit 1
+          fi
+
+  ValidateCluster:
+    needs: [CreateCluster]
+    name: "Validate Cluster"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Login ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Install ROSA CLI
+        shell: bash
+        run: |
+          curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz"
+          tar -xvf rosa-linux.tar.gz
+          sudo mv rosa /usr/local/bin/rosa
+          chmod +x /usr/local/bin/rosa
+          rm -f rosa-linux.tar.gz
+          rosa version
+
+      - name: Get Secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          parse-json-secrets: true
+          secret-ids: |
+            ,${{needs.CreateCluster.outputs.cluster_name}}-htpasswd
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          # URL to your OpenShift cluster.
+          openshift_server_url: ${{ env.OPENSHIFT_SERVER }}
+          openshift_username: ${{ env.OPENSHIFT_USERNAME }}
+          openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
+
+      - name: Validate Cluster and Host ROSA Setup
+        working-directory: test/e2e/rosa
+        env:
+          CLUSTER_NAME: ${{needs.CreateCluster.outputs.cluster_name}}
+        run: go test -computeType=ROSA -eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} -eksDeploymentStrategy="DAEMON" -region=${{env.AWS_REGION}} -v
+  PatchCluster:
+    needs: [CreateCluster,ValidateCluster]
+    name: "Patch ROSA Cluster"
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Install ROSA CLI
+        shell: bash
+        run: |
+          curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz"
+          tar -xvf rosa-linux.tar.gz
+          sudo mv rosa /usr/local/bin/rosa
+          chmod +x /usr/local/bin/rosa
+          rm -f rosa-linux.tar.gz
+          rosa version
+
+      - name: Get Secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          parse-json-secrets: true
+          secret-ids: |
+            ,${{needs.CreateCluster.outputs.cluster_name}}-htpasswd
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          # URL to your OpenShift cluster.
+          openshift_server_url: ${{ env.OPENSHIFT_SERVER }}
+          openshift_username: ${{ env.OPENSHIFT_USERNAME }}
+          openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
+
+      - name: Install SSM Agent
+        working-directory: terraform/rosa/patching
+        run : |
+          oc apply -f ./patch.yaml
+
+  RosaTest:
+    needs: [CreateCluster,ValidateCluster,PatchCluster]
+    name: ${{matrix.arrays.testName}}
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        arrays: ${{ fromJson(inputs.test_props) }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - uses: actions/checkout@v3
+        with:
+          repository: "aws-observability/helm-charts"
+          ref: ${{inputs.helm_charts_branch}}
+          path: "terraform/eks/e2e/helm-charts"# have to fix this later
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Install OpenShift CLI
+        uses: redhat-actions/oc-installer@v1
+
+      - name: Install ROSA CLI
+        shell: bash
+        run: |
+          curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/rosa/latest/rosa-linux.tar.gz"
+          tar -xvf rosa-linux.tar.gz
+          sudo mv rosa /usr/local/bin/rosa
+          chmod +x /usr/local/bin/rosa
+          rm -f rosa-linux.tar.gz
+          rosa version
+
+      - name: Get Secrets
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          parse-json-secrets: true
+          secret-ids: |
+            ,${{needs.CreateCluster.outputs.cluster_name}}-htpasswd
+
+      - name: Login to OpenShift
+        uses: redhat-actions/oc-login@v1
+        with:
+          # URL to your OpenShift cluster.
+          openshift_server_url: ${{ env.OPENSHIFT_SERVER }}
+          openshift_username: ${{ env.OPENSHIFT_USERNAME }}
+          openshift_password: ${{ env.OPENSHIFT_PASSWORD }}
+
+      - name: ${{matrix.arrays.testName}}
+        working-directory: ${{matrix.arrays.test_dir}}
+        run: |
+          go test --computeType=ROSA \
+          --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
+          --eksDeploymentStrategy="DAEMON" \
+          --region=${{env.AWS_REGION}} \
+          --helm_charts_branch=${{inputs.helm_charts_branch}} \
+          --cloudwatch_agent_repository=${{inputs.cloudwatch_agent_repository}} \
+          --cloudwatch_agent_tag=${{inputs.cloudwatch_agent_tag}} \
+          --cloudwatch_agent_repository_url=${{inputs.cloudwatch_agent_repository_url}} \
+          --cloudwatch_agent_operator_repository=${{inputs.cloudwatch_agent_operator_repository}} \
+          --cloudwatch_agent_operator_tag=${{inputs.cloudwatch_agent_operator_tag}} \
+          --cloudwatch_agent_operator_repository_url=${{inputs.cloudwatch_agent_operator_repository_url}} \
+          --cloudwatch_agent_target_allocator_repository=${{inputs.cloudwatch_agent_target_allocator_repository}} \
+          --cloudwatch_agent_target_allocator_tag=${{inputs.cloudwatch_agent_target_allocator_tag}} \
+          --cloudwatch_agent_target_allocator_repository_url=${{inputs.cloudwatch_agent_target_allocator_repository_url}} \
+          --sample_app=${{matrix.arrays.sample_app_path}} \
+          --timeout 30m \
+          --v
+          
+      - name: Cleanup
+        working-directory: ${{matrix.arrays.test_dir}}
+        if: always()
+        run: |
+          go test --computeType=ROSA \
+          --destroy \
+          --eksClusterName=${{needs.CreateCluster.outputs.cluster_name}} \
+          --eksDeploymentStrategy="DAEMON" \
+          --region=${{env.AWS_REGION}} \
+          --sample_app=${{matrix.arrays.sample_app_path}} \
+          --timeout 30m \
+          --v
+  DestroyCluster:
+    name: "Destroy ROSA HCP Cluster"
+    if: ${{ always() && needs.CreateCluster.result== 'success' }}
+    needs: [CreateCluster, ValidateCluster, RosaTest]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{inputs.test_repo_name}}
+          ref: ${{inputs.test_repo_branch}}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ inputs.terraform_assume_role}}
+          aws-region: ${{ inputs.region }}
+          role-duration-seconds: ${{ env.TERRAFORM_AWS_ASSUME_ROLE_DURATION }}
+
+      - name: Copy state
+        working-directory: terraform/rosa/e2e
+        run: aws s3 cp s3://${{inputs.s3_integration_bucket}}/integration-test/local-stack-terraform-state/${{inputs.github_sha}}/terraform.tfstate .
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Verify Terraform version
+        run: terraform --version
+
+      - name: Terraform destroy
+        id: terraform
+        uses: nick-fields/retry@v2
+        env:
+          TF_VAR_rhcs_token: ${{secrets.RHCS_ACCOUNT_TOKEN}}
+          TF_VAR_billing_account_id: ${{secrets.ROSA_BILLING_ACCOUNT}}
+          TF_VAR_aws_region: ${{inputs.region}}
+          TF_VAR_cluster_name: ${{needs.CreateCluster.outputs.cluster_name}}
+        with:
+          max_attempts: 1
+          timeout_minutes: 80
+          retry_wait_seconds: 5
+          command: |
+            cd terraform/rosa/e2e
+            terraform init
+            terraform destroy --auto-approve || exit 0
+
