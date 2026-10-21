@@ -1,0 +1,68 @@
+# This rule is the same as the rule that the aws-observability/helm-charts chart renders for
+# signal_to_info_metric/cw_k8s_ci_v0_vllm, in the template
+# charts/amazon-cloudwatch-observability/templates/linux/_otel-container-insights-config.tpl.
+# A change to one of them needs the same change in the other.
+#
+# The vLLM engine configuration rule with the expressions that the Helm chart renders, with all 14 facts.
+# The connector settings are at the top level (no component ID). The example in README.md has the same rule.
+rules:
+  - name: vllm_engine_config_info
+    description: vLLM engine configuration parsed from the engine startup log line. The value is always 1.
+    max_entities: 500
+    # vllm_version needs the full startup phrase and ") with config: ", so a line with only the phrase gives no series.
+    # A prefix check does not work, because vLLM writes "(EngineCore pid=N) INFO ..." or "INFO ..." first.
+    body_contains:
+      - "Initializing an LLM engine (v"
+      - "Initializing a V0 LLM engine (v"
+      - "Initializing a V1 LLM engine (v"
+    # The filelog receiver reads these names from the container log file name, so every record has them.
+    # Two containers of one pod are two entities.
+    identity: [k8s.namespace.name, k8s.pod.name, k8s.container.name]
+    # The pod UID is included, so that the pipeline can compare it with the live pod.
+    include_resource_attributes: [k8s.namespace.name, k8s.pod.name, k8s.container.name, k8s.pod.uid]
+    attributes:
+      - key: vllm_version
+        value: 'ExtractPatterns(log.body, "Initializing an? (?:V[01] )?LLM engine \\(v(?P<v>[^)]+)\\) with config: ")["v"]'
+      # A block scalar, because the pattern contains single quotes.
+      - key: model
+        value: |-
+          ExtractPatterns(log.body, "with config: model='(?P<v>[^']*)'")["v"]
+      # A missing key in ExtractPatterns is an evaluation error, so the default applies to "Initializing an LLM engine" (v0.6.x) lines.
+      - key: vllm_engine
+        value: 'ExtractPatterns(log.body, "Initializing a (?P<v>V[01]) LLM engine")["v"]'
+        default_value: V0
+      - key: served_model_name
+        value: 'ExtractPatterns(log.body, ", served_model_name=(?P<v>[^,]+),")["v"]'
+        optional: true
+      - key: dtype
+        value: 'ExtractPatterns(log.body, ", dtype=(?:torch\\.)?(?P<v>[A-Za-z0-9_]+),")["v"]'
+        optional: true
+      - key: max_seq_len
+        value: 'ExtractPatterns(log.body, ", max_seq_len=(?P<v>\\d+),")["v"]'
+        optional: true
+      - key: tensor_parallel_size
+        value: 'ExtractPatterns(log.body, ", tensor_parallel_size=(?P<v>\\d+),")["v"]'
+        optional: true
+      - key: pipeline_parallel_size
+        value: 'ExtractPatterns(log.body, ", pipeline_parallel_size=(?P<v>\\d+),")["v"]'
+        optional: true
+      - key: data_parallel_size
+        value: 'ExtractPatterns(log.body, ", data_parallel_size=(?P<v>\\d+),")["v"]'
+        optional: true
+      - key: quantization
+        value: 'ExtractPatterns(log.body, ", quantization=(?P<v>[A-Za-z0-9_.\\-]+),")["v"]'
+        optional: true
+      - key: enforce_eager
+        value: 'ExtractPatterns(log.body, ", enforce_eager=(?P<v>True|False),")["v"]'
+        optional: true
+      - key: kv_cache_dtype
+        value: 'ExtractPatterns(log.body, ", kv_cache_dtype=(?P<v>[A-Za-z0-9_]+),")["v"]'
+        optional: true
+      - key: enable_prefix_caching
+        value: 'ExtractPatterns(log.body, ", enable_prefix_caching=(?P<v>True|False|None),")["v"]'
+        optional: true
+      # "None" for speculative_config=None, the method for speculative_config=SpeculativeConfig(method='mtp', ...).
+      - key: speculative_method
+        value: |-
+          ExtractPatterns(log.body, "speculative_config=(?:SpeculativeConfig\\(method=')?(?P<v>None|[^',)]+)")["v"]
+        optional: true
