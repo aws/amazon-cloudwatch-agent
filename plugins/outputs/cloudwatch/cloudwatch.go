@@ -360,13 +360,21 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 	}
 }
 
-// backoffSleep sleeps some amount of time based on number of retries done.
-func (c *CloudWatch) backoffSleep() {
+// backoffDuration returns how long to sleep before the next retry, based on the
+// number of retries done so far. It is deterministic apart from bounded jitter
+// and does not sleep, so it can be unit tested without depending on wall-clock
+// timing.
+func (c *CloudWatch) backoffDuration() time.Duration {
 	d := 1 * time.Minute
 	if c.retries <= c.config.MaxRetryCount {
 		d = c.config.BackoffRetryBase * time.Duration(1<<c.retries)
 	}
-	d = (d / 2) + publishJitter(d/2)
+	return (d / 2) + publishJitter(d/2)
+}
+
+// backoffSleep sleeps some amount of time based on number of retries done.
+func (c *CloudWatch) backoffSleep() {
+	d := c.backoffDuration()
 	if !c.config.DowngradeErrors {
 		log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
 			c.retries, d.Milliseconds())
