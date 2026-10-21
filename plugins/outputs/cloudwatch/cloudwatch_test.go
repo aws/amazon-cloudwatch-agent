@@ -571,31 +571,23 @@ func TestMiddleware(t *testing.T) {
 
 func TestBackoffRetries(t *testing.T) {
 	c := &CloudWatch{config: createDefaultConfig().(*Config)}
-	sleeps := []time.Duration{
-		time.Millisecond * 200,
-		time.Millisecond * 400,
-		time.Millisecond * 800,
-		time.Millisecond * 1600,
-		time.Millisecond * 3200,
-		time.Millisecond * 6400}
-	leniency := 200 * time.Millisecond
+	// For retry i (<= MaxRetryCount) the delay is drawn from [window/2, window),
+	// where window = BackoffRetryBase * 2^i. Assert on the computed duration
+	// rather than on wall-clock sleep time, which is flaky on shared CI runners.
 	for i := 0; i <= defaultRetryCount; i++ {
-		start := time.Now()
-		c.backoffSleep()
-		// Expect time since start is between sleeps[i]/2 and sleeps[i].
-		// Except that github automation fails on this for MacOs, so allow leniency.
-		assert.Less(t, sleeps[i]/2, time.Since(start))
-		assert.Greater(t, sleeps[i]+leniency, time.Since(start))
+		d := c.backoffDuration()
+		window := backoffRetryBase * time.Duration(1<<i)
+		assert.GreaterOrEqual(t, d, window/2)
+		assert.Less(t, d, window)
+		c.retries++
 	}
-	start := time.Now()
-	c.backoffSleep()
-	assert.Less(t, 30*time.Second, time.Since(start))
-	assert.Greater(t, 60*time.Second, time.Since(start))
-	// reset
+	// Beyond MaxRetryCount the delay caps at the [30s, 60s) window.
+	d := c.backoffDuration()
+	assert.GreaterOrEqual(t, d, 30*time.Second)
+	assert.Less(t, d, 60*time.Second)
+	// After a reset the delay returns to the first window.
 	c.retries = 0
-	start = time.Now()
-	c.backoffSleep()
-	assert.Greater(t, 200*time.Millisecond+leniency, time.Since(start))
+	assert.Less(t, c.backoffDuration(), 200*time.Millisecond)
 }
 
 // Fill up the channel and verify it is full.
