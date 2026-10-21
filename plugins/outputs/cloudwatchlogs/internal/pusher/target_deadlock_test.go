@@ -35,8 +35,10 @@ func newThrottlingClient(t *testing.T) (*cloudwatchlogs.Client, *retryer.LogThro
 		_, _ = w.Write([]byte(`{"__type":"ThrottlingException","message":"Rate exceeded"}`))
 	}))
 
-	// The embedded retry.Standard bounds attempts (default 3, i.e. >1) so a dead
-	// consumer fills the capacity-1 throttle channel and (pre-fix) the next send blocks.
+	// The embedded retry.Standard bounds attempts (>1), so a dead/slow consumer would
+	// (pre-fix) wedge on a blocking send into the throttle channel. This test checks the
+	// end-to-end path stays unblocked; the buffer-full drop path itself is covered by the
+	// retryer package unit test (TestIsErrorRetryableDoesNotBlockAfterStop).
 	r := retryer.NewLogThrottleRetryer(testutil.NewNopLogger())
 
 	client := cloudwatchlogs.NewFromConfig(aws.Config{
@@ -63,8 +65,7 @@ func TestInitTargetNoDeadlockUnderThrottling(t *testing.T) {
 
 	// Stop the retryer's consumer BEFORE any calls, reproducing the dead-consumer
 	// condition that arises when the destination owning the retryer stops.
-	r.Stop()
-	time.Sleep(50 * time.Millisecond)
+	r.Stop() // synchronous: watcher has exited on return
 
 	var wg sync.WaitGroup
 	done := make(chan struct{})
