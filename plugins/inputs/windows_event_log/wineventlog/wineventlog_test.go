@@ -19,6 +19,7 @@ import (
 	"unsafe"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/svc/eventlog"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/logscommon"
@@ -289,18 +290,22 @@ func seekToEnd(t *testing.T, elog *windowsEventLog) {
 // Optionally register the given logSrc.
 // Fail the test if an error occurs.
 func writeEvents(t *testing.T, msgCount int, doRegister bool, logSrc string, eventId uint32) {
+	t.Helper()
 	if doRegister {
 		// Expected to fail if unit test previously ran and installed the event src.
 		_ = eventlog.InstallAsEventCreate(logSrc, eventlog.Info|eventlog.Warning|eventlog.Error)
 	}
+	// Use require so the test stops here if the event log cannot be opened
+	// (for example "Access is denied." on some CI runners). Otherwise wlog is
+	// nil and the wlog.Error() call below panics, aborting the whole package.
 	wlog, err := eventlog.Open(logSrc)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for i := 0; i < msgCount; i++ {
 		err = wlog.Error(eventId, fmt.Sprintf("CWA_UnitTest event msg %v", i))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	err = wlog.Close()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Must sleep after wlog.Error() otherwise elog.read() will not see results.
 	time.Sleep(3 * time.Second)
 }
