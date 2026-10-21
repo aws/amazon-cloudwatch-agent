@@ -4,7 +4,9 @@
 package logfile
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -432,11 +434,12 @@ func createWriteRead(t *testing.T, prefix string, logFile *LogFile, done chan bo
 		}
 		t.Log("Verify 1st temp file was auto deleted.")
 		// Deletion happens asynchronously once the old file is read to EOF, so poll
-		// for it rather than checking once (which raced, especially on Windows where
-		// an open handle briefly blocks deletion).
+		// for it rather than checking once. Use os.Stat, not os.Open: on Windows an
+		// open handle lacks FILE_SHARE_DELETE, so it would make the one-shot
+		// os.Remove in tailerSrc.cleanUp fail and the file would never be deleted.
 		require.Eventually(t, func() bool {
-			_, err := os.Open(file.Name())
-			return os.IsNotExist(err)
+			_, err := os.Stat(file.Name())
+			return errors.Is(err, fs.ErrNotExist)
 		}, 10*time.Second, 50*time.Millisecond, "1st temp file should be auto-deleted after being read to EOF")
 	}
 }
