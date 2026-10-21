@@ -1,7 +1,7 @@
 export BASE_SPACE=$(shell pwd)
 export BUILD_SPACE=$(BASE_SPACE)/build
 
-VERSION = $(shell echo `git describe --tag --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
+VERSION = $(shell echo `git describe --tag --match 'v[0-9]*' --dirty``git status --porcelain 2>/dev/null| grep -q "^??" &&echo '-untracked'`)
 VERSION := $(shell echo ${VERSION} | sed -e "s/^v//")
 nightly-release: VERSION := $(shell echo ${VERSION}-nightly-build)
 nightly-release-mac: VERSION := $(shell echo ${VERSION}-nightly-build)
