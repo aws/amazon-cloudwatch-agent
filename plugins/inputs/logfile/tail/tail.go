@@ -282,7 +282,7 @@ func (tail *Tail) readLine() (string, error) {
 		// UTF-8 input (orphan continuations, lone start bytes whose
 		// FullRune is already true as RuneError) keeps today's behavior
 		// exactly.
-		if tail.Config.IsUTF8 && len(line) >= utf8.UTFMax {
+		if tail.IsUTF8 && len(line) >= utf8.UTFMax {
 			runeStart := -1
 			for j := 1; j < utf8.UTFMax; j++ {
 				if utf8.RuneStart(line[len(line)-j]) {
@@ -711,8 +711,8 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 
 	// Split longer lines
 	if tail.MaxLineSize > 0 && len(line) > tail.MaxLineSize {
-		lines = partitionString(line, tail.MaxLineSize, tail.Config.IsUTF8)
-		if tail.Config.IsUTF8 {
+		lines = partitionString(line, tail.MaxLineSize, tail.IsUTF8)
+		if tail.IsUTF8 {
 			// A non-final chunk shorter than MaxLineSize is only possible
 			// because partitionString backed its cut off to a rune start.
 			// Count each so operators can observe the fix at work via
