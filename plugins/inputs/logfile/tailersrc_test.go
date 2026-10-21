@@ -643,7 +643,9 @@ func TestTailerSrcMultiLineGroupSplitAtLineBoundaries(t *testing.T) {
 		1,
 		"",
 	)
-	multilineWaitPeriod = 50 * time.Millisecond
+	// The tailer flushes a pending group after 5 quiet ticks, so 200ms gives 1s of slack before a slow CI host fires the
+	// timeout mid-group and splits a written group into two events. The test is about size-based splits, not timing.
+	multilineWaitPeriod = 200 * time.Millisecond
 
 	// A group of 30 short lines (about 400 bytes), a line longer than maxEventSize whose tail chunk starts with a
 	// space, and a final group.
@@ -708,7 +710,9 @@ func TestTailerSrcMultiLineGroupSplitAtLineBoundaries(t *testing.T) {
 			case evt := <-eventCh:
 				received = append(received, evt)
 			default:
-				return len(received) >= len(expected)
+				// Wait until the last event reaches the end of the written file: counting events alone would stop
+				// early if a slow multi-line flush split a group into one extra event.
+				return len(received) > 0 && received[len(received)-1].(*LogEvent).Range().EndOffsetInt64() == int64(written)
 			}
 		}
 	}, 10*time.Second, 50*time.Millisecond)
