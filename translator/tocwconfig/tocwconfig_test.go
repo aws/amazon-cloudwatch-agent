@@ -362,98 +362,57 @@ func TestHostMetricsConfig(t *testing.T) {
 	checkTranslation(t, "opentelemetry/host_metrics_config", "linux", nil, "")
 }
 
-func TestContainerInsightsConfig(t *testing.T) {
-	// Cannot use checkTranslation here because the container_insights prometheus
-	// receiver references /var/run/secrets/kubernetes.io/serviceaccount/token
-	// which only exists inside K8s pods. Translate without collector validation.
-	//
-	// Covers: node role with logs (filelog app/node + shared logs pipeline) and
-	// cluster role (metrics-only, no logs).
-	for _, name := range []string{
-		"container_insights_node_config",
-		"container_insights_cluster_config",
-	} {
-		t.Run(name, func(t *testing.T) {
-			resetContext(t)
-			context.CurrentContext().SetMode(config.ModeEC2)
-			context.CurrentContext().SetKubernetesMode(config.ModeEKS)
-
-			agent.Global_Config = *new(agent.Agent)
-			translator.SetTargetPlatform("linux")
-			var input interface{}
-			blob, err := os.ReadFile("./sampleConfig/opentelemetry/" + name + ".json")
-			require.NoError(t, err)
-			require.NoError(t, json.Unmarshal(blob, &input))
-			_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
-
-			var expected interface{}
-			bs, err := os.ReadFile("./sampleConfig/opentelemetry/" + name + ".yaml")
-			require.NoError(t, err)
-			require.NoError(t, yaml.Unmarshal(bs, &expected))
-
-			var actual interface{}
-			cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
-			require.NoError(t, err)
-			yamlConfig, err := mapstructure.Marshal(cfg)
-			require.NoError(t, err)
-			yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
-			require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
-
-			opt := cmpopts.SortSlices(func(x, y interface{}) bool {
-				return pretty.Sprint(x) < pretty.Sprint(y)
-			})
-			require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
-		})
-	}
-}
-
-func TestContainerInsightsAKSGKEConfig(t *testing.T) {
+// TestDeprecatedContainerInsightsConfigIsNoOp: opentelemetry.collect.container_insights is
+// deprecated and ignored, so each config must translate exactly as it would with the
+// section removed.
+func TestDeprecatedContainerInsightsConfigIsNoOp(t *testing.T) {
 	for _, tc := range []struct {
 		name           string
 		kubernetesMode string
 	}{
+		{name: "container_insights_node_config", kubernetesMode: config.ModeEKS},
+		{name: "container_insights_cluster_config", kubernetesMode: config.ModeEKS},
 		{name: "container_insights_cluster_config_aks", kubernetesMode: config.ModeAKS},
 		{name: "container_insights_cluster_config_gke", kubernetesMode: config.ModeGKE},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			resetContext(t)
-			context.CurrentContext().SetMode(config.ModeEC2)
-			context.CurrentContext().SetKubernetesMode(tc.kubernetesMode)
-
-			agent.Global_Config = *new(agent.Agent)
-			translator.SetTargetPlatform("linux")
-			var input interface{}
-			blob, err := os.ReadFile("./sampleConfig/opentelemetry/" + tc.name + ".json")
-			require.NoError(t, err)
-			require.NoError(t, json.Unmarshal(blob, &input))
-			// Side effect: repopulates agent.Global_Config (incl. Region) from the
-			// input, matching TestContainerInsightsConfig. Without it the base
-			// metrics/opentelemetry pipeline errors on the empty region and is dropped.
-			_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
-
-			cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
-			require.NoError(t, err)
-			yamlConfig, err := mapstructure.Marshal(cfg)
-			require.NoError(t, err)
-			yamlStr := toyamlconfig.ToYamlConfig(yamlConfig)
-
-			goldenPath := "./sampleConfig/opentelemetry/" + tc.name + ".yaml"
-			if os.Getenv("GENERATE_GOLDEN") != "" {
-				require.NoError(t, os.WriteFile(goldenPath, []byte(yamlStr), 0644))
+			// A config whose only OTel section is container_insights yields
+			// pipeline.ErrNoPipelines both ways, which the agent tolerates (no
+			// OTel YAML is written), so compare the error as well as the output.
+			translate := func(input map[string]interface{}) (string, error) {
+				resetContext(t)
+				context.CurrentContext().SetMode(config.ModeEC2)
+				context.CurrentContext().SetKubernetesMode(tc.kubernetesMode)
+				agent.Global_Config = *new(agent.Agent)
+				translator.SetTargetPlatform("linux")
+				_, _ = cmdutil.TranslateJsonMapToTomlConfig(input)
+				cfg, err := otel.TranslateWithoutValidation(input, context.CurrentContext().Os())
+				if err != nil {
+					return "", err
+				}
+				yamlConfig, err := mapstructure.Marshal(cfg)
+				require.NoError(t, err)
+				return toyamlconfig.ToYamlConfig(yamlConfig), nil
+			}
+			load := func() map[string]interface{} {
+				var input map[string]interface{}
+				blob, err := os.ReadFile("./sampleConfig/opentelemetry/" + tc.name + ".json")
+				require.NoError(t, err)
+				require.NoError(t, json.Unmarshal(blob, &input))
+				return input
 			}
 
-			var expected interface{}
-			bs, err := os.ReadFile(goldenPath)
-			require.NoError(t, err)
-			require.NoError(t, yaml.Unmarshal(bs, &expected))
+			withCI := load()
+			collect := withCI["opentelemetry"].(map[string]interface{})["collect"].(map[string]interface{})
+			require.Contains(t, collect, "container_insights")
 
-			var actual interface{}
-			require.NoError(t, yaml.Unmarshal([]byte(yamlStr), &actual))
+			withoutCI := load()
+			delete(withoutCI["opentelemetry"].(map[string]interface{})["collect"].(map[string]interface{}), "container_insights")
 
-			opt := cmpopts.SortSlices(func(x, y interface{}) bool {
-				return pretty.Sprint(x) < pretty.Sprint(y)
-			})
-			require.True(t, cmp.Equal(expected, actual, opt), "D! YAML diff: %s", cmp.Diff(expected, actual))
+			wantYAML, wantErr := translate(withoutCI)
+			gotYAML, gotErr := translate(withCI)
+			assert.Equal(t, wantErr, gotErr)
+			assert.Equal(t, wantYAML, gotYAML)
 		})
 	}
 }
