@@ -79,6 +79,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
 	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 
+	"github.com/aws/amazon-cloudwatch-agent/connector/signaltoinfometricconnector"
 	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/extension/entitystore"
 	"github.com/aws/amazon-cloudwatch-agent/extension/k8smetadata"
@@ -205,6 +206,7 @@ func Factories() (otelcol.Factories, error) {
 		countconnector.NewFactory(),
 		forwardconnector.NewFactory(),
 		routingconnector.NewFactory(),
+		signaltoinfometricconnector.NewFactory(),
 		signaltometricsconnector.NewFactory(),
 		spanmetricsconnector.NewFactory(),
 	); err != nil {
