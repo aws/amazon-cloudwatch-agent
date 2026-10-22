@@ -904,6 +904,17 @@ func BenchmarkUTF8EncodedLength(b *testing.B) {
 	invalidNearStart[16] = 0xC0 // not a valid UTF-8 lead byte
 	invalidNearEnd := []byte(strings.Repeat("a", n))
 	invalidNearEnd[n-16] = 0xC0
+	// DenseInvalid: an invalid byte every 64 ASCII bytes forces the fallback to re-enter the ASCII skip 16384 times
+	// over 1 MiB, so a word-at-a-time skip has to amortise its own setup against short runs.
+	denseInvalid := []byte(strings.Repeat("a", n))
+	for k := 63; k < n; k += 64 {
+		denseInvalid[k] = 0xC0
+	}
+	// MultibyteWithOneInvalid: a 1 MiB stream of mostly valid multi-byte runes with a single invalid byte planted
+	// near the end, so the fallback walks almost entirely through decodeRuneSize rather than the ASCII skip. Checks
+	// the SWAR change does not regress non-ASCII-heavy input.
+	multibyteWithOneInvalid := []byte(strings.Repeat("日", n/3))
+	multibyteWithOneInvalid[len(multibyteWithOneInvalid)-5] = 0xC0
 
 	cases := []struct {
 		name    string
@@ -912,6 +923,8 @@ func BenchmarkUTF8EncodedLength(b *testing.B) {
 		{"AllValid", allValid},
 		{"InvalidNearStart", string(invalidNearStart)},
 		{"InvalidNearEnd", string(invalidNearEnd)},
+		{"DenseInvalid", string(denseInvalid)},
+		{"MultibyteWithOneInvalid", string(multibyteWithOneInvalid)},
 	}
 	for _, tc := range cases {
 		tc := tc

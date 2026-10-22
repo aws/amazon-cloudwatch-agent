@@ -198,18 +198,39 @@ func utf8EncodedLength(message string) int {
 		return len(message)
 	}
 	// Slow path: ValidString returned false, so the message holds at least one byte that is not part of a valid
-	// UTF-8 sequence. Walk the message, but skip ASCII runs byte-by-byte: an ASCII byte is a rune of its own and
-	// counts as 1, so there is no reason to call DecodeRuneInString for it. This keeps the fallback close to the
-	// fast path on inputs with sparse invalid bytes (e.g. a long ASCII prefix followed by one bad byte), where the
-	// former implementation re-decoded every ASCII byte individually (review comment C2).
+	// UTF-8 sequence. ValidString does not report the offset of that byte, so this walk restarts at 0; the
+	// word-at-a-time ASCII skip below keeps the cost of the leading ASCII prefix close to ValidString's own and
+	// avoids a redundant second full pass to find the first invalid byte (review comment C2).
+	//
+	// Every byte below 0x80 is an ASCII rune of its own and counts as 1, so a run of them is counted by its length.
+	// Loading 8 bytes as a little-endian uint64 and masking against 0x80 in every lane detects a non-ASCII byte in
+	// 0, 1, 2, ... 7 anywhere in the window with a single AND. The counted size is unchanged by the batching: 8
+	// ASCII bytes still count as 8, and any byte with the high bit set is handed off to the byte loop and then to
+	// decodeRuneSize, exactly as before.
 	size := 0
 	for i := 0; i < len(message); {
-		// Fast-skip an ASCII run: every byte below 0x80 counts as 1.
-		j := i
-		for j < len(message) && message[j] < 0x80 {
-			j++
-		}
-		if j > i {
+		if message[i] < 0x80 {
+			// Gated on an ASCII head byte so a non-ASCII-heavy stream (where decodeRuneSize eats most bytes) never
+			// pays for a word load that is guaranteed to fail the mask check.
+			//
+			// Word-at-a-time ASCII skip. The uint64 is assembled from 8 bytes of the string without converting to a
+			// []byte (which would allocate); the Go compiler folds this chain of shifted ORs into a single 64-bit
+			// load.
+			for i+8 <= len(message) {
+				w := uint64(message[i]) | uint64(message[i+1])<<8 | uint64(message[i+2])<<16 | uint64(message[i+3])<<24 |
+					uint64(message[i+4])<<32 | uint64(message[i+5])<<40 | uint64(message[i+6])<<48 | uint64(message[i+7])<<56
+				if w&0x8080808080808080 != 0 {
+					break
+				}
+				size += 8
+				i += 8
+			}
+			// Fast-skip the remaining ASCII bytes one at a time: this handles the tail (fewer than 8 bytes left)
+			// and the stretch between the first non-ASCII byte of a word and the start of that non-ASCII rune.
+			j := i
+			for j < len(message) && message[j] < 0x80 {
+				j++
+			}
 			size += j - i
 			i = j
 			continue
