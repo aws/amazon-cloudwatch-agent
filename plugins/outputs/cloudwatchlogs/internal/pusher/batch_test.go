@@ -925,3 +925,19 @@ func BenchmarkUTF8EncodedLength(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkSplitMessage exercises splitMessage on 7 × maxEventMessageBytes of valid ASCII. The current loop calls
+// truncateToUTF8EncodedLength for every cut, each of which runs utf8.ValidString on the remaining tail, so the
+// cost grows as O(chunks × n). The optimisation called out in review comment C3 uses the valid-UTF-8 proof
+// (size == len(message)) from the caller to turn each cut into a bounded rune-boundary backup, dropping the loop
+// to O(chunks).
+func BenchmarkSplitMessage(b *testing.B) {
+	message := strings.Repeat("a", 7*maxEventMessageBytes)
+	size := utf8EncodedLength(message)
+	b.ReportAllocs()
+	b.SetBytes(int64(len(message)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = splitMessage(message, size, maxEventMessageBytes, maxSplitChunks)
+	}
+}

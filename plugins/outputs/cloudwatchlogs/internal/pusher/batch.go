@@ -109,16 +109,21 @@ func splitMessage(message string, size, budget, maxChunks int) ([]string, []int,
 		prefix, prefixSize := truncateToUTF8EncodedLength(message, budget)
 		return []string{prefix}, []int{prefixSize}, prefixSize < size
 	}
+	// When the whole message is valid UTF-8 (every byte of it decoded by the service as itself), the counted size
+	// of any prefix equals its byte length, so each cut is a bounded rune-boundary backup inside a budget-sized
+	// window. Taking that path avoids re-running utf8.ValidString over the whole remaining tail on every
+	// iteration, which was O(chunks * n) and the main cost called out in review comment C3.
+	validUTF8 := size == len(message)
 	var chunks []string
 	var sizes []int
 	rest, restSize := message, size
 	for restSize > budget {
 		if len(chunks) >= maxChunks-1 {
 			// The cap is reached: truncate the last chunk as validateAndTruncateMessage does, and drop the rest.
-			prefix, prefixSize := truncateToUTF8EncodedLength(rest, budget-len(defaultTruncationSuffix))
+			prefix, prefixSize := truncateRest(rest, budget-len(defaultTruncationSuffix), validUTF8)
 			return append(chunks, prefix+defaultTruncationSuffix), append(sizes, prefixSize+len(defaultTruncationSuffix)), true
 		}
-		chunk, chunkSize := truncateToUTF8EncodedLength(rest, budget)
+		chunk, chunkSize := truncateRest(rest, budget, validUTF8)
 		chunk, chunkSize = preferNaturalCut(chunk, chunkSize)
 		chunks, sizes = append(chunks, chunk), append(sizes, chunkSize)
 		// chunk ends on a rune boundary, so the rest decodes to the remaining runes and its counted size is the
@@ -126,6 +131,28 @@ func splitMessage(message string, size, budget, maxChunks int) ([]string, []int,
 		rest, restSize = rest[len(chunk):], restSize-chunkSize
 	}
 	return append(chunks, rest), append(sizes, restSize), false
+}
+
+// truncateRest returns the longest prefix of rest of counted size at most limit, picking the valid-UTF-8 fast path
+// when the caller already knows the whole input is valid UTF-8. In that case counted size == byte length, so the
+// cut is just a rune-boundary backup from index min(limit, len(rest)); no utf8.ValidString scan over the tail is
+// needed. Otherwise it falls back to truncateToUTF8EncodedLength, which handles invalid sequences.
+func truncateRest(rest string, limit int, validUTF8 bool) (string, int) {
+	if !validUTF8 {
+		return truncateToUTF8EncodedLength(rest, limit)
+	}
+	if limit <= 0 {
+		return "", 0
+	}
+	if len(rest) <= limit {
+		return rest, len(rest)
+	}
+	// Back up to the first byte of the rune that crosses the limit. Walks at most utf8.UTFMax bytes.
+	i := limit
+	for i > 0 && !utf8.RuneStart(rest[i]) {
+		i--
+	}
+	return rest[:i], i
 }
 
 // preferNaturalCut moves the end of chunk, whose counted size is size, back to just after the last newline within
