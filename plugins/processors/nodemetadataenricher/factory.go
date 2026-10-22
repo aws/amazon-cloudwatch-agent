@@ -27,6 +27,7 @@ func NewFactory() processor.Factory {
 		TypeStr,
 		createDefaultConfig,
 		processor.WithMetrics(createMetricsProcessor, stability),
+		processor.WithLogs(createLogsProcessor, stability),
 	)
 }
 
@@ -53,6 +54,29 @@ func createMetricsProcessor(
 		cfg,
 		nextConsumer,
 		metricsProcessor.processMetrics,
+		processorhelper.WithCapabilities(processorCapabilities),
+	)
+}
+
+func createLogsProcessor(
+	ctx context.Context,
+	set processor.Settings,
+	cfg component.Config,
+	nextConsumer consumer.Logs,
+) (processor.Logs, error) {
+	_, ok := cfg.(*Config)
+	if !ok {
+		return nil, fmt.Errorf("configuration parsing error")
+	}
+
+	logsProcessor := newNodeMetadataEnricherProcessor(set.Logger)
+
+	return processorhelper.NewLogs(
+		ctx,
+		set,
+		cfg,
+		nextConsumer,
+		logsProcessor.processLogs,
 		processorhelper.WithCapabilities(processorCapabilities),
 	)
 }
