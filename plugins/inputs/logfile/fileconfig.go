@@ -111,11 +111,13 @@ func (config *FileConfig) init() error {
 	// accepted the literal spellings "utf-8"/"utf_8"/"utf8"/"ascii", so every other case fell through to
 	// charset.Lookup and set a non-nil Enc. Downstream, logfile.go set IsUTF8 false and tail skipped the
 	// rune-boundary backoff on MaxLineSize cuts, so the UTF-8 decoder in tailersrc.go substituted U+FFFD for
-	// the broken trailing bytes - silent data corruption at every size cut. "ascii" was especially risky:
-	// charset.Lookup aliases it to windows-1252, which reinterprets bytes >= 0x80.
+	// the broken trailing bytes - silent data corruption at every size cut.
 	normalizedEncoding := strings.ToLower(strings.ReplaceAll(config.Encoding, "_", "-"))
-	switch normalizedEncoding {
-	case "", "utf-8", "utf8", "ascii":
+	switch {
+	case config.Encoding == "ascii":
+		// Unchanged: only the exact lowercase "ascii" is treated as UTF-8. Other spellings ("ASCII", "Ascii", ...)
+		// keep their existing behaviour and go through charset.Lookup below, which aliases them to windows-1252.
+	case normalizedEncoding == "" || normalizedEncoding == "utf-8" || normalizedEncoding == "utf8":
 		// Treat as UTF-8: leave Enc nil so the tailer applies the rune-boundary backoff.
 	default:
 		if config.Enc, _ = charset.Lookup(config.Encoding); config.Enc == nil {
