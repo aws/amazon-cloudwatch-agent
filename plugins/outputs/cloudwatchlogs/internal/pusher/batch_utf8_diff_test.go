@@ -4,6 +4,7 @@ package pusher
 
 import (
 	"math/rand/v2"
+	"strings"
 	"testing"
 	"unicode/utf8"
 )
@@ -216,4 +217,79 @@ func bytesRepeat(b byte, n int) []byte {
 		out[i] = b
 	}
 	return out
+}
+
+// TestFirstInvalidUTF8 pins the firstInvalidUTF8 helper: it must return len(s) exactly when s is valid UTF-8,
+// and the byte offset of the first byte not part of a valid UTF-8 sequence otherwise. Covers the offsets the
+// chunked ValidString + byte-level fallback must agree on (position 0, mid-word, last byte, truncated rune
+// at EOS, boundaries of the 8-byte word scan, and across the 16 KiB chunk boundary firstInvalidUTF8 uses).
+func TestFirstInvalidUTF8(t *testing.T) {
+	// Chunk size that firstInvalidUTF8 uses internally — not exported, so compute it locally so the test
+	// stays explicit about which boundaries it is probing.
+	const chunk = 16 * 1024
+
+	tests := []struct {
+		name string
+		s    string
+		want int
+	}{
+		{name: "Empty", s: "", want: 0},
+		{name: "ValidASCII", s: "hello world", want: len("hello world")},
+		{name: "ValidMultibyte", s: "héllo 日本語 😀", want: len("héllo 日本語 😀")},
+		{name: "InvalidAtZero", s: "\xffhello", want: 0},
+		// Mid-word invalid: 4 ASCII bytes then an invalid byte at offset 4 (inside the first 8-byte word).
+		{name: "InvalidMidWord", s: "abcd\xff" + strings.Repeat("x", 20), want: 4},
+		{name: "InvalidAtLastByte", s: strings.Repeat("a", 20) + "\xff", want: 20},
+		// Truncated multi-byte sequence at end of string: lead byte 0xC2 expects one continuation byte.
+		{name: "TruncatedRuneAtEnd", s: strings.Repeat("a", 10) + "\xc2", want: 10},
+		// Encoded surrogate: valid shape, invalid for the codepoint.
+		{name: "EncodedSurrogate", s: "ok" + "\xed\xa0\x80", want: 2},
+		// Overlong encoding of '/': valid shape, invalid codepoint.
+		{name: "Overlong", s: "ok" + "\xc0\xaf", want: 2},
+		// Lone continuation byte with no lead.
+		{name: "LoneContinuation", s: "ok\x80rest", want: 2},
+		// Invalid byte exactly at the 8-byte word boundary (offset 8) in a word-aligned 16-byte string.
+		{name: "InvalidAtWordBoundary", s: "aaaaaaaa\xffaaaaaaa", want: 8},
+		// Just before the first word boundary.
+		{name: "InvalidJustBeforeWord", s: "aaaaaaa\xffaaaaaaaa", want: 7},
+		// Just after a word boundary (byte 9 — first byte of the second word).
+		{name: "InvalidJustAfterWord", s: "aaaaaaaaa\xffaaaaaa", want: 9},
+		// Across the 16 KiB chunk boundary: invalid byte at the first offset of chunk 1 (chunk 0 is pure
+		// ASCII, chunk 1's lead byte is invalid). firstInvalidUTF8 must advance past chunk 0 and locate
+		// the offset at the start of chunk 1 — this is the case rune-boundary extension at chunk edges
+		// must preserve.
+		{
+			name: "InvalidAtChunkBoundary",
+			s:    strings.Repeat("a", chunk) + "\xff" + strings.Repeat("a", 100),
+			want: chunk,
+		},
+		// Valid 4-byte rune straddling the chunk boundary (first byte of the rune at chunk-2, so bytes
+		// chunk-2..chunk+1 form one rune). firstInvalidUTF8 must extend the chunk forward to the next
+		// rune start instead of flagging the straddling rune as truncated.
+		{
+			name: "ValidRuneStraddlesChunkBoundary",
+			s:    strings.Repeat("a", chunk-2) + "\xf0\x9f\x98\x80" + strings.Repeat("a", 100),
+			want: chunk - 2 + 4 + 100, // whole string is valid
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := firstInvalidUTF8(tt.s)
+			if got != tt.want {
+				t.Fatalf("firstInvalidUTF8(%q) = %d, want %d", tt.s, got, tt.want)
+			}
+			// Cross-check against utf8.ValidString: when the whole string is valid, firstInvalidUTF8 must
+			// return len(s); otherwise, the prefix up to the returned offset must itself be valid UTF-8.
+			if got == len(tt.s) {
+				if !utf8.ValidString(tt.s) {
+					t.Fatalf("firstInvalidUTF8(%q) returned len(s) but ValidString says invalid", tt.s)
+				}
+			} else {
+				if !utf8.ValidString(tt.s[:got]) {
+					t.Fatalf("firstInvalidUTF8(%q) = %d but prefix is not valid UTF-8", tt.s, got)
+				}
+			}
+		})
+	}
 }

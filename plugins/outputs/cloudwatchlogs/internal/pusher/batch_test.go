@@ -900,6 +900,10 @@ func TestTruncateToUTF8EncodedLength(t *testing.T) {
 func BenchmarkUTF8EncodedLength(b *testing.B) {
 	const n = 1 << 20
 	allValid := strings.Repeat("a", n)
+	// MultibyteValid: ~1 MiB of valid 2/3/4-byte runes ("é" + "日" + "😀" = 9 bytes per cycle). The fast path
+	// should still return in one utf8.ValidString pass; this guards against a regression if the fast path is
+	// ever replaced with a pure-Go scan that lacks SIMD acceleration.
+	multibyteValid := strings.Repeat("é日😀", n/9)
 	invalidNearStart := []byte(strings.Repeat("a", n))
 	invalidNearStart[16] = 0xC0 // not a valid UTF-8 lead byte
 	invalidNearEnd := []byte(strings.Repeat("a", n))
@@ -921,6 +925,7 @@ func BenchmarkUTF8EncodedLength(b *testing.B) {
 		message string
 	}{
 		{"AllValid", allValid},
+		{"MultibyteValid", multibyteValid},
 		{"InvalidNearStart", string(invalidNearStart)},
 		{"InvalidNearEnd", string(invalidNearEnd)},
 		{"DenseInvalid", string(denseInvalid)},

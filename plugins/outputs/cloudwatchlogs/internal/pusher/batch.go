@@ -193,22 +193,15 @@ func preferNaturalCut(chunk string, size int) (string, int) {
 // counted. Each byte that is not part of a valid UTF-8 sequence reaches the service as U+FFFD, so it counts as
 // invalidUTF8ByteSize bytes instead of 1.
 func utf8EncodedLength(message string) int {
-	// Fast path: valid UTF-8 (including all ASCII) is counted as is.
-	if utf8.ValidString(message) {
+	// Scan for the first byte that is not part of a valid UTF-8 sequence. The prefix [0, off) is valid UTF-8,
+	// so its counted size equals its byte length — if the whole message is valid, return that length right
+	// away; otherwise resume counting from off instead of re-walking from byte 0 (review comment C2).
+	off := firstInvalidUTF8(message)
+	if off == len(message) {
 		return len(message)
 	}
-	// Slow path: ValidString returned false, so the message holds at least one byte that is not part of a valid
-	// UTF-8 sequence. ValidString does not report the offset of that byte, so this walk restarts at 0; the
-	// word-at-a-time ASCII skip below keeps the cost of the leading ASCII prefix close to ValidString's own and
-	// avoids a redundant second full pass to find the first invalid byte (review comment C2).
-	//
-	// Every byte below 0x80 is an ASCII rune of its own and counts as 1, so a run of them is counted by its length.
-	// Loading 8 bytes as a little-endian uint64 and masking against 0x80 in every lane detects a non-ASCII byte in
-	// 0, 1, 2, ... 7 anywhere in the window with a single AND. The counted size is unchanged by the batching: 8
-	// ASCII bytes still count as 8, and any byte with the high bit set is handed off to the byte loop and then to
-	// decodeRuneSize, exactly as before.
-	size := 0
-	for i := 0; i < len(message); {
+	size := off
+	for i := off; i < len(message); {
 		if message[i] < 0x80 {
 			// Gated on an ASCII head byte so a non-ASCII-heavy stream (where decodeRuneSize eats most bytes) never
 			// pays for a word load that is guaranteed to fail the mask check.
@@ -241,6 +234,74 @@ func utf8EncodedLength(message string) int {
 		i += n
 	}
 	return size
+}
+
+// firstInvalidUTF8ChunkBytes is the span utf8.ValidString is asked to verify at a time: large enough that each
+// call amortises its setup cost over a lot of SIMD-accelerated bytes, small enough that scanning the FIRST chunk
+// that fails byte-by-byte is cheap (the only pure-Go pass we take on a mostly-valid message with a trailing
+// invalid byte).
+const firstInvalidUTF8ChunkBytes = 16 * 1024
+
+// firstInvalidUTF8 returns the byte offset in s of the first byte that is not part of a valid UTF-8 sequence,
+// or len(s) when s is valid UTF-8. It walks s in firstInvalidUTF8ChunkBytes-sized windows with utf8.ValidString
+// (SIMD-accelerated on amd64), so a long valid prefix is skipped at ValidString's own throughput — then narrows
+// the first chunk that fails to the exact offset with a word-at-a-time ASCII skip plus utf8.DecodeRuneInString
+// for non-ASCII runes. Each window is extended forward to the next rune start so a multi-byte rune straddling
+// the chunk edge is not mistaken for a truncated sequence. utf8EncodedLength uses the returned offset to
+// resume counting instead of re-walking from byte 0 after a validity check fails (review comment C2).
+func firstInvalidUTF8(s string) int {
+	i := 0
+	for i < len(s) {
+		end := i + firstInvalidUTF8ChunkBytes
+		if end > len(s) {
+			end = len(s)
+		}
+		// Extend forward to a rune boundary (or to EOS) so a straddling multi-byte rune is not split across
+		// chunk edges. The extension walks at most utf8.UTFMax-1 continuation bytes.
+		for end < len(s) && !utf8.RuneStart(s[end]) {
+			end++
+		}
+		if !utf8.ValidString(s[i:end]) {
+			return i + firstInvalidInChunk(s[i:end])
+		}
+		i = end
+	}
+	return len(s)
+}
+
+// firstInvalidInChunk returns the byte offset in s of the first byte that is not part of a valid UTF-8
+// sequence. It assumes the caller has already determined s is invalid, so it does not fall through to a
+// "no invalid byte found" response: an unexpected clean walk returns len(s) to keep callers safe. ASCII runs
+// are skipped 8 bytes at a time (reusing the hot loop utf8EncodedLength uses); non-ASCII runes are validated
+// with utf8.DecodeRuneInString, which returns (utf8.RuneError, 1) exactly when the lead byte at i does not
+// start a valid UTF-8 sequence (lone continuation, bad lead, truncated multi-byte, encoded surrogate,
+// overlong encoding, or above U+10FFFF).
+func firstInvalidInChunk(s string) int {
+	for i := 0; i < len(s); {
+		if s[i] < 0x80 {
+			// Word-at-a-time ASCII skip, mirroring utf8EncodedLength's hot loop. The uint64 is assembled from 8
+			// bytes without converting to a []byte (which would allocate); the compiler folds this chain of
+			// shifted ORs into a single 64-bit load.
+			for i+8 <= len(s) {
+				w := uint64(s[i]) | uint64(s[i+1])<<8 | uint64(s[i+2])<<16 | uint64(s[i+3])<<24 |
+					uint64(s[i+4])<<32 | uint64(s[i+5])<<40 | uint64(s[i+6])<<48 | uint64(s[i+7])<<56
+				if w&0x8080808080808080 != 0 {
+					break
+				}
+				i += 8
+			}
+			for i < len(s) && s[i] < 0x80 {
+				i++
+			}
+			continue
+		}
+		r, n := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && n == 1 {
+			return i
+		}
+		i += n
+	}
+	return len(s)
 }
 
 // truncateToUTF8EncodedLength returns the longest prefix of message whose utf8EncodedLength is at most limit. The
