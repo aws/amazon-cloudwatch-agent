@@ -33,10 +33,12 @@ func newConverter(logger telegraf.Logger, target Target) *converter {
 	}
 }
 
-// convert sets a timestamp if not set in the logs.LogEvent. It returns the events that carry the message: one, or
-// several with the same timestamp if the message is over the per-event limit (see newStatefulLogEvents). Only the last
-// of them carries the state and done callback of e.
-func (c *converter) convert(e logs.LogEvent) []*logEvent {
+// convert sets a timestamp if not set in the logs.LogEvent. It returns the event or events that carry the message:
+// one single event via the fast path (single != nil, split == nil), or several with the same timestamp (single ==
+// nil, split != nil) if the message is over the per-event limit (see newStatefulLogEvents). Only the last of them
+// carries the state and done callback of e. Exactly one of single and split is non-nil, so the single-event fast
+// path never allocates a slice.
+func (c *converter) convert(e logs.LogEvent) (single *logEvent, split []*logEvent) {
 	message := e.Message()
 
 	now := time.Now()

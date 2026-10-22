@@ -262,29 +262,32 @@ func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(
 }
 
 // newStatefulLogEvents returns the log events that carry message, the message of one source log event. A message
-// within the per-event limit becomes one event, as with newStatefulLogEvent. A larger message is split into up to
-// maxSplitChunks events (see splitMessage), unless it looks like EMF (see IsEMFMessage), in which case it is truncated
-// as before.
+// within the per-event limit becomes one event, as with newStatefulLogEvent, and is returned as single (split is nil).
+// A larger message is split into up to maxSplitChunks events (see splitMessage) and returned as split (single is nil);
+// unless it looks like EMF (see IsEMFMessage), in which case it is truncated as a single event instead.
+//
+// Exactly one of the returned values is non-nil, so the common single-event fast path does not allocate a slice.
 //
 // Every event gets the timestamp of the source event. Only the last event carries doneCallback and state: the
 // queue sends the events of a split message in order and the last event's batch completes after the others, so the
 // source event is acknowledged, and its file offset advanced, only once all of it has been sent.
-func newStatefulLogEvents(timestamp time.Time, message string, doneCallback func(), state *logEventState) []*logEvent {
+func newStatefulLogEvents(timestamp time.Time, message string, doneCallback func(), state *logEventState) (single *logEvent, split []*logEvent) {
 	size := utf8EncodedLength(message)
 	if size <= maxEventMessageBytes {
 		// The common case: one event, with the message unchanged. size is reused, so the message is scanned once.
-		return []*logEvent{{
+		// Returned via single to skip the 1-element-slice allocation of the former []*logEvent return.
+		return &logEvent{
 			message:      message,
 			timestamp:    timestamp,
 			eventBytes:   size + perEventHeaderBytes,
 			doneCallback: doneCallback,
 			state:        state,
-		}}
+		}, nil
 	}
 	if IsEMFMessage(message) {
 		// Parts of an EMF document are not EMF documents, so splitting would only store invalid JSON fragments and
 		// spend requests on them. Keep the truncation.
-		return []*logEvent{newStatefulLogEvent(timestamp, message, doneCallback, state)}
+		return newStatefulLogEvent(timestamp, message, doneCallback, state), nil
 	}
 	chunks, sizes, truncated := splitMessage(message, size, maxEventMessageBytes, maxSplitChunks)
 	events := make([]*logEvent, len(chunks))
@@ -300,7 +303,7 @@ func newStatefulLogEvents(timestamp time.Time, message string, doneCallback func
 	last.truncated = truncated
 	last.doneCallback = doneCallback
 	last.state = state
-	return events
+	return nil, events
 }
 
 // batch builds a types.InputLogEvent from the timestamp and message stored. Converts the timestamp to

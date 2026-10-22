@@ -306,20 +306,22 @@ func TestNewStatefulLogEvents(t *testing.T) {
 
 	t.Run("Fits", func(t *testing.T) {
 		mrq := &mockRangeQueue{}
-		events := newStatefulLogEvents(now, "small", func() {}, &logEventState{r: r, queue: mrq})
-		require.Len(t, events, 1)
-		assert.Equal(t, "small", events[0].message)
-		assert.Equal(t, len("small")+perEventHeaderBytes, events[0].eventBytes)
-		assert.NotNil(t, events[0].doneCallback)
-		assert.NotNil(t, events[0].state)
-		assert.False(t, events[0].truncated)
+		single, split := newStatefulLogEvents(now, "small", func() {}, &logEventState{r: r, queue: mrq})
+		require.NotNil(t, single)
+		require.Nil(t, split)
+		assert.Equal(t, "small", single.message)
+		assert.Equal(t, len("small")+perEventHeaderBytes, single.eventBytes)
+		assert.NotNil(t, single.doneCallback)
+		assert.NotNil(t, single.state)
+		assert.False(t, single.truncated)
 	})
 
 	t.Run("Split", func(t *testing.T) {
 		mrq := &mockRangeQueue{}
 		var doneCalls int
 		message := strings.Repeat("x", 3*maxEventMessageBytes+1)
-		events := newStatefulLogEvents(now, message, func() { doneCalls++ }, &logEventState{r: r, queue: mrq})
+		single, events := newStatefulLogEvents(now, message, func() { doneCalls++ }, &logEventState{r: r, queue: mrq})
+		require.Nil(t, single)
 		require.Len(t, events, 4)
 		for i, event := range events {
 			assert.Equal(t, now, event.timestamp, "event %d", i)
@@ -340,7 +342,8 @@ func TestNewStatefulLogEvents(t *testing.T) {
 
 	t.Run("PastCap", func(t *testing.T) {
 		message := string(bytes.Repeat([]byte{0xff}, 3*maxEventMessageBytes))
-		events := newStatefulLogEvents(now, message, nil, nil)
+		single, events := newStatefulLogEvents(now, message, nil, nil)
+		require.Nil(t, single)
 		require.Len(t, events, maxSplitChunks)
 		for i, event := range events[:len(events)-1] {
 			assert.False(t, event.truncated, "event %d", i)
@@ -354,14 +357,15 @@ func TestNewStatefulLogEvents(t *testing.T) {
 	t.Run("EMFOverLimitIsTruncated", func(t *testing.T) {
 		message := `{"_aws":{"CloudWatchMetrics":[]},"data":"` + strings.Repeat("x", maxEventMessageBytes) + `"}`
 		require.True(t, IsEMFMessage(message))
-		events := newStatefulLogEvents(now, message, func() {}, nil)
-		require.Len(t, events, 1)
+		single, split := newStatefulLogEvents(now, message, func() {}, nil)
+		require.NotNil(t, single)
+		require.Nil(t, split)
 		expected, size, truncated := validateAndTruncateMessage(message)
 		require.True(t, truncated)
-		assert.Equal(t, expected, events[0].message)
-		assert.Equal(t, size+perEventHeaderBytes, events[0].eventBytes)
-		assert.True(t, events[0].truncated)
-		assert.NotNil(t, events[0].doneCallback)
+		assert.Equal(t, expected, single.message)
+		assert.Equal(t, size+perEventHeaderBytes, single.eventBytes)
+		assert.True(t, single.truncated)
+		assert.NotNil(t, single.doneCallback)
 	})
 
 	t.Run("JSONWithoutCloudWatchMetricsIsSplit", func(t *testing.T) {
@@ -380,7 +384,7 @@ func TestLogEventBatch_SplitEventsAckOnce(t *testing.T) {
 	mrq.On("ID").Return("file")
 	mrq.On("Enqueue", r).Return().Once()
 	var doneCalls int
-	events := newStatefulLogEvents(time.Now(), strings.Repeat("x", 2*maxEventMessageBytes+1), func() { doneCalls++ }, &logEventState{r: r, queue: mrq})
+	events := flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), strings.Repeat("x", 2*maxEventMessageBytes+1), func() { doneCalls++ }, &logEventState{r: r, queue: mrq}))
 	require.Len(t, events, 3)
 	for i, event := range events {
 		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)

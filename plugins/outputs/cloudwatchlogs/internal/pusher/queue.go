@@ -160,28 +160,29 @@ func (q *queue) start() {
 			if len(q.batch.events) == 0 {
 				q.resetFlushTimer()
 			}
-			events := q.converter.convert(e)
-			// The events of one source event share its timestamp, and the last one carries its truncation flag.
-			last := events[len(events)-1]
-			// A message over the per-event limit was split into several events. Report it, as one log line now
-			// shows as several log events.
-			if len(events) > 1 {
-				// Report the converted timestamp, as it is the one sent to CloudWatch Logs and is never zero.
-				q.reportSplit(e, last.timestamp, len(events))
-			}
-			// A message over the per-event limit lost content: it looks like EMF and was truncated, or it needed
-			// more than maxSplitChunks events. Report it, as this is otherwise silent.
-			if last.truncated {
-				q.reportTruncated(e, events)
-			}
-			if len(events) > 1 {
-				q.sendSplit(events)
-			} else {
-				event := events[0]
-				if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.eventBytes) {
+			single, split := q.converter.convert(e)
+			if single != nil {
+				// Fast path: message fit in one event (either normally, or a single truncated EMF event).
+				if single.truncated {
+					// EMF over the per-event limit was truncated rather than split: content was lost silently.
+					// Report it with a one-event slice; this is already the slow path.
+					q.reportTruncated(e, []*logEvent{single})
+				}
+				if !q.batch.inTimeRange(single.timestamp) || !q.batch.hasSpace(single.eventBytes) {
 					q.send()
 				}
-				q.batch.append(event)
+				q.batch.append(single)
+			} else {
+				// Split path: the message was over the per-event limit and sent as several events sharing its
+				// timestamp. The last one carries the truncation flag.
+				last := split[len(split)-1]
+				// Report the converted timestamp, as it is the one sent to CloudWatch Logs and is never zero.
+				q.reportSplit(e, last.timestamp, len(split))
+				if last.truncated {
+					// More than maxSplitChunks events would have been needed, so the last one was truncated.
+					q.reportTruncated(e, split)
+				}
+				q.sendSplit(split)
 			}
 		case <-q.flushCh:
 			lastSentTime, _ := q.lastSentTime.Load().(time.Time)

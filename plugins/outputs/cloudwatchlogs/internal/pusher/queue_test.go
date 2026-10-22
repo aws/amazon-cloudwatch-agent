@@ -528,7 +528,7 @@ func TestReportTruncatedLogEvents(t *testing.T) {
 	emf := oversizedEMFMessage()
 	// Counted as 9 times the limit, so it needs more than maxSplitChunks events and loses content.
 	pastCap := string(bytes.Repeat([]byte{0xff}, 3*maxMessageSize))
-	pastCapEvents := newStatefulLogEvents(time.Now(), pastCap, nil, nil)
+	pastCapEvents := flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), pastCap, nil, nil))
 	require.Len(t, pastCapEvents, maxSplitChunks)
 	pastCapKept := -len(defaultTruncationSuffix)
 	for _, e := range pastCapEvents {
@@ -590,7 +590,7 @@ func TestReportTruncatedLogEvents(t *testing.T) {
 	wg.Wait()
 	q.lastTruncatedWarnTime = time.Time{}
 	pastCapEvent := newStubLogEvent(pastCap, time.Now())
-	q.reportTruncated(pastCapEvent, newStatefulLogEvents(pastCapEvent.Time(), pastCap, nil, nil))
+	q.reportTruncated(pastCapEvent, flattenStatefulLogEvents(newStatefulLogEvents(pastCapEvent.Time(), pastCap, nil, nil)))
 	warns := countWarns(logSink, "truncated")
 	require.Len(t, warns, 1, "the past-cap variant does not say truncated")
 	warns = countWarns(logSink, "counted bytes dropped")
@@ -616,7 +616,7 @@ func TestReportTruncatedLogEvents_WarningRearms(t *testing.T) {
 	logSink := testutil.NewLogSink()
 	q := &queue{target: target, logger: logSink}
 	event := newStubLogEvent(oversizedEMFMessage(), time.Now())
-	events := newStatefulLogEvents(event.Time(), event.Message(), nil, nil)
+	events := flattenStatefulLogEvents(newStatefulLogEvents(event.Time(), event.Message(), nil, nil))
 	require.Len(t, events, 1)
 	require.True(t, events[0].truncated)
 	countAllWarns := func() int { return len(countWarns(logSink, "")) }
@@ -664,7 +664,7 @@ func TestReportSplitLogEvents(t *testing.T) {
 	// Counted as 3 times the limit (all invalid). A chunk holds a whole number of invalid bytes, maxMessageSize/3,
 	// so it is split into 4 events.
 	oversized := string(bytes.Repeat([]byte{0xff}, maxMessageSize))
-	numEvents := len(newStatefulLogEvents(time.Now(), oversized, nil, nil))
+	numEvents := len(flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), oversized, nil, nil)))
 	require.Equal(t, 4, numEvents)
 
 	tests := []struct {
@@ -745,7 +745,7 @@ func TestReportSplitLogEvents_WarningRearms(t *testing.T) {
 	assert.Equal(t, 1, splitWarns())
 	q.reportSplit(event, event.Time(), 2)
 	assert.Equal(t, 1, splitWarns(), "within warnSplitLogEventInterval of the last warning")
-	q.reportTruncated(event, newStatefulLogEvents(event.Time(), oversizedEMFMessage(), nil, nil))
+	q.reportTruncated(event, flattenStatefulLogEvents(newStatefulLogEvents(event.Time(), oversizedEMFMessage(), nil, nil)))
 	assert.Len(t, countWarns(logSink, "truncated"), 1, "the truncation warning has its own timer")
 	q.lastSplitWarnTime = time.Now().Add(-warnSplitLogEventInterval - time.Second)
 	q.reportSplit(event, event.Time(), 2)
@@ -1132,9 +1132,10 @@ func TestQueueCallbackRegistration(t *testing.T) {
 
 		event := newStubStatefulLogEvent("test message", time.Now(), state.NewRange(10, 20), mrq)
 
-		convertedEvents := q.converter.convert(event)
-		require.Len(t, convertedEvents, 1)
-		q.batch.append(convertedEvents[0])
+		convertedSingle, convertedSplit := q.converter.convert(event)
+		require.NotNil(t, convertedSingle)
+		require.Nil(t, convertedSplit)
+		q.batch.append(convertedSingle)
 
 		q.send()
 
@@ -1298,7 +1299,7 @@ func (r *splitRecorder) onEnqueue(mock.Arguments) {
 // rejected.
 func TestSplitLogEventSentInOrder(t *testing.T) {
 	message := uniqueMessage(3*maxEventMessageBytes + 1)
-	chunks := newStatefulLogEvents(time.Now(), message, nil, nil)
+	chunks := flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), message, nil, nil))
 	require.Len(t, chunks, 4)
 
 	tests := []struct {

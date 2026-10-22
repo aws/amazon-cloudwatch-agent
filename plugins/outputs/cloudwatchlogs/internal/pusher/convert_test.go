@@ -99,9 +99,9 @@ func TestConverter(t *testing.T) {
 		now := time.Now()
 
 		conv := newConverter(logger, target)
-		les := conv.convert(newStubLogEvent("Test message", now))
-		require.Len(t, les, 1)
-		le := les[0]
+		le, split := conv.convert(newStubLogEvent("Test message", now))
+		require.NotNil(t, le)
+		require.Nil(t, split)
 
 		assert.Equal(t, now, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
@@ -116,9 +116,9 @@ func TestConverter(t *testing.T) {
 		conv := newConverter(logger, target)
 		conv.lastValidTime = testTimestampMs
 
-		les := conv.convert(newStubLogEvent("Test message", time.Time{}))
-		require.Len(t, les, 1)
-		le := les[0]
+		le, split := conv.convert(newStubLogEvent("Test message", time.Time{}))
+		require.NotNil(t, le)
+		require.Nil(t, split)
 
 		assert.Equal(t, testTimestampMs, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
@@ -133,9 +133,9 @@ func TestConverter(t *testing.T) {
 		conv.lastValidTime = oldTime
 		conv.lastUpdateTime = oldTime
 
-		les := conv.convert(newStubLogEvent("Test message", time.Time{}))
-		require.Len(t, les, 1)
-		le := les[0]
+		le, split := conv.convert(newStubLogEvent("Test message", time.Time{}))
+		require.NotNil(t, le)
+		require.Nil(t, split)
 
 		assert.Equal(t, oldTime, le.timestamp)
 		assert.Equal(t, "Test message", le.message)
@@ -155,9 +155,9 @@ func TestConverter(t *testing.T) {
 		r := state.NewRange(5, 10)
 		mrq := &mockRangeQueue{}
 		le := newStubStatefulLogEvent("Test message", now, r, mrq)
-		gots := conv.convert(le)
-		require.Len(t, gots, 1)
-		got := gots[0]
+		got, split := conv.convert(le)
+		require.NotNil(t, got)
+		require.Nil(t, split)
 		assert.NotNil(t, got.state)
 		assert.NotNil(t, got.state.queue)
 		assert.Equal(t, mrq, got.state.queue)
@@ -177,7 +177,8 @@ func TestConverter(t *testing.T) {
 		le := newStubStatefulLogEvent(message, now, r, mrq)
 		var doneCalls int
 		le.done = func() { doneCalls++ }
-		gots := conv.convert(le)
+		single, gots := conv.convert(le)
+		require.Nil(t, single)
 		require.Len(t, gots, 3)
 		var reassembled strings.Builder
 		for i, got := range gots {
@@ -198,4 +199,23 @@ func TestConverter(t *testing.T) {
 		last.doneCallback()
 		assert.Equal(t, 1, doneCalls)
 	})
+}
+
+// BenchmarkConvert measures the hot path of converter.convert for a small ASCII message that
+// fits in a single event. It exists to catch any new per-event allocation added by changes to
+// convert / newStatefulLogEvents (see review comment C1): the fast path should allocate the
+// logEvent itself and the state/time fields only - 3 allocs total - and not a result slice.
+func BenchmarkConvert(b *testing.B) {
+	logger := testutil.NewNopLogger()
+	target := Target{Group: "testGroup", Stream: "testStream"}
+	conv := newConverter(logger, target)
+	// 20 bytes of ASCII: well under maxEventMessageBytes, so convert takes the single-event
+	// fast path. Time is zero so convert hits the time.Now() branch, matching the on-box
+	// setup used in the review assessment.
+	ev := newStubLogEvent("short message of 20b", time.Time{})
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = conv.convert(ev)
+	}
 }

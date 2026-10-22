@@ -383,7 +383,7 @@ func TestEventValidation_Over1MB(t *testing.T) {
 func assertSplitsLosslessly(t *testing.T, message string) []*logEvent {
 	t.Helper()
 	require.False(t, IsEMFMessage(message))
-	events := newStatefulLogEvents(time.Now(), message, nil, nil)
+	events := flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), message, nil, nil))
 	var reassembled strings.Builder
 	for i, event := range events {
 		size := utf8EncodedLength(event.message)
@@ -395,6 +395,16 @@ func assertSplitsLosslessly(t *testing.T, message string) []*logEvent {
 	assert.True(t, reassembled.String() == message, "the events concatenate to the message")
 	assert.Equal(t, utf8EncodedLength(message) > maxEventMessageBytes, len(events) > 1)
 	return events
+}
+
+// flattenStatefulLogEvents reduces the (single, split) return of newStatefulLogEvents to a flat []*logEvent so
+// existing tests can keep walking over events without caring which path was taken. Test-only: production callers
+// (converter.convert / queue) read the two values directly to skip the slice allocation on the fast path.
+func flattenStatefulLogEvents(single *logEvent, split []*logEvent) []*logEvent {
+	if single != nil {
+		return []*logEvent{single}
+	}
+	return split
 }
 
 func TestEventValidation_Between256KBand1MB(t *testing.T) {
