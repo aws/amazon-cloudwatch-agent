@@ -46,7 +46,7 @@ const (
 	// perEventHeaderBytes of maxEventPayloadBytes for each event.
 	maxEventMessageBytes = maxEventPayloadBytes - perEventHeaderBytes
 	// The most log events one source log event is split into. Past it, the last of them is truncated and the rest
-	// of the message is dropped. With the default max_event_size the most a message from the file tailer needs is 7.
+	// of the message is dropped. With the default max_event_size the most a message from the file tailer needs is 4.
 	maxSplitChunks = 8
 	// How far, in counted bytes, the cut between two chunks of a split message may move back from the greedy cut to
 	// land after a newline, space or tab.
