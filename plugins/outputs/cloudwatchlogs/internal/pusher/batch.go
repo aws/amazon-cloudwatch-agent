@@ -314,7 +314,7 @@ func newStatefulLogEvent(timestamp time.Time, message string, doneCallback func(
 // Every event gets the timestamp of the source event. Only the last event carries doneCallback and state: the
 // queue sends the events of a split message in order and the last event's batch completes after the others, so the
 // source event is acknowledged, and its file offset advanced, only once all of it has been sent.
-func newStatefulLogEvents(timestamp time.Time, message string, doneCallback func(), state *logEventState) (single *logEvent, split []*logEvent) {
+func newStatefulLogEvents(timestamp time.Time, message string, doneCallback func(), state *logEventState) (*logEvent, []*logEvent) {
 	size := utf8EncodedLength(message)
 	if size <= maxEventMessageBytes {
 		// The common case: one event, with the message unchanged. size is reused, so the message is scanned once.

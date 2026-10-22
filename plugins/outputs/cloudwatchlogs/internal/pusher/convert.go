@@ -38,7 +38,7 @@ func newConverter(logger telegraf.Logger, target Target) *converter {
 // nil, split != nil) if the message is over the per-event limit (see newStatefulLogEvents). Only the last of them
 // carries the state and done callback of e. Exactly one of single and split is non-nil, so the single-event fast
 // path never allocates a slice.
-func (c *converter) convert(e logs.LogEvent) (single *logEvent, split []*logEvent) {
+func (c *converter) convert(e logs.LogEvent) (*logEvent, []*logEvent) {
 	message := e.Message()
 
 	now := time.Now()
