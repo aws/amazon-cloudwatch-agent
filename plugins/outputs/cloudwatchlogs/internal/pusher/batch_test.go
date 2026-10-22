@@ -894,9 +894,9 @@ func TestTruncateToUTF8EncodedLength(t *testing.T) {
 
 // BenchmarkUTF8EncodedLength exercises utf8EncodedLength on 1 MiB of ASCII with a single invalid byte placed
 // near the start and near the end. It exists to catch the slow-fallback regression called out in review comment
-// C2: utf8.ValidString returns false and the current fallback restarts at byte 0, re-reading the ASCII prefix
-// one byte at a time via DecodeRuneInString. A fix that resumes from the first invalid offset and skips ASCII
-// runs cuts both scenarios to a small factor of the all-valid fast path (see "AllValid").
+// C2: the fallback used to restart at byte 0 after utf8.ValidString returned false, re-reading the ASCII prefix
+// one byte at a time via DecodeRuneInString. It now resumes from the first invalid offset and skips ASCII 8 bytes
+// at a time, which cuts both scenarios to a small factor of the all-valid fast path (see "AllValid").
 func BenchmarkUTF8EncodedLength(b *testing.B) {
 	const n = 1 << 20
 	allValid := strings.Repeat("a", n)
