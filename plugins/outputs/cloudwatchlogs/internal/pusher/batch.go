@@ -170,8 +170,24 @@ func utf8EncodedLength(message string) int {
 	if utf8.ValidString(message) {
 		return len(message)
 	}
+	// Slow path: ValidString returned false, so the message holds at least one byte that is not part of a valid
+	// UTF-8 sequence. Walk the message, but skip ASCII runs byte-by-byte: an ASCII byte is a rune of its own and
+	// counts as 1, so there is no reason to call DecodeRuneInString for it. This keeps the fallback close to the
+	// fast path on inputs with sparse invalid bytes (e.g. a long ASCII prefix followed by one bad byte), where the
+	// former implementation re-decoded every ASCII byte individually (review comment C2).
 	size := 0
 	for i := 0; i < len(message); {
+		// Fast-skip an ASCII run: every byte below 0x80 counts as 1.
+		j := i
+		for j < len(message) && message[j] < 0x80 {
+			j++
+		}
+		if j > i {
+			size += j - i
+			i = j
+			continue
+		}
+		// Non-ASCII byte: decode a (possibly invalid) rune and count it as the service would.
 		n, counted := decodeRuneSize(message[i:])
 		size += counted
 		i += n
