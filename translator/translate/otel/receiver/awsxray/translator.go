@@ -77,7 +77,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.ProxyServer.Profile = fmt.Sprintf("%v", profileKey)
 	}
-	if endpoint, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
+	if endpoint, ok := common.GetEndpointOverride(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
 		cfg.ProxyServer.AWSEndpoint = endpoint
 	}
 	if proxyAddress, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.ProxyOverrideKey)); ok {

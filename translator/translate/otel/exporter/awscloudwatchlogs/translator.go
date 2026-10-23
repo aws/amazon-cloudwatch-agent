@@ -68,7 +68,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 	}
 
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	if endpoint, ok := common.GetString(c, endpointOverrideKey); ok {
+	if endpoint, ok := common.GetEndpointOverride(c, endpointOverrideKey); ok {
 		// for some reason the exporter has an endpoint field in the config that
 		// clashes with the AWSSessionsSettings
 		cfg.Endpoint = endpoint

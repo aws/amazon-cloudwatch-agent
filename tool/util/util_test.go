@@ -4,6 +4,8 @@
 package util
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	internaltestutil "github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 )
 
@@ -165,4 +168,44 @@ func TestBackupConfigFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 10, len(files))
 
+}
+
+func TestSDKRegionWithProfile(t *testing.T) {
+	t.Run("EnvRegion", func(t *testing.T) {
+		internaltestutil.IsolateAWSSharedConfigEnv(t)
+		t.Setenv("AWS_REGION", "eu-west-1")
+		assert.Equal(t, "eu-west-1", SDKRegionWithProfile(t.Context(), "AmazonCloudWatchAgent"))
+	})
+	t.Run("ErrorIsEmpty", func(t *testing.T) {
+		internaltestutil.IsolateAWSSharedConfigEnv(t)
+		t.Setenv("AWS_MAX_ATTEMPTS", "not-a-number")
+		assert.Empty(t, SDKRegionWithProfile(t.Context(), "AmazonCloudWatchAgent"))
+	})
+}
+
+// TestDefaultEC2Region serves an IMDS endpoint locally and sets a stale AWS_PROFILE. The lookup
+// must return the served region without loading credentials: with the credential-backed client it
+// used, a stale profile caused a 15s sleep and then no region.
+func TestDefaultEC2Region(t *testing.T) {
+	internaltestutil.IsolateAWSSharedConfigEnv(t)
+	t.Setenv("AWS_PROFILE", "does-not-exist")
+	t.Setenv("AWS_EC2_METADATA_DISABLED", "false")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPut && r.URL.Path == "/latest/api/token":
+			_, _ = w.Write([]byte("test-token"))
+		case r.Method == http.MethodGet && r.URL.Path == "/latest/dynamic/instance-identity/document":
+			_, _ = w.Write([]byte(`{"region":"eu-north-1","instanceId":"i-0123456789abcdef0"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	t.Setenv("AWS_EC2_METADATA_SERVICE_ENDPOINT", server.URL)
+
+	start := time.Now()
+	region := DefaultEC2Region(t.Context())
+	assert.Equal(t, "eu-north-1", region)
+	assert.Less(t, time.Since(start), 5*time.Second, "region lookup must not wait on credential loading")
 }

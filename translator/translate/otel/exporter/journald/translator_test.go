@@ -191,6 +191,31 @@ func TestTranslator_Translate_WithEndpointOverride(t *testing.T) {
 	require.True(t, ok)
 
 	assert.Equal(t, "https://logs-fips.us-west-2.amazonaws.com", cfg.Endpoint)
+	assert.Equal(t, "https://logs-fips.us-west-2.amazonaws.com", cfg.AWSSessionSettings.Endpoint)
+}
+
+func TestTranslator_Translate_WithSchemeLessEndpointOverride(t *testing.T) {
+	resetGlobalConfig()
+	agent.Global_Config.Region = "us-west-2"
+
+	translator := NewTranslatorWithConfig("", nil)
+
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"logs": map[string]interface{}{
+			"endpoint_override": "vpce-0123456789abcdef0-abcdefgh.logs.us-west-2.vpce.amazonaws.com",
+		},
+	})
+
+	result, err := translator.Translate(conf)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
+	require.True(t, ok)
+
+	want := "https://vpce-0123456789abcdef0-abcdefgh.logs.us-west-2.vpce.amazonaws.com"
+	assert.Equal(t, want, cfg.Endpoint)
+	assert.Equal(t, want, cfg.AWSSessionSettings.Endpoint)
 }
 
 func TestTranslator_Translate_WithRoleARNOverride(t *testing.T) {

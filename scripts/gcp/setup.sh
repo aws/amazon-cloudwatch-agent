@@ -289,24 +289,73 @@ linux_install_cmd() {
 # base64 payload (UTF-16LE) so it needs no quoting through the default cmd.exe
 # shell. $1 = PowerShell env prelude. Returns non-zero if it cannot encode (no
 # iconv), letting the caller fall back to printing the command.
+# The previous install.ps1 is removed and errors stop the command, so a failed
+# download fails the install instead of running a stale copy. Errors are caught
+# and written as plain text: left uncaught, -EncodedCommand writes them to
+# stderr as CLIXML.
 windows_install_cmd() {
      ps_prelude="$1"
-     ps_script="\$ProgressPreference='SilentlyContinue'; ${ps_prelude}Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1; & \$env:TEMP\\install.ps1"
+     ps_script="\$ProgressPreference='SilentlyContinue'; \$ErrorActionPreference='Stop'; try { ${ps_prelude}$(windows_fetch_and_run) } catch { [Console]::Error.WriteLine((\$_ | Out-String).Trim()); exit 1 }"
      encoded=$(printf '%s' "${ps_script}" | iconv -f UTF-8 -t UTF-16LE 2>/dev/null | base64 | tr -d '\n')
      [ -n "${encoded}" ] || return 1
-     printf 'powershell -NoProfile -EncodedCommand %s' "${encoded}"
+     printf 'powershell -NoProfile -NonInteractive -EncodedCommand %s' "${encoded}"
+}
+
+# PowerShell that downloads a fresh install.ps1 and runs it, stopping if the
+# download fails. Shared by the remote command and the manual instructions.
+# TLS 1.2 is forced as in install.ps1: Windows PowerShell 5.1 may default to
+# TLS 1.0, which GitHub rejects.
+windows_fetch_and_run() {
+     printf '%s' "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Remove-Item -Force -ErrorAction SilentlyContinue \$env:TEMP\\install.ps1; Invoke-WebRequest -UseBasicParsing -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1 -ErrorAction Stop; & \$env:TEMP\\install.ps1"
 }
 
 # Run a command on the GCE VM via gcloud compute ssh. $1 = command.
-# ssh preserves the remote exit status (unlike Azure's run-command, which
-# masks it), so the install script's own failure handling surfaces directly
-# and no stdout sentinel check is needed.
+# Like the Azure run-command path: prints the remote stdout (install.sh's
+# success sentinel and status JSON) and shows the remote stderr (the install
+# transcript) only on failure. Success needs a zero exit status and the status
+# JSON on stdout reporting "running".
 run_via_gcloud_ssh() {
      ssh_cmd="$1"
-     logaction "Running install via gcloud compute ssh"
-     gcloud_scoped compute ssh "${INSTANCE_NAME}" \
-          --zone "${LOCATION}" \
-          --command "${ssh_cmd}" >&3 2>&3
+     logaction "Running install via gcloud compute ssh (this can take a minute)"
+
+     # POSIX sh cannot capture stdout and stderr into separate variables, and
+     # this avoids a temp file: stderr streams straight into one capture, and
+     # stdout, held in its own variable until gcloud exits, is appended after a
+     # marker line carrying the exit status. The two never write at the same
+     # time, so they cannot interleave.
+     marker="__cwagent_install_stdout_$$__"
+     captured=$(
+          {
+               ssh_rc=0
+               ssh_out=$(gcloud_scoped compute ssh "${INSTANCE_NAME}" \
+                    --zone "${LOCATION}" \
+                    --command "${ssh_cmd}" 2>&4) || ssh_rc=$?
+               # The leading \n keeps the marker at the start of a line even if
+               # stderr lacks a trailing newline, and off line 1 (see the sed below).
+               printf '\n%s %s\n%s\n' "${marker}" "${ssh_rc}" "${ssh_out}"
+          } 4>&1
+     )
+     # Windows targets (and some ssh clients) emit CRLF line endings.
+     captured=$(printf '%s\n' "${captured}" | tr -d '\r')
+     install_stderr=$(printf '%s\n' "${captured}" | sed "/^${marker} /,\$d")
+     install_rc=$(printf '%s\n' "${captured}" | sed -n "s/^${marker} //p")
+     install_stdout=$(printf '%s\n' "${captured}" | sed "1,/^${marker} /d")
+
+     if [ -n "${install_stdout}" ]; then printf '%s\n' "${install_stdout}" >&3; fi
+
+     if [ "${install_rc}" = "0" ] && [ "$(json_line_value status "${install_stdout}")" = "running" ]; then
+          return 0
+     fi
+     if [ -n "${install_stderr}" ]; then printf '%s\n' "${install_stderr}" >&2; fi
+     return 1
+}
+
+# json_line_value <key> <json>: the string value of "key" in one-key-per-line
+# JSON such as the agent status readout (empty when absent). Not a general JSON
+# parser; jq is not assumed on the machine running this script.
+json_line_value() {
+     printf '%s\n' "$2" |
+          sed -n "s/.*\"$1\":[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -n 1
 }
 
 # =============================================================================
@@ -379,17 +428,19 @@ setup_gcp_gce() {
                     log "Service account unique ID (for the AWS setup): ${SA_UNIQUE_ID}"
                     return
                fi
-               logwarn "remote install on '${INSTANCE_NAME}' failed (the SSH session may not be elevated)"
+               logwarn "remote install on '${INSTANCE_NAME}' failed (see the install output above)"
           else
                logwarn "could not reach '${INSTANCE_NAME}' over SSH (Windows SSH is opt-in)"
           fi
 
+          # Unlike Linux, a Windows failure is not fatal: Windows SSH is opt-in, so
+          # any failure falls back to printing the manual command and exits 0.
           printf '\n' >&3
           printf 'To install manually, run the following on %s:\n' "${INSTANCE_NAME}" >&3
           printf '\n' >&3
           printf '%s\n' "  # PowerShell, as Administrator:" >&3
           printf '%s\n' "  \$env:CWAGENT_CLOUD='gcp'; \$env:CWAGENT_AWS_ROLE_ARN='${ROLE_ARN}'; \$env:CWAGENT_AWS_REGION='${REGION}'" >&3
-          printf '%s\n' "  Invoke-WebRequest -Uri ${SCRIPT_BASE_URL}/install.ps1 -OutFile \$env:TEMP\\install.ps1; & \$env:TEMP\\install.ps1" >&3
+          printf '%s\n' "  $(windows_fetch_and_run)" >&3
           return
      fi
 

@@ -56,7 +56,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if namespace, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, namespaceKey)); ok {
 		cfg.Namespace = namespace
 	}
-	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.MetricsKey, common.EndpointOverrideKey)); ok {
+	if endpointOverride, ok := common.GetEndpointOverride(conf, common.ConfigKey(common.MetricsKey, common.EndpointOverrideKey)); ok {
 		cfg.EndpointOverride = endpointOverride
 	}
 	if forceFlushInterval, ok := common.GetDuration(conf, common.ConfigKey(common.MetricsKey, forceFlushIntervalKey)); ok {

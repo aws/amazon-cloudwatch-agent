@@ -39,7 +39,7 @@ func (sd *ServiceDiscovery) init(ctx context.Context) {
 	}
 
 	// Configure retry behavior
-	awsConfig.RetryMaxAttempts = AwsSdkLevelRetryCount
+	awsConfig.RetryMaxAttempts = AwsSdkLevelRetryCount + 1 // RetryMaxAttempts includes the first attempt
 
 	// Add middleware if configured
 	if sd.Configurer != nil {

@@ -11,6 +11,6 @@
       }
     },
     "force_flush_interval": 5,
-    "endpoint_override":"https://fake_endpoint"
+    "endpoint_override":"vpce-0123456789abcdef0-abcdefgh.logs.us-west-2.vpce.amazonaws.com"
   }
 }

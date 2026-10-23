@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
+	"github.com/aws/amazon-cloudwatch-agent/translator/config"
+	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
@@ -45,6 +47,9 @@ type templateData struct {
 	// When false the pod->RS->Deployment owner walk (and its cluster-wide
 	// ReplicaSet informer) is not started. Default true.
 	WatchReplicaSet bool
+	// ApiserverTLSServerName sets tls_config.server_name on the
+	// apiserver prometheus scrape for managed control planes (AKS/GKE)
+	ApiserverTLSServerName string
 }
 
 // rawMapConfig wraps a raw config map and passes it through serialization unchanged.
@@ -138,6 +143,17 @@ func solutionNamespace(conf *confmap.Conf, name, defaultNamespace string) string
 // disabled by either watch_replicaset key — see common.WatchReplicaSet).
 func watchReplicaSet(conf *confmap.Conf) bool {
 	return common.WatchReplicaSet(conf)
+}
+
+// apiserverTLSServerName returns the TLS server_name to set on the apiserver
+// prometheus scrape for managed control planes (AKS/GKE)
+func apiserverTLSServerName() string {
+	switch context.CurrentContext().KubernetesMode() {
+	case config.ModeAKS, config.ModeGKE:
+		return "kubernetes.default.svc"
+	default:
+		return ""
+	}
 }
 
 // getRole resolves the container insights pipeline role using the following
