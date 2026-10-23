@@ -251,7 +251,7 @@ Function CwaStatus() {
         $workload_discovery_path = $WORKLOAD_DISCOVERY
         if (Test-Path -LiteralPath $workload_discovery_path) {
             try {
-                $workloads_json = cmd /c "`"$workload_discovery_path`" 2>null"
+                $workloads_json = (& $workload_discovery_path 2>$null | Out-String).Trim()
                 if (-not $workloads_json) { $workloads_json = "[]" }
             } catch {
                 $workloads_json = "[]"
@@ -339,11 +339,11 @@ Function CWAConfig() {
     if ($ConfigLocation -eq $AllConfig) {
         Remove-Item -Path "${JSON_DIR}\*" -Force -ErrorAction SilentlyContinue
     } else {
+        $downloaderArgs = @('--output-dir', $JSON_DIR, '--download-source', $ConfigLocation, '--mode', $param_mode, '--config', $COMMON_CONIG, '--multi-config', $multi_config)
         if ($d -and $multi_config -ne 'remove') {
-            & cmd /c "`"${CWAProgramFiles}\config-downloader.exe`" --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`" --dualstack 2>&1"
-        } else {
-            & cmd /c "`"${CWAProgramFiles}\config-downloader.exe`" --output-dir `"${JSON_DIR}`" --download-source `"${ConfigLocation}`" --mode `"${param_mode}`" --config `"${COMMON_CONIG}`" --multi-config `"${multi_config}`" 2>&1"
+            $downloaderArgs += '--dualstack'
         }
+        InvokeNative "${CWAProgramFiles}\config-downloader.exe" $downloaderArgs | Write-Output
         CheckCMDResult
     }
 
@@ -355,11 +355,11 @@ Function CWAConfig() {
         Remove-Item "${OTEL_YAML}" -Force -ErrorAction SilentlyContinue
     } else {
         Write-Output "Start configuration validation..."
-        & cmd /c "`"$CWAProgramFiles\config-translator.exe`" --input ${JSON} --input-dir ${JSON_DIR} --output ${TOML} --mode ${param_mode} --config ${COMMON_CONIG} --multi-config ${multi_config} 2>&1"
+        InvokeNative "${CWAProgramFiles}\config-translator.exe" @('--input', $JSON, '--input-dir', $JSON_DIR, '--output', $TOML, '--mode', $param_mode, '--config', $COMMON_CONIG, '--multi-config', $multi_config) | Write-Output
         CheckCMDResult
         # Let command pass so we can check return code and give user-friendly error-message
         $ErrorActionPreference = "Continue"
-        & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --schematest --config ${TOML} 2>&1" | Out-File $CVLogFile
+        InvokeNative "${CWAProgramFiles}\amazon-cloudwatch-agent.exe" @('--schematest', '--config', $TOML) | Out-File $CVLogFile
         if ($LASTEXITCODE -ne 0) {
             Write-Output "Configuration validation second phase failed"
             Write-Output "======== Error Log ========"
@@ -399,6 +399,19 @@ Function CWAConfig() {
     }
 }
 
+# Runs a native executable directly (no cmd.exe), merging stderr into the output stream.
+# Stderr lines are converted to strings and the preference is relaxed so they don't
+# raise terminating errors; $LASTEXITCODE is preserved for CheckCMDResult.
+Function InvokeNative([string]$Path, [string[]]$Arguments) {
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Path @Arguments 2>&1 | ForEach-Object { "$_" }
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+}
+
 # For exes(non cmlet) the $ErrorActionPreference won't help if run cmd result failed,
 # We have to check the $LASTEXITCODE everytime.
 Function CheckCMDResult($ErrorMessage, $SuccessMessage) {
@@ -427,7 +440,7 @@ Function SetLogLevelAll() {
         }
     }
 
-    & cmd /c "`"${CWAProgramFiles}\amazon-cloudwatch-agent.exe`" --setenv CWAGENT_LOG_LEVEL=${LogLevel} --envconfig ${ENV_CONFIG} 2>&1"
+    InvokeNative "${CWAProgramFiles}\amazon-cloudwatch-agent.exe" @('--setenv', "CWAGENT_LOG_LEVEL=${LogLevel}", '--envconfig', $ENV_CONFIG) | Write-Output
     CheckCMDResult "" "Set CWAGENT_LOG_LEVEL to ${LogLevel}"
 }
 
@@ -437,8 +450,8 @@ Function SetEnv() {
         Exit 1
     }
 
-    # Invoke directly (not via cmd /c) so the value is passed as a single
-    # argument and shell metacharacters or spaces in it are not interpreted.
+    # The value is passed as a single argument, so shell metacharacters or
+    # spaces in it are not interpreted.
     & "${CWAProgramFiles}\amazon-cloudwatch-agent.exe" --setenv $EnvVar --envconfig $ENV_CONFIG
     CheckCMDResult "" "Set $(${EnvVar}.Split('=')[0])"
 }
