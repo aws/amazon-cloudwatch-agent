@@ -951,6 +951,13 @@ func TestTraceConfig(t *testing.T) {
 	}
 }
 
+func TestOpenTelemetryOtlpConfig(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+	readCommonConfig(t, "./sampleConfig/commonConfig/withCredentials.toml")
+	checkTranslation(t, "opentelemetry_otlp_config", "linux", nil, "")
+}
+
 func TestAppendDimensionsHostMetrics(t *testing.T) {
 	resetContext(t)
 	context.CurrentContext().SetMode(config.ModeEC2)

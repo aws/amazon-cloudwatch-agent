@@ -27,3 +27,27 @@ func TestCanEnable_Deprecated(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, CanEnable(reg, ProfilesSupportGateID))
 }
+
+func TestEnable(t *testing.T) {
+	reg := featuregate.NewRegistry()
+	gate, err := reg.Register(ProfilesSupportGateID, featuregate.StageAlpha)
+	require.NoError(t, err)
+	assert.False(t, gate.IsEnabled())
+
+	require.NoError(t, Enable(reg, ProfilesSupportGateID))
+	assert.True(t, gate.IsEnabled())
+}
+
+func TestEnable_MissingGateIsNoop(t *testing.T) {
+	reg := featuregate.NewRegistry()
+	require.NoError(t, Enable(reg, ProfilesSupportGateID))
+}
+
+func TestEnable_StableGateIsNoop(t *testing.T) {
+	reg := featuregate.NewRegistry()
+	gate, err := reg.Register(ProfilesSupportGateID, featuregate.StageStable,
+		featuregate.WithRegisterToVersion("v0.1.0"))
+	require.NoError(t, err)
+	require.True(t, gate.IsEnabled())
+	require.NoError(t, Enable(reg, ProfilesSupportGateID))
+}

@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/service"
@@ -21,6 +22,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/featuregates"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -150,6 +152,9 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 	}
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
+	}
+	if err = featuregates.Enable(featuregate.GlobalRegistry(), featuregates.ProfilesSupportGateID); err != nil {
+		return nil, fmt.Errorf("unable to enable %s feature gate: %w", featuregates.ProfilesSupportGateID, err)
 	}
 	if validate {
 		if err = xconfmap.Validate(cfg); err != nil {
