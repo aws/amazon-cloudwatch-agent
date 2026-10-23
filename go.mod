@@ -653,7 +653,7 @@ require (
 	go.opentelemetry.io/collector/pdata/pprofile v0.150.0 // indirect
 	go.opentelemetry.io/collector/pdata/testdata v0.150.0 // indirect
 	go.opentelemetry.io/collector/pdata/xpdata v0.150.0 // indirect
-	go.opentelemetry.io/collector/pipeline/xpipeline v0.150.0 // indirect
+	go.opentelemetry.io/collector/pipeline/xpipeline v0.150.0
 	go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper v0.150.0 // indirect
 	go.opentelemetry.io/collector/processor/xprocessor v0.150.0 // indirect
 	go.opentelemetry.io/collector/receiver/receiverhelper v0.150.0 // indirect

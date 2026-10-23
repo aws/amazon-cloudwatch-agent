@@ -13,7 +13,6 @@ import (
 
 const setClusterNameProcessorName = "set_cluster_name"
 
-// NewSetClusterNameTranslator returns the transform processor that sets the root-level cluster name, or nil when none is configured.
 func NewSetClusterNameTranslator(conf *confmap.Conf) (common.ComponentTranslator, error) {
 	clusterName := common.GetClusterName(conf, common.OtelClusterNameKey)
 	if clusterName == "" {
@@ -27,5 +26,6 @@ func NewSetClusterNameTranslator(conf *confmap.Conf) (common.ComponentTranslator
 		WithMetricResourceStatements([]string{stmt}),
 		WithLogResourceStatements([]string{stmt}),
 		WithTraceResourceStatements([]string{stmt}),
+		WithProfileResourceStatements([]string{stmt}),
 	), nil
 }
