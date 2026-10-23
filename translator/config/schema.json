@@ -1219,6 +1219,11 @@
                     "description": "Minimum priority level to collect",
                     "enum": ["emerg", "alert", "crit", "err", "warning", "notice", "info", "debug", "0", "1", "2", "3", "4", "5", "6", "7"]
                   },
+                  "mode": {
+                    "type": "string",
+                    "description": "Backend used to read journald logs",
+                    "enum": ["native", "journalctl"]
+                  },
                   "matches": {
                     "type": "array",
                     "description": "Array of journald field match objects for filtering log entries",

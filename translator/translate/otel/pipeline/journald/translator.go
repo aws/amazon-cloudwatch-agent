@@ -159,7 +159,17 @@ func (t *translator) Translate(conf *confmap.Conf) (*common.ComponentTranslators
 		}
 	}
 
-	translators.Receivers.Set(journaldreceiver.NewTranslatorWithConfig(receiverName, unitStrings, priority, matchConfigs))
+	// Extract mode
+	var mode string
+	if rawMode, exists := entryConfig["mode"]; exists {
+		var ok bool
+		mode, ok = rawMode.(string)
+		if !ok {
+			return nil, fmt.Errorf("mode must be a string at collect_list index %d", index)
+		}
+	}
+
+	translators.Receivers.Set(journaldreceiver.NewTranslatorWithConfig(receiverName, unitStrings, priority, matchConfigs, mode))
 
 	// Add filter processor if filters are specified
 	if rawFilters, exists := entryConfig["filters"]; exists {
