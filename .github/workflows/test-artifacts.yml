@@ -462,6 +462,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_gpu_matrix) }}
     permissions:
@@ -818,6 +821,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_matrix) }}
     permissions:
@@ -928,6 +934,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_mac_matrix) }}
     permissions:
@@ -1083,6 +1092,9 @@ jobs:
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ecs_ec2_launch_daemon_matrix) }}
     permissions:
@@ -1180,6 +1192,9 @@ jobs:
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ecs_fargate_matrix) }}
     permissions:
@@ -1271,6 +1286,9 @@ jobs:
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_daemon_matrix) }}
     permissions:
@@ -1388,6 +1406,9 @@ jobs:
     needs: [ GenerateTestMatrix, OutputEnvVariables ]
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_deployment_matrix) }}
     permissions:
@@ -1480,6 +1501,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_performance_matrix) }}
     permissions:
@@ -1569,6 +1593,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_performance_matrix) }}
     permissions:
@@ -1658,6 +1685,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_stress_matrix) }}
     permissions:
@@ -1751,6 +1781,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.ec2_windows_stress_matrix) }}
     permissions:
@@ -1846,6 +1879,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Cap concurrent jobs per matrix to limit simultaneous STS AssumeRoleWithWebIdentity calls.
+      # 100 is a conservative value, not calibrated against throttle data; account concurrency limits may cap lower.
+      max-parallel: 100
       matrix:
         arrays: ${{ fromJson(needs.GenerateTestMatrix.outputs.eks_addon_matrix) }}
     permissions:
