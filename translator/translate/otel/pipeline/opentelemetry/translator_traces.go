@@ -75,6 +75,9 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 			))
 		}
 	}
+	if common.OtlpWorkloadEnabled(conf, common.OtlpWorkloadRay) {
+		processors.Set(transformprocessor.NewTranslatorWithName(common.OtlpRay))
+	}
 	if common.OtlpWorkloadEnabled(conf, common.OtlpWorkloadVllm) {
 		processors.Set(transformprocessor.NewTranslatorWithName(common.OtlpVllm))
 	}

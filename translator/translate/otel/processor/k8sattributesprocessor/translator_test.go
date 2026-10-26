@@ -113,3 +113,28 @@ func TestTranslateVllmWorkloadLabels(t *testing.T) {
 	assert.Equal(t, "revision", k8sCfg.Extract.Labels[4].TagName)
 	assert.Equal(t, "serving.knative.dev/revision", k8sCfg.Extract.Labels[4].Key)
 }
+
+func TestTranslateRayWorkloadLabels(t *testing.T) {
+	tt := NewTranslator("opentelemetry")
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{"workloads": []interface{}{"ray"}},
+			},
+		},
+	})
+	cfg, err := tt.Translate(conf)
+	require.NoError(t, err)
+	k8sCfg := cfg.(*k8sattributesprocessor.Config)
+	require.Len(t, k8sCfg.Extract.Labels, 5)
+	for i, key := range []string{"ray.io/cluster", "ray.io/node-type"} {
+		assert.Equal(t, key, k8sCfg.Extract.Labels[3+i].Key)
+		assert.Equal(t, "k8s.pod.label."+key, k8sCfg.Extract.Labels[3+i].TagName)
+		assert.Equal(t, "pod", k8sCfg.Extract.Labels[3+i].From)
+	}
+
+	// Off by default: only the identity labels are extracted.
+	cfg, err = tt.Translate(confmap.New())
+	require.NoError(t, err)
+	assert.Len(t, cfg.(*k8sattributesprocessor.Config).Extract.Labels, 3)
+}

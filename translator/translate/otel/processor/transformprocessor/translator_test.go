@@ -438,3 +438,25 @@ func TestOtlpVllmTranslate(t *testing.T) {
 	require.Len(t, actualCfg.TraceStatements[1].Statements, 3)
 	assert.Contains(t, actualCfg.TraceStatements[1].Statements[0], `set(span.attributes["gen_ai.system"], "vllm")`)
 }
+
+func TestOtlpRayTranslate(t *testing.T) {
+	transl := NewTranslatorWithName(common.OtlpRay)
+	assert.Equal(t, "transform/otlp_ray", transl.ID().String())
+
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+	require.NoError(t, actualCfg.Validate())
+	require.Len(t, actualCfg.TraceStatements, 1)
+	assert.Equal(t, "resource", string(actualCfg.TraceStatements[0].Context))
+	stmts := actualCfg.TraceStatements[0].Statements
+	require.Len(t, stmts, 2)
+	// Both statements are scoped to Ray pods, so other OTLP senders on the shared pipeline are untouched.
+	for _, s := range stmts {
+		assert.Contains(t, s, `resource.attributes["k8s.pod.label.ray.io/cluster"] != nil`)
+	}
+	assert.Contains(t, stmts[0], `delete_key(resource.attributes, "service.name")`)
+	assert.Contains(t, stmts[0], `"^unknown_service"`)
+	assert.Contains(t, stmts[1], `delete_key(resource.attributes, "app.kubernetes.io/name")`)
+	assert.Contains(t, stmts[1], `== "kuberay"`)
+}

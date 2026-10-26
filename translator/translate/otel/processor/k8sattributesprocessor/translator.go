@@ -93,6 +93,19 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		)
 	}
 
+	// KubeRay writes these labels on every Ray pod. The otlp_ray transform detects Ray
+	// pods by ray.io/cluster; node-type lets a consumer tell head from worker spans.
+	// The ray.io/originated-from-* labels are only on the RayCluster object, not on
+	// its pods, so k8sattributes cannot read them.
+	if common.OtlpWorkloadEnabled(conf, common.OtlpWorkloadRay) {
+		extract := cfgMap["extract"].(map[string]interface{})
+		for _, key := range []string{"ray.io/cluster", "ray.io/node-type"} {
+			extract["labels"] = append(extract["labels"].([]map[string]interface{}),
+				map[string]interface{}{"tag_name": "k8s.pod.label." + key, "key": key, "from": "pod"},
+			)
+		}
+	}
+
 	if err := confmap.NewFromStringMap(cfgMap).Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to configure k8sattributes processor: %w", err)
 	}

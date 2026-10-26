@@ -52,6 +52,8 @@ const (
 	OtlpKey                                        = "otlp"
 	OtlpVllm                                       = "otlp_vllm"
 	OtlpWorkloadVllm                               = "vllm"
+	OtlpRay                                        = "otlp_ray"
+	OtlpWorkloadRay                                = "ray"
 	JmxKey                                         = "jmx"
 	TLSKey                                         = "tls"
 	Endpoint                                       = "endpoint"

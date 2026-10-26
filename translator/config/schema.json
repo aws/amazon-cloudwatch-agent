@@ -1990,9 +1990,9 @@
                   "type": "boolean"
                 },
                 "workloads": {
-                  "description": "Workload-specific enrichment for OTLP traces. \"vllm\" names vLLM spans after their KServe InferenceService or workload and adds GenAI attributes.",
+                  "description": "Workload-specific enrichment for OTLP traces. \"vllm\" names vLLM spans after their KServe InferenceService or workload and adds GenAI attributes. \"ray\" lets Ray spans that carry no service name fall back to the workload or pod name and adds the KubeRay pod labels.",
                   "type": "array",
-                  "items": {"type": "string", "enum": ["vllm"]},
+                  "items": {"type": "string", "enum": ["vllm", "ray"]},
                   "uniqueItems": true
                 }
               },

@@ -230,6 +230,31 @@ func TestBaseTracesTranslatorVllmWorkload(t *testing.T) {
 	assert.NotContains(t, collectKeys(got.Processors.Keys()), "transform/otlp_vllm")
 }
 
+func TestBaseTracesTranslatorRayWorkload(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseTracesTranslator()
+
+	translate := func(workloads ...interface{}) []string {
+		got, err := tt.Translate(confmap.NewFromStringMap(map[string]interface{}{
+			"opentelemetry": map[string]interface{}{
+				"collect": map[string]interface{}{
+					"otlp": map[string]interface{}{"workloads": workloads},
+				},
+			},
+		}))
+		require.NoError(t, err)
+		return collectKeys(got.Processors.Keys())
+	}
+
+	// otlp_ray must run after k8sattributes (it reads the KubeRay pod labels) and before
+	// identity (which fills service.name only where it is still unset).
+	assert.Equal(t, []string{"resourcedetection/opentelemetry", "k8s_attributes/opentelemetry", "transform/otlp_ray", "transform/identity", "batch/opentelemetry_traces"}, translate("ray"))
+	assert.Equal(t, []string{"resourcedetection/opentelemetry", "k8s_attributes/opentelemetry", "transform/otlp_ray", "transform/otlp_vllm", "transform/identity", "batch/opentelemetry_traces"}, translate("vllm", "ray"))
+	assert.NotContains(t, translate("vllm"), "transform/otlp_ray")
+}
+
 func collectKeys(ids []component.ID) []string {
 	out := make([]string, 0, len(ids))
 	for _, id := range ids {

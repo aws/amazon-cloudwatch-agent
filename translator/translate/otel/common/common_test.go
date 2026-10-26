@@ -474,3 +474,11 @@ func TestOtlpWorkloadEnabled(t *testing.T) {
 	assert.True(t, OtlpWorkloadEnabled(conf, OtlpWorkloadVllm))
 	assert.False(t, OtlpWorkloadEnabled(conf, "other"))
 }
+
+func TestOtlpWorkloadEnabledRay(t *testing.T) {
+	conf := confmap.NewFromStringMap(map[string]any{
+		"opentelemetry": map[string]any{"collect": map[string]any{"otlp": map[string]any{"workloads": []any{"vllm", "ray"}}}},
+	})
+	assert.True(t, OtlpWorkloadEnabled(conf, OtlpWorkloadRay))
+	assert.True(t, OtlpWorkloadEnabled(conf, OtlpWorkloadVllm))
+}
