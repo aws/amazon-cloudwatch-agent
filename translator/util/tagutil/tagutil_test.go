@@ -5,6 +5,7 @@ package tagutil
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -112,6 +113,37 @@ func TestGetEKSClusterName_EmptyResult(t *testing.T) {
 	ResetEC2APIProvider()
 	ResetTagsCache()
 }
+func TestGetAutoScalingGroupName_DescribeTagsFails(t *testing.T) {
+	ResetTagsCache()
+	// Record backoff calls instead of sleeping, to keep the test fast and to
+	// check that no backoff follows the final attempt.
+	originalBackoffSleep := backoffSleep
+	var backoffs []int
+	backoffSleep = func(i int) { backoffs = append(backoffs, i) }
+
+	mockClient := &MockEC2TagsClient{}
+	mockClient.On("DescribeTags", mock.Anything, mock.Anything).
+		Return((*ec2.DescribeTagsOutput)(nil), errors.New("UnauthorizedOperation"))
+	SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
+		return mockClient
+	})
+
+	defer func() {
+		backoffSleep = originalBackoffSleep
+		ResetEC2APIProvider()
+		ResetTagsCache()
+	}()
+
+	assert.NotPanics(t, func() {
+		assert.Equal(t, "", GetAutoScalingGroupName(t.Context(), "i-1234567890abcdef0"))
+	})
+	mockClient.AssertNumberOfCalls(t, "DescribeTags", defaultRetryCount+1)
+	// One backoff between each pair of attempts, none after the last. Every
+	// backoff index is covered by sleeps, so defaultBackoffDuration is never used.
+	assert.Equal(t, []int{0, 1, 2, 3, 4}, backoffs)
+	assert.Len(t, sleeps, defaultRetryCount)
+}
+
 func TestLoadAllTagsWithPagination(t *testing.T) {
 	// Reset cache before test
 	ResetTagsCache()
