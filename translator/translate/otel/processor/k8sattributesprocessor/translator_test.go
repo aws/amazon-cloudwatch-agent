@@ -94,3 +94,22 @@ func TestTranslateWatchReplicaSetCollectLevel(t *testing.T) {
 	// No container_insights key was set, so the CI pipelines are never activated by this toggle.
 	assert.NotContains(t, off.AllKeys(), "opentelemetry::collect::container_insights")
 }
+
+func TestTranslateVllmWorkloadLabels(t *testing.T) {
+	tt := NewTranslator("opentelemetry")
+	conf := confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{"workloads": []interface{}{"vllm"}},
+			},
+		},
+	})
+	cfg, err := tt.Translate(conf)
+	require.NoError(t, err)
+	k8sCfg := cfg.(*k8sattributesprocessor.Config)
+	require.Len(t, k8sCfg.Extract.Labels, 5)
+	assert.Equal(t, "inferenceservice", k8sCfg.Extract.Labels[3].TagName)
+	assert.Equal(t, "serving.kserve.io/inferenceservice", k8sCfg.Extract.Labels[3].Key)
+	assert.Equal(t, "revision", k8sCfg.Extract.Labels[4].TagName)
+	assert.Equal(t, "serving.knative.dev/revision", k8sCfg.Extract.Labels[4].Key)
+}

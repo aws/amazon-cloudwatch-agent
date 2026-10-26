@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
@@ -198,4 +199,41 @@ func TestBaseTracesTranslatorNoClusterName(t *testing.T) {
 		keys = append(keys, k.String())
 	}
 	assert.NotContains(t, keys, "transform/set_cluster_name")
+}
+
+func TestBaseTracesTranslatorVllmWorkload(t *testing.T) {
+	agent.Global_Config.Region = "us-west-2"
+	context.CurrentContext().SetKubernetesMode(config.ModeEKS)
+	t.Cleanup(func() { context.CurrentContext().SetKubernetesMode("") })
+	tt := NewBaseTracesTranslator()
+
+	got, err := tt.Translate(confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{
+			"collect": map[string]interface{}{
+				"otlp": map[string]interface{}{"workloads": []interface{}{"vllm"}},
+			},
+		},
+	}))
+	require.NoError(t, err)
+	keys := make([]string, 0, got.Processors.Len())
+	for _, k := range got.Processors.Keys() {
+		keys = append(keys, k.String())
+	}
+	// otlp_vllm must run after k8sattributes (it reads the InferenceService label) and before
+	// identity (which fills service.name only where it is still unset).
+	assert.Equal(t, []string{"resourcedetection/opentelemetry", "k8s_attributes/opentelemetry", "transform/otlp_vllm", "transform/identity", "batch/opentelemetry_traces"}, keys)
+
+	got, err = tt.Translate(confmap.NewFromStringMap(map[string]interface{}{
+		"opentelemetry": map[string]interface{}{"collect": map[string]interface{}{"otlp": map[string]interface{}{}}},
+	}))
+	require.NoError(t, err)
+	assert.NotContains(t, collectKeys(got.Processors.Keys()), "transform/otlp_vllm")
+}
+
+func collectKeys(ids []component.ID) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, id.String())
+	}
+	return out
 }

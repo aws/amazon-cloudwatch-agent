@@ -421,3 +421,20 @@ func TestResolveK8sIdentityConfig(t *testing.T) {
 	assert.NotContains(t, got, "%CLUSTER_NAME%")
 	assert.Contains(t, got, `"^MC_(.+)_my_cluster_[^_]+$"`, "cluster name must be injected into the regex literal")
 }
+
+func TestOtlpVllmTranslate(t *testing.T) {
+	transl := NewTranslatorWithName(common.OtlpVllm)
+	assert.Equal(t, "transform/otlp_vllm", transl.ID().String())
+
+	cfg, err := transl.Translate(nil)
+	require.NoError(t, err)
+	actualCfg := cfg.(*transformprocessor.Config)
+	require.NoError(t, actualCfg.Validate())
+	require.Len(t, actualCfg.TraceStatements, 2)
+	assert.Equal(t, "resource", string(actualCfg.TraceStatements[0].Context))
+	require.Len(t, actualCfg.TraceStatements[0].Statements, 2)
+	assert.Contains(t, actualCfg.TraceStatements[0].Statements[1], `delete_key(resource.attributes, "service.name")`)
+	assert.Equal(t, "span", string(actualCfg.TraceStatements[1].Context))
+	require.Len(t, actualCfg.TraceStatements[1].Statements, 3)
+	assert.Contains(t, actualCfg.TraceStatements[1].Statements[0], `set(span.attributes["gen_ai.system"], "vllm")`)
+}
