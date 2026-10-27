@@ -53,7 +53,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		"k8s.container.name",
 	}
 	// watch_replicaset (default true) drops k8s.deployment.name when false, stopping the cluster-wide
-	// ReplicaSet informer; common.WatchReplicaSet resolves the collect-level and container_insights keys.
+	// ReplicaSet informer; common.WatchReplicaSet resolves the collect-level key.
 	if !common.WatchReplicaSet(conf) {
 		metadata = removeString(metadata, "k8s.deployment.name")
 	}
