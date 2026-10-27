@@ -1,4 +1,13 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300074.1 (2026-10-27)
+========================================================================
+Enhancements:
+* [Agent] Build the agent with Go 1.27.3
+
+Bug Fixes:
+* [Container] Remove root certificates that are no longer trusted from the container image CA bundle
+
+========================================================================
 Amazon CloudWatch Agent 1.300074.0 (2026-09-29)
 ========================================================================
 Enhancements:
