@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 name: Test Artifacts
+# The default name is the workflow name. A caller that sets request_id gets it
+# in the run name, so it can find the run it dispatched.
+run-name: ${{ inputs.request_id && format('Test Artifacts {0} ({1})', inputs.build_id, inputs.request_id) || 'Test Artifacts' }}
 permissions:
   id-token: write
   contents: read
@@ -44,6 +47,10 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
+      request_id:
+        description: 'Optional caller id: added to the run name, and the run uploads a test-result artifact'
+        type: string
+        required: false
   workflow_call:
     inputs:
       build_id:
@@ -65,9 +72,15 @@ on:
         description: 'Override helm chart branch (default: latest release-* branch)'
         type: string
         required: false
+      request_id:
+        description: 'Optional caller id: added to the run name, and the run uploads a test-result artifact'
+        type: string
+        required: false
 
+# Runs with the same request_id (empty by default) for the same build cancel
+# each other; runs with different request_ids do not.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ inputs.build_id }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ inputs.build_id }}-${{ inputs.request_id }}
   cancel-in-progress: true
 
 jobs:
@@ -161,7 +174,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.26.4
+          go-version: ~1.26.10
 
   GenerateTestMatrix:
     name: 'GenerateTestMatrix'
@@ -199,7 +212,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.26.4
+          go-version: ~1.26.10
 
       - name: Generate matrix
         id: set-matrix
@@ -353,7 +366,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.26.4
+          go-version: ~1.26.10
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
@@ -2263,7 +2276,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.26.4
+          go-version: ~1.26.10
           cache: false
 
       - name: Terraform apply
@@ -2392,7 +2405,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.26.4
+          go-version: ~1.26.10
           cache: false
 
       - name: Terraform apply
@@ -2637,7 +2650,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4.3.0
         with:
-          go-version: ~1.26.4
+          go-version: ~1.26.10
           cache: false
 
       # Keyless GCP auth: the job's GitHub OIDC token is exchanged via Workload Identity
@@ -2709,3 +2722,63 @@ jobs:
               -var="gcp_project=$GCP_PROJECT" \
               -var="gcp_network_name=$GCP_NETWORK_NAME" \
               -var="runner_ip=$RUNNER_IP"
+
+  # Runs only when request_id is set. It must list every other job in needs,
+  # so it starts after they finish; a job still running when it starts counts
+  # as failed. Re-running failed jobs re-runs this job too, and the artifact of
+  # the latest attempt replaces the previous one.
+  TestResult:
+    name: 'TestResult'
+    if: ${{ always() && inputs.request_id != '' }}
+    needs: [ id, OutputEnvVariables, GenerateTestMatrix, CloudformationTest, StartLocalStack, StartLocalStackITAR,
+             StartLocalStackCN, UploadDependenciesCN, EC2NvidiaGPUIntegrationTest, EC2LinuxIntegrationTest-0,
+             EC2LinuxIntegrationTest-1, EC2LinuxIntegrationTest-2, EC2LinuxIntegrationTest-3, EC2LinuxIntegrationTest-4,
+             LinuxOnPremIntegrationTest, EC2LinuxIntegrationTestITAR, EC2LinuxIntegrationTestCN, EC2SELinuxIntegrationTest,
+             EC2WinIntegrationTest, EC2DarwinIntegrationTest, StopLocalStack, StopLocalStackITAR, StopLocalStackCN,
+             ECSEC2IntegrationTest, ECSFargateIntegrationTest, EKSIntegrationTest, EKSPrometheusIntegrationTest,
+             PerformanceTrackingTest, EC2WinPerformanceTest, StressTrackingTest, EC2WinStressTrackingTest, GPUEndToEndTest,
+             AzureVMIntegrationTest, AzureVMWindowsIntegrationTest, AKSIntegrationTest, AKSContainerInsightsIntegrationTest,
+             GCEIntegrationTest, GKEIntegrationTest ]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Check request id
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          if [[ ! "$REQUEST_ID" =~ ^[A-Za-z0-9._:/-]{1,128}$ ]]; then
+            echo "::error::request_id must be 1-128 characters from A-Z a-z 0-9 . _ : / -"
+            exit 1
+          fi
+
+      - name: Write test-result.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUEST_ID: ${{ inputs.request_id }}
+          BUILD_ID: ${{ inputs.build_id }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT_JOB_NAME: 'TestResult'
+          TEST_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
+          TEST_OS_FILTER: ${{ inputs.test_os_filter }}
+          TEST_DIR_FILTER: ${{ inputs.test_dir_filter }}
+          HELM_CHART_BRANCH: ${{ inputs.helm_chart_branch }}
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs?filter=latest&per_page=100" \
+            --jq '.jobs[]' > jobs.ndjson
+          .github/scripts/test-result.sh jobs.ndjson > test-result.json
+          jq '{request_id, verdict, summary, failed}' test-result.json
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-result
+          path: test-result.json
+          if-no-files-found: error
+          overwrite: true
