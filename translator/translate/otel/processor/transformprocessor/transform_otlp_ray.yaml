@@ -1,0 +1,13 @@
+error_mode: ignore
+trace_statements:
+  - error_mode: ignore
+    context: resource
+    statements:
+      # Ray Serve builds its tracer provider without a resource, so unless the pod sets
+      # OTEL_SERVICE_NAME its spans report unknown_service. Clear the placeholder on Ray
+      # pods so the identity transform derives the name. A real service.name is kept.
+      - delete_key(resource.attributes, "service.name") where resource.attributes["k8s.pod.label.ray.io/cluster"] != nil and resource.attributes["service.name"] != nil and IsMatch(resource.attributes["service.name"], "^unknown_service")
+      # KubeRay sets app.kubernetes.io/name=kuberay on every Ray pod. It names the operator,
+      # not the service, and would give every Ray span the same service.name. Drop it so
+      # the identity transform falls back to the workload or pod name.
+      - delete_key(resource.attributes, "app.kubernetes.io/name") where resource.attributes["k8s.pod.label.ray.io/cluster"] != nil and resource.attributes["app.kubernetes.io/name"] == "kuberay"

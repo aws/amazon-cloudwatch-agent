@@ -26,6 +26,12 @@ var transformJmxConfig string
 //go:embed transform_jmx_drop_config.yaml
 var transformJmxDropConfig string
 
+//go:embed transform_otlp_vllm.yaml
+var transformOtlpVllmConfig string
+
+//go:embed transform_otlp_ray.yaml
+var transformOtlpRayConfig string
+
 //go:embed transform_efa_config.yaml
 var transformEfaConfig string
 
@@ -198,6 +204,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	if strings.HasPrefix(t.name, common.PipelineNameHostDeltaMetrics) {
 		return common.GetYamlFileToYamlConfig(cfg, transformEfaConfig)
+	}
+	if t.name == common.OtlpVllm {
+		return common.GetYamlFileToYamlConfig(cfg, transformOtlpVllmConfig)
+	}
+	if t.name == common.OtlpRay {
+		return common.GetYamlFileToYamlConfig(cfg, transformOtlpRayConfig)
 	}
 	if t.name == common.DbiTransformFixStartTime {
 		return common.GetYamlFileToYamlConfig(cfg, transformDbiFixStartTimeConfig)

@@ -50,6 +50,10 @@ const (
 	DisableMetricExtraction                        = "disable_metric_extraction"
 	XrayKey                                        = "xray"
 	OtlpKey                                        = "otlp"
+	OtlpVllm                                       = "otlp_vllm"
+	OtlpWorkloadVllm                               = "vllm"
+	OtlpRay                                        = "otlp_ray"
+	OtlpWorkloadRay                                = "ray"
 	JmxKey                                         = "jmx"
 	TLSKey                                         = "tls"
 	Endpoint                                       = "endpoint"
@@ -170,6 +174,7 @@ var (
 	DatabaseInsightsPostgresKey = ConfigKey(OpenTelemetryKey, CollectKey, DatabaseInsightsKey, PostgreSQLKey)
 	OtelCollectLogsConfigKey    = ConfigKey(OpenTelemetryKey, CollectKey, LogsKey)
 	OtelSpanMetricsEnabledKey   = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "span_metrics_enabled")
+	OtelOtlpWorkloadsKey        = ConfigKey(OpenTelemetryKey, CollectKey, OtlpKey, "workloads")
 	WindowsEventsConfigKey      = ConfigKey(OpenTelemetryKey, CollectKey, WindowsEventsKey)
 	FilesConfigKey              = ConfigKey(OpenTelemetryKey, CollectKey, FilesKey)
 	// OtelResourceAttributesKey holds customer-supplied resource attributes added to every opentelemetry export pipeline.
@@ -648,4 +653,22 @@ func ValidateClusterName(name string) error {
 		return fmt.Errorf("cluster_name %q is invalid: must match pattern %s", name, ClusterNameRegex.String())
 	}
 	return nil
+}
+
+// OtlpWorkloadEnabled reports whether the named workload is listed under
+// opentelemetry.collect.otlp.workloads.
+func OtlpWorkloadEnabled(conf *confmap.Conf, workload string) bool {
+	if conf == nil || !conf.IsSet(OtelOtlpWorkloadsKey) {
+		return false
+	}
+	workloads, ok := conf.Get(OtelOtlpWorkloadsKey).([]any)
+	if !ok {
+		return false
+	}
+	for _, w := range workloads {
+		if w == workload {
+			return true
+		}
+	}
+	return false
 }

@@ -70,6 +70,12 @@ func (t *baseTracesTranslator) Translate(conf *confmap.Conf) (*common.ComponentT
 			processors.Set(setClusterName)
 		}
 	}
+	if common.OtlpWorkloadEnabled(conf, common.OtlpWorkloadRay) {
+		processors.Set(transformprocessor.NewTranslatorWithName(common.OtlpRay))
+	}
+	if common.OtlpWorkloadEnabled(conf, common.OtlpWorkloadVllm) {
+		processors.Set(transformprocessor.NewTranslatorWithName(common.OtlpVllm))
+	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
 	processors.Set(batchprocessor.NewTranslator(common.WithName("opentelemetry_traces"), batchprocessor.WithSendBatchSize(common.MaxSpansPerRequest), batchprocessor.WithSendBatchMaxSize(common.MaxSpansPerRequest), batchprocessor.WithTimeout(common.BatchTimeout)))
 
