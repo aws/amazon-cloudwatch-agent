@@ -8,7 +8,7 @@
 # on PATH. A missing tool prints the manual commands, names what is missing, and
 # exits non-zero, so the run never reads as a successful install. A failing
 # kubeconfig or helm step dies with a message naming the step. The tool check
-# runs before any cloud call. Every case hides the host's own helm, kubectl, and
+# runs before any cluster call. Every case hides the host's own helm, kubectl, and
 # gke-gcloud-auth-plugin (hide_tools), so only the fakes a case makes exist.
 
 set -u
@@ -105,7 +105,7 @@ assert_output_contains stdout "--set-string 'agents[1].name=cloudwatch-agent-clu
 assert_output_contains stderr "Helm chart not installed on 'test-cluster': missing kubectl."
 assert_output_lacks stdout "Chart installed"
 assert_output_lacks stdout "OIDC issuer (for the AWS setup)"
-# The check runs before any cloud call: nothing is read or configured.
+# The check runs before any cluster call: nothing is read or configured.
 assert_not_called "container clusters describe"
 assert_not_called "get-credentials"
 assert_not_called "helm"

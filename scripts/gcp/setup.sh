@@ -487,10 +487,10 @@ setup_gcp_gke() {
      if [ -z "${LOCATION}" ] || [ -z "${CLUSTER_NAME}" ]; then usage; fi
 
      # Install mode needs helm, kubectl, and gke-gcloud-auth-plugin (kubectl
-     # authenticates to GKE through the plugin). Check before any cloud call so a
-     # missing tool fails fast: print the commands to run from a shell that has
-     # them, name what is missing, and exit non-zero, so the run never reads as a
-     # successful install. Identity mode (no ARN) needs none of them.
+     # authenticates to GKE through the plugin). Check before any cluster call
+     # so a missing tool fails fast: print the commands to run from a shell that
+     # has them, name what is missing, and exit non-zero, so the run never reads
+     # as a successful install. Identity mode (no ARN) needs none of them.
      if [ -n "${ROLE_ARN}" ]; then
           missing=$(missing_tools helm kubectl gke-gcloud-auth-plugin)
           if [ -n "${missing}" ]; then
