@@ -79,9 +79,10 @@ The flow is `gcp/setup.sh` (identity) -> `aws/setup.sh` (trust) -> `gcp/setup.sh
 like the Azure script. The identity step is read-only: it discovers the VM's
 service account unique ID (`gcp_gce`) or the cluster's OIDC issuer URL
 (`gcp_gke`) for the trust step. A VM install is pushed over `gcloud compute
-ssh`; a GKE install uses the CloudWatch Observability Helm chart when `helm`,
-`kubectl`, and `gke-gcloud-auth-plugin` are present, otherwise the commands are
-printed.
+ssh`; a GKE install uses the CloudWatch Observability Helm chart and needs
+`helm`, `kubectl`, and `gke-gcloud-auth-plugin`. If any is missing, the chart is
+not installed: the commands are printed, the missing tools are named, and the
+script exits non-zero.
 
 ## Running the setup scripts directly
 
@@ -150,12 +151,14 @@ Shell** for the Azure steps, **Google Cloud Shell** for the GCP steps.
   installs the CloudWatch Observability EKS add-on (no `helm`/`kubectl` needed).
   Enabling Transaction Search also needs `logs:PutResourcePolicy` and the
   `xray:*TraceSegmentDestination` permissions.
-- **Azure platforms:** `az` (v2.47+ recommended). AKS install additionally uses
-  `helm` and `kubectl` when present. If either is missing the script prints the
-  install command to run from a shell that has them.
-- **GCP platforms:** `gcloud`. A GKE install additionally uses `helm`, `kubectl`,
-  and `gke-gcloud-auth-plugin` when present; if any is missing the script prints
-  the install commands to run from a shell that has them. A GCE VM install is
+- **Azure platforms:** `az` (v2.47+ recommended). AKS install additionally needs
+  `helm` and `kubectl`. If either is missing, the chart is not installed: the
+  script prints the install command to run from a shell that has them, names the
+  missing tools, and exits non-zero.
+- **GCP platforms:** `gcloud`. A GKE install additionally needs `helm`,
+  `kubectl`, and `gke-gcloud-auth-plugin`. If any is missing, the chart is not
+  installed: the script prints the install commands to run from a shell that has
+  them, names the missing tools, and exits non-zero. A GCE VM install is
   pushed over `gcloud compute ssh` (Linux targets), printing the command instead
   when the VM is not reachable over SSH.
 - **Targets:** EC2/VM installs fetch `install.sh` (Linux) or `install.ps1`
