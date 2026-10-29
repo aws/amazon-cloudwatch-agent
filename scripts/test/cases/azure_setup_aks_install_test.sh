@@ -7,9 +7,9 @@
 # chart is installed only when helm and kubectl are both on PATH. A missing tool
 # prints the manual commands, names what is missing, and exits non-zero. A
 # failing kubeconfig or helm step dies with a message naming the step. The tool
-# check runs before any cloud call, in particular before the slow "az aks
-# update". Every case hides the host's own helm and kubectl (hide_tools), so
-# only the fakes a case makes exist.
+# check runs after the cluster setup (OIDC issuer and workload identity), so the
+# printed Helm commands work from another shell. Every case hides the host's own
+# helm and kubectl (hide_tools), so only the fakes a case makes exist.
 
 set -u
 TEST_DIR="${TEST_DIR:-$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)}"
@@ -26,6 +26,9 @@ az_fake() {
 case "$*" in
 "version"*) printf '2.60.0\n' ;;
 "account show"*) printf 'sub-id\ttest-sub\ttenant-id\n' ;;
+*"aks show"*"--query oidcIssuerProfile.issuerUrl -o tsv"*)
+     printf 'https://eastus.oic.prod-aks.azure.com/tenant-id/cluster-id/\n'
+     ;;
 "aks show"*)
      if [ -f "${SANDBOX}/oidc_off" ]; then
           printf 'False\tFalse\t\n'
@@ -98,20 +101,25 @@ assert_output_contains stdout "--set-string 'agents[1].name=cloudwatch-agent-clu
 assert_output_contains stderr "Helm chart not installed on 'test-cluster': missing kubectl."
 assert_output_lacks stdout "Chart installed"
 assert_output_lacks stdout "OIDC issuer (for the AWS setup)"
-# The check runs before any cluster call: nothing is read, changed, or configured.
-assert_not_called "aks show"
+# The cluster setup ran first; nothing after the check did.
+assert_called "az aks show"
 assert_not_called "aks get-credentials"
 assert_not_called "helm"
 
-t_case "kubectl missing on a cluster without OIDC: fails before the slow aks update"
+t_case "kubectl missing on a cluster without workload identity: cluster enabled first, then fails"
 az_fake
 helm_fake
 : >"${SANDBOX}/oidc_off"
 run_install
 assert_status 1
+# The printed Helm commands only work once OIDC and workload identity are on,
+# so the cluster is enabled before the missing-tool failure.
+assert_called "az aks update --resource-group test-rg --name test-cluster --enable-oidc-issuer --enable-workload-identity"
+assert_output_contains stdout "Enabling OIDC issuer and workload identity"
+assert_output_contains stdout "Install the Amazon CloudWatch Observability Helm chart manually"
 assert_output_contains stderr "missing kubectl."
-assert_not_called "aks update"
-assert_output_lacks stdout "Enabling OIDC issuer"
+assert_not_called "aks get-credentials"
+assert_not_called "helm"
 
 t_case "helm and kubectl missing: both named"
 az_fake
