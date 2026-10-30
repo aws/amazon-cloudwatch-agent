@@ -25,10 +25,11 @@ type EndpointConfig struct {
 }
 
 type translator struct {
-	name          string
-	factory       exporter.Factory
-	endpoint      EndpointConfig
-	authenticator component.ID
+	name             string
+	factory          exporter.Factory
+	endpoint         EndpointConfig
+	authenticator    component.ID
+	requestQueueSize *int64
 }
 
 type Option func(*translator)
@@ -37,6 +38,18 @@ type Option func(*translator)
 func WithAuthenticator(id component.ID) Option {
 	return func(t *translator) {
 		t.authenticator = id
+	}
+}
+
+// WithRequestQueueSize makes the translator emit an explicit sending_queue that
+// bounds the exporter's in-memory queue to size export requests (sizer
+// "requests"), instead of leaving the factory default of 1000. The queue stays
+// non-blocking (block_on_overflow false): when it is full, further exports are
+// rejected with a retryable error rather than the agent blocking the sender.
+// When the option is unset the exporter keeps the factory default queue.
+func WithRequestQueueSize(size int64) Option {
+	return func(t *translator) {
+		t.requestQueueSize = &size
 	}
 }
 
@@ -88,6 +101,26 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	// which the collector's confmap round-trip promotes back to Some(defaults),
 	// re-enabling the batcher.
 	cfg.QueueConfig = configoptional.None[exporterhelper.QueueBatchConfig]()
+
+	// When a request-count cap is requested, emit an EXPLICIT sending_queue
+	// instead of None. None marshals as an absent sending_queue key, which makes
+	// the collector re-materialise the factory default (1000-request queue), so
+	// the cap must be a concrete value. Start from the factory default so the
+	// queue keeps parity with the other signals (sizer "requests", 10 consumers,
+	// non-blocking) and only the size changes.
+	//
+	// NOTE: the agent YAML serializer writes the empty Batch optional as
+	// "batch: null", which the collector would promote to Some(defaults) on
+	// reload and re-enable the exporter batcher. The otlphttp queue-batch
+	// converter in service/configprovider strips that null key so the batcher
+	// stays off, matching metrics/logs. (A byte-sized cap, sizer: "bytes", is a
+	// separate follow-up: SizerType.MarshalText has a pointer receiver and emits
+	// "sizer: null", which reloads to the default request sizer.)
+	if t.requestQueueSize != nil {
+		queueConfig := exporterhelper.NewDefaultQueueConfig()
+		queueConfig.QueueSize = *t.requestQueueSize
+		cfg.QueueConfig = configoptional.Some(queueConfig)
+	}
 
 	return cfg, nil
 }

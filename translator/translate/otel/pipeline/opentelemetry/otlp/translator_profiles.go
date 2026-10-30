@@ -25,6 +25,20 @@ const (
 	profilesPath         = "/v1development/profiles"
 	serviceNameAttribute = "service.name"
 	fallbackServiceName  = "unknown_service"
+
+	// profilesQueueSize bounds the profiles otlphttp exporter's in-memory send
+	// queue to 64 export requests, rather than the shared 1000-request
+	// exporterhelper default. Profile export requests are much larger than
+	// metric/log requests (order ~1 MB in memory, not wire size), so the shared
+	// default allows a much larger worst-case footprint for profiles if a
+	// sustained retryable backend error makes the queue back up. Profiles are
+	// low-frequency per source (a profiler typically exports every tens of
+	// seconds), so 64 outstanding requests is ample headroom on the healthy
+	// path while bounding the worst case to roughly queue_size x per-profile
+	// size. The queue stays non-blocking (block_on_overflow false): a full
+	// queue sheds load (exports rejected with a retryable error) rather than
+	// blocking the profiler.
+	profilesQueueSize int64 = 64
 )
 
 type profilesPipelineTranslator struct {
@@ -60,6 +74,7 @@ func (t *profilesPipelineTranslator) Translate(conf *confmap.Conf) (*common.Comp
 		Exporters: common.NewTranslatorMap(otlphttp.NewTranslatorWithName(profilesExporterName,
 			otlphttp.EndpointConfig{ProfilesEndpoint: common.ServiceEndpoint(monitoringService, region, profilesPath)},
 			otlphttp.WithAuthenticator(agentHealthExt.ID()),
+			otlphttp.WithRequestQueueSize(profilesQueueSize),
 		)),
 		Extensions: common.NewTranslatorMap(sigv4Ext, agentHealthExt),
 	}, nil
