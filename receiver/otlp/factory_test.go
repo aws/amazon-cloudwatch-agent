@@ -34,15 +34,21 @@ import (
 )
 
 func TestReceiverPathLeavesReferencesUnresolved(t *testing.T) {
-	request := pprofileotlp.NewExportRequest()
-	require.NoError(t, request.UnmarshalProto(dictionaryEncoded(t)))
-	attributes := request.Profiles().ResourceProfiles().At(0).Resource().Attributes()
-	require.Equal(t, 4, attributes.Len())
-	for key, value := range attributes.All() {
-		assert.Empty(t, key)
-		if value.Type() != pcommon.ValueTypeInt {
-			assert.Equal(t, pcommon.ValueTypeEmpty, value.Type())
-		}
+	for _, transport := range []string{"http", "grpc"} {
+		t.Run(transport, func(t *testing.T) {
+			sink := new(consumertest.ProfilesSink)
+			addr := startProfilesReceiver(t, otlpreceiver.NewFactory().(xreceiver.Factory), sink, transport)
+			exportProfiles(t, transport, addr, dictionaryEncoded(t))
+			require.Len(t, sink.AllProfiles(), 1)
+			attributes := sink.AllProfiles()[0].ResourceProfiles().At(0).Resource().Attributes()
+			require.Equal(t, 4, attributes.Len())
+			for key, value := range attributes.All() {
+				assert.Empty(t, key)
+				if value.Type() != pcommon.ValueTypeInt {
+					assert.Equal(t, pcommon.ValueTypeEmpty, value.Type())
+				}
+			}
+		})
 	}
 }
 
@@ -53,7 +59,7 @@ func TestProfilesReceiverResolvesReferencesForNextProcessor(t *testing.T) {
 	}
 	for _, transport := range []string{"http", "grpc"} {
 		sink := new(consumertest.ProfilesSink)
-		addr := startProfilesReceiver(t, newResourceProcessor(t, sink), transport)
+		addr := startProfilesReceiver(t, NewFactory().(xreceiver.Factory), newResourceProcessor(t, sink), transport)
 		for name, payload := range payloads {
 			t.Run(transport+"/"+name, func(t *testing.T) {
 				sink.Reset()
@@ -84,8 +90,9 @@ func TestProfilesReceiverResolvesReferencesForNextProcessor(t *testing.T) {
 
 func TestResolveReferencesPassesPlainProfilesThrough(t *testing.T) {
 	profiles := newProfiles()
-	assert.Equal(t, profiles, resolveReferences(zap.NewNop(), profiles))
-	assert.Equal(t, 0, profiles.Dictionary().StringTable().Len())
+	got := resolveReferences(zap.NewNop(), profiles)
+	assert.Equal(t, profiles, got)
+	assert.Equal(t, 0, got.Dictionary().StringTable().Len())
 }
 
 func TestResolveReferencesKeepsSamples(t *testing.T) {
@@ -205,14 +212,13 @@ func readTestdata(t *testing.T, name string) []byte {
 	return buf
 }
 
-func startProfilesReceiver(t *testing.T, next xconsumer.Profiles, transport string) string {
+func startProfilesReceiver(t *testing.T, factory xreceiver.Factory, next xconsumer.Profiles, transport string) string {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	addr := listener.Addr().String()
 	require.NoError(t, listener.Close())
 
-	factory := NewFactory().(xreceiver.Factory)
 	cfg := factory.CreateDefaultConfig().(*otlpreceiver.Config)
 	switch transport {
 	case "http":

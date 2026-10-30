@@ -5,16 +5,16 @@
 // scope attributes arrive as ProfilesDictionary string-table references are resolved
 // before they reach the pipeline. pdata v1.56 only resolves those references in
 // pprofile.ProtoUnmarshaler, which the receiver does not use, so processors saw empty
-// attribute keys. Upstream fixed this in opentelemetry-collector v0.161.0
-// (open-telemetry/opentelemetry-collector#15794); remove this package once the agent
-// is on that version or later.
+// attribute keys. Upstream fixed the HTTP path in opentelemetry-collector v0.161.0
+// (open-telemetry/opentelemetry-collector#15794) and the gRPC path in v0.163.0
+// (open-telemetry/opentelemetry-collector#16016); remove this package once the agent
+// is on v0.163.0 or later.
 package otlp
 
 import (
 	"context"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/xconsumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pprofile"
@@ -43,7 +43,7 @@ func createProfiles(base xreceiver.Factory) xreceiver.CreateProfilesFunc {
 	return func(ctx context.Context, set receiver.Settings, cfg component.Config, next xconsumer.Profiles) (xreceiver.Profiles, error) {
 		resolving, err := xconsumer.NewProfiles(func(ctx context.Context, pd pprofile.Profiles) error {
 			return next.ConsumeProfiles(ctx, resolveReferences(set.Logger, pd))
-		}, consumer.WithCapabilities(consumer.Capabilities{MutatesData: true}))
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -84,8 +84,7 @@ func resolveReferences(logger *zap.Logger, pd pprofile.Profiles) pprofile.Profil
 // key_strindex together, which the OTLP KeyValue definition forbids.
 func inlineKeys(attributes pcommon.Map) {
 	resolved := pcommon.NewMap()
-	attributes.CopyTo(resolved)
-	attributes.Clear()
+	attributes.MoveTo(resolved)
 	for key, value := range resolved.All() {
 		value.CopyTo(attributes.PutEmpty(key))
 	}
