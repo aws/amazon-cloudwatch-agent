@@ -4,6 +4,7 @@
 package pusher
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,25 @@ import (
 
 	"github.com/aws/amazon-cloudwatch-agent/logs"
 	"github.com/aws/amazon-cloudwatch-agent/profiler"
+)
+
+const (
+	// The minimum interval between logs warning that a log event was truncated, like warnOldTimeStampLogInterval.
+	warnTruncatedLogEventInterval = 5 * time.Minute
+	// truncatedLogEventsStat is the profiler stat that counts the log events whose message was over the per-event
+	// limit and lost content: it looks like EMF, so it was truncated rather than split, or it needed more than
+	// maxSplitChunks events, so the last of them was truncated. The rest of the message is dropped. It counts each
+	// such log event once. A log event that is split without loss is not counted here.
+	truncatedLogEventsStat = "truncatedLogEvents"
+	// The minimum interval between logs warning that a log event was split. It has its own timer, so that frequent
+	// splits do not mute the truncation warning.
+	warnSplitLogEventInterval = 5 * time.Minute
+	// splitLogEventsStat is the profiler stat that counts the log events whose message was over the per-event limit
+	// and so was sent as two or more log events. It counts each such log event once.
+	splitLogEventsStat = "splitLogEvents"
+	// splitLogEventChunksStat is the profiler stat that counts the log events sent for split log events, so the
+	// number of extra events is splitLogEventChunks - splitLogEvents.
+	splitLogEventChunksStat = "splitLogEventChunks"
 )
 
 type Queue interface {
@@ -38,6 +58,10 @@ type queue struct {
 	stopCh       chan struct{}
 	stopped      bool
 	lastSentTime atomic.Value
+	// The last time a truncated log event was logged. Only used by the start goroutine.
+	lastTruncatedWarnTime time.Time
+	// The last time a split log event was logged. Only used by the start goroutine.
+	lastSplitWarnTime time.Time
 
 	initNonBlockingChOnce sync.Once
 	startNonBlockCh       chan struct{}
@@ -136,11 +160,30 @@ func (q *queue) start() {
 			if len(q.batch.events) == 0 {
 				q.resetFlushTimer()
 			}
-			event := q.converter.convert(e)
-			if !q.batch.inTimeRange(event.timestamp) || !q.batch.hasSpace(event.eventBytes) {
-				q.send()
+			single, split := q.converter.convert(e)
+			if single != nil {
+				// Fast path: message fit in one event (either normally, or a single truncated EMF event).
+				if single.truncated {
+					// EMF over the per-event limit was truncated rather than split: content was lost silently.
+					// Report it with a one-event slice; this is already the slow path.
+					q.reportTruncated(e, []*logEvent{single})
+				}
+				if !q.batch.inTimeRange(single.timestamp) || !q.batch.hasSpace(single.eventBytes) {
+					q.send()
+				}
+				q.batch.append(single)
+			} else {
+				// Split path: the message was over the per-event limit and sent as several events sharing its
+				// timestamp. The last one carries the truncation flag.
+				last := split[len(split)-1]
+				// Report the converted timestamp, as it is the one sent to CloudWatch Logs and is never zero.
+				q.reportSplit(e, last.timestamp, len(split))
+				if last.truncated {
+					// More than maxSplitChunks events would have been needed, so the last one was truncated.
+					q.reportTruncated(e, split)
+				}
+				q.sendSplit(split)
 			}
-			q.batch.append(event)
 		case <-q.flushCh:
 			lastSentTime, _ := q.lastSentTime.Load().(time.Time)
 			flushTimeout, _ := q.flushTimeout.Load().(time.Duration)
@@ -180,6 +223,28 @@ func (q *queue) send() {
 	}
 }
 
+// sendSplit sends the events of one split source event as an ordered sequence of single-event batches.
+//
+// The open batch is sent first, so that no other event of this queue is sent between the events of the sequence and
+// the open batch does not wait behind them. Each event then gets a batch of its own: a full chunk fills a request by
+// itself, and a batch per event keeps the sizes computed as for any batch. The batches are handed to the sender
+// together (Sender.SendOrdered), which sends each only after the one before it has completed, with or without a
+// worker pool. The last event carries the source event's state and done callback (see newStatefulLogEvents), so the
+// file offset advances only after the batches of all the events have completed.
+func (q *queue) sendSplit(events []*logEvent) {
+	q.send()
+	batches := make([]*logEventBatch, 0, len(events))
+	for _, event := range events {
+		// Use the entity provider of the open batch (always q.entityProvider), so that the events get the entity an
+		// event appended to it would get.
+		batch := newLogEventBatch(q.target, q.entityProvider)
+		batch.append(event)
+		batch.addDoneCallback(q.onSuccessCallback(batch.bufferedSize))
+		batches = append(batches, batch)
+	}
+	q.sender.SendOrdered(batches)
+}
+
 // onSuccessCallback returns a callback function to be executed after a successful send.
 func (q *queue) onSuccessCallback(bufferedSize int) func() {
 	return func() {
@@ -187,6 +252,52 @@ func (q *queue) onSuccessCallback(bufferedSize int) func() {
 		go q.addStats("rawSize", float64(bufferedSize))
 		q.resetFlushTimer()
 	}
+}
+
+// reportTruncated counts a log event whose message was truncated, and logs a warning about it at most once per
+// warnTruncatedLogEventInterval. The stat is added before the throttle check, so every truncated event is counted.
+// events are the events the log event was converted to; the last one is the truncated one.
+func (q *queue) reportTruncated(e logs.LogEvent, events []*logEvent) {
+	q.addStats(truncatedLogEventsStat, 1)
+	now := time.Now()
+	if now.Sub(q.lastTruncatedWarnTime) <= warnTruncatedLogEventInterval {
+		return
+	}
+	q.lastTruncatedWarnTime = now
+	// The original message is measured again only when the warning is logged, which keeps the truncation path cheap.
+	// The limit is the one for the message alone: the agent reserves perEventHeaderBytes of maxEventPayloadBytes for
+	// each event.
+	size := utf8EncodedLength(e.Message())
+	var outcome string
+	if len(events) == 1 {
+		// A message that is not split but truncated: only one that looks like EMF, as maxSplitChunks is more than 1.
+		outcome = "it looks like embedded metric format, so it was truncated, not split, and the remainder dropped."
+	} else {
+		// The counted bytes kept are those of the events sent, less the suffix added to the last one.
+		kept := -len(defaultTruncationSuffix)
+		for _, event := range events {
+			kept += event.eventBytes - perEventHeaderBytes
+		}
+		outcome = fmt.Sprintf("the message was sent as %d log events and the remaining %d counted bytes dropped.", len(events), size-kept)
+	}
+	q.logger.Warnf("The log entry in (%v/%v) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); %s",
+		q.target.Group, q.target.Stream, events[len(events)-1].timestamp, size, len(e.Message()), invalidUTF8ByteSize, maxEventMessageBytes, perEventHeaderBytes, outcome)
+}
+
+// reportSplit counts a log event whose message was sent as numEvents log events, and logs a warning about it at most
+// once per warnSplitLogEventInterval, on a timer of its own. The stats are added before the throttle check, so every
+// split event is counted.
+func (q *queue) reportSplit(e logs.LogEvent, timestamp time.Time, numEvents int) {
+	q.addStats(splitLogEventsStat, 1)
+	q.addStats(splitLogEventChunksStat, float64(numEvents))
+	now := time.Now()
+	if now.Sub(q.lastSplitWarnTime) <= warnSplitLogEventInterval {
+		return
+	}
+	q.lastSplitWarnTime = now
+	// As in reportTruncated, the original message is measured again only when the warning is logged.
+	q.logger.Warnf("The log entry in (%v/%v) with timestamp (%v) has a message counted as %d bytes by CloudWatch Logs (%d raw bytes; each byte that is not valid UTF-8 counts as %d), which exceeds the %d byte limit per log event message (after the agent's %d byte per-event overhead); it was sent as %d log events with the same timestamp.",
+		q.target.Group, q.target.Stream, timestamp, utf8EncodedLength(e.Message()), len(e.Message()), invalidUTF8ByteSize, maxEventMessageBytes, perEventHeaderBytes, numEvents)
 }
 
 // addStats adds statistics to the profiler.
