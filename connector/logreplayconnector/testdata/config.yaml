@@ -1,0 +1,23 @@
+log_replay:
+  rules:
+    - name: app_start
+      body_contains: ["app started"]
+      identity: [k8s.pod.uid]
+log_replay/full:
+  storage: file_storage/state
+  interval: 30m
+  source_file_attribute: log.file.path
+  max_state_bytes: 1048576
+  max_record_bytes: 16384
+  error_mode: propagate
+  rules:
+    - name: app_start
+      body_contains: ["app started", "app restarted"]
+      conditions:
+        - attributes["log.iostream"] == "stdout"
+      identity: [k8s.namespace.name, k8s.pod.name, k8s.container.name]
+      max_entries: 50
+    - name: app_ready
+      conditions:
+        - IsMatch(body, "^ready")
+      identity: [k8s.pod.uid]
