@@ -1,0 +1,31 @@
+{
+  "metrics": {
+    "metrics_collected": {
+      "dpdk": {
+        "socket_path": "/var/run/dpdk/rte/dpdk_telemetry.v2",
+        "device_types": [
+          "ethdev"
+        ],
+        "metrics_include": [
+          "bw_in_allowance_exceeded",
+          "bw_out_allowance_exceeded",
+          "pps_allowance_exceeded",
+          "conntrack_allowance_exceeded",
+          "linklocal_allowance_exceeded",
+          "rx_missed_errors"
+        ],
+        "append_dimensions": {
+          "name": "sampleName"
+        }
+      }
+    },
+    "append_dimensions": {
+      "ImageId": "${aws:ImageId}",
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions" : [["ImageId"], ["InstanceId", "InstanceType"], ["d1"],[]],
+    "force_flush_interval": 60
+  }
+}
