@@ -11,6 +11,8 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
+	"go.opentelemetry.io/collector/pipeline/xpipeline"
+	servicepipelines "go.opentelemetry.io/collector/service/pipelines"
 
 	"github.com/aws/amazon-cloudwatch-agent/tool/testutil"
 	"github.com/aws/amazon-cloudwatch-agent/translator"
@@ -404,4 +406,16 @@ func TestTranslatorWithAppSignalsConnectors(t *testing.T) {
 	// Verify metrics pipelines reference the connector
 	metricsRoute := pipeline.NewIDWithName(pipeline.SignalMetrics, "application_signals_metrics_route")
 	assert.Contains(t, got.Service.Pipelines, metricsRoute)
+}
+
+func TestHasProfilesPipeline(t *testing.T) {
+	assert.False(t, hasProfilesPipeline(nil))
+	assert.False(t, hasProfilesPipeline(servicepipelines.Config{
+		pipeline.NewIDWithName(pipeline.SignalMetrics, "host"): {},
+		pipeline.NewIDWithName(pipeline.SignalLogs, "emf"):     {},
+	}))
+	assert.True(t, hasProfilesPipeline(servicepipelines.Config{
+		pipeline.NewIDWithName(pipeline.SignalMetrics, "host"):   {},
+		pipeline.NewIDWithName(xpipeline.SignalProfiles, "otlp"): {},
+	}))
 }
