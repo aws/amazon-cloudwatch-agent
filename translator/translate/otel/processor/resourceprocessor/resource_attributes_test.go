@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 )
 
-func TestResourceAttributesProcessor(t *testing.T) {
+func TestNewResourceAttributesTranslator(t *testing.T) {
 	// nil conf -> no processor
 	assert.Nil(t, NewResourceAttributesTranslator(nil))
 
@@ -39,7 +39,7 @@ func TestResourceAttributesProcessor(t *testing.T) {
 	assert.NotNil(t, cfg)
 }
 
-func TestResourceAttributesProcessor_ReservedKeyRejected(t *testing.T) {
+func TestNewResourceAttributesTranslator_ReservedKeyRejected(t *testing.T) {
 	for _, key := range reservedResourceAttributeKeys {
 		t.Run(key, func(t *testing.T) {
 			conf := confmap.NewFromStringMap(map[string]interface{}{
@@ -57,7 +57,7 @@ func TestResourceAttributesProcessor_ReservedKeyRejected(t *testing.T) {
 	}
 }
 
-func TestResourceAttributesProcessor_EmptyKeyRejected(t *testing.T) {
+func TestNewResourceAttributesTranslator_EmptyKeyRejected(t *testing.T) {
 	conf := confmap.NewFromStringMap(map[string]interface{}{
 		"opentelemetry": map[string]interface{}{
 			"resource_attributes": map[string]interface{}{"": "value"},
