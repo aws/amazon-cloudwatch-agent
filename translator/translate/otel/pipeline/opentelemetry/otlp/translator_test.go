@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/pipeline"
+	"go.opentelemetry.io/collector/pipeline/xpipeline"
 
 	otlpreceiver "github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/receiver/otlp"
 )
@@ -38,7 +39,7 @@ func TestNewTranslators(t *testing.T) {
 					},
 				},
 			},
-			want: 3, // metrics, logs, traces
+			want: 4, // metrics, logs, traces, profiles
 		},
 	}
 	for name, tc := range testCases {
@@ -67,7 +68,9 @@ func TestOtlpPipelineTranslator(t *testing.T) {
 	})
 
 	translators := NewTranslators(conf)
-	assert.Equal(t, 3, translators.Len())
+	assert.Equal(t, 4, translators.Len())
+	_, ok := translators.Get(pipeline.NewIDWithName(xpipeline.SignalProfiles, "otlp"))
+	assert.True(t, ok)
 
 	// Verify each signal pipeline
 	signals := []pipeline.Signal{pipeline.SignalMetrics, pipeline.SignalLogs, pipeline.SignalTraces}
