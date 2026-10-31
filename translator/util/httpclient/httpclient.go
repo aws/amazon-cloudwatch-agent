@@ -47,7 +47,9 @@ func (h *HttpClient) Request(endpoint string) (body []byte, err error) {
 		if err != nil {
 			log.Printf("W! retry [%d/%d], unable to get http response from %s, error: %v", i, h.maxRetries, endpoint, err)
 			h.backoffSleep(i)
+			continue
 		}
+		return body, err
 	}
 	return
 }
