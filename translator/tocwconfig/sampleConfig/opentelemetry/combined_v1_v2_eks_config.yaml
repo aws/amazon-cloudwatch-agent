@@ -812,9 +812,6 @@ processors:
                 - from: resource_attribute
                   name: container.id
             - sources:
-                - from: resource_attribute
-                  name: k8s.pod.ip
-            - sources:
                 - from: connection
                   name: ""
         wait_for_metadata: false
