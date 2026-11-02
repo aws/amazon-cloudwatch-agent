@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"go.opentelemetry.io/collector/receiver/xreceiver"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -265,11 +266,22 @@ func exportProfiles(t *testing.T, transport, addr string, payload []byte) {
 	conn, err := clientCfg.ToClientConn(context.Background(), nil, componenttest.NewNopTelemetrySettings())
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, conn.Close()) })
-	request := pprofileotlp.NewExportRequest()
-	require.NoError(t, request.UnmarshalProto(payload))
-	_, err = pprofileotlp.NewGRPCClient(conn).Export(context.Background(), request)
-	require.NoError(t, err)
+	var response []byte
+	require.NoError(t, conn.Invoke(context.Background(), "/opentelemetry.proto.collector.profiles.v1development.ProfilesService/Export", payload, &response, grpc.ForceCodec(rawCodec{})))
 }
+
+// rawCodec sends and receives the wire bytes unchanged, so the gRPC test leg exercises
+// the same captured payload as the HTTP leg instead of a pdata client's re-encoding.
+type rawCodec struct{}
+
+func (rawCodec) Marshal(v any) ([]byte, error) { return v.([]byte), nil }
+
+func (rawCodec) Unmarshal(data []byte, v any) error {
+	*(v.(*[]byte)) = data
+	return nil
+}
+
+func (rawCodec) Name() string { return "proto" }
 
 func assertStr(t *testing.T, attributes pcommon.Map, key, want string) {
 	t.Helper()
