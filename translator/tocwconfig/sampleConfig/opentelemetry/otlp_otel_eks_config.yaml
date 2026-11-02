@@ -177,6 +177,8 @@ processors:
               key: aws.log.stream.name
     awsattributelimit/opentelemetry_metrics:
         max_total_attributes: 150
+    awsattributelimit/opentelemetry_profiles:
+        max_total_attributes: 150
     batch/opentelemetry_logs:
         metadata_cardinality_limit: 1000
         metadata_keys:
@@ -1225,6 +1227,7 @@ service:
                 - k8s_attributes/profiles
                 - transform/set_cluster_name
                 - transform/identity
+                - awsattributelimit/opentelemetry_profiles
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318

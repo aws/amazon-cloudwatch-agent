@@ -17,6 +17,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/awsattributelimit"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourceprocessor"
@@ -68,6 +69,11 @@ func (t *profilesPipelineTranslator) Translate(conf *confmap.Conf) (*common.Comp
 		}
 	}
 	processors.Set(transformprocessor.NewTranslatorWithName(common.Identity))
+	// Cap attributes at the CloudWatch OTLP limit (150) after enrichment, as a
+	// safety net: an over-cap profile is delivered truncated instead of rejected
+	// whole by the backend. Runs last, mirroring the metrics pipeline position;
+	// profiles have no batch processor, so there is nothing after it.
+	processors.Set(awsattributelimit.NewTranslator(common.WithName("opentelemetry_profiles")))
 
 	return &common.ComponentTranslators{
 		Receivers:  otlpreceiver.NewTranslators(conf, pipelineName, otlpKey),

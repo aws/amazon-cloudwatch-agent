@@ -533,6 +533,8 @@ processors:
               key: aws.log.stream.name
     awsattributelimit/opentelemetry_metrics:
         max_total_attributes: 150
+    awsattributelimit/opentelemetry_profiles:
+        max_total_attributes: 150
     awsentity/resource:
         entity_type: Resource
         platform: ec2
@@ -2235,6 +2237,7 @@ service:
                 - transform/otlp_scope
                 - resourcedetection/opentelemetry
                 - transform/identity
+                - awsattributelimit/opentelemetry_profiles
             receivers:
                 - otlp/grpc_127_0_0_1_4327
                 - otlp/http_127_0_0_1_4328

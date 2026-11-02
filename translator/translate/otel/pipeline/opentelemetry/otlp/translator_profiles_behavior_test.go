@@ -5,10 +5,12 @@ package otlp
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -314,4 +316,64 @@ func setMode(t *testing.T, mode string) {
 		translatorcontext.CurrentContext().SetMode(mode)
 	}
 	t.Cleanup(func() { translatorcontext.CurrentContext().SetMode(previous) })
+}
+
+// TestProfilesAttributeLimitBehavior drives the attribute-limit processor built
+// from the agent's translated profiles config and asserts that an over-cap
+// profile (160 attributes across resource + profile) leaves the pipeline
+// trimmed to exactly the 150 limit, with the service.name identity preserved.
+func TestProfilesAttributeLimitBehavior(t *testing.T) {
+	t.Cleanup(otlpreceiver.ClearConfigCache)
+	resetGlobalConfig(t, "us-east-1")
+	setMode(t, config.ModeEC2)
+
+	conf := confmap.NewFromStringMap(otlpSectionWithClusterNameConf)
+	got, err := (&profilesPipelineTranslator{}).Translate(conf)
+	require.NoError(t, err)
+
+	profiles := pprofile.NewProfiles()
+	rp := profiles.ResourceProfiles().AppendEmpty()
+	rp.Resource().Attributes().PutStr(serviceNameAttribute, "svc") // protected identity
+	dic := profiles.Dictionary()
+	prof := rp.ScopeProfiles().AppendEmpty().Profiles().AppendEmpty()
+	const profileAttrs = 159 // 1 resource + 159 profile = 160 total, 10 over the 150 cap
+	for i := 0; i < profileAttrs; i++ {
+		addDictProfileAttr(dic, prof, fmt.Sprintf("leaf.key%03d", i), "v")
+	}
+	require.Equal(t, 1+profileAttrs, rp.Resource().Attributes().Len()+prof.AttributeIndices().Len())
+
+	loaded := loadProcessorsAsAgent(t, got, conf)
+	sink := new(consumertest.ProfilesSink)
+	proc := newProfilesProcessor(t, awsattributelimitprocessor.NewFactory(), loaded, "awsattributelimit", "opentelemetry_profiles", sink)
+	require.NoError(t, proc.ConsumeProfiles(context.Background(), profiles))
+
+	require.Len(t, sink.AllProfiles(), 1)
+	outRP := sink.AllProfiles()[0].ResourceProfiles().At(0)
+	outProf := outRP.ScopeProfiles().At(0).Profiles().At(0)
+	assert.Equal(t, 150, outRP.Resource().Attributes().Len()+outProf.AttributeIndices().Len(),
+		"over-cap profile must be delivered trimmed to exactly the limit")
+	_, ok := outRP.Resource().Attributes().Get(serviceNameAttribute)
+	assert.True(t, ok, "service.name identity must never be dropped")
+}
+
+// addDictProfileAttr adds a profile-level attribute through the profiles
+// dictionary: it interns the key in the string table, appends a KeyValueAndUnit
+// to the shared attribute table, and references it from the profile.
+func addDictProfileAttr(dic pprofile.ProfilesDictionary, prof pprofile.Profile, key, val string) {
+	st := dic.StringTable()
+	keyIdx := -1
+	for i := 0; i < st.Len(); i++ {
+		if st.At(i) == key {
+			keyIdx = i
+			break
+		}
+	}
+	if keyIdx == -1 {
+		st.Append(key)
+		keyIdx = st.Len() - 1
+	}
+	kv := dic.AttributeTable().AppendEmpty()
+	kv.SetKeyStrindex(int32(keyIdx)) //nolint:gosec // test builds a small, bounded dictionary; index fits int32
+	kv.Value().SetStr(val)
+	prof.AttributeIndices().Append(int32(dic.AttributeTable().Len() - 1)) //nolint:gosec // test builds a small, bounded dictionary; index fits int32
 }

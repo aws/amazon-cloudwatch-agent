@@ -195,6 +195,8 @@ processors:
         timeout: 30s
     awsattributelimit/opentelemetry_metrics:
         max_total_attributes: 150
+    awsattributelimit/opentelemetry_profiles:
+        max_total_attributes: 150
     batch/opentelemetry_metrics:
         metadata_cardinality_limit: 1000
         send_batch_max_size: 1000
@@ -1044,6 +1046,7 @@ service:
                 - transform/otlp_scope
                 - resourcedetection/opentelemetry
                 - transform/identity
+                - awsattributelimit/opentelemetry_profiles
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318

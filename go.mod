@@ -46,7 +46,7 @@ replace github.com/amazon-contributing/opentelemetry-collector-contrib/override/
 
 replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributestocontextprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260928123001-54b8ee6518df
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260928123001-54b8ee6518df
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsattributelimitprocessor => github.com/OisinMcMenamin/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20261030172730-847ab82e8c42
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260928123001-54b8ee6518df
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor => github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20260928123001-54b8ee6518df
 )
