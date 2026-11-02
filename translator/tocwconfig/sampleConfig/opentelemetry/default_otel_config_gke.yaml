@@ -225,6 +225,8 @@ processors:
             - k8s.node.label.alpha.eksctl.io/
     awsattributelimit/opentelemetry_metrics:
         max_total_attributes: 150
+    awsattributelimit/opentelemetry_profiles:
+        max_total_attributes: 150
     awsdevicepodcorrelation/cw_k8s_ci_v0:
         device_types:
             - device_id_attribute: neuroncore
@@ -1962,6 +1964,7 @@ service:
                 - k8s_attributes/profiles
                 - transform/set_cluster_name
                 - transform/identity
+                - awsattributelimit/opentelemetry_profiles
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318

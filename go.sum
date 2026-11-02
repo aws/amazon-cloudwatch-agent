@@ -161,6 +161,8 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/Microsoft/hcsshim v0.13.0 h1:/BcXOiS6Qi7N9XqUcv27vkIuVOkBEcWstd2pMlWSeaA=
 github.com/Microsoft/hcsshim v0.13.0/go.mod h1:9KWJ/8DgU+QzYGupX4tzMhRQE8h6w90lH6HAaclpEok=
+github.com/OisinMcMenamin/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20261102151307-b3b9be37f6e4 h1:b00VhVyKn+BqiDRQs274ndUlte5ze819OdPw44OQJqY=
+github.com/OisinMcMenamin/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20261102151307-b3b9be37f6e4/go.mod h1:knZZPmTMhXkk1Od1Il9pdNn6sR5NsOlVEUVHY/dtMSo=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/sarama v1.37.2 h1:LoBbU0yJPte0cE5TZCGdlzZRmMgMtZU/XgnUKZg9Cv4=
@@ -242,8 +244,6 @@ github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0
 github.com/amazon-contributing/opentelemetry-collector-contrib/pkg/stanza v0.0.0-20260928123001-54b8ee6518df/go.mod h1:8oXRIBSggiKdi+WFeBwbil2VybfOGNnrcxxS4kxuvuw=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260928123001-54b8ee6518df h1:UL7r60GownbliqiBg0gKGU9w184wJRjM7++wT7JtnBY=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/attributestocontextprocessor v0.0.0-20260928123001-54b8ee6518df/go.mod h1:E+PmgeASy3qNX1QRqcPDypclu8EIGqd7QY9EjPkVFKo=
-github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260928123001-54b8ee6518df h1:IJfhSQ623DM9t8w2kYnk4rlenXWKVFNGnD3CiFoPoh8=
-github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsattributelimitprocessor v0.0.0-20260928123001-54b8ee6518df/go.mod h1:8O+zvPDXJ1Kg7nllNnhRqNnQTyKEPCQhoS64sKfWXgM=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260928123001-54b8ee6518df h1:o/Xbbnpt34Po4RwwnL6ty+Anf5a2xiqZLMQDY9zwYz8=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/awsdevicepodcorrelationprocessor v0.0.0-20260928123001-54b8ee6518df/go.mod h1:ir4CSjRg9kdUfY/DuFbI/g8T6WbQvCUgx6hx6XW+DTo=
 github.com/amazon-contributing/opentelemetry-collector-contrib/processor/resourcedetectionprocessor v0.0.0-20260928123001-54b8ee6518df h1:qM0MNbVbYozWaSA8guWzgCnlmD/MuOJGQGoBPXjYDPQ=
