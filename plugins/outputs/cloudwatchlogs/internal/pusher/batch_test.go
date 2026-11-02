@@ -4,13 +4,18 @@
 package pusher
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
+	smithyjson "github.com/aws/smithy-go/encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/state"
 	"github.com/aws/amazon-cloudwatch-agent/logs"
@@ -350,17 +355,56 @@ func TestEventValidation_1MB(t *testing.T) {
 	event := newStatefulLogEvent(time.Now(), largeMessage, nil, nil)
 	assert.Equal(t, largeMessage, event.message)
 	assert.Equal(t, maxMessageSize+perEventHeaderBytes, event.eventBytes)
+	assert.False(t, event.truncated)
 }
 
 func TestEventValidation_Over1MB(t *testing.T) {
-	// Test event over 1MB - should be truncated with truncation suffix
+	// Test event over 1MB - split into events within the limit, with nothing dropped and no suffix
 	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
 	oversizeMessage := strings.Repeat("a", maxEventPayloadBytes+1000)
 
+	events := assertSplitsLosslessly(t, oversizeMessage)
+	require.Len(t, events, 2)
+	assert.Equal(t, oversizeMessage[:maxMessageSize], events[0].message)
+	assert.Equal(t, maxMessageSize+perEventHeaderBytes, events[0].eventBytes)
+	assert.Equal(t, oversizeMessage[maxMessageSize:], events[1].message)
+
+	// The unsplit path, used for EMF messages, still truncates with the truncation suffix.
 	event := newStatefulLogEvent(time.Now(), oversizeMessage, nil, nil)
 	// The total length should still be maxMessageSize
 	assert.Equal(t, maxMessageSize, len(event.message))
 	assert.Equal(t, oversizeMessage[:maxMessageSize-len(defaultTruncationSuffix)]+defaultTruncationSuffix, event.message)
+	assert.True(t, event.truncated)
+}
+
+// assertSplitsLosslessly checks the path a message that is not EMF takes (newStatefulLogEvents): every event is
+// within the per-event limit and sized by its counted size, nothing is truncated, the events concatenate to the
+// message, and the message is split exactly when its counted size is over the limit. It returns the events.
+func assertSplitsLosslessly(t *testing.T, message string) []*logEvent {
+	t.Helper()
+	require.False(t, IsEMFMessage(message))
+	events := flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), message, nil, nil))
+	var reassembled strings.Builder
+	for i, event := range events {
+		size := utf8EncodedLength(event.message)
+		assert.LessOrEqual(t, size, maxEventMessageBytes, "event %d", i)
+		assert.Equal(t, size+perEventHeaderBytes, event.eventBytes, "event %d", i)
+		assert.False(t, event.truncated, "event %d", i)
+		reassembled.WriteString(event.message)
+	}
+	assert.True(t, reassembled.String() == message, "the events concatenate to the message")
+	assert.Equal(t, utf8EncodedLength(message) > maxEventMessageBytes, len(events) > 1)
+	return events
+}
+
+// flattenStatefulLogEvents reduces the (single, split) return of newStatefulLogEvents to a flat []*logEvent so
+// existing tests can keep walking over events without caring which path was taken. Test-only: production callers
+// (converter.convert / queue) read the two values directly to skip the slice allocation on the fast path.
+func flattenStatefulLogEvents(single *logEvent, split []*logEvent) []*logEvent {
+	if single != nil {
+		return []*logEvent{single}
+	}
+	return split
 }
 
 func TestEventValidation_Between256KBand1MB(t *testing.T) {
@@ -375,9 +419,10 @@ func TestValidateAndTruncateMessage(t *testing.T) {
 	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
 
 	tests := []struct {
-		name           string
-		input          string
-		expectedOutput string
+		name              string
+		input             string
+		expectedOutput    string
+		expectedTruncated bool
 	}{
 		{
 			name:           "Small message",
@@ -390,16 +435,527 @@ func TestValidateAndTruncateMessage(t *testing.T) {
 			expectedOutput: strings.Repeat("a", maxMessageSize),
 		},
 		{
-			name:           "Over limit",
-			input:          strings.Repeat("a", maxMessageSize+1000),
-			expectedOutput: strings.Repeat("a", maxMessageSize-len(defaultTruncationSuffix)) + defaultTruncationSuffix,
+			name:              "Over limit",
+			input:             strings.Repeat("a", maxMessageSize+1000),
+			expectedOutput:    strings.Repeat("a", maxMessageSize-len(defaultTruncationSuffix)) + defaultTruncationSuffix,
+			expectedTruncated: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := validateAndTruncateMessage(tt.input)
+			// The unsplit (EMF) path truncates a message over the limit.
+			result, _, truncated := validateAndTruncateMessage(tt.input)
 			assert.Equal(t, tt.expectedOutput, result)
+			assert.Equal(t, tt.expectedTruncated, truncated)
+			// Any other message over the limit is split instead, with nothing dropped.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, tt.expectedTruncated, len(events) > 1)
 		})
+	}
+}
+
+// TestValidateAndTruncateMessage_Truncated checks that a message is reported as truncated exactly when its counted
+// size is over the limit, whatever its raw length, and that the size returned is that of the truncated message.
+func TestValidateAndTruncateMessage_Truncated(t *testing.T) {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	// Fewer raw bytes than the limit, but counted as invalidUTF8ByteSize bytes each, so over the limit.
+	invalidUnderRawLimit := string(bytes.Repeat([]byte{0xff}, maxMessageSize/invalidUTF8ByteSize+1))
+	require.Less(t, len(invalidUnderRawLimit), maxMessageSize)
+	require.Greater(t, utf8EncodedLength(invalidUnderRawLimit), maxMessageSize)
+
+	tests := []struct {
+		name              string
+		input             string
+		expectedTruncated bool
+	}{
+		{name: "ASCII exactly at limit", input: strings.Repeat("a", maxMessageSize)},
+		{name: "ASCII over limit", input: strings.Repeat("a", maxMessageSize+1), expectedTruncated: true},
+		{name: "Multi-byte UTF-8 over limit", input: strings.Repeat("日", maxMessageSize/len("日")+1), expectedTruncated: true},
+		{name: "Invalid UTF-8 under raw limit but counted over limit", input: invalidUnderRawLimit, expectedTruncated: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, size, truncated := validateAndTruncateMessage(tt.input)
+			assert.Equal(t, tt.expectedTruncated, truncated)
+			assert.Equal(t, utf8EncodedLength(result), size)
+			assert.LessOrEqual(t, size, maxMessageSize)
+			if tt.expectedTruncated {
+				assert.True(t, strings.HasSuffix(result, defaultTruncationSuffix))
+				assert.Greater(t, utf8EncodedLength(tt.input), size)
+			} else {
+				assert.Equal(t, tt.input, result)
+				assert.Equal(t, maxMessageSize, size)
+			}
+
+			event := newLogEvent(time.Now(), tt.input, nil)
+			assert.Equal(t, tt.expectedTruncated, event.truncated)
+			assert.Equal(t, size+perEventHeaderBytes, event.eventBytes)
+
+			// A message that is not EMF is split rather than truncated: it is over the limit, and so split, exactly
+			// when the unsplit path truncates it, whatever its raw length.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, tt.expectedTruncated, len(events) > 1)
+		})
+	}
+}
+
+// serviceEventOverheadBytes is the number of bytes the service counts for each log event in addition to its
+// message, per the PutLogEvents API reference.
+const serviceEventOverheadBytes = 26
+
+// decodeSerializedMessage returns the message as the service receives it: the message is encoded with the JSON
+// encoder the SDK uses to serialize PutLogEvents requests, then decoded.
+func decodeSerializedMessage(t *testing.T, message string) string {
+	t.Helper()
+	encoder := smithyjson.NewEncoder()
+	encoder.Value.String(message)
+	var decoded string
+	require.NoError(t, json.Unmarshal(encoder.Bytes(), &decoded))
+	return decoded
+}
+
+// serviceCountedSize returns the size of the events as counted by the service: the length in UTF-8 of each decoded
+// message plus serviceEventOverheadBytes for each event.
+func serviceCountedSize(t *testing.T, events []types.InputLogEvent) int {
+	t.Helper()
+	size := 0
+	for _, event := range events {
+		size += len(decodeSerializedMessage(t, *event.Message)) + serviceEventOverheadBytes
+	}
+	return size
+}
+
+// utf8EncodedLengthTestCases pairs messages with the size the service counts for them.
+var utf8EncodedLengthTestCases = []struct {
+	name     string
+	message  string
+	expected int
+}{
+	{name: "Empty", message: "", expected: 0},
+	{name: "ASCII", message: "hello world", expected: 11},
+	// JSON escaping is not counted: \", \\, \n, \t and \u001b each count as 1 byte.
+	{name: "CharactersEscapedInJSON", message: "\"\\\n\t\x1b", expected: 5},
+	// Escaped by the encoder as \u0000, which decodes back to 1 byte.
+	{name: "NUL", message: "\x00", expected: 1},
+	{name: "TwoByteUTF8", message: "héllo", expected: 6},
+	{name: "ThreeByteUTF8", message: "日本語", expected: 9},
+	{name: "FourByteUTF8", message: "😀", expected: 4},
+	// Escaped by the encoder as \u2028, which decodes back to the same 3 bytes.
+	{name: "LineSeparator", message: "\u2028", expected: 3},
+	// A valid U+FFFD in the message is not inflated.
+	{name: "ValidReplacementCharacter", message: "\uFFFD", expected: 3},
+	// Each byte that is not valid UTF-8 is decoded by the service as U+FFFD, 3 bytes.
+	{name: "InvalidByte", message: "\xff", expected: 3},
+	{name: "Latin1", message: "caf\xe9", expected: 6},
+	{name: "LoneContinuationByte", message: "\x80", expected: 3},
+	{name: "TruncatedMultiByteSequence", message: "\xe6\x97", expected: 6},
+	{name: "OverlongEncoding", message: "\xc0\xaf", expected: 6},
+	{name: "EncodedSurrogate", message: "\xed\xa0\x80", expected: 9},
+	// Above U+10FFFF, so none of the 4 bytes starts a valid sequence and each counts as 3.
+	{name: "AboveMaxRune", message: "\xf4\x90\x80\x80", expected: 12},
+	{name: "MixedValidAndInvalid", message: "a\xffé\xe6\x97日", expected: 15},
+}
+
+func TestUTF8EncodedLength(t *testing.T) {
+	for _, tc := range utf8EncodedLengthTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := utf8EncodedLength(tc.message)
+			assert.Equal(t, tc.expected, got)
+			if utf8.ValidString(tc.message) {
+				assert.Equal(t, len(tc.message), got, "valid UTF-8 is counted by its length in bytes")
+			} else {
+				assert.Greater(t, got, len(tc.message), "invalid UTF-8 is counted as more than its length in bytes")
+			}
+		})
+	}
+
+	t.Run("CountsBytesNotRunes", func(t *testing.T) {
+		for _, message := range []string{"héllo", "日本語", "😀"} {
+			assert.Equal(t, len(message), utf8EncodedLength(message))
+			assert.NotEqual(t, utf8.RuneCountInString(message), utf8EncodedLength(message))
+		}
+	})
+}
+
+// TestUTF8EncodedLength_MatchesSerializedMessage checks that utf8EncodedLength equals the length in UTF-8 of the
+// message the service decodes from a request serialized by the SDK.
+func TestUTF8EncodedLength_MatchesSerializedMessage(t *testing.T) {
+	for _, tc := range utf8EncodedLengthTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// json.Unmarshal would itself replace raw invalid UTF-8 with U+FFFD, so also check the bytes the encoder
+			// writes: they are valid UTF-8, and invalid UTF-8 in the message is escaped as \ufffd.
+			enc := smithyjson.NewEncoder()
+			enc.Value.String(tc.message)
+			assert.True(t, utf8.Valid(enc.Bytes()))
+			if !utf8.ValidString(tc.message) {
+				assert.Contains(t, string(enc.Bytes()), `\ufffd`)
+			}
+			assert.Equal(t, len(decodeSerializedMessage(t, tc.message)), utf8EncodedLength(tc.message))
+		})
+	}
+}
+
+func TestLogEvent_EventBytes(t *testing.T) {
+	t.Run("InvalidUTF8", func(t *testing.T) {
+		const invalidBytes = 1000
+		// ISO-8859-1 encoded 'é', which is not valid UTF-8.
+		message := strings.Repeat("\xe9", invalidBytes)
+
+		event := newLogEvent(time.Now(), message, nil)
+		assert.Equal(t, message, event.message)
+		assert.Equal(t, invalidBytes*utf8.RuneLen(utf8.RuneError)+perEventHeaderBytes, event.eventBytes)
+
+		// Sizing by the raw length, as before, undercounts by 2 bytes per invalid byte.
+		rawEventBytes := len(message) + perEventHeaderBytes
+		assert.Equal(t, invalidBytes+perEventHeaderBytes, rawEventBytes)
+		assert.Equal(t, 2*invalidBytes, event.eventBytes-rawEventBytes)
+	})
+
+	t.Run("ValidMultiByteUTF8", func(t *testing.T) {
+		message := strings.Repeat("héllo 日本語 😀 ", 100)
+
+		event := newLogEvent(time.Now(), message, nil)
+		assert.Equal(t, message, event.message)
+		assert.Equal(t, len(message)+perEventHeaderBytes, event.eventBytes)
+	})
+}
+
+// TestLogEventBatch_HasSpaceWithInvalidUTF8 fills batches the way the queue does and checks the size of the
+// resulting request as the service counts it.
+func TestLogEventBatch_HasSpaceWithInvalidUTF8(t *testing.T) {
+	const validBytes, invalidBytes = 600, 400
+	// A message where some of the bytes are not valid UTF-8, e.g. ISO-8859-1 encoded text.
+	message := strings.Repeat("a", validBytes) + strings.Repeat("\xe9", invalidBytes)
+
+	event := newLogEvent(time.Now(), message, nil)
+	require.Equal(t, validBytes+invalidBytes*utf8.RuneLen(utf8.RuneError)+perEventHeaderBytes, event.eventBytes)
+	// The same event sized by its raw length, as before.
+	rawSizedEvent := &logEvent{timestamp: event.timestamp, message: message, eventBytes: len(message) + perEventHeaderBytes}
+
+	// Append events until the batch has no space for the next one.
+	fill := func(e *logEvent) *logEventBatch {
+		batch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+		for batch.hasSpace(e.eventBytes) {
+			batch.append(e)
+		}
+		return batch
+	}
+	batch := fill(event)
+	rawSizedBatch := fill(rawSizedEvent)
+	require.Len(t, batch.events, reqSizeLimit/event.eventBytes)
+	require.Len(t, rawSizedBatch.events, reqSizeLimit/rawSizedEvent.eventBytes)
+	require.Greater(t, len(rawSizedBatch.events), len(batch.events))
+
+	// The full batch has no space for another event, while raw-length sizing reported space at the same point.
+	assert.False(t, batch.hasSpace(event.eventBytes))
+	partialRawSizedBatch := newLogEventBatch(Target{Group: "G", Stream: "S"}, nil)
+	for range batch.events {
+		partialRawSizedBatch.append(rawSizedEvent)
+	}
+	assert.True(t, partialRawSizedBatch.hasSpace(rawSizedEvent.eventBytes))
+
+	// Only the batch sized by the decoded UTF-8 length is within the limit enforced by the service.
+	assert.LessOrEqual(t, serviceCountedSize(t, batch.events), reqSizeLimit)
+	assert.Greater(t, serviceCountedSize(t, rawSizedBatch.events), reqSizeLimit)
+}
+
+func TestValidateAndTruncateMessage_UTF8(t *testing.T) {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	// The space left for the kept part of a truncated message.
+	budget := maxMessageSize - len(defaultTruncationSuffix)
+	replacementCharBytes := utf8.RuneLen(utf8.RuneError)
+	// The longest run of invalid bytes that fits leaves maxMessageSize%replacementCharBytes bytes of the limit, which
+	// "aa" fills exactly. The run plus "aa" is longer than maxMessageSize/invalidUTF8ByteSize bytes, and its counted
+	// size is compared to the limit.
+	invalidRun := strings.Repeat("\xe9", maxMessageSize/replacementCharBytes)
+	require.Equal(t, maxMessageSize, len(invalidRun)*replacementCharBytes+len("aa"))
+
+	tests := []struct {
+		name           string
+		input          string
+		expectedOutput string
+		// Whether the kept part of the output must be valid UTF-8.
+		validOutput bool
+	}{
+		{
+			name:           "Invalid UTF-8 at limit",
+			input:          strings.Repeat("\xe9", maxMessageSize/replacementCharBytes),
+			expectedOutput: strings.Repeat("\xe9", maxMessageSize/replacementCharBytes),
+		},
+		{
+			// Counted as exactly maxMessageSize bytes, see invalidRun.
+			name:           "Invalid UTF-8 with ASCII tail exactly at limit",
+			input:          invalidRun + "aa",
+			expectedOutput: invalidRun + "aa",
+		},
+		{
+			// Counted as maxMessageSize+1 bytes.
+			name:           "Invalid UTF-8 with ASCII tail one byte over limit",
+			input:          invalidRun + "aaa",
+			expectedOutput: strings.Repeat("\xe9", budget/replacementCharBytes) + defaultTruncationSuffix,
+		},
+		{
+			name:           "Invalid UTF-8 over limit",
+			input:          strings.Repeat("\xe9", maxMessageSize/replacementCharBytes+1),
+			expectedOutput: strings.Repeat("\xe9", budget/replacementCharBytes) + defaultTruncationSuffix,
+		},
+		{
+			// Previously passed through untruncated because len(input) is within the limit.
+			name:           "Invalid UTF-8 at raw length limit",
+			input:          strings.Repeat("\xe9", maxMessageSize),
+			expectedOutput: strings.Repeat("\xe9", budget/replacementCharBytes) + defaultTruncationSuffix,
+		},
+		{
+			name:           "Invalid UTF-8 over raw length limit",
+			input:          strings.Repeat("\xe9", maxEventPayloadBytes+1000),
+			expectedOutput: strings.Repeat("\xe9", budget/replacementCharBytes) + defaultTruncationSuffix,
+		},
+		{
+			// Previously passed through untruncated because len(input) is exactly at the limit.
+			name:           "Valid prefix with invalid UTF-8 tail",
+			input:          strings.Repeat("a", maxMessageSize-10) + strings.Repeat("\xe9", 10),
+			expectedOutput: strings.Repeat("a", budget) + defaultTruncationSuffix,
+			validOutput:    true,
+		},
+		{
+			// The invalid byte at the cut point would count as more than the 1 byte of budget left, so it is dropped.
+			name:           "Invalid UTF-8 byte at cut point",
+			input:          strings.Repeat("a", budget-1) + strings.Repeat("\xe9", 10),
+			expectedOutput: strings.Repeat("a", budget-1) + defaultTruncationSuffix,
+			validOutput:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, size, truncated := validateAndTruncateMessage(tt.input)
+			assert.Equal(t, tt.expectedOutput, result)
+			assert.Equal(t, utf8EncodedLength(result), size)
+			assert.LessOrEqual(t, utf8EncodedLength(result), maxMessageSize)
+			assert.Equal(t, result != tt.input, truncated)
+			if result != tt.input {
+				require.True(t, strings.HasSuffix(result, defaultTruncationSuffix))
+				kept := strings.TrimSuffix(result, defaultTruncationSuffix)
+				assert.True(t, strings.HasPrefix(tt.input, kept))
+				if tt.validOutput {
+					assert.True(t, utf8.ValidString(kept))
+				}
+			}
+
+			event := newLogEvent(time.Now(), tt.input, nil)
+			assert.Equal(t, result, event.message)
+			assert.Equal(t, size+perEventHeaderBytes, event.eventBytes)
+			assert.Equal(t, truncated, event.truncated)
+			assert.LessOrEqual(t, event.eventBytes, maxEventPayloadBytes)
+
+			// A message that is not EMF is split where the unsplit path truncates it, and nothing is dropped.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, truncated, len(events) > 1)
+			if len(events) > 1 {
+				// The first event holds the longest prefix that fits, cut on a rune boundary.
+				kept, keptSize := truncateToUTF8EncodedLength(tt.input, maxMessageSize)
+				assert.Equal(t, kept, events[0].message)
+				assert.Equal(t, keptSize+perEventHeaderBytes, events[0].eventBytes)
+			}
+		})
+	}
+
+	t.Run("Valid multi-byte UTF-8 is cut on rune boundary", func(t *testing.T) {
+		runeBytes := len("日")
+		// Pad with ASCII so that cutting at the byte budget would split a rune after its first byte.
+		input := strings.Repeat("a", (budget-1)%runeBytes) + strings.Repeat("日", maxMessageSize/runeBytes+1)
+		require.Greater(t, len(input), maxMessageSize)
+		require.False(t, utf8.ValidString(input[:budget]), "cutting at the byte budget would split a rune")
+
+		result, size, truncated := validateAndTruncateMessage(input)
+		assert.True(t, truncated)
+		require.True(t, strings.HasSuffix(result, defaultTruncationSuffix))
+		kept := strings.TrimSuffix(result, defaultTruncationSuffix)
+		assert.True(t, utf8.ValidString(kept))
+		assert.Equal(t, input[:budget-1], kept)
+		assert.Equal(t, len(result), size)
+		assert.LessOrEqual(t, utf8EncodedLength(result), maxMessageSize)
+
+		// Split instead of truncated, each event is valid UTF-8: no cut splits a rune.
+		events := assertSplitsLosslessly(t, input)
+		require.Len(t, events, 2)
+		for _, e := range events {
+			assert.True(t, utf8.ValidString(e.message))
+		}
+		// The first event is the ASCII padding plus as many whole runes as fit.
+		pad := (budget - 1) % runeBytes
+		assert.Equal(t, input[:pad+(maxMessageSize-pad)/runeBytes*runeBytes], events[0].message)
+	})
+}
+
+// TestValidateAndTruncateMessage_LengthBoundary covers raw lengths around maxMessageSize/invalidUTF8ByteSize, below
+// which no message can be counted as more than maxMessageSize bytes. Measuring the message alone decides whether it
+// fits, so these messages need no length-based shortcut.
+func TestValidateAndTruncateMessage_LengthBoundary(t *testing.T) {
+	maxMessageSize := maxEventPayloadBytes - perEventHeaderBytes
+	n := maxMessageSize / invalidUTF8ByteSize
+	require.Zero(t, n%6, "n must be a whole number of 2-byte and 3-byte runes")
+
+	tests := []struct {
+		name          string
+		input         string
+		expectedSize  int
+		wantTruncated bool
+	}{
+		{
+			name:         "Invalid UTF-8 at boundary",
+			input:        string(bytes.Repeat([]byte{0xff}, n)),
+			expectedSize: invalidUTF8ByteSize * n,
+		},
+		{
+			name:          "Invalid UTF-8 one byte over boundary",
+			input:         string(bytes.Repeat([]byte{0xff}, n+1)),
+			wantTruncated: true,
+		},
+		{
+			name:         "ASCII at boundary",
+			input:        strings.Repeat("a", n),
+			expectedSize: n,
+		},
+		{
+			name:         "ASCII one byte over boundary",
+			input:        strings.Repeat("a", n+1),
+			expectedSize: n + 1,
+		},
+		{
+			name:         "2-byte UTF-8 at boundary",
+			input:        strings.Repeat("é", n/2),
+			expectedSize: n,
+		},
+		{
+			name:         "2-byte UTF-8 one byte over boundary",
+			input:        strings.Repeat("é", n/2) + "a",
+			expectedSize: n + 1,
+		},
+		{
+			name:         "3-byte UTF-8 at boundary",
+			input:        strings.Repeat("日", n/3),
+			expectedSize: n,
+		},
+		{
+			name:         "3-byte UTF-8 one byte over boundary",
+			input:        strings.Repeat("日", n/3) + "a",
+			expectedSize: n + 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// A message that is not EMF is split exactly when the unsplit path truncates it.
+			events := assertSplitsLosslessly(t, tt.input)
+			assert.Equal(t, tt.wantTruncated, len(events) > 1)
+
+			result, size, truncated := validateAndTruncateMessage(tt.input)
+			assert.Equal(t, tt.wantTruncated, truncated)
+			if tt.wantTruncated {
+				assert.True(t, strings.HasSuffix(result, defaultTruncationSuffix))
+				assert.NotEqual(t, tt.input, result)
+				assert.LessOrEqual(t, size, maxMessageSize)
+				return
+			}
+			assert.Equal(t, tt.input, result)
+			assert.Equal(t, tt.expectedSize, size)
+		})
+	}
+}
+
+// TestTruncateToUTF8EncodedLength checks the prefix and size returned for every limit up to the counted size of each
+// message, including limits of 0 or less, which keep nothing.
+func TestTruncateToUTF8EncodedLength(t *testing.T) {
+	for _, tc := range utf8EncodedLengthTestCases {
+		t.Run(tc.name, func(t *testing.T) {
+			for limit := -1; limit <= tc.expected; limit++ {
+				prefix, size := truncateToUTF8EncodedLength(tc.message, limit)
+				require.True(t, strings.HasPrefix(tc.message, prefix), "limit %d", limit)
+				assert.Equal(t, utf8EncodedLength(prefix), size, "limit %d", limit)
+				if limit <= 0 {
+					assert.Empty(t, prefix, "limit %d", limit)
+					continue
+				}
+				assert.LessOrEqual(t, size, limit, "limit %d", limit)
+				if prefix == tc.message {
+					assert.Equal(t, tc.expected, size)
+					continue
+				}
+				// The prefix is the longest that fits: adding the next rune would exceed the limit.
+				_, next := decodeRuneSize(tc.message[len(prefix):])
+				assert.Greater(t, size+next, limit, "limit %d", limit)
+			}
+		})
+	}
+}
+
+// BenchmarkUTF8EncodedLength exercises utf8EncodedLength on 1 MiB of ASCII with a single invalid byte placed
+// near the start and near the end. It exists to catch the slow-fallback regression called out in review comment
+// C2: the fallback used to restart at byte 0 after utf8.ValidString returned false, re-reading the ASCII prefix
+// one byte at a time via DecodeRuneInString. It now resumes from the first invalid offset and skips ASCII 8 bytes
+// at a time, which cuts both scenarios to a small factor of the all-valid fast path (see "AllValid").
+func BenchmarkUTF8EncodedLength(b *testing.B) {
+	const n = 1 << 20
+	allValid := strings.Repeat("a", n)
+	// MultibyteValid: ~1 MiB of valid 2/3/4-byte runes ("é" + "日" + "😀" = 9 bytes per cycle). The fast path
+	// should still return in one utf8.ValidString pass; this guards against a regression if the fast path is
+	// ever replaced with a pure-Go scan that lacks SIMD acceleration.
+	multibyteValid := strings.Repeat("é日😀", n/9)
+	invalidNearStart := []byte(strings.Repeat("a", n))
+	invalidNearStart[16] = 0xC0 // not a valid UTF-8 lead byte
+	invalidNearEnd := []byte(strings.Repeat("a", n))
+	invalidNearEnd[n-16] = 0xC0
+	// DenseInvalid: an invalid byte every 64 ASCII bytes forces the fallback to re-enter the ASCII skip 16384 times
+	// over 1 MiB, so a word-at-a-time skip has to amortise its own setup against short runs.
+	denseInvalid := []byte(strings.Repeat("a", n))
+	for k := 63; k < n; k += 64 {
+		denseInvalid[k] = 0xC0
+	}
+	// MultibyteWithOneInvalid: a 1 MiB stream of mostly valid multi-byte runes with a single invalid byte planted
+	// near the end, so the fallback walks almost entirely through decodeRuneSize rather than the ASCII skip. Checks
+	// the SWAR change does not regress non-ASCII-heavy input.
+	multibyteWithOneInvalid := []byte(strings.Repeat("日", n/3))
+	multibyteWithOneInvalid[len(multibyteWithOneInvalid)-5] = 0xC0
+
+	cases := []struct {
+		name    string
+		message string
+	}{
+		{"AllValid", allValid},
+		{"MultibyteValid", multibyteValid},
+		{"InvalidNearStart", string(invalidNearStart)},
+		{"InvalidNearEnd", string(invalidNearEnd)},
+		{"DenseInvalid", string(denseInvalid)},
+		{"MultibyteWithOneInvalid", string(multibyteWithOneInvalid)},
+	}
+	for _, tc := range cases {
+		tc := tc
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(int64(len(tc.message)))
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = utf8EncodedLength(tc.message)
+			}
+		})
+	}
+}
+
+// BenchmarkSplitMessage exercises splitMessage on 7 × maxEventMessageBytes of valid ASCII. The current loop calls
+// truncateToUTF8EncodedLength for every cut, each of which runs utf8.ValidString on the remaining tail, so the
+// cost grows as O(chunks × n). The optimisation called out in review comment C3 uses the valid-UTF-8 proof
+// (size == len(message)) from the caller to turn each cut into a bounded rune-boundary backup, dropping the loop
+// to O(chunks).
+func BenchmarkSplitMessage(b *testing.B) {
+	message := strings.Repeat("a", 7*maxEventMessageBytes)
+	size := utf8EncodedLength(message)
+	b.ReportAllocs()
+	b.SetBytes(int64(len(message)))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = splitMessage(message, size, maxEventMessageBytes, maxSplitChunks)
 	}
 }
