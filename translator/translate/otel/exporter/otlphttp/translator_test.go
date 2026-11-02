@@ -77,3 +77,21 @@ func TestTranslatorDisablesQueueBatcher(t *testing.T) {
 	otlpCfg := cfg.(*otlphttpexporter.Config)
 	assert.False(t, otlpCfg.QueueConfig.HasValue())
 }
+
+func TestTranslatorWithRequestQueueSize(t *testing.T) {
+	tr := NewTranslatorWithName("profiles", EndpointConfig{
+		ProfilesEndpoint: "https://monitoring.us-east-1.amazonaws.com/v1development/profiles",
+	}, WithRequestQueueSize(100))
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	otlpCfg := cfg.(*otlphttpexporter.Config)
+	require.True(t, otlpCfg.QueueConfig.HasValue(), "explicit sending_queue expected when a cap is set")
+	q := otlpCfg.QueueConfig.Get()
+	assert.EqualValues(t, 100, q.QueueSize)
+	assert.Equal(t, "requests", q.Sizer.String())
+	assert.False(t, q.BlockOnOverflow, "queue must stay non-blocking (drop on overflow)")
+	assert.False(t, q.Batch.HasValue(), "exporter batcher must stay off")
+	assert.NoError(t, otlpCfg.Validate())
+}
