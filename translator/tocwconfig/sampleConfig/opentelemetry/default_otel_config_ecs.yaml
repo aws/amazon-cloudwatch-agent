@@ -221,15 +221,6 @@ processors:
         send_batch_max_size: 10000
         send_batch_size: 10000
         timeout: 30s
-    resource/profiles:
-        attributes:
-            - action: insert
-              converted_type: ""
-              from_attribute: ""
-              from_context: ""
-              key: service.name
-              pattern: ""
-              value: unknown_service
     resourcedetection/opentelemetry:
         akamai:
             resource_attributes:
@@ -775,7 +766,16 @@ processors:
                 - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
-        profile_statements: []
+        profile_statements:
+            - context: resource
+              error_mode: ignore
+              statements:
+                - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
+                - set(resource.attributes["cloud.resource_id"], resource.attributes["aws.ecs.task.arn"]) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["aws.ecs.task.arn"] != nil
+                - set(resource.attributes["aws.ecs.cluster.name"], resource.attributes["aws.ecs.cluster.arn"]) where resource.attributes["aws.ecs.cluster.name"] == nil and resource.attributes["aws.ecs.cluster.arn"] != nil
+                - replace_pattern(resource.attributes["aws.ecs.cluster.name"], "^.*/", "") where resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], resource.attributes["aws.ecs.cluster.name"]], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["aws.ecs.cluster.name"] != nil
+                - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
         trace_statements:
             - context: resource
               error_mode: ignore
@@ -939,7 +939,8 @@ service:
                 - otlp_http/profiles
             processors:
                 - transform/otlp_scope
-                - resource/profiles
+                - resourcedetection/opentelemetry
+                - transform/identity
             receivers:
                 - otlp/grpc_127_0_0_1_4317
                 - otlp/http_127_0_0_1_4318
