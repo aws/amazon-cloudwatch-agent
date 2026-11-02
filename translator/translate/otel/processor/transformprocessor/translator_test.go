@@ -241,6 +241,8 @@ func TestScopeStatementsAllSignals(t *testing.T) {
 	assert.Equal(t, "scope", string(actualCfg.LogStatements[0].Context))
 	require.Len(t, actualCfg.TraceStatements, 1)
 	assert.Equal(t, "scope", string(actualCfg.TraceStatements[0].Context))
+	require.Len(t, actualCfg.ProfileStatements, 1)
+	assert.Equal(t, "scope", string(actualCfg.ProfileStatements[0].Context))
 }
 
 func TestLogsRoutingWindowsSync(t *testing.T) {

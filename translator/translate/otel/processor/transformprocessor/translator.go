@@ -173,6 +173,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			cfgMap["metric_statements"] = appendStatements(cfgMap["metric_statements"], scopeBlock)
 			cfgMap["log_statements"] = appendStatements(cfgMap["log_statements"], scopeBlock)
 			cfgMap["trace_statements"] = []any{scopeBlock}
+			cfgMap["profile_statements"] = appendStatements(cfgMap["profile_statements"], scopeBlock)
 		}
 		if len(t.metricScopeStatements) > 0 {
 			cfgMap["metric_statements"] = appendStatements(cfgMap["metric_statements"], buildScopeStatements(t.metricScopeStatements, errorMode))

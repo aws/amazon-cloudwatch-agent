@@ -4,16 +4,29 @@
 package transformprocessor
 
 import (
+	"context"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
+
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
+
+type noTagsEC2Client struct{}
+
+func (noTagsEC2Client) DescribeTags(context.Context, *ec2.DescribeTagsInput, ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
+	return &ec2.DescribeTagsOutput{}, nil
+}
 
 func TestNewSetClusterNameTranslator(t *testing.T) {
 	t.Setenv("K8S_CLUSTER_NAME", "")
+	tagutil.SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient { return noTagsEC2Client{} })
+	t.Cleanup(tagutil.ResetEC2APIProvider)
+	t.Cleanup(tagutil.ResetTagsCache)
 	testCases := map[string]struct {
 		clusterName string
 		wantErr     bool
