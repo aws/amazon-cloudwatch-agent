@@ -28,6 +28,10 @@ const (
 	profilesExporterName = "profiles"
 	monitoringService    = "monitoring"
 	profilesPath         = "/v1development/profiles"
+
+	// profilesQueueSize bounds the profiles exporter's send queue to limit the
+	// memory it can hold when exports back up.
+	profilesQueueSize int64 = 100
 )
 
 type profilesPipelineTranslator struct {
@@ -75,6 +79,7 @@ func (t *profilesPipelineTranslator) Translate(conf *confmap.Conf) (*common.Comp
 		Exporters: common.NewTranslatorMap(otlphttp.NewTranslatorWithName(profilesExporterName,
 			otlphttp.EndpointConfig{ProfilesEndpoint: common.ServiceEndpoint(monitoringService, region, profilesPath)},
 			otlphttp.WithAuthenticator(agentHealthExt.ID()),
+			otlphttp.WithRequestQueueSize(profilesQueueSize),
 		)),
 		Extensions: common.NewTranslatorMap(sigv4Ext, agentHealthExt),
 	}, nil
