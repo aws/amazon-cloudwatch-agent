@@ -1,5 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -113,6 +114,7 @@ func translateConfig() error {
 			switch {
 			case status.Exited():
 				log.Printf("I! Return exit error: exit code=%d\n", status.ExitStatus())
+
 				if status.ExitStatus() == constants.ExitCodeNoJSONFile {
 					log.Printf("I! No json config files found, please provide config, exit now\n")
 					os.Exit(0)
@@ -122,6 +124,7 @@ func translateConfig() error {
 			log.Printf("Return other error: %s\n", err)
 		}
 	}
+
 	return err
 }
 
