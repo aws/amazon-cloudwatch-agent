@@ -25,6 +25,9 @@ type cloudWatchLogsService interface {
 
 type Sender interface {
 	Send(*logEventBatch)
+	// SendOrdered sends the batches one after another, in order: a batch is sent only after the one before it has
+	// completed (succeeded or been dropped). The queue uses it for the events of one split log event.
+	SendOrdered([]*logEventBatch)
 	SetRetryDuration(time.Duration)
 	RetryDuration() time.Duration
 	Stop()
@@ -136,6 +139,19 @@ func (s *sender) Send(batch *logEventBatch) {
 			return
 		case <-time.After(wait):
 		}
+	}
+}
+
+// SendOrdered sends each batch with Send, in order. Send returns only once its batch has succeeded or been dropped,
+// including all retries, so a batch is never in flight before the one before it has completed. Each batch keeps its
+// own retry loop and runs its own done and state callbacks.
+//
+// Without a worker pool it runs in the queue goroutine, so one split log line can hold the queue for up to
+// len(batches) times the retry duration. After Stop, each remaining batch still gets one attempt, and its state
+// callbacks still run when it is dropped, as for any batch sent after Stop.
+func (s *sender) SendOrdered(batches []*logEventBatch) {
+	for _, batch := range batches {
+		s.Send(batch)
 	}
 }
 
