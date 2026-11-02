@@ -1,0 +1,19 @@
+# This configuration is the same as the one that the aws-observability/helm-charts chart renders for
+# log_replay/cw_k8s_ci_v0_vllm, in the template
+# charts/amazon-cloudwatch-observability/templates/linux/_otel-container-insights-config.tpl, without the storage.
+# A change to one of them needs the same change in the other.
+interval: 1h
+# The filelog receiver sets log.file.path to the /var/log/containers symlink of the container log. The kubelet
+# removes the symlink when it removes the container, so the copies of a deleted pod stop.
+source_file_attribute: log.file.path
+rules:
+  - name: vllm_engine_config
+    # The engine startup line, which holds the release, the model, and the effective engine configuration.
+    # A prefix check does not work, because vLLM writes "(EngineCore pid=N) INFO ..." or "INFO ..." first.
+    body_contains:
+      - "Initializing an LLM engine (v"
+      - "Initializing a V0 LLM engine (v"
+      - "Initializing a V1 LLM engine (v"
+    # The filelog receiver reads these names from the container log file name, so every record has them.
+    # Two containers of one pod are two entries.
+    identity: [k8s.namespace.name, k8s.pod.name, k8s.container.name]
