@@ -26,15 +26,15 @@ func TestCollectorFeatureGateArgs(t *testing.T) {
 			},
 			want: []string{"--feature-gates=+" + featuregates.ProfilesSupportGateID},
 		},
-		// A gate that graduated to stable is still enableable, so keep passing it until
-		// it is removed from the registry entirely.
+		// A gate that graduated to stable is already on; asking for it again makes the
+		// collector print a notice at every startup, so emit nothing.
 		"GateStable": {
 			register: func(t *testing.T, reg *featuregate.Registry) {
 				_, err := reg.Register(featuregates.ProfilesSupportGateID, featuregate.StageStable,
 					featuregate.WithRegisterToVersion("v1.0.0"))
 				require.NoError(t, err)
 			},
-			want: []string{"--feature-gates=+" + featuregates.ProfilesSupportGateID},
+			want: nil,
 		},
 		// The gate graduated and was deleted upstream: emit nothing rather than an arg
 		// the collector would reject at startup.
