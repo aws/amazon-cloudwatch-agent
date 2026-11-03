@@ -13,14 +13,18 @@ import (
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
+	"go.opentelemetry.io/collector/pipeline/xpipeline"
 	"go.opentelemetry.io/collector/service"
+	servicepipelines "go.opentelemetry.io/collector/service/pipelines"
 	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 	otelconfig "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/featuregates"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
@@ -151,12 +155,26 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 	if err = build(conf, cfg, pipelines.Translators); err != nil {
 		return nil, fmt.Errorf("unable to build components in pipeline: %w", err)
 	}
+	if hasProfilesPipeline(pipelines.Pipelines) {
+		if err = featuregates.Enable(featuregate.GlobalRegistry(), featuregates.ProfilesSupportGateID); err != nil {
+			return nil, fmt.Errorf("unable to enable %s feature gate: %w", featuregates.ProfilesSupportGateID, err)
+		}
+	}
 	if validate {
 		if err = xconfmap.Validate(cfg); err != nil {
 			return nil, fmt.Errorf("invalid otel config: %w", err)
 		}
 	}
 	return cfg, nil
+}
+
+func hasProfilesPipeline(cfg servicepipelines.Config) bool {
+	for id := range cfg {
+		if id.Signal() == xpipeline.SignalProfiles {
+			return true
+		}
+	}
+	return false
 }
 
 // hasSigv4auth reports whether a sigv4auth extension is present, i.e. some pipeline will consume the oidctoken file.

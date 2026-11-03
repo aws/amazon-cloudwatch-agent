@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -310,7 +309,7 @@ func (cd *cwDest) Publish(events []logs.LogEvent) error {
 	for _, e := range events {
 		if !cd.isEMF.Load() {
 			msg := e.Message()
-			if strings.HasPrefix(msg, "{") && strings.HasSuffix(msg, "}") && strings.Contains(msg, "\"CloudWatchMetrics\"") {
+			if pusher.IsEMFMessage(msg) {
 				cd.switchToEMF()
 			}
 		}

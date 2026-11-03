@@ -26,7 +26,7 @@ func collectorFeatureGateArgs(reg *featuregate.Registry) []string {
 	var gates []string
 	for _, id := range defaultEnabledFeatureGates {
 		if !featuregates.CanEnable(reg, id) {
-			log.Printf("I! Feature gate %q cannot be enabled in this collector build, skipping", id)
+			log.Printf("I! Feature gate %q does not need enabling, skipping", id)
 			continue
 		}
 		gates = append(gates, "+"+id)
