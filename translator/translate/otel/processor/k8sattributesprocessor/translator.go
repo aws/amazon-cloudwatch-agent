@@ -14,10 +14,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
-const (
-	podIPAttribute       = "k8s.pod.ip"
-	containerIDAttribute = "container.id"
-)
+const containerIDAttribute = "container.id"
 
 type Option func(*translator)
 
@@ -104,9 +101,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		cfgMap["pod_association"] = []map[string]interface{}{
 			{"sources": []map[string]interface{}{
 				{"from": "resource_attribute", "name": containerIDAttribute},
-			}},
-			{"sources": []map[string]interface{}{
-				{"from": "resource_attribute", "name": podIPAttribute},
 			}},
 			{"sources": []map[string]interface{}{
 				{"from": "connection"},
