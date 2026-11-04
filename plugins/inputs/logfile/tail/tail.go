@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/models"
@@ -66,6 +67,12 @@ type Config struct {
 
 	// Special handling for utf16
 	IsUTF16 bool
+
+	// IsUTF8 enables rune-boundary backoff at MaxLineSize cuts so a UTF-8
+	// multi-byte character that straddles the raw byte boundary is not split
+	// into invalid bytes. When false (declared non-UTF-8 encoding handled by
+	// tailersrc, or UTF-16 handled by readlineUtf16), raw byte cuts are kept.
+	IsUTF8 bool
 }
 
 type Tail struct {
@@ -89,6 +96,19 @@ type Tail struct {
 	FileDeletedCh chan struct{}
 
 	linePool sync.Pool
+
+	// pending holds UTF-8 continuation bytes carried over from a previous
+	// readLine ErrBufferFull-driven rune-boundary backoff. The next readSlice
+	// prepends them to the fresh read so the two chunks still concatenate to
+	// the original line byte-for-byte. bufio.Reader.UnreadByte only
+	// guarantees one byte, so we keep a small (at most utf8.UTFMax-1 = 3
+	// byte) buffer here instead.
+	pending []byte
+
+	// utf8BoundaryBackoffs counts how many times readLine or partitionString
+	// held bytes back from a cut to align to a rune boundary. Exposed via
+	// UTF8BoundaryBackoffs() for test and future metric emission.
+	utf8BoundaryBackoffs atomic.Int64
 }
 
 // TailFile begins tailing the file. Output stream is made available
@@ -250,6 +270,42 @@ func (tail *Tail) readLine() (string, error) {
 		if len(line) > 0 && line[len(line)-1] == '\r' {
 			tail.unreadByte()
 			line = line[:len(line)-1]
+		}
+		// UTF-8 rune-boundary backoff. The raw cut lands at MaxLineSize
+		// bytes with no rune awareness, so a multi-byte sequence that
+		// straddles the boundary would be split into invalid bytes
+		// downstream (every orphan byte then becomes U+FFFD in the SDK's
+		// JSON encoder). When the file is UTF-8, inspect the last up-to-3
+		// bytes for an incomplete-but-valid UTF-8 prefix; if found, back
+		// the cut off to that rune start and park the trailing 1-3 bytes
+		// in tail.pending so the next readSlice prepends them. Invalid
+		// UTF-8 input (orphan continuations, lone start bytes whose
+		// FullRune is already true as RuneError) keeps today's behavior
+		// exactly.
+		if tail.IsUTF8 && len(line) >= utf8.UTFMax {
+			runeStart := -1
+			for j := 1; j < utf8.UTFMax; j++ {
+				if utf8.RuneStart(line[len(line)-j]) {
+					runeStart = len(line) - j
+					break
+				}
+			}
+			if runeStart > 0 && !utf8.FullRune(line[runeStart:]) {
+				carry := len(line) - runeStart
+				// Stash the carried bytes for the next readSlice. Decrement
+				// curOffset so the (shorter) line's reported offset still
+				// equals the file offset of its last byte + 1. readSlice
+				// restores the offset when it prepends tail.pending to the
+				// next word.
+				tail.pending = append(tail.pending[:0], line[runeStart:]...)
+				tail.curOffset -= int64(carry)
+				line = line[:runeStart]
+				tail.utf8BoundaryBackoffs.Add(1)
+				if tail.Logger != nil {
+					tail.Logger.Debugf("UTF-8 rune-boundary backoff on %s: %d byte(s) carried to next chunk at offset %d",
+						tail.Filename, carry, tail.curOffset)
+				}
+			}
 		}
 		return string(line), nil
 	}
@@ -553,20 +609,47 @@ func (tail *Tail) openReader() {
 	} else {
 		tail.reader = bufio.NewReaderSize(tail.file, constants.DefaultReaderBufferSize)
 	}
+	// Drop any UTF-8 bytes carried from the previous reader. On rotation,
+	// truncation, or any other reopen, the new file is discontinuous with
+	// those bytes — prepending them would corrupt the first line of the
+	// new file. The curOffset decrement that was paired with the carry is
+	// implicitly undone by callers: Reopen(true) resets curOffset to 0,
+	// and Reopen(false) immediately follows with seekTo() which recomputes
+	// curOffset via Tell().
+	tail.pending = tail.pending[:0]
 	tail.lk.Unlock()
 }
 
 func (tail *Tail) readSlice(delim byte) ([]byte, error) {
+	// Pull any UTF-8 bytes that a previous ErrBufferFull-driven rune-boundary
+	// backoff parked here; they are prepended to this read's result so the
+	// returned bytes concatenate to the original file content. curOffset was
+	// decremented by len(carried) when the carry was created, so adding it
+	// back after the read keeps offsets consistent.
+	var carried []byte
+	if len(tail.pending) > 0 {
+		carried = append([]byte(nil), tail.pending...)
+		tail.pending = tail.pending[:0]
+	}
+
 	// First try: normal ReadSlice
 	word, err := tail.reader.ReadSlice(delim)
 	if err != bufio.ErrBufferFull {
 		tail.curOffset += int64(len(word))
-		return word, err // fast path: no allocation
+		if len(carried) > 0 {
+			tail.curOffset += int64(len(carried))
+			word = append(carried, word...)
+		}
+		return word, err // fast path when no carry: no allocation
 	}
 
 	// Check if buffer already upgraded
 	if tail.reader.Size() == tail.MaxLineSize {
 		tail.curOffset += int64(len(word))
+		if len(carried) > 0 {
+			tail.curOffset += int64(len(carried))
+			word = append(carried, word...)
+		}
 		return word, bufio.ErrBufferFull
 	}
 
@@ -590,6 +673,10 @@ func (tail *Tail) readSlice(delim byte) ([]byte, error) {
 	word, err = tail.reader.ReadSlice(delim)
 	buf = append(buf, word...)
 	tail.curOffset += int64(len(buf))
+	if len(carried) > 0 {
+		tail.curOffset += int64(len(carried))
+		buf = append(carried, buf...)
+	}
 
 	return buf, err
 }
@@ -603,8 +690,15 @@ func (tail *Tail) seekTo(pos SeekInfo) error {
 	if err != nil {
 		return fmt.Errorf("Seek error on %s: %s", tail.Filename, err)
 	}
-	// Reset the read buffer whenever the file is re-seek'ed
+	// Reset the read buffer whenever the file is re-seek'ed, and drop any
+	// UTF-8 bytes carried from the pre-seek position: they belong to a line
+	// at the old offset and are discontinuous with the new one. The paired
+	// curOffset decrement is implicitly undone by the Tell() call below,
+	// which recomputes curOffset from the file's new position.
+	tail.lk.Lock()
 	tail.reader.Reset(tail.file)
+	tail.pending = tail.pending[:0]
+	tail.lk.Unlock()
 	tail.curOffset, err = tail.Tell()
 	return err
 }
@@ -617,7 +711,18 @@ func (tail *Tail) sendLine(line string, offset int64) bool {
 
 	// Split longer lines
 	if tail.MaxLineSize > 0 && len(line) > tail.MaxLineSize {
-		lines = partitionString(line, tail.MaxLineSize)
+		lines = partitionString(line, tail.MaxLineSize, tail.IsUTF8)
+		if tail.IsUTF8 {
+			// A non-final chunk shorter than MaxLineSize is only possible
+			// because partitionString backed its cut off to a rune start.
+			// Count each so operators can observe the fix at work via
+			// UTF8BoundaryBackoffs(); bounded by one event per cut.
+			for i := 0; i < len(lines)-1; i++ {
+				if len(lines[i]) < tail.MaxLineSize {
+					tail.utf8BoundaryBackoffs.Add(1)
+				}
+			}
+		}
 	}
 
 	for i, line := range lines {
@@ -715,7 +820,15 @@ func (tail *Tail) exitOnDeletion() {
 
 // partitionString partitions the string into chunks of given size,
 // with the last chunk of variable size.
-func partitionString(s string, chunkSize int) []string {
+//
+// When utf8Aware is true, each non-final chunk is right-trimmed by at most
+// utf8.UTFMax-1 bytes if the trailing bytes form an incomplete-but-valid
+// UTF-8 prefix. The trimmed bytes are prepended to the next chunk, so the
+// concatenation of all chunks equals the input byte-for-byte. The last
+// chunk is never trimmed. If chunkSize < utf8.UTFMax or the backoff would
+// land at the chunk start, the raw cut is emitted and backoff is skipped
+// — invalid-UTF-8 input also keeps today's behavior exactly.
+func partitionString(s string, chunkSize int, utf8Aware bool) []string {
 	if chunkSize <= 0 {
 		panic("Invalid chunkSize")
 	}
@@ -728,6 +841,25 @@ func partitionString(s string, chunkSize int) []string {
 		if end > length {
 			end = length
 		}
+		// Rune-boundary backoff for non-final chunks only. The raw cut
+		// at s[start:end] has no rune awareness, so a multi-byte sequence
+		// straddling `end` would end up as invalid trailing bytes in this
+		// chunk and leading bytes in the next — both invalid UTF-8. Walk
+		// back up to utf8.UTFMax-1 bytes to find the last RuneStart and,
+		// if the resulting [i:end] is an incomplete rune, cut at i and
+		// let the next iteration pick up the carried bytes.
+		if utf8Aware && end < length && (end-start) >= utf8.UTFMax {
+			runeStart := -1
+			for j := 1; j < utf8.UTFMax; j++ {
+				if utf8.RuneStart(s[end-j]) {
+					runeStart = end - j
+					break
+				}
+			}
+			if runeStart > start && !utf8.FullRuneInString(s[runeStart:end]) {
+				end = runeStart
+			}
+		}
 		parts = append(parts, s[start:end])
 		if end == length {
 			break
@@ -735,4 +867,11 @@ func partitionString(s string, chunkSize int) []string {
 		start, end = end, end+chunkSize
 	}
 	return parts
+}
+
+// UTF8BoundaryBackoffs returns the monotonic count of times readLine or
+// partitionString backed a cut off to align it to a UTF-8 rune boundary.
+// Exposed for tests and future metric emission.
+func (tail *Tail) UTF8BoundaryBackoffs() int64 {
+	return tail.utf8BoundaryBackoffs.Load()
 }
