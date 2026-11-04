@@ -126,7 +126,7 @@ jobs:
           fi
 
           terraform init
-          if terraform apply --auto-approve \
+          if terraform apply -input=false --auto-approve \
             -var="agent_start=$MATRIX_AGENT_START" \
             -var="ami=$MATRIX_AMI" \
             -var="arc=$MATRIX_ARC" \
@@ -150,9 +150,9 @@ jobs:
             -var="test_name=$MATRIX_OS" \
             -var="is_onprem=$INPUT_IS_ONPREM_TEST" \
             -var="user=$MATRIX_USERNAME"; then
-            terraform destroy -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" -auto-approve
+            terraform destroy -input=false -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" -auto-approve
           else
-            terraform destroy -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" -auto-approve && exit 1
+            terraform destroy -input=false -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" -auto-approve && exit 1
           fi
       
       - name: "[WIP] ✅ Passed"
@@ -189,4 +189,4 @@ jobs:
               cd "$INPUT_TEST_DIR"
             fi
 
-            terraform destroy -lock-timeout=5m -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" --auto-approve
+            terraform destroy -input=false -lock-timeout=5m -var="region=$INPUT_REGION" -var="ami=$MATRIX_AMI" --auto-approve

@@ -150,3 +150,29 @@ func TestDeleteRoles(t *testing.T) {
 		}
 	}
 }
+
+func TestHasPrefix(t *testing.T) {
+	// Role names as created by the amazon-cloudwatch-agent-test terraform/eks/daemon/* dirs (prefix + testing_id).
+	for _, name := range []string{
+		"cwagent-otel-eks-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-pod-identity-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-karpenter-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-ebs-csi-pod-identity-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-efa-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-efa-pod-identity-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-gpu-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-gpu-pod-identity-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-liscsi-eks-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-liscsi-pod-identity-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-neuron-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-otel-neuron-pod-identity-1a2b3c4d5e6f7a8b",
+		"cwagent-liscsi-eks-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-attr-limit-eks-Worker-Role-1a2b3c4d5e6f7a8b",
+		"cwagent-attr-limit-pod-identity-1a2b3c4d5e6f7a8b",
+	} {
+		assert.True(t, hasPrefix(name), name)
+	}
+	for _, name := range []string{"does-not-match-any-prefix", "cwagent-otel", "AWSServiceRoleForAmazonEKS"} {
+		assert.False(t, hasPrefix(name), name)
+	}
+}
