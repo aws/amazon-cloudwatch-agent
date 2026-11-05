@@ -78,7 +78,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, fmt.Errorf("unable to unmarshal into awsxrayexporter config: %w", err)
 	}
 	cfg.AWSSessionSettings.CertificateFilePath = os.Getenv(envconfig.AWS_CA_BUNDLE)
-	if endpointOverride, ok := common.GetString(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
+	if endpointOverride, ok := common.GetEndpointOverride(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
 		cfg.AWSSessionSettings.Endpoint = endpointOverride
 	}
 	cfg.IMDSRetries = override.GetDefaultRetryNumber()

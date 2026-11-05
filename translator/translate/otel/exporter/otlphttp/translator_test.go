@@ -19,9 +19,10 @@ func TestTranslatorID(t *testing.T) {
 
 func TestTranslatorWithEndpoints(t *testing.T) {
 	endpoint := EndpointConfig{
-		LogsEndpoint:    "https://logs.us-west-2.amazonaws.com/v1/logs",
-		MetricsEndpoint: "https://monitoring.us-west-2.amazonaws.com/v1/metrics",
-		TracesEndpoint:  "https://xray.us-west-2.amazonaws.com/v1/traces",
+		LogsEndpoint:     "https://logs.us-west-2.amazonaws.com/v1/logs",
+		MetricsEndpoint:  "https://monitoring.us-west-2.amazonaws.com/v1/metrics",
+		TracesEndpoint:   "https://xray.us-west-2.amazonaws.com/v1/traces",
+		ProfilesEndpoint: "https://monitoring.us-west-2.amazonaws.com/v1development/profiles",
 	}
 	tr := NewTranslatorWithName("full", endpoint)
 
@@ -32,6 +33,23 @@ func TestTranslatorWithEndpoints(t *testing.T) {
 	assert.Equal(t, "https://logs.us-west-2.amazonaws.com/v1/logs", otlpCfg.LogsEndpoint)
 	assert.Equal(t, "https://monitoring.us-west-2.amazonaws.com/v1/metrics", otlpCfg.MetricsEndpoint)
 	assert.Equal(t, "https://xray.us-west-2.amazonaws.com/v1/traces", otlpCfg.TracesEndpoint)
+	assert.Equal(t, "https://monitoring.us-west-2.amazonaws.com/v1development/profiles", otlpCfg.ProfilesEndpoint)
+}
+
+func TestTranslatorWithProfilesEndpointOnly(t *testing.T) {
+	tr := NewTranslatorWithName("profiles", EndpointConfig{
+		ProfilesEndpoint: "https://monitoring.us-east-1.amazonaws.com/v1development/profiles",
+	})
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	otlpCfg := cfg.(*otlphttpexporter.Config)
+	assert.Equal(t, "https://monitoring.us-east-1.amazonaws.com/v1development/profiles", otlpCfg.ProfilesEndpoint)
+	assert.Empty(t, otlpCfg.LogsEndpoint)
+	assert.Empty(t, otlpCfg.MetricsEndpoint)
+	assert.Empty(t, otlpCfg.TracesEndpoint)
+	assert.NoError(t, otlpCfg.Validate())
 }
 
 func TestTranslatorWithAuthenticator(t *testing.T) {
@@ -58,4 +76,22 @@ func TestTranslatorDisablesQueueBatcher(t *testing.T) {
 
 	otlpCfg := cfg.(*otlphttpexporter.Config)
 	assert.False(t, otlpCfg.QueueConfig.HasValue())
+}
+
+func TestTranslatorWithRequestQueueSize(t *testing.T) {
+	tr := NewTranslatorWithName("profiles", EndpointConfig{
+		ProfilesEndpoint: "https://monitoring.us-east-1.amazonaws.com/v1development/profiles",
+	}, WithRequestQueueSize(100))
+
+	cfg, err := tr.Translate(nil)
+	require.NoError(t, err)
+
+	otlpCfg := cfg.(*otlphttpexporter.Config)
+	require.True(t, otlpCfg.QueueConfig.HasValue(), "explicit sending_queue expected when a cap is set")
+	q := otlpCfg.QueueConfig.Get()
+	assert.EqualValues(t, 100, q.QueueSize)
+	assert.Equal(t, "requests", q.Sizer.String())
+	assert.False(t, q.BlockOnOverflow, "queue must stay non-blocking (drop on overflow)")
+	assert.False(t, q.Batch.HasValue(), "exporter batcher must stay off")
+	assert.NoError(t, otlpCfg.Validate())
 }

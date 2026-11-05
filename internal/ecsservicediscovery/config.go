@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	// AwsSdkLevelRetryCount is the number of retries after the first attempt.
 	AwsSdkLevelRetryCount = 3
 
 	portSeparator = ";"

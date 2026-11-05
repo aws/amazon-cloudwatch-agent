@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 name: Test Release Candidate
+run-name: Test Release Candidate ${{ inputs.build_id }}${{ inputs.request_id && format(' ({0})', inputs.request_id) || '' }}
 env:
   CWA_GITHUB_TEST_REPO_BRANCH: "main"
 
@@ -14,6 +15,19 @@ on:
         required: true
       test_repo_branch:
         description: 'Override for the test repo branch (default is main)'
+        type: string
+      artifact_source:
+        description: 'Where to copy the artifacts from: release-bucket (default) or candidate-store'
+        type: string
+        default: release-bucket
+      test_os_filter:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
+      test_dir_filter:
+        description: 'Optional, passed to test-artifacts.yml'
+        type: string
+      request_id:
+        description: 'Optional caller id, passed to test-artifacts.yml: added to both run names, and the test run uploads a test-result artifact'
         type: string
 
 jobs:
@@ -31,6 +45,16 @@ jobs:
           CWA_GITHUB_TEST_REPO_BRANCH="$TEST_REPO_BRANCH"
           echo "CWA_GITHUB_TEST_REPO_BRANCH=${CWA_GITHUB_TEST_REPO_BRANCH:-${{ env.CWA_GITHUB_TEST_REPO_BRANCH }}}" >> "$GITHUB_OUTPUT"
 
+      - name: Check request id
+        if: ${{ inputs.request_id != '' }}
+        env:
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: |
+          if [[ ! "$REQUEST_ID" =~ ^[A-Za-z0-9._:/-]{1,128}$ ]]; then
+            echo "::error::request_id must be 1-128 characters from A-Z a-z 0-9 . _ : / -"
+            exit 1
+          fi
+
       - name: Echo test variables
         env:
           OUT_REPO_BRANCH: ${{ steps.set-outputs.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
@@ -46,6 +70,7 @@ jobs:
       contents: read
     with:
       build_id: ${{ inputs.build_id }}
+      artifact_source: ${{ inputs.artifact_source }}
 
   StartIntegrationTests:
     needs: [ RepackageArtifacts, OutputEnvVariables ]
@@ -59,4 +84,7 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
           OUT_REPO_BRANCH: ${{ needs.OutputEnvVariables.outputs.CWA_GITHUB_TEST_REPO_BRANCH }}
-        run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH"
+          TEST_OS_FILTER: ${{ inputs.test_os_filter }}
+          TEST_DIR_FILTER: ${{ inputs.test_dir_filter }}
+          REQUEST_ID: ${{ inputs.request_id }}
+        run: gh workflow run test-artifacts.yml --ref "$REF_NAME" --repo "$GITHUB_REPOSITORY" -f "build_id=$INPUT_BUILD_ID" -f "test_repo_branch=$OUT_REPO_BRANCH" -f "test_os_filter=$TEST_OS_FILTER" -f "test_dir_filter=$TEST_DIR_FILTER" -f "request_id=$REQUEST_ID"

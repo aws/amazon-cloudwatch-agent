@@ -14,6 +14,11 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+const (
+	// DefaultMaxRetries is the number of retries after the first attempt.
+	DefaultMaxRetries = 3
+)
+
 var (
 	throttleReportTimeout     = 1 * time.Minute
 	throttleReportCheckPeriod = 5 * time.Second
@@ -45,7 +50,9 @@ func NewLogThrottleRetryer(logger telegraf.Logger) *LogThrottleRetryer {
 		Log:          logger,
 		throttleChan: make(chan throttleEvent, 1),
 		done:         make(chan struct{}),
-		Standard:     retry.NewStandard(),
+		Standard: retry.NewStandard(func(o *retry.StandardOptions) {
+			o.MaxAttempts = DefaultMaxRetries + 1 // MaxAttempts includes the first attempt
+		}),
 	}
 
 	go r.watchThrottleEvents()

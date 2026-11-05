@@ -257,6 +257,7 @@ func ConfigToTomlFile(config interface{}, tomlConfigFilePath string) error {
 }
 
 func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
+	stripNullSendingQueueBatch(config)
 	res := toyamlconfig.ToYamlConfig(config)
 	// If YAML just contains the word null, then remove the file.
 	if strings.TrimSpace(res) == "null" {
@@ -265,4 +266,31 @@ func ConfigToYamlFile(config interface{}, yamlConfigFilePath string) error {
 		return nil
 	}
 	return os.WriteFile(yamlConfigFilePath, []byte(res), fileMode)
+}
+
+// stripNullSendingQueueBatch drops a null sending_queue.batch, which the
+// collector would otherwise promote to a default and enable the batcher. Done
+// at the agent's own config write so merged customer config is untouched.
+func stripNullSendingQueueBatch(config interface{}) {
+	root, ok := config.(map[string]any)
+	if !ok {
+		return
+	}
+	exporters, ok := root["exporters"].(map[string]any)
+	if !ok {
+		return
+	}
+	for _, cfg := range exporters {
+		exporterCfg, ok := cfg.(map[string]any)
+		if !ok {
+			continue
+		}
+		sendingQueue, ok := exporterCfg["sending_queue"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if batch, present := sendingQueue["batch"]; present && batch == nil {
+			delete(sendingQueue, "batch")
+		}
+	}
 }

@@ -5,6 +5,7 @@ package metrics
 
 import (
 	"github.com/aws/amazon-cloudwatch-agent/translator"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 
 type EndpointOverride struct {
@@ -13,6 +14,9 @@ type EndpointOverride struct {
 func (r *EndpointOverride) ApplyRule(input interface{}) (returnKey string, returnVal interface{}) {
 	res := map[string]interface{}{}
 	key, val := translator.DefaultCase("endpoint_override", "", input)
+	if s, ok := val.(string); ok {
+		val = common.NormalizeEndpointURL(s)
+	}
 	res[key] = val
 	if val != "" {
 		returnKey = "outputs"

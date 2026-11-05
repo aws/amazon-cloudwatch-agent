@@ -360,13 +360,22 @@ func (c *CloudWatch) pushMetricDatumBatch() {
 	}
 }
 
-// backoffSleep sleeps some amount of time based on number of retries done.
-func (c *CloudWatch) backoffSleep() {
+// backoffDuration returns the jittered sleep duration for the current retry
+// count without sleeping. The schedule doubles from BackoffRetryBase up to the
+// retry cap, past which it is pinned to one minute; jitter then keeps the result
+// in [d/2, d). Split out from backoffSleep so the schedule can be verified
+// deterministically without real sleeps.
+func (c *CloudWatch) backoffDuration() time.Duration {
 	d := 1 * time.Minute
 	if c.retries <= c.config.MaxRetryCount {
 		d = c.config.BackoffRetryBase * time.Duration(1<<c.retries)
 	}
-	d = (d / 2) + publishJitter(d/2)
+	return (d / 2) + publishJitter(d/2)
+}
+
+// backoffSleep sleeps some amount of time based on number of retries done.
+func (c *CloudWatch) backoffSleep() {
+	d := c.backoffDuration()
 	if !c.config.DowngradeErrors {
 		log.Printf("W! cloudwatch: %v retries, going to sleep %v ms before retrying.",
 			c.retries, d.Milliseconds())

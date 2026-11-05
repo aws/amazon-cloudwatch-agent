@@ -19,6 +19,7 @@ import (
 	override "github.com/amazon-contributing/opentelemetry-collector-contrib/override/aws"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 
 	configaws "github.com/aws/amazon-cloudwatch-agent/cfg/aws"
 	"github.com/aws/amazon-cloudwatch-agent/internal/ec2metadataprovider"
@@ -168,11 +169,11 @@ func backupConfigFile(configFilePath, backupDirPath string) error {
 }
 
 func SDKRegionWithProfile(ctx context.Context, profile string) string {
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
+	region, err := configaws.SharedConfigRegion(ctx, profile, nil, nil)
 	if err != nil {
 		return ""
 	}
-	return cfg.Region
+	return region
 }
 
 func SDKCredentials(ctx context.Context) (string, string, aws.CredentialsProvider) {
@@ -191,13 +192,12 @@ func SDKCredentials(ctx context.Context) (string, string, aws.CredentialsProvide
 func DefaultEC2Region(ctx context.Context) string {
 	fmt.Println("Trying to fetch the default region based on ec2 metadata...")
 
-	cfg := configaws.CredentialsConfig{}
-	awsCfg, err := cfg.LoadConfig(ctx)
-	if err != nil {
-		return ""
-	}
-
-	mdProvider := ec2metadataprovider.NewMetadataProvider(awsCfg, nil, override.GetDefaultRetryNumber())
+	// IMDS requests are unsigned, so build an IMDS-only client instead of loading a
+	// credential-backed aws.Config.
+	mdProvider := ec2metadataprovider.NewMetadataProviderWithoutConfig(nil, override.GetDefaultRetryNumber(), func(o *imds.Options) {
+		o.Logger = configaws.SDKLogger{}
+		o.ClientLogMode = configaws.SDKLogLevel()
+	})
 	if info, err := mdProvider.Get(ctx); err != nil {
 		fmt.Printf("W! could not get region from ec2 metadata... %v", err)
 	} else {

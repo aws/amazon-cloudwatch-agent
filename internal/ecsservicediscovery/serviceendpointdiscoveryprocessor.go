@@ -77,6 +77,9 @@ func (p *ServiceEndpointDiscoveryProcessor) mapDeploymentIDs(ctx context.Context
 		endIndex := min(startIndex+10, len(servicesForInput))
 		req := &ecs.DescribeServicesInput{Cluster: &cluster, Services: servicesForInput[startIndex:endIndex]}
 		describeServiceResp, describeServiceErr := p.svcEcs.DescribeServices(ctx, req)
+		if describeServiceErr != nil {
+			return newServiceDiscoveryError("Failed to describe service ARNs for "+cluster, &describeServiceErr)
+		}
 		for _, describedService := range describeServiceResp.Services {
 			for _, deployment := range describedService.Deployments {
 				if aws.ToString(deployment.Status) == "ACTIVE" || aws.ToString(deployment.Status) == "PRIMARY" {
@@ -85,9 +88,6 @@ func (p *ServiceEndpointDiscoveryProcessor) mapDeploymentIDs(ctx context.Context
 					}
 				}
 			}
-		}
-		if describeServiceErr != nil {
-			return newServiceDiscoveryError("Failed to describe service ARNs for "+cluster, &describeServiceErr)
 		}
 	}
 	return nil

@@ -109,6 +109,16 @@ func (s *senderPool) Send(batch *logEventBatch) {
 	})
 }
 
+// SendOrdered submits one task to the worker pool that sends the batches in order (see sender.SendOrdered). Submitting
+// each batch as a task of its own would let a later batch reach the service while an earlier one waits to retry, so
+// the parts of a split log event could be stored out of order and the last part, which owns the file offset, could
+// complete first.
+func (s *senderPool) SendOrdered(batches []*logEventBatch) {
+	s.workerPool.Submit(func() {
+		s.sender.SendOrdered(batches)
+	})
+}
+
 func (s *senderPool) Stop() {
 	// workerpool is stopped by the plugin
 	s.sender.Stop()

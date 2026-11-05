@@ -1,7 +1,7 @@
 exporters:
     awscloudwatchlogs/emf_logs:
         emf_only: true
-        endpoint: https://fake_endpoint
+        endpoint: https://vpce-0123456789abcdef0-abcdefgh.logs.us-west-2.vpce.amazonaws.com
         imds_retries: 1
         log_group_name: emf/logs/default
         log_retention: 0
@@ -25,7 +25,7 @@ exporters:
         dimension_rollup_option: NoDimensionRollup
         disable_metric_extraction: false
         eks_fargate_container_insights_enabled: false
-        endpoint: https://fake_endpoint
+        endpoint: https://vpce-0123456789abcdef0-abcdefgh.logs.us-west-2.vpce.amazonaws.com
         enhanced_container_insights: false
         imds_retries: 1
         log_group_name: /aws/ecs/containerinsights/{ClusterName}/performance
