@@ -24,7 +24,11 @@ This package provides daemon of Amazon CloudWatch Agent
 
 rm -rf $RPM_BUILD_ROOT
 mkdir $RPM_BUILD_ROOT
-cp -r %{_topdir}/BUILD/%{name}-%{version}/*  $RPM_BUILD_ROOT/
+# Copy the unpacked sources from the build subdir. Use %{_builddir}/%{buildsubdir}
+# (set by %setup) rather than a hardcoded %{_topdir}/BUILD/%{name}-%{version} path:
+# rpm >= 4.20 (e.g. Ubuntu 26.04 runners) relocates the build tree under
+# %{name}-%{version}-build/, so the old hardcoded path no longer exists.
+cp -r %{_builddir}/%{buildsubdir}/*  $RPM_BUILD_ROOT/
 
 ############################# create the symbolic links
 # bin
