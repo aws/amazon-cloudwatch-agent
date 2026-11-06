@@ -486,41 +486,6 @@ setup_gcp_gce() {
 setup_gcp_gke() {
      if [ -z "${LOCATION}" ] || [ -z "${CLUSTER_NAME}" ]; then usage; fi
 
-     # Install mode needs helm, kubectl, and gke-gcloud-auth-plugin (kubectl
-     # authenticates to GKE through the plugin). Check before any cluster call
-     # so a missing tool fails fast: print the commands to run from a shell that
-     # has them, name what is missing, and exit non-zero, so the run never reads
-     # as a successful install. Identity mode (no ARN) needs none of them.
-     if [ -n "${ROLE_ARN}" ]; then
-          missing=$(missing_tools helm kubectl gke-gcloud-auth-plugin)
-          if [ -n "${missing}" ]; then
-               printf '\n' >&3
-               printf 'Install the Amazon CloudWatch Observability Helm chart manually (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
-               printf '\n' >&3
-               {
-                    printf '%s\n' "  helm repo add aws-observability ${HELM_CHART_REPO}"
-                    printf '%s\n' "  helm repo update"
-                    printf '  helm upgrade --install amazon-cloudwatch-observability aws-observability/amazon-cloudwatch-observability \\\n'
-                    printf '    --set k8sMode=GKE \\\n'
-                    printf '    --set roleArn=%s \\\n' "${ROLE_ARN}"
-                    printf '    --set region=%s \\\n' "${REGION}"
-                    printf '    --set clusterName=%s \\\n' "${CLUSTER_NAME}"
-                    printf '    --set containerInsights.enabled=false \\\n'
-                    printf '    --set containerLogs.enabled=false \\\n'
-                    printf '    --set otelContainerInsights.enabled=true \\\n'
-                    printf '    --set otelContainerInsights.logs.enabled=true \\\n'
-                    printf "    --set-string 'agents[0].name=cloudwatch-agent' \\\\\n"
-                    printf "    --set-string 'agents[0].config=default:otel' \\\\\n"
-                    printf "    --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \\\\\n"
-                    printf "    --set-string 'agents[1].mode=deployment' \\\\\n"
-                    printf "    --set-string 'agents[1].config=default' \\\\\n"
-                    printf '    --namespace %s \\\n' "${K8S_NAMESPACE}"
-                    printf '    --create-namespace\n'
-               } >&3
-               die "Helm chart not installed on '${CLUSTER_NAME}': missing ${missing}. Install the missing tools and rerun, or run the commands above from a shell that has them."
-          fi
-     fi
-
      section "Reading GKE cluster identity..."
 
      gcloud_scoped container clusters describe "${CLUSTER_NAME}" \
@@ -544,6 +509,41 @@ setup_gcp_gke() {
      if [ -z "${ROLE_ARN}" ]; then
           print_await_arn "OIDC issuer (for the AWS setup): ${GCP_OIDC_ISSUER}"
           return
+     fi
+
+     # Install needs helm, kubectl, and gke-gcloud-auth-plugin (kubectl
+     # authenticates to GKE through the plugin). The check runs after the
+     # cluster is confirmed above, so a wrong name or location reports that
+     # first, and before get-credentials or any Helm call. When any tool is
+     # missing, the chart is not installed: print the commands, name the
+     # missing tools, and exit non-zero, so the run never reads as a
+     # successful install.
+     missing=$(missing_tools helm kubectl gke-gcloud-auth-plugin)
+     if [ -n "${missing}" ]; then
+          printf '\n' >&3
+          printf 'Install the Amazon CloudWatch Observability Helm chart manually (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
+          printf '\n' >&3
+          {
+               printf '%s\n' "  helm repo add aws-observability ${HELM_CHART_REPO}"
+               printf '%s\n' "  helm repo update"
+               printf '  helm upgrade --install amazon-cloudwatch-observability aws-observability/amazon-cloudwatch-observability \\\n'
+               printf '    --set k8sMode=GKE \\\n'
+               printf '    --set roleArn=%s \\\n' "${ROLE_ARN}"
+               printf '    --set region=%s \\\n' "${REGION}"
+               printf '    --set clusterName=%s \\\n' "${CLUSTER_NAME}"
+               printf '    --set containerInsights.enabled=false \\\n'
+               printf '    --set containerLogs.enabled=false \\\n'
+               printf '    --set otelContainerInsights.enabled=true \\\n'
+               printf '    --set otelContainerInsights.logs.enabled=true \\\n'
+               printf "    --set-string 'agents[0].name=cloudwatch-agent' \\\\\n"
+               printf "    --set-string 'agents[0].config=default:otel' \\\\\n"
+               printf "    --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \\\\\n"
+               printf "    --set-string 'agents[1].mode=deployment' \\\\\n"
+               printf "    --set-string 'agents[1].config=default' \\\\\n"
+               printf '    --namespace %s \\\n' "${K8S_NAMESPACE}"
+               printf '    --create-namespace\n'
+          } >&3
+          die "Helm chart not installed on '${CLUSTER_NAME}': missing ${missing}. Install the missing tools and rerun, or run the commands above from a shell that has them."
      fi
 
      section "Installing CloudWatch Observability Helm chart on ${CLUSTER_NAME}..."

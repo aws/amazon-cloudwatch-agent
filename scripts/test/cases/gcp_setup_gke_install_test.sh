@@ -8,7 +8,8 @@
 # on PATH. A missing tool prints the manual commands, names what is missing, and
 # exits non-zero, so the run never reads as a successful install. A failing
 # kubeconfig or helm step dies with a message naming the step. The tool check
-# runs before any cluster call. Every case hides the host's own helm, kubectl, and
+# runs after the cluster is confirmed and before get-credentials or any Helm
+# call. Every case hides the host's own helm, kubectl, and
 # gke-gcloud-auth-plugin (hide_tools), so only the fakes a case makes exist.
 
 set -u
@@ -18,13 +19,20 @@ TEST_DIR="${TEST_DIR:-$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)}"
 ROLE_ARN="arn:aws:iam::123456789012:role/CloudWatchAgentServerRole-test"
 ISSUER="https://container.googleapis.com/v1/projects/test-project/locations/us-east1/clusters/test-cluster"
 
-# Fake gcloud. Sandbox flag credentials_fail makes get-credentials fail.
+# Fake gcloud. Sandbox flags: cluster_missing makes the cluster describe fail,
+# credentials_fail makes get-credentials fail.
 gcloud_fake() {
      make_fake gcloud <<'EOF'
 case "$*" in
 *"auth list"*) printf 'tester@example.com\n' ;;
 *"projects describe"*) printf 'test-project\n' ;;
-*"container clusters describe"*) printf 'test-cluster\n' ;;
+*"container clusters describe"*)
+     if [ -f "${SANDBOX}/cluster_missing" ]; then
+          printf 'ERROR: (gcloud.container.clusters.describe) NOT_FOUND\n' >&2
+          exit 1
+     fi
+     printf 'test-cluster\n'
+     ;;
 *"container clusters get-credentials"*)
      if [ -f "${SANDBOX}/credentials_fail" ]; then
           printf 'ERROR: (gcloud.container.clusters.get-credentials) permission denied\n' >&2
@@ -105,8 +113,21 @@ assert_output_contains stdout "--set-string 'agents[1].name=cloudwatch-agent-clu
 assert_output_contains stderr "Helm chart not installed on 'test-cluster': missing kubectl."
 assert_output_lacks stdout "Chart installed"
 assert_output_lacks stdout "OIDC issuer (for the AWS setup)"
-# The check runs before any cluster call: nothing is read or configured.
-assert_not_called "container clusters describe"
+# The cluster is confirmed first; nothing after the check runs.
+assert_called "gcloud container clusters describe test-cluster"
+assert_not_called "get-credentials"
+assert_not_called "helm"
+
+t_case "wrong cluster and kubectl missing: reports the cluster, not the tool"
+gcloud_fake
+helm_fake
+noop_fake gke-gcloud-auth-plugin
+: >"${SANDBOX}/cluster_missing"
+run_install
+assert_status 1
+assert_output_contains stderr "cannot read cluster 'test-cluster' in location 'us-east1' of project 'test-project'"
+assert_output_lacks stderr "missing kubectl"
+assert_output_lacks stdout "manually"
 assert_not_called "get-credentials"
 assert_not_called "helm"
 
