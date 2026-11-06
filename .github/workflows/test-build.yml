@@ -62,7 +62,11 @@ on:
 jobs:
   MakeBinary:
     name: 'MakeBinary'
-    runs-on: ubuntu-latest
+    # Pinned to ubuntu-24.04: on ubuntu-26.04 (where ubuntu-latest is migrating) rpmbuild
+    # builds in BUILD/<name>-<version>-build/, so the spec %install copy from
+    # %{_topdir}/BUILD/%{name}-%{version} fails and package-rpm exits non-zero.
+    # Remove the pin once packaging/linux/amazon-cloudwatch-agent.spec handles the new layout.
+    runs-on: ubuntu-24.04
     permissions:
       id-token: write
       contents: read
