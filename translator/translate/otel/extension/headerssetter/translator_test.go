@@ -21,6 +21,7 @@ func TestTranslatorWithHeaders(t *testing.T) {
 	headers := []HeaderMapping{
 		{HeaderName: "x-aws-log-group", ContextKey: "aws.log.group.name"},
 		{HeaderName: "x-aws-log-stream", Value: "my-stream"},
+		{HeaderName: "x-version", Value: "1", Action: headerssetterextension.INSERT},
 	}
 	tr := NewTranslatorWithName("logs", WithHeaders(headers))
 
@@ -28,7 +29,7 @@ func TestTranslatorWithHeaders(t *testing.T) {
 	require.NoError(t, err)
 
 	hsCfg := cfg.(*headerssetterextension.Config)
-	require.Len(t, hsCfg.HeadersConfig, 2)
+	require.Len(t, hsCfg.HeadersConfig, 3)
 
 	assert.Equal(t, "x-aws-log-group", *hsCfg.HeadersConfig[0].Key)
 	assert.Equal(t, "aws.log.group.name", *hsCfg.HeadersConfig[0].FromContext)
@@ -39,6 +40,10 @@ func TestTranslatorWithHeaders(t *testing.T) {
 	assert.Nil(t, hsCfg.HeadersConfig[1].FromContext)
 	assert.Equal(t, "my-stream", *hsCfg.HeadersConfig[1].Value)
 	assert.Equal(t, headerssetterextension.UPSERT, hsCfg.HeadersConfig[1].Action)
+
+	assert.Equal(t, "x-version", *hsCfg.HeadersConfig[2].Key)
+	assert.Equal(t, "1", *hsCfg.HeadersConfig[2].Value)
+	assert.Equal(t, headerssetterextension.INSERT, hsCfg.HeadersConfig[2].Action)
 }
 
 func TestTranslatorWithAdditionalAuth(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/transformprocessor"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,7 @@ import (
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
 
+	"github.com/aws/amazon-cloudwatch-agent/extension/agenthealth"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/translator/config"
 	"github.com/aws/amazon-cloudwatch-agent/translator/context"
@@ -75,7 +77,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
 				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
-				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
+				extensions: []string{"sigv4auth/monitoring", "headers_setter/profiles", "agenthealth/opentelemetry_profiles"},
 			},
 		},
 		"WithECS": {
@@ -86,7 +88,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
 				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
-				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
+				extensions: []string{"sigv4auth/monitoring", "headers_setter/profiles", "agenthealth/opentelemetry_profiles"},
 			},
 		},
 		"WithEndpoints": {
@@ -105,7 +107,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 				receivers:  []string{"otlp/grpc_127_0_0_1_5317", "otlp/http_127_0_0_1_5318"},
 				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
-				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
+				extensions: []string{"sigv4auth/monitoring", "headers_setter/profiles", "agenthealth/opentelemetry_profiles"},
 			},
 		},
 		"WithResourceAttributes": {
@@ -122,7 +124,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
 				processors: []string{"transform/otlp_scope", "resource/opentelemetry", "resourcedetection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
-				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
+				extensions: []string{"sigv4auth/monitoring", "headers_setter/profiles", "agenthealth/opentelemetry_profiles"},
 			},
 		},
 		"WithKubernetesAndClusterName": {
@@ -133,7 +135,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
 				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "k8s_attributes/profiles", "transform/set_cluster_name", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
-				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
+				extensions: []string{"sigv4auth/monitoring", "headers_setter/profiles", "agenthealth/opentelemetry_profiles"},
 			},
 		},
 		"WithKubernetesResourceAttributesAndClusterName": {
@@ -152,7 +154,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
 				processors: []string{"transform/otlp_scope", "resource/opentelemetry", "resourcedetection/opentelemetry", "k8s_attributes/profiles", "transform/set_cluster_name", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
-				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
+				extensions: []string{"sigv4auth/monitoring", "headers_setter/profiles", "agenthealth/opentelemetry_profiles"},
 			},
 		},
 		"WithKubernetesInvalidClusterName": {
@@ -229,6 +231,38 @@ func TestProfilesExporterEndpoint(t *testing.T) {
 			assert.Equal(t, "agenthealth/opentelemetry_profiles", exporterCfg.ClientConfig.Auth.Get().AuthenticatorID.String())
 		})
 	}
+}
+
+func TestProfilesVersionHeaderExtension(t *testing.T) {
+	t.Cleanup(otlpreceiver.ClearConfigCache)
+	resetGlobalConfig(t, "us-east-1")
+	conf := confmap.NewFromStringMap(otlpSectionConf)
+	got, err := (&profilesPipelineTranslator{}).Translate(conf)
+	require.NoError(t, err)
+
+	headersTranslator, ok := got.Extensions.Get(component.MustNewIDWithName("headers_setter", "profiles"))
+	require.True(t, ok)
+	cfg, err := headersTranslator.Translate(conf)
+	require.NoError(t, err)
+	headersCfg, ok := cfg.(*headerssetterextension.Config)
+	require.True(t, ok)
+	require.NotNil(t, headersCfg.AdditionalAuth)
+	assert.Equal(t, "sigv4auth/monitoring", headersCfg.AdditionalAuth.String())
+	require.Len(t, headersCfg.HeadersConfig, 1)
+	require.NotNil(t, headersCfg.HeadersConfig[0].Key)
+	require.NotNil(t, headersCfg.HeadersConfig[0].Value)
+	assert.Equal(t, "OTLP-Profiles-Development-Version", *headersCfg.HeadersConfig[0].Key)
+	assert.Equal(t, "1", *headersCfg.HeadersConfig[0].Value)
+	assert.Equal(t, headerssetterextension.INSERT, headersCfg.HeadersConfig[0].Action)
+
+	agentHealthTranslator, ok := got.Extensions.Get(component.MustNewIDWithName("agenthealth", "opentelemetry_profiles"))
+	require.True(t, ok)
+	cfg, err = agentHealthTranslator.Translate(conf)
+	require.NoError(t, err)
+	agentHealthCfg, ok := cfg.(*agenthealth.Config)
+	require.True(t, ok)
+	require.NotNil(t, agentHealthCfg.AdditionalAuth)
+	assert.Equal(t, "headers_setter/profiles", agentHealthCfg.AdditionalAuth.String())
 }
 
 func TestProfilesServiceNameFallbackOwnedByIdentity(t *testing.T) {

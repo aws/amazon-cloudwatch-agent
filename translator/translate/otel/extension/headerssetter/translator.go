@@ -17,6 +17,7 @@ type HeaderMapping struct {
 	HeaderName string
 	ContextKey string
 	Value      string
+	Action     headerssetterextension.ActionValue
 }
 
 type Option func(*translator)
@@ -63,9 +64,13 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 
 	for _, h := range t.headers {
 		key := h.HeaderName
+		action := h.Action
+		if action == "" {
+			action = headerssetterextension.UPSERT
+		}
 		hc := headerssetterextension.HeaderConfig{
 			Key:    &key,
-			Action: headerssetterextension.UPSERT,
+			Action: action,
 		}
 		if h.ContextKey != "" {
 			ctx := h.ContextKey

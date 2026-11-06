@@ -4,43 +4,19 @@
 package configprovider
 
 import (
-	"context"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/exporter/otlphttpexporter"
-	"go.opentelemetry.io/collector/otelcol"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
-
-	"github.com/aws/amazon-cloudwatch-agent/service/defaultcomponents"
-	"github.com/aws/amazon-cloudwatch-agent/translator/cmdutil"
 )
 
 // End-to-end: a config written via ConfigToYamlFile (which strips the null
 // batch) resolves with the profiles queue bounded and the batcher off.
 func TestProfilesExporterSendingQueueResolved(t *testing.T) {
-	factories, err := defaultcomponents.Factories()
-	require.NoError(t, err)
-
 	// Golden is raw translator output with the null batch; ConfigToYamlFile strips it.
-	golden, err := os.ReadFile(filepath.Join("../../translator/tocwconfig/sampleConfig/opentelemetry", "otlp_otel_config.yaml"))
-	require.NoError(t, err)
-	var cfgMap map[string]any
-	require.NoError(t, yaml.Unmarshal(golden, &cfgMap))
-
-	yamlPath := filepath.Join(t.TempDir(), "otlp_otel_config.yaml")
-	require.NoError(t, cmdutil.ConfigToYamlFile(cfgMap, yamlPath))
-
-	providerSettings := GetSettings([]string{yamlPath}, zap.NewNop())
-	provider, err := otelcol.NewConfigProvider(providerSettings)
-	require.NoError(t, err)
-	cfg, err := provider.Get(context.Background(), factories)
-	require.NoError(t, err)
+	cfg := loadResolvedOtlpGolden(t)
 
 	// Profiles exporter: bounded queue, batcher off.
 	profilesID := component.MustNewIDWithName("otlp_http", "profiles")
