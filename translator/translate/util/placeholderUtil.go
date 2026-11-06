@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,13 +19,14 @@ import (
 )
 
 const (
-	instanceIdPlaceholder    = "{instance_id}"
-	hostnamePlaceholder      = "{hostname}"
-	localHostnamePlaceholder = "{local_hostname}" //regardless of ec2 metadata
-	ipAddressPlaceholder     = "{ip_address}"
-	awsRegionPlaceholder     = "{aws_region}"
-	datePlaceholder          = "{date}"
-	accountIdPlaceholder     = "{account_id}"
+	instanceIdPlaceholder           = "{instance_id}"
+	hostnamePlaceholder             = "{hostname}"
+	localHostnamePlaceholder        = "{local_hostname}" //regardless of ec2 metadata
+	ipAddressPlaceholder            = "{ip_address}"
+	awsRegionPlaceholder            = "{aws_region}"
+	datePlaceholder                 = "{date}"
+	accountIdPlaceholder            = "{account_id}"
+	autoScalingGroupNamePlaceholder = "{autoscaling_group_name}"
 
 	UnknownInstanceID   = "i-UNKNOWN"
 	unknownHostname     = "UNKNOWN-HOST"
@@ -33,6 +35,7 @@ const (
 	unknownAccountID    = "UNKNOWN-ACCOUNT"
 	unknownInstanceType = "UNKNOWN-TYPE"
 	unknownImageID      = "UNKNOWN-AMI"
+	unknownASGName      = "UNKNOWN-ASG"
 
 	awsPlaceholderPrefix = "${aws:"
 )
@@ -71,11 +74,37 @@ func ResolvePlaceholder(placeholder string, metadata map[string]string) string {
 	if tmpString == "" {
 		tmpString = instanceIdPlaceholder
 	}
+	// resolve lazily due to ec2:DescribeTags API call
+	if strings.Contains(tmpString, autoScalingGroupNamePlaceholder) {
+		tmpString = resolveAutoScalingGroupNamePlaceholder(tmpString, metadata[instanceIdPlaceholder])
+	}
 	for k, v := range metadata {
 		tmpString = strings.Replace(tmpString, k, v, -1)
 	}
 	tmpString = strings.Replace(tmpString, datePlaceholder, time.Now().Format("2006-01-02"), -1)
 	return tmpString
+}
+
+// invalidLogNameChars matches characters not allowed in a CloudWatch Logs log
+// group name. The same set is used for log stream names, which are less strict.
+var invalidLogNameChars = regexp.MustCompile(`[^.\-_/#A-Za-z0-9]`)
+
+// autoScalingGroupNameProvider looks up the Auto Scaling group name for an
+// instance. It can be overridden in tests.
+var autoScalingGroupNameProvider = func(instanceID string) string {
+	return tagutil.GetAutoScalingGroupName(context.Background(), instanceID)
+}
+
+// resolveAutoScalingGroupNamePlaceholder replaces {autoscaling_group_name} with
+// the instance's Auto Scaling group name. Characters that are invalid in log
+// names are replaced with "_". If the instance is not in an Auto Scaling group
+// (or the name cannot be determined), unknownASGName is used instead.
+func resolveAutoScalingGroupNamePlaceholder(input, instanceID string) string {
+	asgName := ""
+	if instanceID != "" && instanceID != UnknownInstanceID {
+		asgName = invalidLogNameChars.ReplaceAllString(autoScalingGroupNameProvider(instanceID), "_")
+	}
+	return strings.ReplaceAll(input, autoScalingGroupNamePlaceholder, defaultIfEmpty(asgName, unknownASGName))
 }
 
 func defaultIfEmpty(value, defaultValue string) string {

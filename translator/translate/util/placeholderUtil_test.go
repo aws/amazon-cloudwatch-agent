@@ -4,8 +4,12 @@
 package util
 
 import (
+	"context"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/ec2tagger"
@@ -53,6 +57,118 @@ func TestGetMetadataInfoDerivesIpAddress(t *testing.T) {
 func TestGetMetadataInfoEmptyAccountId(t *testing.T) {
 	m := GetMetadataInfo(mockMetadataProvider(dummyInstanceId, dummyHostName, dummyPrivateIp, ""))
 	assert.Equal(t, unknownAccountID, m[accountIdPlaceholder])
+}
+
+// mockAutoScalingGroupName overrides the ASG name lookup and returns a pointer
+// to a call counter plus a cleanup function.
+func mockAutoScalingGroupName(name string) (*int, func()) {
+	calls := 0
+	original := autoScalingGroupNameProvider
+	autoScalingGroupNameProvider = func(string) string {
+		calls++
+		return name
+	}
+	return &calls, func() { autoScalingGroupNameProvider = original }
+}
+
+func TestResolvePlaceholderAutoScalingGroupName(t *testing.T) {
+	metadata := map[string]string{instanceIdPlaceholder: "i-1234567890abcdef0"}
+
+	tests := []struct {
+		name     string
+		asgName  string
+		input    string
+		expected string
+	}{
+		{
+			name:     "ASG present",
+			asgName:  "my-asg",
+			input:    "/app/logs/{autoscaling_group_name}",
+			expected: "/app/logs/my-asg",
+		},
+		{
+			name:     "ASG present combined with other placeholders",
+			asgName:  "my-asg",
+			input:    "{autoscaling_group_name}/{instance_id}",
+			expected: "my-asg/i-1234567890abcdef0",
+		},
+		{
+			name:     "ASG name with invalid characters is sanitized",
+			asgName:  "my asg:prod*1",
+			input:    "/app/{autoscaling_group_name}",
+			expected: "/app/my_asg_prod_1",
+		},
+		{
+			name:     "ASG absent uses unknown fallback",
+			input:    "/app/logs/{autoscaling_group_name}",
+			expected: "/app/logs/" + unknownASGName,
+		},
+		{
+			name:     "ASG absent combined with other placeholders",
+			input:    "{autoscaling_group_name}/{instance_id}",
+			expected: unknownASGName + "/i-1234567890abcdef0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls, cleanup := mockAutoScalingGroupName(tt.asgName)
+			defer cleanup()
+			assert.Equal(t, tt.expected, ResolvePlaceholder(tt.input, metadata))
+			assert.Equal(t, 1, *calls)
+		})
+	}
+}
+
+func TestResolvePlaceholderAutoScalingGroupNameNotUsed(t *testing.T) {
+	calls, cleanup := mockAutoScalingGroupName("my-asg")
+	defer cleanup()
+
+	metadata := map[string]string{instanceIdPlaceholder: "i-1234567890abcdef0"}
+	assert.Equal(t, "/app/i-1234567890abcdef0", ResolvePlaceholder("/app/{instance_id}", metadata))
+	assert.Equal(t, 0, *calls, "ASG lookup must not happen when the placeholder is not used")
+}
+
+func TestResolvePlaceholderAutoScalingGroupNameUnknownInstance(t *testing.T) {
+	calls, cleanup := mockAutoScalingGroupName("my-asg")
+	defer cleanup()
+
+	for _, id := range []string{"", UnknownInstanceID} {
+		metadata := map[string]string{instanceIdPlaceholder: id}
+		assert.Equal(t, "/app/"+unknownASGName, ResolvePlaceholder("/app/{autoscaling_group_name}", metadata))
+	}
+	assert.Equal(t, 0, *calls, "ASG lookup must not happen without a known instance ID")
+}
+
+func TestResolvePlaceholderAutoScalingGroupNameFromTags(t *testing.T) {
+	tagutil.ResetTagsCache()
+	mockClient := &mockDescribeTagsClient{
+		output: &ec2.DescribeTagsOutput{
+			Tags: []types.TagDescription{
+				{Key: aws.String("aws:autoscaling:groupName"), Value: aws.String("tagged-asg")},
+			},
+		},
+	}
+	tagutil.SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient { return mockClient })
+	defer func() {
+		tagutil.ResetEC2APIProvider()
+		tagutil.ResetTagsCache()
+	}()
+
+	metadata := map[string]string{instanceIdPlaceholder: "i-1234567890abcdef0"}
+	assert.Equal(t, "/app/tagged-asg", ResolvePlaceholder("/app/{autoscaling_group_name}", metadata))
+	assert.Equal(t, "tagged-asg", ResolvePlaceholder("{autoscaling_group_name}", metadata))
+	assert.Equal(t, 1, mockClient.calls, "tags should be fetched once and cached")
+}
+
+type mockDescribeTagsClient struct {
+	output *ec2.DescribeTagsOutput
+	calls  int
+}
+
+func (m *mockDescribeTagsClient) DescribeTags(context.Context, *ec2.DescribeTagsInput, ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
+	m.calls++
+	return m.output, nil
 }
 
 func mockMetadataProvider(instanceId, hostname, privateIp, accountId string) func() *Metadata {
