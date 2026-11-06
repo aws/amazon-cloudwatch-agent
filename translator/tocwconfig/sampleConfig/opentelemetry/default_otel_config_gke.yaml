@@ -140,7 +140,7 @@ extensions:
                 mode: GKE
                 region_type: RNF
     agenthealth/opentelemetry_profiles:
-        additional_auth: sigv4auth/monitoring
+        additional_auth: headers_setter/profiles
         is_usage_data_enabled: true
         stats:
             operations:
@@ -174,6 +174,12 @@ extensions:
             - action: upsert
               from_context: aws.log.stream.name
               key: x-aws-log-stream
+    headers_setter/profiles:
+        additional_auth: sigv4auth/monitoring
+        headers:
+            - action: upsert
+              key: OTLP-Profiles-Development-Version
+              value: "1"
     server:
         listen_addr: :4311
         tls_ca_path: /etc/amazon-cloudwatch-observability-agent-client-cert/tls-ca.crt
@@ -1741,6 +1747,7 @@ receivers:
 service:
     extensions:
         - sigv4auth/monitoring
+        - headers_setter/profiles
         - agenthealth/opentelemetry_profiles
         - agenthealth/opentelemetry_metrics
         - sigv4auth/logs

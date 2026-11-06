@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/headerssetterextension"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -64,4 +65,31 @@ func TestProfilesExporterSendingQueueResolved(t *testing.T) {
 		assert.EqualValues(t, 1000, other.QueueConfig.Get().QueueSize, "%s queue should keep the factory default", name)
 		assert.False(t, other.QueueConfig.Get().Batch.HasValue(), "%s batcher must stay off", name)
 	}
+}
+
+func TestProfilesVersionHeaderResolved(t *testing.T) {
+	factories, err := defaultcomponents.Factories()
+	require.NoError(t, err)
+
+	golden, err := os.ReadFile(filepath.Join("../../translator/tocwconfig/sampleConfig/opentelemetry", "otlp_otel_config.yaml"))
+	require.NoError(t, err)
+	var cfgMap map[string]any
+	require.NoError(t, yaml.Unmarshal(golden, &cfgMap))
+
+	yamlPath := filepath.Join(t.TempDir(), "otlp_otel_config.yaml")
+	require.NoError(t, cmdutil.ConfigToYamlFile(cfgMap, yamlPath))
+
+	providerSettings := GetSettings([]string{yamlPath}, zap.NewNop())
+	provider, err := otelcol.NewConfigProvider(providerSettings)
+	require.NoError(t, err)
+	cfg, err := provider.Get(context.Background(), factories)
+	require.NoError(t, err)
+
+	headersID := component.MustNewIDWithName("headers_setter", "profiles")
+	headers, ok := cfg.Extensions[headersID].(*headerssetterextension.Config)
+	require.True(t, ok, "profiles headers_setter extension missing or wrong type")
+	require.Len(t, headers.HeadersConfig, 1)
+	require.NotNil(t, headers.HeadersConfig[0].Value)
+	assert.Equal(t, "1", *headers.HeadersConfig[0].Value)
+	assert.Equal(t, "OTLP-Profiles-Development-Version", *headers.HeadersConfig[0].Key)
 }
