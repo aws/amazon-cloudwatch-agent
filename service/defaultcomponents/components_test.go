@@ -7,11 +7,46 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"golang.org/x/exp/maps"
 
+	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 )
+
+// TestDefaultConfigsMarshal checks that the default configuration of every component
+// encodes with internal/mapstructure. The agent encodes the merged OTEL configuration
+// with it at start, and exits if that fails. For example, the resource_attributes of
+// receiver_creator have keys of the named string type observer.EndpointType.
+func TestDefaultConfigsMarshal(t *testing.T) {
+	factories, err := Factories()
+	require.NoError(t, err)
+	// Each configuration is a field of a struct, as it is in otelcol.Config, so that the
+	// encode hooks see it as a nested value and Marshal returns a map.
+	type wrapper struct {
+		Config any `mapstructure:"config"`
+	}
+	check := func(kind string, id component.Type, cfg component.Config) {
+		_, err := mapstructure.Marshal(wrapper{Config: cfg})
+		assert.NoError(t, err, "%s %s", kind, id)
+	}
+	for id, f := range factories.Receivers {
+		check("receiver", id, f.CreateDefaultConfig())
+	}
+	for id, f := range factories.Processors {
+		check("processor", id, f.CreateDefaultConfig())
+	}
+	for id, f := range factories.Exporters {
+		check("exporter", id, f.CreateDefaultConfig())
+	}
+	for id, f := range factories.Extensions {
+		check("extension", id, f.CreateDefaultConfig())
+	}
+	for id, f := range factories.Connectors {
+		check("connector", id, f.CreateDefaultConfig())
+	}
+}
 
 func TestComponents(t *testing.T) {
 	factories, err := Factories()
@@ -37,6 +72,7 @@ func TestComponents(t *testing.T) {
 		"otlp",
 		"prometheus",
 		"postgresql",
+		"receiver_creator",
 		"statsd",
 		"systemmetrics",
 		"tcplog",
@@ -133,6 +169,7 @@ func TestComponents(t *testing.T) {
 		"file_storage",
 		"headers_setter",
 		"health_check",
+		"k8s_observer",
 		"k8smetadata",
 		"nodemetadatacache",
 		"oidctoken",
