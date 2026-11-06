@@ -140,7 +140,7 @@ extensions:
                 mode: EC2
                 region_type: ACJ
     agenthealth/opentelemetry_profiles:
-        additional_auth: sigv4auth/monitoring
+        additional_auth: headers_setter/profiles
         is_usage_data_enabled: true
         stats:
             operations:
@@ -175,6 +175,12 @@ extensions:
             - action: upsert
               from_context: aws.log.stream.name
               key: x-aws-log-stream
+    headers_setter/profiles:
+        additional_auth: sigv4auth/monitoring
+        headers:
+            - action: upsert
+              key: OTLP-Profiles-Development-Version
+              value: "1"
     sigv4auth/logs:
         assume_role: {}
         imds_retries: 1
@@ -900,6 +906,7 @@ service:
         - agenthealth/opentelemetry_logs
         - sigv4auth/xray
         - agenthealth/opentelemetry_traces
+        - headers_setter/profiles
         - agenthealth/opentelemetry_profiles
     pipelines:
         logs/opentelemetry:

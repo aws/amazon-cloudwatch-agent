@@ -16,6 +16,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/exporter/otlphttp"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/agenthealth"
+	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/headerssetter"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/extension/sigv4auth"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/k8sattributesprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/processor/resourcedetection"
@@ -32,6 +33,9 @@ const (
 	// profilesQueueSize bounds the profiles exporter's send queue to limit the
 	// memory it can hold when exports back up.
 	profilesQueueSize int64 = 100
+
+	profilesVersionHeaderName  = "OTLP-Profiles-Development-Version"
+	profilesVersionHeaderValue = "1"
 )
 
 type profilesPipelineTranslator struct {
@@ -53,7 +57,13 @@ func (t *profilesPipelineTranslator) Translate(conf *confmap.Conf) (*common.Comp
 	}
 
 	sigv4Ext := sigv4auth.NewTranslatorWithService(monitoringService)
-	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelProfilesName, []string{"*"}, agenthealth.WithAdditionalAuth(sigv4Ext.ID()))
+	headersExt := headerssetter.NewTranslatorWithName(profilesExporterName,
+		headerssetter.WithAdditionalAuth(sigv4Ext.ID()),
+		headerssetter.WithHeaders([]headerssetter.HeaderMapping{
+			{HeaderName: profilesVersionHeaderName, Value: profilesVersionHeaderValue},
+		}),
+	)
+	agentHealthExt := agenthealth.NewTranslator(agenthealth.OtelProfilesName, []string{"*"}, agenthealth.WithAdditionalAuth(headersExt.ID()))
 
 	processors := common.NewTranslatorMap[component.Config, component.ID]()
 	processors.Set(newOtlpScopeTranslator())
@@ -81,6 +91,6 @@ func (t *profilesPipelineTranslator) Translate(conf *confmap.Conf) (*common.Comp
 			otlphttp.WithAuthenticator(agentHealthExt.ID()),
 			otlphttp.WithRequestQueueSize(profilesQueueSize),
 		)),
-		Extensions: common.NewTranslatorMap(sigv4Ext, agentHealthExt),
+		Extensions: common.NewTranslatorMap(sigv4Ext, headersExt, agentHealthExt),
 	}, nil
 }
