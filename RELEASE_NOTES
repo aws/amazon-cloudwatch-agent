@@ -1,4 +1,19 @@
 ========================================================================
+Amazon CloudWatch Agent 1.300075.0 (2026-11-06)
+========================================================================
+New Features:
+* [OpenTelemetry] Add OTLP profiles support to the opentelemetry otlp section: profiles are sent to CloudWatch with the same cloud, host, and Kubernetes resource attributes as metrics, logs, and traces
+* [ContainerInsights] Add device-to-pod correlation for GPU, AWS Neuron, and Elastic Fabric Adapter (EFA) devices allocated with Kubernetes Dynamic Resource Allocation (DRA)
+
+Enhancements:
+* [Logs] Split log messages larger than the 1 MB log event limit into consecutive log events instead of truncating them
+
+Bug Fixes:
+* [Logs] Fix log batches with non-UTF-8 content being rejected by CloudWatch Logs and dropped
+* [ContainerInsights] Fix per-core Neuron metrics reporting zero on nodes running more than one Neuron runtime
+* [Metrics] Fix the netstat input dropping a collection interval when a process exits during collection
+
+========================================================================
 Amazon CloudWatch Agent 1.300074.1 (2026-10-27)
 ========================================================================
 Enhancements:
