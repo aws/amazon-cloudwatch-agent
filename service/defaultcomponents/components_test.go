@@ -114,6 +114,7 @@ func TestComponents(t *testing.T) {
 		"count",
 		"forward",
 		"routing",
+		"signal_to_info_metric",
 		"signaltometrics",
 		"signal_to_metrics",
 		"spanmetrics",
