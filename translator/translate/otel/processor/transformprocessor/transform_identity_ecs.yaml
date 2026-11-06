@@ -17,3 +17,7 @@ log_statements:
   - error_mode: ignore
     context: resource
     statements: *identity_statements
+profile_statements:
+  - error_mode: ignore
+    context: resource
+    statements: *identity_statements

@@ -697,3 +697,57 @@ func initializeLogFiltersForBenchmarks(b *testing.B, filters []*LogFilter) []*Lo
 	}
 	return filters
 }
+
+// TestFileConfigInit_EncodingAliases covers review comment C4: FileConfig.init treated
+// "utf-8"/"utf_8"/"utf8"/"ascii" (lowercase, exact) as UTF-8 and left Enc nil, but any other
+// spelling (UTF-8, UTF8, Utf-8, ...) fell through to charset.Lookup, which set a non-nil
+// Enc and misled the pipeline into skipping the UTF-8 rune-boundary backoff on MaxLineSize
+// cuts.
+//
+// This test asserts every case-insensitive spelling of utf-8 (with "-" or "_" as a
+// separator) and the exact lowercase "ascii" leave Enc nil, so logfile.go's IsUTF8
+// derivation (fileconfig.Enc == nil && !isutf16) stays true and tail applies the
+// rune-boundary backoff. Other ascii spellings keep their existing behaviour (resolved by
+// charset.Lookup), and a real non-UTF-8 encoding must still set Enc.
+func TestFileConfigInit_EncodingAliases(t *testing.T) {
+	utf8Aliases := []string{
+		"", "utf-8", "utf8", "utf_8", "UTF-8", "UTF8", "Utf-8", "uTf-8", "UTF_8", "ascii",
+	}
+	for _, enc := range utf8Aliases {
+		enc := enc
+		t.Run("UTF8/"+enc, func(t *testing.T) {
+			fc := &FileConfig{FilePath: "/tmp/logfile.log", Encoding: enc}
+			require.NoError(t, fc.init())
+			assert.Nil(t, fc.Enc, "encoding %q should leave Enc nil (treated as UTF-8)", enc)
+			// Mirror logfile.go:236's IsUTF8 derivation for a non-UTF-16 file to make the behaviour
+			// enabled by the fix explicit: tail receives IsUTF8=true and applies the rune-boundary
+			// backoff at MaxLineSize, so a split cannot land mid-rune and no U+FFFD is produced.
+			const isutf16 = false
+			isUTF8 := fc.Enc == nil && !isutf16
+			assert.True(t, isUTF8, "encoding %q must enable the UTF-8 rune-boundary backoff", enc)
+		})
+	}
+
+	// Spellings of ascii other than the exact lowercase one are unchanged from before the fix:
+	// they go through charset.Lookup and set a non-nil Enc, so the boundary backoff stays off.
+	for _, enc := range []string{"ASCII", "Ascii"} {
+		enc := enc
+		t.Run("ASCIIUnchanged/"+enc, func(t *testing.T) {
+			fc := &FileConfig{FilePath: "/tmp/logfile.log", Encoding: enc}
+			require.NoError(t, fc.init())
+			assert.NotNil(t, fc.Enc, "encoding %q should still resolve through charset.Lookup", enc)
+		})
+	}
+
+	// A real non-UTF-8 encoding still resolves. Picks a stable name charset.Lookup accepts.
+	t.Run("NonUTF8/Shift_JIS", func(t *testing.T) {
+		fc := &FileConfig{FilePath: "/tmp/logfile.log", Encoding: "shift_jis"}
+		require.NoError(t, fc.init())
+		assert.NotNil(t, fc.Enc, "a non-UTF-8 encoding should set Enc")
+		// IsUTF8 stays false, so raw byte cuts are preserved - tailersrc.go then decodes with
+		// the explicit encoder and the mid-rune concern does not apply.
+		const isutf16 = false
+		isUTF8 := fc.Enc == nil && !isutf16
+		assert.False(t, isUTF8, "a non-UTF-8 encoding must not enable the UTF-8 boundary backoff")
+	})
+}

@@ -18,16 +18,18 @@ import (
 
 // EndpointConfig specifies signal-specific endpoints for the otlphttp exporter.
 type EndpointConfig struct {
-	LogsEndpoint    string
-	MetricsEndpoint string
-	TracesEndpoint  string
+	LogsEndpoint     string
+	MetricsEndpoint  string
+	TracesEndpoint   string
+	ProfilesEndpoint string
 }
 
 type translator struct {
-	name          string
-	factory       exporter.Factory
-	endpoint      EndpointConfig
-	authenticator component.ID
+	name             string
+	factory          exporter.Factory
+	endpoint         EndpointConfig
+	authenticator    component.ID
+	requestQueueSize *int64
 }
 
 type Option func(*translator)
@@ -36,6 +38,14 @@ type Option func(*translator)
 func WithAuthenticator(id component.ID) Option {
 	return func(t *translator) {
 		t.authenticator = id
+	}
+}
+
+// WithRequestQueueSize emits an explicit non-blocking sending_queue capping the
+// exporter to size requests.
+func WithRequestQueueSize(size int64) Option {
+	return func(t *translator) {
+		t.requestQueueSize = &size
 	}
 }
 
@@ -71,6 +81,9 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	if t.endpoint.TracesEndpoint != "" {
 		cfg.TracesEndpoint = t.endpoint.TracesEndpoint
 	}
+	if t.endpoint.ProfilesEndpoint != "" {
+		cfg.ProfilesEndpoint = t.endpoint.ProfilesEndpoint
+	}
 	cfg.ClientConfig.Compression = configcompression.TypeGzip
 	if t.authenticator.Type().String() != "" {
 		cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{
@@ -84,6 +97,14 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	// which the collector's confmap round-trip promotes back to Some(defaults),
 	// re-enabling the batcher.
 	cfg.QueueConfig = configoptional.None[exporterhelper.QueueBatchConfig]()
+
+	// A cap needs an explicit queue: None serializes as absent and the collector
+	// replaces it with its own default.
+	if t.requestQueueSize != nil {
+		queueConfig := exporterhelper.NewDefaultQueueConfig()
+		queueConfig.QueueSize = *t.requestQueueSize
+		cfg.QueueConfig = configoptional.Some(queueConfig)
+	}
 
 	return cfg, nil
 }
