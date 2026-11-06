@@ -25,9 +25,11 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 
+	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -79,14 +81,23 @@ func init() {
 	prometheus.MustRegister(v.NewCollector("prometheus"))
 }
 
+func getPrometheusLogLevel(debugEnv, agentLogLevel string) string {
+	if debugEnv != "" || strings.EqualFold(agentLogLevel, "DEBUG") {
+		return "debug"
+	}
+	return "info"
+}
+
 func Start(configFilePath string, receiver storage.Appendable, shutDownChan chan interface{}, wg *sync.WaitGroup, mth *metricsTypeHandler) {
 	logLevel := promslog.NewLevel()
-	logLevel.Set("info")
+	logLevel.Set(getPrometheusLogLevel(
+		os.Getenv("DEBUG"),
+		os.Getenv(envconfig.CWAGENT_LOG_LEVEL),
+	))
 
 	if os.Getenv("DEBUG") != "" {
 		runtime.SetBlockProfileRate(20)
 		runtime.SetMutexProfileFraction(20)
-		logLevel.Set("debug")
 	}
 	logFormat := &promslog.Format{}
 	_ = logFormat.Set("logfmt")
