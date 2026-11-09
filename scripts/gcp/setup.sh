@@ -535,11 +535,6 @@ setup_gcp_gke() {
                printf '    --set containerLogs.enabled=false \\\n'
                printf '    --set otelContainerInsights.enabled=true \\\n'
                printf '    --set otelContainerInsights.logs.enabled=true \\\n'
-               printf "    --set-string 'agents[0].name=cloudwatch-agent' \\\\\n"
-               printf "    --set-string 'agents[0].config=default:otel' \\\\\n"
-               printf "    --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \\\\\n"
-               printf "    --set-string 'agents[1].mode=deployment' \\\\\n"
-               printf "    --set-string 'agents[1].config=default' \\\\\n"
                printf '    --namespace %s \\\n' "${K8S_NAMESPACE}"
                printf '    --create-namespace\n'
           } >&3
@@ -558,9 +553,6 @@ setup_gcp_gke() {
           die "helm repo add failed for ${HELM_CHART_REPO} (see the helm error above)"
      helm repo update >&3 ||
           die "helm repo update failed (see the helm error above)"
-     # Every agents[] entry is listed, not just the one being changed: --set replaces a whole
-     # list element rather than merging into it, so setting agents[0] alone drops the chart's
-     # default agents[1] and the cluster scraper is never created.
      helm upgrade --install amazon-cloudwatch-observability aws-observability/amazon-cloudwatch-observability \
           --set k8sMode=GKE \
           --set roleArn="${ROLE_ARN}" \
@@ -570,11 +562,6 @@ setup_gcp_gke() {
           --set containerLogs.enabled=false \
           --set otelContainerInsights.enabled=true \
           --set otelContainerInsights.logs.enabled=true \
-          --set-string 'agents[0].name=cloudwatch-agent' \
-          --set-string 'agents[0].config=default:otel' \
-          --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \
-          --set-string 'agents[1].mode=deployment' \
-          --set-string 'agents[1].config=default' \
           --namespace "${K8S_NAMESPACE}" \
           --create-namespace >&3 ||
           die "helm upgrade failed on '${CLUSTER_NAME}' (see the helm error above)"
