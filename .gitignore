@@ -12,3 +12,5 @@ terraform.*
 coverage.txt
 AGENTS.md
 local
+.devcontainer
+*.code-workspace
