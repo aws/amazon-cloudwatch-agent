@@ -12,8 +12,10 @@
 #               (requires: az)
 #   azure_aks   enables the OIDC issuer and workload identity on the cluster
 #               (an "az aks update" that can take several minutes), then
-#               installs the CloudWatch Observability Helm chart when helm and
-#               kubectl are present, otherwise prints the command (requires: az)
+#               installs the CloudWatch Observability Helm chart (requires: az;
+#               install also needs helm and kubectl, and when either is missing
+#               it prints the command, names the missing tools, and exits
+#               non-zero)
 #
 # Two modes, keyed on CWAGENT_AWS_ROLE_ARN:
 #
@@ -85,6 +87,16 @@ is_true() {
      1 | true | yes | on) return 0 ;;
      *) return 1 ;;
      esac
+}
+
+# missing_tools <cmd>...: the given commands not found on PATH, comma-separated
+# (empty when all are present), so a failure can name exactly what to install.
+missing_tools() {
+     _missing=""
+     for _tool in "$@"; do
+          command -v "${_tool}" >/dev/null 2>&1 || _missing="${_missing:+${_missing}, }${_tool}"
+     done
+     printf '%s' "${_missing}"
 }
 
 # =============================================================================
@@ -580,39 +592,14 @@ setup_azure_aks() {
           return
      fi
 
-     # Install directly when helm and kubectl are available, otherwise print the
-     # commands to run from a shell that has them.
-     if command -v helm >/dev/null 2>&1 && command -v kubectl >/dev/null 2>&1; then
-          section "Installing CloudWatch Observability Helm chart on ${CLUSTER_NAME}..."
-          logaction "Configuring kubeconfig for '${CLUSTER_NAME}'"
-          az_scoped aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --overwrite-existing >&3
-
-          logaction "Installing via Helm"
-          # --force-update surfaces (not swallows) a stale-URL conflict if the
-          # repo alias already points somewhere else.
-          helm repo add --force-update aws-observability "${HELM_CHART_REPO}" >&3
-          helm repo update >&3
-          # Every agents[] entry is listed, not just the one being changed: --set replaces a whole
-          # list element rather than merging into it, so setting agents[0] alone drops the chart's
-          # default agents[1] and the cluster scraper is never created.
-          helm upgrade --install amazon-cloudwatch-observability aws-observability/amazon-cloudwatch-observability \
-               --set k8sMode=AKS \
-               --set roleArn="${ROLE_ARN}" \
-               --set region="${REGION}" \
-               --set clusterName="${CLUSTER_NAME}" \
-               --set containerInsights.enabled=false \
-               --set containerLogs.enabled=false \
-               --set otelContainerInsights.enabled=true \
-               --set otelContainerInsights.logs.enabled=true \
-               --set-string 'agents[0].name=cloudwatch-agent' \
-               --set-string 'agents[0].config=default:otel' \
-               --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \
-               --set-string 'agents[1].mode=deployment' \
-               --set-string 'agents[1].config=default' \
-               --namespace "${K8S_NAMESPACE}" \
-               --create-namespace >&3
-          log "Chart installed on '${CLUSTER_NAME}'"
-     else
+     # Install needs helm and kubectl. The check runs after the cluster setup
+     # above on purpose: the printed commands cover only the Helm steps, so the
+     # OIDC issuer and workload identity must already be on for them to work
+     # from another shell. When either tool is missing, the chart is not
+     # installed: print the commands, name the missing tools, and exit
+     # non-zero, so the run never reads as a successful install.
+     missing=$(missing_tools helm kubectl)
+     if [ -n "${missing}" ]; then
           printf '\n' >&3
           printf 'Install the Amazon CloudWatch Observability Helm chart manually (requires kubeconfig for %s):\n' "${CLUSTER_NAME}" >&3
           printf '\n' >&3
@@ -636,8 +623,42 @@ setup_azure_aks() {
                printf '    --namespace %s \\\n' "${K8S_NAMESPACE}"
                printf '    --create-namespace\n'
           } >&3
+          die "Helm chart not installed on '${CLUSTER_NAME}': missing ${missing}. Install the missing tools and rerun, or run the commands above from a shell that has them."
      fi
 
+     section "Installing CloudWatch Observability Helm chart on ${CLUSTER_NAME}..."
+     logaction "Configuring kubeconfig for '${CLUSTER_NAME}'"
+     az_scoped aks get-credentials --resource-group "${RESOURCE_GROUP}" --name "${CLUSTER_NAME}" --overwrite-existing >&3 ||
+          die "could not configure kubeconfig for '${CLUSTER_NAME}' (see the az error above)"
+
+     logaction "Installing via Helm"
+     # --force-update surfaces (not swallows) a stale-URL conflict if the
+     # repo alias already points somewhere else.
+     helm repo add --force-update aws-observability "${HELM_CHART_REPO}" >&3 ||
+          die "helm repo add failed for ${HELM_CHART_REPO} (see the helm error above)"
+     helm repo update >&3 ||
+          die "helm repo update failed (see the helm error above)"
+     # Every agents[] entry is listed, not just the one being changed: --set replaces a whole
+     # list element rather than merging into it, so setting agents[0] alone drops the chart's
+     # default agents[1] and the cluster scraper is never created.
+     helm upgrade --install amazon-cloudwatch-observability aws-observability/amazon-cloudwatch-observability \
+          --set k8sMode=AKS \
+          --set roleArn="${ROLE_ARN}" \
+          --set region="${REGION}" \
+          --set clusterName="${CLUSTER_NAME}" \
+          --set containerInsights.enabled=false \
+          --set containerLogs.enabled=false \
+          --set otelContainerInsights.enabled=true \
+          --set otelContainerInsights.logs.enabled=true \
+          --set-string 'agents[0].name=cloudwatch-agent' \
+          --set-string 'agents[0].config=default:otel' \
+          --set-string 'agents[1].name=cloudwatch-agent-cluster-scraper' \
+          --set-string 'agents[1].mode=deployment' \
+          --set-string 'agents[1].config=default' \
+          --namespace "${K8S_NAMESPACE}" \
+          --create-namespace >&3 ||
+          die "helm upgrade failed on '${CLUSTER_NAME}' (see the helm error above)"
+     log "Chart installed on '${CLUSTER_NAME}'"
      log "OIDC issuer (for the AWS setup): ${OIDC_ISSUER}"
 }
 
