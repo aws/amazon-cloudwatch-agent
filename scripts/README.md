@@ -137,9 +137,14 @@ CWAGENT_PLATFORM=gcp_gke CWAGENT_AWS_ROLE_ARN=arn:aws:iam::123456789012:role/Clo
 | `CWAGENT_GCP_SA_UNIQUE_ID`         | `gcp_gce`                | GCP service account unique ID (produced by `gcp/setup.sh`, consumed by `aws/setup.sh`)  |
 | `CWAGENT_GCP_OIDC_ISSUER`          | `gcp_gke`               | GKE cluster OIDC issuer URL (produced by `gcp/setup.sh`, consumed by `aws/setup.sh`)    |
 
-The agent runs in the `amazon-cloudwatch` namespace on Kubernetes. Telemetry uses
-the default OpenTelemetry configuration (`default:otel`): OTel Container Insights
-and logs on the node agent, plus a cluster-scraper for cluster-level metrics.
+The agent runs in the `amazon-cloudwatch` namespace on Kubernetes. The scripts
+turn on OTel Container Insights and logs on the node agent and keep the chart's
+default agents: the node agent, whose OTLP endpoint (gRPC 4317, HTTP 4318) is on
+by default, plus a cluster-scraper for cluster-level metrics. On EKS the script
+never changes the add-on version: when the installed add-on (or, for a new
+install, the cluster's default add-on version) is older than the first version
+with the default OTLP endpoint, it keeps the node agent on the `default:otel`
+configuration so the install still gets an OTLP endpoint.
 
 ## Requirements
 

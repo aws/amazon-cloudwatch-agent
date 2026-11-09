@@ -90,6 +90,11 @@ SCRIPT_BASE_URL="https://raw.githubusercontent.com/aws/amazon-cloudwatch-agent/m
 # The agent's namespace is fixed: the EKS add-on always installs into
 # amazon-cloudwatch, and the operator/chart centers on it, so it is not settable.
 K8S_NAMESPACE="amazon-cloudwatch"
+# First CloudWatch Observability EKS add-on version whose node agent serves an
+# OTLP endpoint by default. From this version on, the add-on config no longer
+# needs agents[0].config=default:otel. The script never changes the add-on
+# version itself, so older add-ons keep getting default:otel.
+OTLP_ADDON_VERSION="v8.0.0-eksbuild.1"
 
 # True when a flag is an affirmative value (1, true, yes, on, case-insensitive).
 # One truthiness rule for every CWAGENT_* boolean.
@@ -1050,14 +1055,14 @@ install_aws_eks() {
 
      # The add-on injects k8sMode and clusterName, so configuration-values carries
      # only the pipeline config: OTel Container Insights + logs on, v1 CI/FluentBit
-     # off, and the node + cluster-scraper agents.
-     ADDON_CONFIG='{"containerInsights":{"enabled":false},"containerLogs":{"enabled":false},"otelContainerInsights":{"enabled":true,"logs":{"enabled":true}},"agents":[{"name":"cloudwatch-agent","config":"default:otel"},{"name":"cloudwatch-agent-cluster-scraper","mode":"deployment","config":"default"}]}'
-
+     # off. Which agents config is sent depends on the add-on version that will
+     # run (see eks_addon_config); the script never passes --addon-version.
      section "Installing the CloudWatch Observability add-on on ${CLUSTER_NAME}..."
      # create-addon for a new install, update-addon if it already exists.
      # --resolve-conflicts is left at its NONE default, so a re-run never
      # silently overwrites a value changed by hand on the add-on.
-     if aws eks describe-addon --cluster-name "${CLUSTER_NAME}" --addon-name amazon-cloudwatch-observability --region "${REGION}" >/dev/null 2>&1; then
+     if INSTALLED_VERSION=$(aws eks describe-addon --cluster-name "${CLUSTER_NAME}" --addon-name amazon-cloudwatch-observability --region "${REGION}" --query addon.addonVersion --output text 2>/dev/null); then
+          eks_addon_config "${INSTALLED_VERSION}" "installed"
           logaction "Updating add-on configuration"
           aws eks update-addon \
                --cluster-name "${CLUSTER_NAME}" \
@@ -1065,6 +1070,7 @@ install_aws_eks() {
                --configuration-values "${ADDON_CONFIG}" \
                --region "${REGION}" >/dev/null
      else
+          eks_addon_config "$(eks_default_addon_version)" "default for this cluster"
           logaction "Creating add-on"
           aws eks create-addon \
                --cluster-name "${CLUSTER_NAME}" \
@@ -1078,6 +1084,48 @@ install_aws_eks() {
           log "Add-on active on '${CLUSTER_NAME}'"
      else
           logwarn "Add-on submitted, still activating. Check: aws eks describe-addon --cluster-name '${CLUSTER_NAME}' --addon-name amazon-cloudwatch-observability --region '${REGION}'"
+     fi
+}
+
+# Prints the add-on version create-addon installs on this cluster when no
+# --addon-version is passed: the default compatible version for the cluster's
+# Kubernetes version. Prints nothing when either lookup fails.
+eks_default_addon_version() {
+     _k8s=$(aws eks describe-cluster --name "${CLUSTER_NAME}" --region "${REGION}" \
+          --query cluster.version --output text 2>/dev/null) || return 0
+     aws eks describe-addon-versions --addon-name amazon-cloudwatch-observability \
+          --kubernetes-version "${_k8s}" --region "${REGION}" \
+          --query 'addons[0].addonVersions[?compatibilities[?defaultVersion]] | [0].addonVersion' \
+          --output text 2>/dev/null || true
+}
+
+# eks_addon_config <add-on version> <where the version came from>
+# Sets ADDON_CONFIG for the add-on version that will run. From OTLP_ADDON_VERSION
+# on, the chart serves the OTLP endpoint by default and its default agents (node
+# agent + cluster scraper) apply, so no agents list is sent. Below it, or when
+# the version is unknown, the node agent keeps default:otel so the install still
+# gets an OTLP endpoint. Only vMAJOR.MINOR.PATCH is compared; the -eksbuild.N
+# suffix is ignored.
+eks_addon_config() {
+     _ver=${1#v}
+     _ver=${_ver%%-*}
+     _base='"containerInsights":{"enabled":false},"containerLogs":{"enabled":false},"otelContainerInsights":{"enabled":true,"logs":{"enabled":true}}'
+     _otlp=${OTLP_ADDON_VERSION#v}
+     _otlp=${_otlp%%-*}
+     case "${_ver}" in
+     "" | *[!0-9.]* | .* | *. | *..*) _known=false ;;
+     *) _known=true ;;
+     esac
+     if [ "${_known}" = true ] && version_ge "${_ver}" "${_otlp}"; then
+          ADDON_CONFIG="{${_base}}"
+          log "Add-on ${1} (${2}) serves OTLP by default: config without default:otel"
+     else
+          ADDON_CONFIG="{${_base},\"agents\":[{\"name\":\"cloudwatch-agent\",\"config\":\"default:otel\"},{\"name\":\"cloudwatch-agent-cluster-scraper\",\"mode\":\"deployment\",\"config\":\"default\"}]}"
+          if [ "${_known}" = true ]; then
+               log "Add-on ${1} (${2}) is older than ${OTLP_ADDON_VERSION}: config with default:otel"
+          else
+               log "Add-on version unknown: config with default:otel"
+          fi
      fi
 }
 

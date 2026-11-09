@@ -86,6 +86,10 @@ run_install
 assert_status 0
 assert_called "az aks get-credentials --resource-group test-rg --name test-cluster --overwrite-existing"
 assert_called "helm upgrade --install amazon-cloudwatch-observability .*--set k8sMode=AKS --set roleArn=${ROLE_ARN}"
+assert_called "helm upgrade --install .*--set otelContainerInsights.enabled=true --set otelContainerInsights.logs.enabled=true --namespace amazon-cloudwatch"
+# The chart's default agents are kept: no agents[] override, no default:otel.
+assert_not_called "helm upgrade .*agents\\["
+assert_not_called "helm upgrade .*default:otel"
 assert_output_contains stdout "Chart installed on 'test-cluster'"
 assert_output_contains stdout "OIDC issuer (for the AWS setup): ${ISSUER}"
 assert_output_lacks stdout "manually"
@@ -97,7 +101,10 @@ run_install
 assert_status 1
 assert_output_contains stdout "Install the Amazon CloudWatch Observability Helm chart manually"
 assert_output_contains stdout "--set k8sMode=AKS"
-assert_output_contains stdout "--set-string 'agents[1].name=cloudwatch-agent-cluster-scraper'"
+assert_output_contains stdout "--set otelContainerInsights.logs.enabled=true"
+# The chart's default agents are kept: no agents[] override, no default:otel.
+assert_output_lacks stdout "agents["
+assert_output_lacks stdout "default:otel"
 assert_output_contains stderr "Helm chart not installed on 'test-cluster': missing kubectl."
 assert_output_lacks stdout "Chart installed"
 assert_output_lacks stdout "OIDC issuer (for the AWS setup)"
