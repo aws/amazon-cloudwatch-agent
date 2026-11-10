@@ -19,6 +19,29 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/tool/paths"
 )
 
+// prepareConfig makes sure the TOML, YAML and env-config.json for this start
+// exist. It reports whether the translator ran. The translator is skipped only
+// on Windows hosts (not containers) when the translation stamp written after
+// the last successful translation still matches; see translation_stamp_windows.go.
+func prepareConfig() (bool, error) {
+	if !envconfig.IsRunningInContainer() && translationIsCurrent() {
+		return false, nil
+	}
+	// Invalidate the stamp first, so that a failed translation never leaves
+	// a valid stamp behind.
+	removeTranslationStamp()
+	// Capture the inputs the translator will use before it runs, so a change
+	// during translation is not recorded as current.
+	captured := captureTranslationInputs()
+	if err := translateConfig(); err != nil {
+		return true, err
+	}
+	if !envconfig.IsRunningInContainer() {
+		writeTranslationStamp(captured)
+	}
+	return true, nil
+}
+
 func translateConfig() error {
 	args := []string{"--output", paths.TomlConfigPath, "--mode", "auto"}
 	if envconfig.IsRunningInContainer() {
@@ -65,12 +88,21 @@ func main() {
 		log.SetOutput(writer)
 	}
 
-	if err := translateConfig(); err != nil {
+	translated, err := prepareConfig()
+	if err != nil {
 		log.Fatalf("E! Cannot translate JSON, ERROR is %v \n", err)
 	}
-	log.Printf("I! Config has been translated into TOML %s \n", paths.TomlConfigPath)
+	if translated {
+		log.Printf("I! Config has been translated into TOML %s \n", paths.TomlConfigPath)
+	} else {
+		log.Printf("I! Skipping config translation: inputs, agent version and host identity unchanged since the last successful translation; using existing TOML %s \n", paths.TomlConfigPath)
+	}
 	printFileContents(paths.TomlConfigPath)
-	log.Printf("I! Config has been translated into YAML %s \n", paths.YamlConfigPath)
+	if translated {
+		log.Printf("I! Config has been translated into YAML %s \n", paths.YamlConfigPath)
+	} else {
+		log.Printf("I! Using existing YAML %s \n", paths.YamlConfigPath)
+	}
 	printFileContents(paths.YamlConfigPath)
 
 	if err := startAgent(writer); err != nil {
