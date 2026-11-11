@@ -217,6 +217,75 @@ func TestStopQueueWouldDoFinalSend(t *testing.T) {
 	require.True(t, called.Load(), "PutLogEvents has not been called after FlushTimeout has been reached.")
 }
 
+// The queue is stopped while its goroutine is held in a PutLogEvents call, so the events added in the meantime still
+// wait in the queue's channel. Every one of them must be sent after the stop, and in order.
+func TestStopQueueWouldSendEventsWaitingInChannel(t *testing.T) {
+	tests := []struct {
+		name     string
+		addEvent func(*queue, logs.LogEvent)
+	}{
+		{name: "Blocking", addEvent: (*queue).AddEvent},
+		{name: "NonBlocking", addEvent: (*queue).AddEventNonBlocking},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var wg sync.WaitGroup
+			var s stubLogsService
+			var mu sync.Mutex
+			var sent []string
+			var calls atomic.Int32
+			entered := make(chan struct{})
+			release := make(chan struct{})
+			s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+				if calls.Add(1) == 1 {
+					close(entered)
+					<-release
+				}
+				mu.Lock()
+				defer mu.Unlock()
+				for _, e := range in.LogEvents {
+					sent = append(sent, *e.Message)
+				}
+				return &cloudwatchlogs.PutLogEventsOutput{}, nil
+			}
+
+			var done atomic.Int32
+			newEvent := func(msg string) logs.LogEvent {
+				e := newStubLogEvent(msg, time.Now())
+				e.done = func() { done.Add(1) }
+				return e
+			}
+
+			// Without a worker pool, the queue goroutine sends synchronously, so it waits in this first call.
+			q, sender := testPreparation(t, -1, &s, 10*time.Millisecond, time.Hour, nil, &wg)
+			tt.addEvent(q, newEvent("first"))
+			select {
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("the first PutLogEvents call was not made")
+			}
+
+			want := []string{"first"}
+			for i := 0; i < 50; i++ {
+				msg := fmt.Sprintf("event %d", i)
+				tt.addEvent(q, newEvent(msg))
+				want = append(want, msg)
+			}
+
+			q.Stop()
+			close(release)
+			sender.Stop()
+			wg.Wait()
+
+			mu.Lock()
+			defer mu.Unlock()
+			assert.Equal(t, want, sent)
+			assert.EqualValues(t, len(want), done.Load())
+		})
+	}
+}
+
 func TestStopPusherWouldStopRetries(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup

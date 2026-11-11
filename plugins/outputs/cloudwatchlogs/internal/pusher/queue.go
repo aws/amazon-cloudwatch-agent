@@ -132,7 +132,8 @@ func (q *queue) AddEventNonBlocking(e logs.LogEvent) {
 	}
 }
 
-// Stop stops all goroutines associated with this queue instance.
+// Stop stops all goroutines associated with this queue instance. Before it exits, the queue goroutine hands every
+// event added before Stop to the sender.
 func (q *queue) Stop() {
 	if q.stopped {
 		return
@@ -196,7 +197,9 @@ func (q *queue) start() {
 	}
 }
 
-// merge merges events from both blocking and non-blocking channel
+// merge merges events from both blocking and non-blocking channel. On stop, it first forwards the events still
+// buffered in either channel, so that the queue sends every event added before Stop: select picks at random among
+// ready cases, so returning on stopCh alone could leave them behind.
 func (q *queue) merge(mergeChan chan logs.LogEvent) {
 	defer close(mergeChan)
 	var nonBlockingEventsCh <-chan logs.LogEvent
@@ -209,6 +212,24 @@ func (q *queue) merge(mergeChan chan logs.LogEvent) {
 		case <-q.startNonBlockCh:
 			nonBlockingEventsCh = q.nonBlockingEventsCh
 		case <-q.stopCh:
+			// A destination switches from the blocking to the non-blocking channel only once, so its older events
+			// are in the blocking one.
+			drainEvents(q.eventsCh, mergeChan)
+			drainEvents(nonBlockingEventsCh, mergeChan)
+			return
+		}
+	}
+}
+
+// drainEvents forwards the events buffered in ch to mergeChan until ch is empty. It never waits for an event to be
+// added: events are added to the queue and the queue is stopped under the cwDest lock, after which cwDest adds no
+// more events, so ch stays empty once drained. A nil ch is empty.
+func drainEvents(ch <-chan logs.LogEvent, mergeChan chan<- logs.LogEvent) {
+	for {
+		select {
+		case e := <-ch:
+			mergeChan <- e
+		default:
 			return
 		}
 	}
