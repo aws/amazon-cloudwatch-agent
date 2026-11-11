@@ -163,7 +163,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 			for old, new := range renameMapForDcgm {
 				var operations []map[string]interface{}
 				// convert decimals to percent
-				if new == containerinsightscommon.GpuMemUtilization {
+				if new == containerinsightscommon.GpuUtilization || new == containerinsightscommon.GpuMemUtilization {
 					operations = append(operations, map[string]interface{}{
 						"action":             "experimental_scale_value",
 						"experimental_scale": 100,
