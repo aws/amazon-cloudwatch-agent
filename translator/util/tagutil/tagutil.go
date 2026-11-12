@@ -51,8 +51,8 @@ func getTagsCache(instanceID string) *TagsCache {
 	return tagsCache
 }
 
-// sleep some back off time before retries.
-func backoffSleep(i int) {
+// sleep some back off time before retries. It can be overridden in tests.
+var backoffSleep = func(i int) {
 	backoffDuration := getBackoffDuration(i)
 	log.Printf("W! It is the %v time, going to sleep %v before retrying.", i, backoffDuration)
 	time.Sleep(backoffDuration)
@@ -68,15 +68,22 @@ func getBackoffDuration(i int) time.Duration {
 
 // encapsulate the retry logic in this separate method.
 func callFuncWithRetries(fn func() (*ec2.DescribeTagsOutput, error), errorMsg string) (*ec2.DescribeTagsOutput, error) {
+	var err error
 	for i := 0; i <= defaultRetryCount; i++ {
-		result, err := fn()
+		var result *ec2.DescribeTagsOutput
+		result, err = fn()
 		if err == nil {
 			return result, nil
+		}
+		// No retry follows the final attempt, so don't sleep or log a retry.
+		// The caller logs the returned error.
+		if i == defaultRetryCount {
+			break
 		}
 		log.Printf("%s Will retry the request: %s", errorMsg, err.Error())
 		backoffSleep(i)
 	}
-	return nil, nil
+	return nil, err
 }
 
 var ec2ClientFactory = createDescribeTagsClient
