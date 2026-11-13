@@ -152,6 +152,63 @@ func TestAddSingleEvent_WithAccountId(t *testing.T) {
 	wg.Wait()
 }
 
+// Every batch the queue sends must carry the entity, not only the first one. This includes the batches that the
+// chunks of a split oversized message are sent in.
+func TestEntityIsSentWithEveryBatch(t *testing.T) {
+	t.Parallel()
+	var wg sync.WaitGroup
+	var s stubLogsService
+	expectedEntity := &types.Entity{
+		KeyAttributes: map[string]string{
+			"Name":        "myService",
+			"Environment": "myEnvironment",
+		},
+	}
+
+	var mu sync.Mutex
+	var entities []*types.Entity
+	s.ple = func(_ context.Context, in *cloudwatchlogs.PutLogEventsInput) (*cloudwatchlogs.PutLogEventsOutput, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		entities = append(entities, in.Entity)
+		return &cloudwatchlogs.PutLogEventsOutput{}, nil
+	}
+	sent := func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(entities)
+	}
+
+	ep := newMockEntityProvider(expectedEntity)
+	q, sender := testPreparation(t, -1, &s, 1*time.Hour, 2*time.Hour, ep, &wg)
+	const batches = 3
+	for i := 1; i <= batches; i++ {
+		q.AddEvent(newStubLogEvent("MSG", time.Now()))
+		require.Eventually(t, func() bool {
+			// The event may not have reached the batch yet, so send until it is sent.
+			triggerSend(t, q)
+			return sent() == i
+		}, 2*time.Second, 10*time.Millisecond)
+	}
+
+	// A message over the per-event limit is split, and each chunk is sent in a batch of its own.
+	message := uniqueMessage(3*maxEventMessageBytes + 1)
+	chunks := flattenStatefulLogEvents(newStatefulLogEvents(time.Now(), message, nil, nil))
+	require.Greater(t, len(chunks), 1)
+	q.AddEvent(newStubLogEvent(message, time.Now()))
+	require.Eventually(t, func() bool { return sent() == batches+len(chunks) }, 2*time.Second, 10*time.Millisecond)
+
+	mu.Lock()
+	for i, entity := range entities {
+		assert.Equal(t, expectedEntity, entity, "request %d was sent without the entity", i+1)
+	}
+	mu.Unlock()
+
+	q.Stop()
+	sender.Stop()
+	wg.Wait()
+}
+
 func TestAddSingleEvent_WithoutAccountId(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup

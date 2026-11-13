@@ -83,6 +83,7 @@ func newQueue(
 		logger:          logger,
 		converter:       newConverter(logger, target),
 		batch:           newLogEventBatch(target, entityProvider),
+		entityProvider:  entityProvider,
 		sender:          sender,
 		eventsCh:        make(chan logs.LogEvent, 100),
 		flushCh:         make(chan struct{}),
