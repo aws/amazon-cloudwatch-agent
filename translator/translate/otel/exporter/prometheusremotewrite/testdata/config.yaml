@@ -1,5 +1,3 @@
-auth:
-  authenticator: sigv4auth
 resource_to_telemetry_conversion:
   clear_after_copy: true
   enabled: true
@@ -16,16 +14,19 @@ remote_write_queue:
   queue_size: 10000
   num_consumers: 5
 external_labels: {}
-write_buffer_size: 524288
-endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
-force_attempt_http2: true
 protobuf_message: prometheus.WriteRequest
 target_info:
   enabled: true
 add_metric_suffixes: false
 disable_scope_info: true
 max_batch_size_bytes: 3000000
-max_conns_per_host: 0
-max_idle_conns: 100
-max_idle_conns_per_host: 0
-idle_conn_timeout: 90000000000
+http:
+  auth:
+    authenticator: sigv4auth
+  endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345/api/v1/remote_write"
+  force_attempt_http2: true
+  write_buffer_size: 524288
+  timeout: 5000000000
+  keepalive:
+    max_idle_conns: 100
+    idle_conn_timeout: 90000000000
