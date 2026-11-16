@@ -68,8 +68,8 @@ func TestTranslatorWithConfig(t *testing.T) {
 			assert.Equal(t, tc.want.InputConfig.Units, gotCfg.InputConfig.Units)
 			assert.Equal(t, tc.want.InputConfig.Priority, gotCfg.InputConfig.Priority)
 			assert.Equal(t, tc.want.InputConfig.Matches, gotCfg.InputConfig.Matches)
-			assert.NotNil(t, gotCfg.StorageID)
-			assert.Equal(t, filestorage.ComponentID(), *gotCfg.StorageID)
+			assert.NotNil(t, gotCfg.BaseConfig.StorageID)
+			assert.Equal(t, filestorage.ComponentID(), *gotCfg.BaseConfig.StorageID)
 		})
 	}
 }

@@ -1345,16 +1345,16 @@ func TestTranslator(t *testing.T) {
 				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
-				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				assert.Equal(t, testCase.want["local_mode"], gotCfg.AWSSessionSettings.LocalMode)
 				if addEntity, exists := testCase.want["add_entity"]; exists {
 					assert.Equal(t, addEntity, gotCfg.AddEntity)
 				}
 				if metricAsDistribution, exists := testCase.want["metric_as_distribution"]; exists {
 					assert.ElementsMatch(t, metricAsDistribution, gotCfg.MetricAsDistribution)
 				}
-				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
-				assert.Equal(t, "global_arn", gotCfg.RoleARN)
-				assert.Equal(t, "us-east-1", gotCfg.Region)
+				assert.Equal(t, "/ca/bundle", gotCfg.AWSSessionSettings.CertificateFilePath)
+				assert.Equal(t, "global_arn", gotCfg.AWSSessionSettings.RoleARN)
+				assert.Equal(t, "us-east-1", gotCfg.AWSSessionSettings.Region)
 				assert.NotNil(t, gotCfg.MiddlewareID)
 				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
 			}
@@ -1400,7 +1400,7 @@ func TestTranslator_EndpointOverride(t *testing.T) {
 			require.NoError(t, err)
 			gotCfg, ok := got.(*awsemfexporter.Config)
 			require.True(t, ok)
-			assert.Equal(t, testCase.want, gotCfg.Endpoint)
+			assert.Equal(t, testCase.want, gotCfg.AWSSessionSettings.Endpoint)
 		})
 	}
 }
@@ -1494,13 +1494,13 @@ func TestTranslatorForKueue(t *testing.T) {
 				assert.Equal(t, testCase.want["resource_to_telemetry_conversion"], gotCfg.ResourceToTelemetrySettings)
 				assert.ElementsMatch(t, testCase.want["metric_declarations"], gotCfg.MetricDeclarations)
 				assert.ElementsMatch(t, testCase.want["metric_descriptors"], gotCfg.MetricDescriptors)
-				assert.Equal(t, testCase.want["local_mode"], gotCfg.LocalMode)
+				assert.Equal(t, testCase.want["local_mode"], gotCfg.AWSSessionSettings.LocalMode)
 				if addEntity, exists := testCase.want["add_entity"]; exists {
 					assert.Equal(t, addEntity, gotCfg.AddEntity)
 				}
-				assert.Equal(t, "/ca/bundle", gotCfg.CertificateFilePath)
-				assert.Equal(t, "global_arn", gotCfg.RoleARN)
-				assert.Equal(t, "us-east-1", gotCfg.Region)
+				assert.Equal(t, "/ca/bundle", gotCfg.AWSSessionSettings.CertificateFilePath)
+				assert.Equal(t, "global_arn", gotCfg.AWSSessionSettings.RoleARN)
+				assert.Equal(t, "us-east-1", gotCfg.AWSSessionSettings.Region)
 				assert.NotNil(t, gotCfg.MiddlewareID)
 				assert.Equal(t, "agenthealth/logs", gotCfg.MiddlewareID.String())
 			}
