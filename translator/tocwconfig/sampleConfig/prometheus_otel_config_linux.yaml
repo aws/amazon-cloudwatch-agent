@@ -1,20 +1,29 @@
 exporters:
-    prometheusremotewrite/amp:
+    prometheus_remote_write/amp:
         add_metric_suffixes: false
-        auth:
-            authenticator: sigv4auth
+        convert_explicit_histograms_to_nhcb: false
         disable_scope_info: true
-        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        http:
+            auth:
+                authenticator: sigv4auth
+            endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+            force_attempt_http2: true
+            keepalive:
+                idle_conn_timeout: 1m30s
+                max_idle_conns: 100
+            timeout: 5s
+            write_buffer_size: 524288
+        keep_classic_histograms: false
         max_batch_size_bytes: 3000000
-        max_idle_conns: 100
         namespace: ""
         protobuf_message: prometheus.WriteRequest
         remote_write_queue:
             enabled: true
             num_consumers: 5
             queue_size: 10000
+        resource_constant_labels:
+            enabled: false
+            exclude_service_attributes: false
         resource_to_telemetry_conversion:
             clear_after_copy: true
             enabled: true
@@ -30,7 +39,7 @@ exporters:
         target_info:
             enabled: true
         timeout: 5s
-        write_buffer_size: 524288
+        translation_strategy: ""
 extensions:
     entitystore:
         mode: ec2
@@ -48,18 +57,22 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    deltatocumulative/prometheus/amp:
+    delta_to_cumulative/prometheus/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
 receivers:
     prometheus:
         api_server:
             enabled: false
+            max_connections: 512
             server_config:
-                idle_timeout: 0s
-                read_header_timeout: 0s
+                endpoint: 127.0.0.1:9090
+                keepalive:
+                    idle_timeout: 1m0s
+                read_header_timeout: 1m0s
+                read_timeout: 10m0s
                 transport: tcp
-                write_timeout: 0s
+                write_timeout: 30s
         config:
             global:
                 evaluation_interval: 1m
@@ -74,6 +87,7 @@ receivers:
                 translation_strategy: UnderscoreEscapingWithSuffixes
             runtime:
                 gogc: 75
+                log_level: info
             scrape_configs:
                 - always_scrape_classic_histograms: false
                   convert_classic_histograms_to_nhcb: false
@@ -106,6 +120,9 @@ receivers:
                 tsdb:
                     outofordertimewindow: 0
                     retention: null
+        discovery_reload_on_startup: false
+        initial_scrape_offset: 0s
+        scrape_on_shutdown: false
         trim_metric_suffixes: false
 service:
     extensions:
@@ -114,10 +131,10 @@ service:
     pipelines:
         metrics/prometheus/amp:
             exporters:
-                - prometheusremotewrite/amp
+                - prometheus_remote_write/amp
             processors:
                 - batch/prometheus/amp
-                - deltatocumulative/prometheus/amp
+                - delta_to_cumulative/prometheus/amp
             receivers:
                 - prometheus
     telemetry:
