@@ -20,32 +20,72 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	}{
 		{
 			name: "default",
-			want: DefaultMetricsBuilderConfig(),
+			want: NewDefaultMetricsBuilderConfig(),
 		},
 		{
 			name: "all_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					DiskioEbsEc2InstancePerformanceExceededIops: MetricConfig{Enabled: true},
-					DiskioEbsEc2InstancePerformanceExceededTp:   MetricConfig{Enabled: true},
-					DiskioEbsTotalReadBytes:                     MetricConfig{Enabled: true},
-					DiskioEbsTotalReadOps:                       MetricConfig{Enabled: true},
-					DiskioEbsTotalReadTime:                      MetricConfig{Enabled: true},
-					DiskioEbsTotalWriteBytes:                    MetricConfig{Enabled: true},
-					DiskioEbsTotalWriteOps:                      MetricConfig{Enabled: true},
-					DiskioEbsTotalWriteTime:                     MetricConfig{Enabled: true},
-					DiskioEbsVolumePerformanceExceededIops:      MetricConfig{Enabled: true},
-					DiskioEbsVolumePerformanceExceededTp:        MetricConfig{Enabled: true},
-					DiskioEbsVolumeQueueLength:                  MetricConfig{Enabled: true},
-					DiskioInstanceStorePerformanceExceededIops:  MetricConfig{Enabled: true},
-					DiskioInstanceStorePerformanceExceededTp:    MetricConfig{Enabled: true},
-					DiskioInstanceStoreTotalReadBytes:           MetricConfig{Enabled: true},
-					DiskioInstanceStoreTotalReadOps:             MetricConfig{Enabled: true},
-					DiskioInstanceStoreTotalReadTime:            MetricConfig{Enabled: true},
-					DiskioInstanceStoreTotalWriteBytes:          MetricConfig{Enabled: true},
-					DiskioInstanceStoreTotalWriteOps:            MetricConfig{Enabled: true},
-					DiskioInstanceStoreTotalWriteTime:           MetricConfig{Enabled: true},
-					DiskioInstanceStoreVolumeQueueLength:        MetricConfig{Enabled: true},
+					DiskioEbsEc2InstancePerformanceExceededIops: DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsEc2InstancePerformanceExceededTp: DiskioEbsEc2InstancePerformanceExceededTpMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsTotalReadBytes: DiskioEbsTotalReadBytesMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsTotalReadOps: DiskioEbsTotalReadOpsMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsTotalReadTime: DiskioEbsTotalReadTimeMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsTotalWriteBytes: DiskioEbsTotalWriteBytesMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsTotalWriteOps: DiskioEbsTotalWriteOpsMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsTotalWriteTime: DiskioEbsTotalWriteTimeMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsVolumePerformanceExceededIops: DiskioEbsVolumePerformanceExceededIopsMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsVolumePerformanceExceededTp: DiskioEbsVolumePerformanceExceededTpMetricConfig{
+						Enabled: true,
+					},
+					DiskioEbsVolumeQueueLength: DiskioEbsVolumeQueueLengthMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStorePerformanceExceededIops: DiskioInstanceStorePerformanceExceededIopsMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStorePerformanceExceededTp: DiskioInstanceStorePerformanceExceededTpMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreTotalReadBytes: DiskioInstanceStoreTotalReadBytesMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreTotalReadOps: DiskioInstanceStoreTotalReadOpsMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreTotalReadTime: DiskioInstanceStoreTotalReadTimeMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreTotalWriteBytes: DiskioInstanceStoreTotalWriteBytesMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreTotalWriteOps: DiskioInstanceStoreTotalWriteOpsMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreTotalWriteTime: DiskioInstanceStoreTotalWriteTimeMetricConfig{
+						Enabled: true,
+					},
+					DiskioInstanceStoreVolumeQueueLength: DiskioInstanceStoreVolumeQueueLengthMetricConfig{
+						Enabled: true,
+					},
 				},
 				ResourceAttributes: ResourceAttributesConfig{
 					SerialID: ResourceAttributeConfig{Enabled: true},
@@ -57,26 +97,66 @@ func TestMetricsBuilderConfig(t *testing.T) {
 			name: "none_set",
 			want: MetricsBuilderConfig{
 				Metrics: MetricsConfig{
-					DiskioEbsEc2InstancePerformanceExceededIops: MetricConfig{Enabled: false},
-					DiskioEbsEc2InstancePerformanceExceededTp:   MetricConfig{Enabled: false},
-					DiskioEbsTotalReadBytes:                     MetricConfig{Enabled: false},
-					DiskioEbsTotalReadOps:                       MetricConfig{Enabled: false},
-					DiskioEbsTotalReadTime:                      MetricConfig{Enabled: false},
-					DiskioEbsTotalWriteBytes:                    MetricConfig{Enabled: false},
-					DiskioEbsTotalWriteOps:                      MetricConfig{Enabled: false},
-					DiskioEbsTotalWriteTime:                     MetricConfig{Enabled: false},
-					DiskioEbsVolumePerformanceExceededIops:      MetricConfig{Enabled: false},
-					DiskioEbsVolumePerformanceExceededTp:        MetricConfig{Enabled: false},
-					DiskioEbsVolumeQueueLength:                  MetricConfig{Enabled: false},
-					DiskioInstanceStorePerformanceExceededIops:  MetricConfig{Enabled: false},
-					DiskioInstanceStorePerformanceExceededTp:    MetricConfig{Enabled: false},
-					DiskioInstanceStoreTotalReadBytes:           MetricConfig{Enabled: false},
-					DiskioInstanceStoreTotalReadOps:             MetricConfig{Enabled: false},
-					DiskioInstanceStoreTotalReadTime:            MetricConfig{Enabled: false},
-					DiskioInstanceStoreTotalWriteBytes:          MetricConfig{Enabled: false},
-					DiskioInstanceStoreTotalWriteOps:            MetricConfig{Enabled: false},
-					DiskioInstanceStoreTotalWriteTime:           MetricConfig{Enabled: false},
-					DiskioInstanceStoreVolumeQueueLength:        MetricConfig{Enabled: false},
+					DiskioEbsEc2InstancePerformanceExceededIops: DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsEc2InstancePerformanceExceededTp: DiskioEbsEc2InstancePerformanceExceededTpMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsTotalReadBytes: DiskioEbsTotalReadBytesMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsTotalReadOps: DiskioEbsTotalReadOpsMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsTotalReadTime: DiskioEbsTotalReadTimeMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsTotalWriteBytes: DiskioEbsTotalWriteBytesMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsTotalWriteOps: DiskioEbsTotalWriteOpsMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsTotalWriteTime: DiskioEbsTotalWriteTimeMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsVolumePerformanceExceededIops: DiskioEbsVolumePerformanceExceededIopsMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsVolumePerformanceExceededTp: DiskioEbsVolumePerformanceExceededTpMetricConfig{
+						Enabled: false,
+					},
+					DiskioEbsVolumeQueueLength: DiskioEbsVolumeQueueLengthMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStorePerformanceExceededIops: DiskioInstanceStorePerformanceExceededIopsMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStorePerformanceExceededTp: DiskioInstanceStorePerformanceExceededTpMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreTotalReadBytes: DiskioInstanceStoreTotalReadBytesMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreTotalReadOps: DiskioInstanceStoreTotalReadOpsMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreTotalReadTime: DiskioInstanceStoreTotalReadTimeMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreTotalWriteBytes: DiskioInstanceStoreTotalWriteBytesMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreTotalWriteOps: DiskioInstanceStoreTotalWriteOpsMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreTotalWriteTime: DiskioInstanceStoreTotalWriteTimeMetricConfig{
+						Enabled: false,
+					},
+					DiskioInstanceStoreVolumeQueueLength: DiskioInstanceStoreVolumeQueueLengthMetricConfig{
+						Enabled: false,
+					},
 				},
 				ResourceAttributes: ResourceAttributesConfig{
 					SerialID: ResourceAttributeConfig{Enabled: false},
@@ -88,7 +168,7 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := loadMetricsBuilderConfig(t, tt.name)
-			diff := cmp.Diff(tt.want, cfg, cmpopts.IgnoreUnexported(MetricConfig{}, ResourceAttributeConfig{}))
+			diff := cmp.Diff(tt.want, cfg, cmpopts.IgnoreUnexported(DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig{}, DiskioEbsEc2InstancePerformanceExceededTpMetricConfig{}, DiskioEbsTotalReadBytesMetricConfig{}, DiskioEbsTotalReadOpsMetricConfig{}, DiskioEbsTotalReadTimeMetricConfig{}, DiskioEbsTotalWriteBytesMetricConfig{}, DiskioEbsTotalWriteOpsMetricConfig{}, DiskioEbsTotalWriteTimeMetricConfig{}, DiskioEbsVolumePerformanceExceededIopsMetricConfig{}, DiskioEbsVolumePerformanceExceededTpMetricConfig{}, DiskioEbsVolumeQueueLengthMetricConfig{}, DiskioInstanceStorePerformanceExceededIopsMetricConfig{}, DiskioInstanceStorePerformanceExceededTpMetricConfig{}, DiskioInstanceStoreTotalReadBytesMetricConfig{}, DiskioInstanceStoreTotalReadOpsMetricConfig{}, DiskioInstanceStoreTotalReadTimeMetricConfig{}, DiskioInstanceStoreTotalWriteBytesMetricConfig{}, DiskioInstanceStoreTotalWriteOpsMetricConfig{}, DiskioInstanceStoreTotalWriteTimeMetricConfig{}, DiskioInstanceStoreVolumeQueueLengthMetricConfig{}, ResourceAttributeConfig{}))
 			require.Emptyf(t, diff, "Config mismatch (-expected +actual):\n%s", diff)
 		})
 	}
@@ -99,7 +179,7 @@ func loadMetricsBuilderConfig(t *testing.T, name string) MetricsBuilderConfig {
 	require.NoError(t, err)
 	sub, err := cm.Sub(name)
 	require.NoError(t, err)
-	cfg := DefaultMetricsBuilderConfig()
+	cfg := NewDefaultMetricsBuilderConfig()
 	require.NoError(t, sub.Unmarshal(&cfg, confmap.WithIgnoreUnused()))
 	return cfg
 }
