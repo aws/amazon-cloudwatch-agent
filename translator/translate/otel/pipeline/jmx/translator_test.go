@@ -127,7 +127,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "cumulativetodelta/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "cumulative_to_delta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -151,7 +151,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"otlp/http_0_0_0_0_4314"},
-				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "cumulativetodelta/jmx"},
+				processors: []string{"filter/jmx", "metrics_transform/jmx", "transform/jmx/drop", "cumulative_to_delta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -178,7 +178,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx",
 				receivers:  []string{"otlp/http_0_0_0_0_4314"},
-				processors: []string{"filter/jmx", "metricstransform/jmx", "resource/jmx", "transform/jmx/drop", "cumulativetodelta/jmx"},
+				processors: []string{"filter/jmx", "metrics_transform/jmx", "resource/jmx", "transform/jmx/drop", "cumulative_to_delta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -208,8 +208,8 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp", "deltatocumulative/jmx/amp"},
-				exporters:  []string{"prometheusremotewrite/amp"},
+				processors: []string{"filter/jmx", "resource/jmx", "batch/jmx/amp", "delta_to_cumulative/jmx/amp"},
+				exporters:  []string{"prometheus_remote_write/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},
@@ -238,8 +238,8 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp",
 				receivers:  []string{"otlp/http_0_0_0_0_4314"},
-				processors: []string{"filter/jmx", "metricstransform/jmx", "transform/jmx/drop", "batch/jmx/amp", "deltatocumulative/jmx/amp"},
-				exporters:  []string{"prometheusremotewrite/amp"},
+				processors: []string{"filter/jmx", "metrics_transform/jmx", "transform/jmx/drop", "batch/jmx/amp", "delta_to_cumulative/jmx/amp"},
+				exporters:  []string{"prometheus_remote_write/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},
@@ -267,7 +267,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/cloudwatch",
 				receivers:  []string{"jmx"},
-				processors: []string{"filter/jmx", "resource/jmx", "transform/jmx", "cumulativetodelta/jmx"},
+				processors: []string{"filter/jmx", "resource/jmx", "transform/jmx", "cumulative_to_delta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -301,7 +301,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/0",
 				receivers:  []string{"jmx/0"},
-				processors: []string{"filter/jmx/0", "resource/jmx", "transform/jmx/0", "ec2tagger", "cumulativetodelta/jmx"},
+				processors: []string{"filter/jmx/0", "resource/jmx", "transform/jmx/0", "ec2tagger", "cumulative_to_delta/jmx"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics"},
 			},
@@ -338,8 +338,8 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/jmx/amp/0",
 				receivers:  []string{"otlp/http_0_0_0_0_4314"},
-				processors: []string{"filter/jmx/0", "metricstransform/jmx", "transform/jmx/drop", "transform/jmx/0", "batch/jmx/amp/0", "deltatocumulative/jmx/amp/0"},
-				exporters:  []string{"prometheusremotewrite/amp"},
+				processors: []string{"filter/jmx/0", "metrics_transform/jmx", "transform/jmx/drop", "transform/jmx/0", "batch/jmx/amp/0", "delta_to_cumulative/jmx/amp/0"},
+				exporters:  []string{"prometheus_remote_write/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},

@@ -66,7 +66,7 @@ func TestTranslators(t *testing.T) {
 			want: map[string]want{
 				"metrics/host/amp": {
 					receivers: []string{"telegraf_cpu"},
-					exporters: []string{"prometheusremotewrite/amp"},
+					exporters: []string{"prometheus_remote_write/amp"},
 				},
 			},
 		},
@@ -92,7 +92,7 @@ func TestTranslators(t *testing.T) {
 				},
 				"metrics/host/amp": {
 					receivers: []string{"telegraf_cpu"},
-					exporters: []string{"prometheusremotewrite/amp"},
+					exporters: []string{"prometheus_remote_write/amp"},
 				},
 			},
 		},
@@ -118,7 +118,7 @@ func TestTranslators(t *testing.T) {
 				},
 				"metrics/host/amp": {
 					receivers: []string{"telegraf_net"},
-					exporters: []string{"prometheusremotewrite/amp"},
+					exporters: []string{"prometheus_remote_write/amp"},
 				},
 			},
 		},
@@ -146,7 +146,7 @@ func TestTranslators(t *testing.T) {
 				},
 				"metrics/host/amp": {
 					receivers: []string{"telegraf_diskio", "awsnvmereceiver"},
-					exporters: []string{"prometheusremotewrite/amp"},
+					exporters: []string{"prometheus_remote_write/amp"},
 				},
 			},
 		},
@@ -174,7 +174,7 @@ func TestTranslators(t *testing.T) {
 				},
 				"metrics/host/amp": {
 					receivers: []string{"telegraf_diskio"},
-					exporters: []string{"prometheusremotewrite/amp"},
+					exporters: []string{"prometheus_remote_write/amp"},
 				},
 			},
 		},
@@ -202,7 +202,7 @@ func TestTranslators(t *testing.T) {
 				},
 				"metrics/host/amp": {
 					receivers: []string{"awsnvmereceiver"},
-					exporters: []string{"prometheusremotewrite/amp"},
+					exporters: []string{"prometheus_remote_write/amp"},
 				},
 			},
 		},
