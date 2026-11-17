@@ -17,7 +17,8 @@ external_labels: {}
 protobuf_message: prometheus.WriteRequest
 target_info:
   enabled: true
-add_metric_suffixes: false
+add_metric_suffixes: true
+translation_strategy: UnderscoreEscapingWithoutSuffixes
 disable_scope_info: true
 max_batch_size_bytes: 3000000
 http:

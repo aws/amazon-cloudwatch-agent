@@ -1,6 +1,6 @@
 exporters:
     prometheus_remote_write/amp:
-        add_metric_suffixes: false
+        add_metric_suffixes: true
         convert_explicit_histograms_to_nhcb: false
         disable_scope_info: true
         http:
@@ -39,7 +39,7 @@ exporters:
         target_info:
             enabled: true
         timeout: 5s
-        translation_strategy: ""
+        translation_strategy: UnderscoreEscapingWithoutSuffixes
 extensions:
     entitystore:
         mode: ec2
