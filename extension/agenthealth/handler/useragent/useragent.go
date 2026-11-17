@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	telegraf "github.com/influxdata/telegraf/config"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.uber.org/atomic"
 	"golang.org/x/exp/maps"
@@ -23,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/collections"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/jmxreceiver"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel/common"
 )
 

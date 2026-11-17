@@ -17,21 +17,17 @@ JAR_SHA=$(sha256sum "${TMP_JAR}" | cut -d' ' -f1)
 # The jmxreceiver hash-gates the JAR at runtime against its supported_jars.go
 # allow-list: a JAR whose sha256 is not listed makes the receiver launch a broken
 # java invocation that fails and restarts every ~5s (silent JMX metric loss). Only
-# accept a JAR whose hash the pinned receiver version supports.
-JMX_RECEIVER_DIR=$( (
-     cd .. && go mod download github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver >/dev/null 2>&1
-     go list -m -f '{{.Dir}}' github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver
-))
-SUPPORTED_JARS="${JMX_RECEIVER_DIR}/supported_jars.go"
+# accept a JAR whose hash the receiver supports.
+SUPPORTED_JARS="../receiver/jmxreceiver/supported_jars.go"
 if [ ! -f "${SUPPORTED_JARS}" ]; then
-     echo "ERROR: cannot locate supported_jars.go for the pinned jmxreceiver (looked in ${JMX_RECEIVER_DIR})" >&2
+     echo "ERROR: cannot locate ${SUPPORTED_JARS}" >&2
      exit 1
 fi
 if ! grep -q "${JAR_SHA}" "${SUPPORTED_JARS}"; then
-     echo "ERROR: ${LATEST_VERSION} jar (sha256 ${JAR_SHA}) is NOT in the pinned jmxreceiver's allow-list:" >&2
+     echo "ERROR: ${LATEST_VERSION} jar (sha256 ${JAR_SHA}) is NOT in the jmxreceiver's allow-list:" >&2
      echo "  ${SUPPORTED_JARS}" >&2
      echo "Shipping it would break JMX at runtime (unsupported-jar restart loop)." >&2
-     echo "Bump the fork pin to a version that supports this jar first, or pick a supported jar version." >&2
+     echo "Add this jar to the allow-list first, or pick a supported jar version." >&2
      exit 1
 fi
 

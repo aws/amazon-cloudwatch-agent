@@ -51,7 +51,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver"
@@ -95,6 +94,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/plugins/processors/nodemetadataenricher"
 	"github.com/aws/amazon-cloudwatch-agent/processor/rollupprocessor"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/awsnvmereceiver"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/jmxreceiver"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/systemmetricsreceiver"
 )
 

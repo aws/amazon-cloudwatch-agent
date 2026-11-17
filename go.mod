@@ -56,7 +56,6 @@ replace (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awscontainerinsightskueuereceiver v0.0.0-20261113163027-dd841fc45498
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsefareceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsefareceiver v0.0.0-20261113163027-dd841fc45498
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/awsekshyperpodreceiver v0.0.0-20261113163027-dd841fc45498
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/jmxreceiver v0.0.0-20261113163027-dd841fc45498
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/postgresqlreceiver v0.0.0-20261113163027-dd841fc45498
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver => github.com/amazon-contributing/opentelemetry-collector-contrib/receiver/prometheusreceiver v0.0.0-20261113163027-dd841fc45498
 )
@@ -138,6 +137,7 @@ require (
 	github.com/knadh/koanf v1.5.0
 	github.com/knadh/koanf/v2 v2.4.1
 	github.com/kr/pretty v0.3.1
+	github.com/magiconair/properties v1.8.10
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/oklog/run v1.2.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector v0.165.1
@@ -190,7 +190,6 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.165.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver v0.165.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver v0.165.1
-	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver v0.165.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/journaldreceiver v0.165.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kafkareceiver v0.165.1
 	github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver v0.165.1
@@ -216,6 +215,7 @@ require (
 	go.opentelemetry.io/collector/component/componenttest v0.165.0
 	go.opentelemetry.io/collector/config/configauth v1.71.0
 	go.opentelemetry.io/collector/config/confighttp v1.71.0
+	go.opentelemetry.io/collector/config/confignet v1.71.0
 	go.opentelemetry.io/collector/config/configopaque v1.71.0
 	go.opentelemetry.io/collector/config/configoptional v1.71.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.165.0
@@ -487,7 +487,6 @@ require (
 	github.com/linode/linodego v1.69.1 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/magefile/mage v1.15.0 // indirect
-	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -621,7 +620,6 @@ require (
 	go.opentelemetry.io/collector/config/configcompression v1.71.0
 	go.opentelemetry.io/collector/config/configgrpc v1.71.0
 	go.opentelemetry.io/collector/config/configmiddleware v1.71.0 // indirect
-	go.opentelemetry.io/collector/config/confignet v1.71.0 // indirect
 	go.opentelemetry.io/collector/config/configretry v1.71.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/httpprovider v1.71.0 // indirect
 	go.opentelemetry.io/collector/confmap/provider/yamlprovider v1.71.0 // indirect

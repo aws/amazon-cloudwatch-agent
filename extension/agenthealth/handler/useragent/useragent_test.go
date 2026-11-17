@@ -12,7 +12,6 @@ import (
 	telegraf "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/awsemfexporter"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/otelcol"
@@ -23,6 +22,7 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/cfg/envconfig"
 	"github.com/aws/amazon-cloudwatch-agent/internal/version"
 	"github.com/aws/amazon-cloudwatch-agent/receiver/adapter"
+	"github.com/aws/amazon-cloudwatch-agent/receiver/jmxreceiver"
 )
 
 func TestSetComponents(t *testing.T) {
