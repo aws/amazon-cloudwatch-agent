@@ -267,6 +267,17 @@ func TestInvalidLogFilterConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogFilesWithFilters.json", false, expectedErrorMap)
 }
 
+func TestJournaldModeConfig(t *testing.T) {
+	// Absent mode must remain valid exactly as before.
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogJournald.json", true, map[string]int{})
+	// mode: native / journalctl must now pass schema validation.
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validLogJournaldWithMode.json", true, map[string]int{})
+	// An unrecognized mode value is rejected by the schema's enum constraint.
+	expectedErrorMap := map[string]int{}
+	expectedErrorMap["enum"] = 1
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidLogJournaldWithInvalidMode.json", false, expectedErrorMap)
+}
+
 func TestMetricsDestinationsConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validMetricsDestinations.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}

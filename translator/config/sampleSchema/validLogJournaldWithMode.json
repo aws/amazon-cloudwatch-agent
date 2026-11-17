@@ -1,0 +1,24 @@
+{
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "log_group_name": "system-logs",
+            "log_stream_name": "{instance_id}",
+            "retention_in_days": 7,
+            "units": ["systemd", "sshd"],
+            "mode": "native"
+          },
+          {
+            "log_group_name": "application-logs",
+            "log_stream_name": "{instance_id}-app",
+            "units": ["nginx"],
+            "mode": "journalctl"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "LOG_STREAM_NAME"
+  }
+}

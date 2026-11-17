@@ -16,6 +16,7 @@ type JournaldConfig struct {
 	Units           []string            `json:"units"`
 	Priority        string              `json:"priority"`
 	Matches         []map[string]string `json:"matches"`
+	Mode            string              `json:"mode"`
 	Filters         []*JournaldFilter   `json:"filters"`
 	RetentionInDays int                 `json:"retention_in_days"`
 }
@@ -36,6 +37,10 @@ func (config *JournaldConfig) ToMap(_ *runtime.Context) (string, map[string]inte
 
 	if len(config.Matches) > 0 {
 		resultMap["matches"] = config.Matches
+	}
+
+	if config.Mode != "" {
+		resultMap["mode"] = config.Mode
 	}
 
 	if len(config.Filters) > 0 {
