@@ -77,7 +77,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostDeltaMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostDeltaMetrics", "awsentity/resource"},
+				processors: []string{"cumulative_to_delta/hostDeltaMetrics", "awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -95,7 +95,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics", "awsentity/service/otlp"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -114,7 +114,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -132,7 +132,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics", "awsentity/service/otlp"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"k8smetadata", "agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -151,7 +151,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -171,7 +171,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -190,7 +190,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -209,7 +209,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostDeltaMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostDeltaMetrics", "transform/hostDeltaMetrics", "awsentity/resource"},
+				processors: []string{"cumulative_to_delta/hostDeltaMetrics", "transform/hostDeltaMetrics", "awsentity/resource"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -326,8 +326,8 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"rollup", "batch/host/amp", "deltatocumulative/host/amp"},
-				exporters:  []string{"prometheusremotewrite/amp"},
+				processors: []string{"rollup", "batch/host/amp", "delta_to_cumulative/host/amp"},
+				exporters:  []string{"prometheus_remote_write/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},
@@ -341,8 +341,8 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/host/amp",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"batch/host/amp", "deltatocumulative/host/amp"},
-				exporters:  []string{"prometheusremotewrite/amp"},
+				processors: []string{"batch/host/amp", "delta_to_cumulative/host/amp"},
+				exporters:  []string{"prometheus_remote_write/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},
@@ -361,7 +361,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics", "awsentity/service/otlp/cloudwatch"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics", "awsentity/service/otlp/cloudwatch"},
 				exporters:  []string{"awscloudwatch"},
 				extensions: []string{"agenthealth/metrics", "agenthealth/statuscode"},
 			},
@@ -382,7 +382,7 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/hostOtlpMetrics/cloudwatchlogs",
 				receivers:  []string{"nop", "other"},
-				processors: []string{"cumulativetodelta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
+				processors: []string{"cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs", "awsentity/service/otlp/cloudwatchlogs", "batch/hostOtlpMetrics/cloudwatchlogs"},
 				exporters:  []string{"awsemf"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},

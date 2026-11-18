@@ -51,7 +51,7 @@ func TestEfaTranslate(t *testing.T) {
 	actualCfg, ok := translatedCfg.(*transformprocessor.Config)
 	assert.True(t, ok)
 	assert.Equal(t, len(expectedCfg.MetricStatements), len(actualCfg.MetricStatements))
-	assert.Equal(t, string(actualCfg.ErrorMode), "propagate")
+	assert.Equal(t, "ignore", string(actualCfg.ErrorMode))
 	// Verify EFA attribute renaming statements are present
 	require.Len(t, actualCfg.MetricStatements, 1)
 	assert.Contains(t, actualCfg.MetricStatements[0].Statements, `set(attributes["device"], attributes["aws.efa.device"]) where attributes["aws.efa.device"] != nil`)
@@ -77,7 +77,7 @@ func TestJmxTranslate(t *testing.T) {
 	assert.Len(t, actualCfg.MetricStatements, 1)
 	sort.Strings(expectedCfg.MetricStatements[0].Statements)
 	sort.Strings(actualCfg.MetricStatements[0].Statements)
-	assert.Equal(t, string(actualCfg.ErrorMode), "propagate")
+	assert.Equal(t, "ignore", string(actualCfg.ErrorMode))
 }
 
 func TestDbiFixStartTimeTranslate(t *testing.T) {

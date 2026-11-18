@@ -177,7 +177,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
-    cumulativetodelta/hostDeltaMetrics/cloudwatch:
+    cumulative_to_delta/hostDeltaMetrics/cloudwatch:
         exclude:
             match_type: strict
             metrics:
@@ -188,7 +188,7 @@ processors:
             match_type: ""
         initial_value: 2
         max_staleness: 1h0m0s
-    cumulativetodelta/jmx:
+    cumulative_to_delta/jmx:
         exclude:
             match_type: ""
         include:
@@ -199,15 +199,15 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - InstanceType
             - ImageId
             - InstanceId
-            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
     filter/jmx/0:
-        error_mode: propagate
+        error_mode: ignore
         logs: {}
         metrics:
             include:
@@ -221,7 +221,7 @@ processors:
         spans: {}
         traces: {}
     filter/jmx/1:
-        error_mode: propagate
+        error_mode: ignore
         logs: {}
         metrics:
             include:
@@ -257,12 +257,14 @@ processors:
               pattern: ""
               value: unknown_service:java
     transform:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "unit") where name == "disk_free"
                 - set(name, "DISK_FREE") where name == "disk_free"
@@ -272,12 +274,14 @@ processors:
         profile_statements: []
         trace_statements: []
     transform/jmx/0:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "unit") where name == "jvm.memory.heap.used"
                 - set(name, "JVM_MEM_HEAP_USED") where name == "jvm.memory.heap.used"
@@ -285,12 +289,14 @@ processors:
         profile_statements: []
         trace_statements: []
     transform/jmx/1:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(name, "TC_ERR") where name == "tomcat.errors"
         profile_statements: []
@@ -449,14 +455,12 @@ receivers:
     otlp/http_0_0_0_0_2222:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:2222
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s
@@ -559,13 +563,13 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
-                - telegraf_netstat
                 - telegraf_procstat/1917393364
-                - telegraf_swap
-                - telegraf_processes
-                - telegraf_disk
                 - telegraf_mem
+                - telegraf_netstat
+                - telegraf_processes
+                - telegraf_cpu
+                - telegraf_swap
+                - telegraf_disk
         metrics/hostCustomMetrics/cloudwatch:
             exporters:
                 - awscloudwatch
@@ -580,7 +584,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostDeltaMetrics/cloudwatch
+                - cumulative_to_delta/hostDeltaMetrics/cloudwatch
                 - ec2tagger
                 - transform
                 - awsentity/resource
@@ -596,7 +600,7 @@ service:
                 - resource/jmx
                 - transform/jmx/0
                 - ec2tagger
-                - cumulativetodelta/jmx
+                - cumulative_to_delta/jmx
             receivers:
                 - jmx/0
         metrics/jmx/cloudwatch/1:
@@ -607,7 +611,7 @@ service:
                 - resource/jmx
                 - transform/jmx/1
                 - ec2tagger
-                - cumulativetodelta/jmx
+                - cumulative_to_delta/jmx
             receivers:
                 - jmx/1
         traces/xray:

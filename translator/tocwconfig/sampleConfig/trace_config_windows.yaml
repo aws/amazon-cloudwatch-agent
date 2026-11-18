@@ -70,14 +70,12 @@ receivers:
     otlp/http_127_0_0_1_4318:
         protocols:
             http:
-                cors: null
                 endpoint: 127.0.0.1:4318
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s

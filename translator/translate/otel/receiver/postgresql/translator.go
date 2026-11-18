@@ -118,26 +118,26 @@ func (t *translator) ID() component.ID {
 func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	cfg := t.factory.CreateDefaultConfig().(*postgresqlreceiver.Config)
 
-	cfg.Endpoint = t.endpoint
+	cfg.AddrConfig.Endpoint = t.endpoint
 	cfg.Username = t.username
 	cfg.Passfile = t.passfile
-	cfg.Transport = "tcp"
+	cfg.AddrConfig.Transport = "tcp"
 
 	if t.isLocalhost {
-		cfg.Insecure = true
-		cfg.InsecureSkipVerify = true
+		cfg.ClientConfig.Insecure = true
+		cfg.ClientConfig.InsecureSkipVerify = true
 	} else {
-		cfg.CAFile = t.caFile
-		cfg.InsecureSkipVerify = false
+		cfg.ClientConfig.CAFile = t.caFile
+		cfg.ClientConfig.InsecureSkipVerify = false
 	}
 
-	cfg.Metrics.PostgresqlFunctionCalls.Enabled = false
-	cfg.Metrics.PostgresqlTupDeleted.Enabled = false
-	cfg.Metrics.PostgresqlTupFetched.Enabled = false
-	cfg.Metrics.PostgresqlTupInserted.Enabled = false
-	cfg.Metrics.PostgresqlTupReturned.Enabled = false
-	cfg.Metrics.PostgresqlTupUpdated.Enabled = false
-	cfg.Metrics.PostgresqlWalDelay.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlFunctionCalls.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlTupDeleted.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlTupFetched.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlTupInserted.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlTupReturned.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlTupUpdated.Enabled = false
+	cfg.MetricsBuilderConfig.Metrics.PostgresqlWalDelay.Enabled = false
 
 	// Split the metric set when requested so DBI can collect per-resource (table/index)
 	// metrics on a separate, slower receiver instance than the server metrics. Both
@@ -170,25 +170,25 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	if t.eventsDisabled {
-		cfg.Events.DbServerQuerySample.Enabled = false
-		cfg.Events.DbServerTopQuery.Enabled = false
+		cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = false
+		cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = false
 	} else {
-		cfg.Events.DbServerQuerySample.Enabled = true
-		cfg.Events.DbServerTopQuery.Enabled = true
+		cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
+		cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true
 	}
 
 	if t.collectionInterval > 0 {
 		cfg.ControllerConfig.CollectionInterval = t.collectionInterval
 	}
 
-	cfg.Enabled = true
+	cfg.QuerySampleCollection.Enabled = true
 	cfg.QuerySampleCollection.CollectionInterval = t.querySampleInterval
 	cfg.QuerySampleCollection.MaxRowsPerQuery = 500
 
 	cfg.TopQueryCollection.CollectionInterval = 60 * time.Second
-	cfg.TopNQuery = 200
+	cfg.TopQueryCollection.TopNQuery = 200
 	cfg.TopQueryCollection.MaxRowsPerQuery = 5000
-	cfg.MaxExplainEachInterval = 1000
+	cfg.TopQueryCollection.MaxExplainEachInterval = 1000
 
 	return cfg, nil
 }
@@ -213,7 +213,7 @@ var perResourceMetricNames = map[string]bool{
 // metric's mapstructure name and a pointer to its Enabled flag. It uses reflection so
 // metrics added upstream in the future are handled without changes here.
 func forEachMetric(cfg *postgresqlreceiver.Config, fn func(name string, enabled *bool)) {
-	v := reflect.ValueOf(&cfg.Metrics).Elem()
+	v := reflect.ValueOf(&cfg.MetricsBuilderConfig.Metrics).Elem()
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		ef := v.Field(i).FieldByName("Enabled")

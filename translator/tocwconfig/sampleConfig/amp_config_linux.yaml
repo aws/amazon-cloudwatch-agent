@@ -21,22 +21,31 @@ exporters:
               - InstanceType
             - - d1
             - []
-    prometheusremotewrite/amp:
-        add_metric_suffixes: false
-        auth:
-            authenticator: sigv4auth
+    prometheus_remote_write/amp:
+        add_metric_suffixes: true
+        convert_explicit_histograms_to_nhcb: false
         disable_scope_info: true
-        endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
-        force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        http:
+            auth:
+                authenticator: sigv4auth
+            endpoint: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-12345/api/v1/remote_write
+            force_attempt_http2: true
+            keepalive:
+                idle_conn_timeout: 1m30s
+                max_idle_conns: 100
+            timeout: 5s
+            write_buffer_size: 524288
+        keep_classic_histograms: false
         max_batch_size_bytes: 3000000
-        max_idle_conns: 100
         namespace: ""
         protobuf_message: prometheus.WriteRequest
         remote_write_queue:
             enabled: true
             num_consumers: 5
             queue_size: 10000
+        resource_constant_labels:
+            enabled: false
+            exclude_service_attributes: false
         resource_to_telemetry_conversion:
             clear_after_copy: true
             enabled: true
@@ -52,7 +61,7 @@ exporters:
         target_info:
             enabled: true
         timeout: 5s
-        write_buffer_size: 524288
+        translation_strategy: UnderscoreEscapingWithoutSuffixes
 extensions:
     agenthealth/metrics:
         is_usage_data_enabled: true
@@ -89,16 +98,16 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    deltatocumulative/host/amp:
+    delta_to_cumulative/host/amp:
         max_stale: 336h0m0s
         max_streams: 9223372036854775807
     ec2tagger:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - InstanceType
             - ImageId
             - InstanceId
+            - InstanceType
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -115,12 +124,14 @@ processors:
             - CPU_USAGE_IDLE
             - cpu_time_active
     transform:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
@@ -141,13 +152,13 @@ service:
     pipelines:
         metrics/host/amp:
             exporters:
-                - prometheusremotewrite/amp
+                - prometheus_remote_write/amp
             processors:
                 - ec2tagger
                 - transform
                 - rollup
                 - batch/host/amp
-                - deltatocumulative/host/amp
+                - delta_to_cumulative/host/amp
             receivers:
                 - telegraf_cpu
         metrics/host/cloudwatch:

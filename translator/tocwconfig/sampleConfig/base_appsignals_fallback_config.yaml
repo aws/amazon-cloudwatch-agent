@@ -181,9 +181,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: https://logs.us-east-1.amazonaws.com/v1/logs
-        max_idle_conns: 100
         metrics_endpoint: ""
         profiles_endpoint: ""
         retry_on_failure:
@@ -202,9 +203,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: ""
-        max_idle_conns: 100
         metrics_endpoint: https://monitoring.us-east-1.amazonaws.com/v1/metrics
         profiles_endpoint: ""
         retry_on_failure:
@@ -336,7 +338,7 @@ processors:
         send_batch_max_size: 1000
         send_batch_size: 1000
         timeout: 1m0s
-    metricstransform/application_signals:
+    metrics_transform/application_signals:
         transforms:
             - action: update
               aggregation_type: ""
@@ -1172,7 +1174,7 @@ processors:
                   new_label: Telemetry.Source
                   new_value: RuntimeMetric
               submatch_case: ""
-    resourcedetection:
+    resource_detection:
         akamai:
             resource_attributes:
                 cloud.account.id:
@@ -1224,6 +1226,8 @@ processors:
                     enabled: true
         azure:
             resource_attributes:
+                azure.resource_group.name:
+                    enabled: true
                 azure.resourcegroup.name:
                     enabled: true
                 azure.vm.name:
@@ -1247,6 +1251,56 @@ processors:
                 host.name:
                     enabled: true
             tags: []
+        azureappservice:
+            resource_attributes:
+                azure.app_service.instance.id:
+                    enabled: true
+                azure.resource_group.name:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                deployment.environment.name:
+                    enabled: true
+                service.name:
+                    enabled: true
+        azurecontainerapps:
+            resource_attributes:
+                azure.container_app.instance.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                service.name:
+                    enabled: true
+        azurefunctions:
+            resource_attributes:
+                azure.resource_group.name:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                deployment.environment.name:
+                    enabled: false
+                faas.instance:
+                    enabled: true
+                service.name:
+                    enabled: true
         consul:
             address: ""
             datacenter: ""
@@ -1343,6 +1397,11 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
+            auth_type: serviceAccount
+            context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
+            kube_config_path: ""
             node_from_env_var: HOST_NAME
             resource_attributes:
                 cloud.account.id:
@@ -1373,10 +1432,17 @@ processors:
                     enabled: true
                 deployment.environment:
                     enabled: true
+                deployment.environment.name:
+                    enabled: true
+                deployment.id:
+                    enabled: true
                 service.instance.id:
                     enabled: true
                 service.version:
                     enabled: true
+        env:
+            attributes: {}
+        fail_on_missing_metadata: false
         force_attempt_http2: true
         gcp:
             labels: []
@@ -1492,8 +1558,23 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-        idle_conn_timeout: 1m30s
         ignore_detector_errors: true
+        k8s_api:
+            auth_type: serviceAccount
+            context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                host.id:
+                    enabled: false
+                k8s.cluster.uid:
+                    enabled: true
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
         k8snode:
             auth_type: serviceAccount
             context: ""
@@ -1502,10 +1583,17 @@ processors:
             kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
+                host.id:
+                    enabled: false
+                k8s.cluster.uid:
+                    enabled: true
                 k8s.node.name:
                     enabled: true
                 k8s.node.uid:
                     enabled: true
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         kubeadm:
             auth_type: serviceAccount
             context: ""
@@ -1537,7 +1625,6 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
-        max_idle_conns: 100
         middleware: agenthealth/statuscode
         nova:
             fail_on_missing_metadata: false
@@ -1569,7 +1656,6 @@ processors:
                 k8s.cluster.name:
                     enabled: true
             tls: {}
-            token: ""
         oraclecloud:
             resource_attributes:
                 cloud.availability_zone:
@@ -1580,6 +1666,8 @@ processors:
                     enabled: true
                 cloud.region:
                     enabled: true
+                cloud.resource_id:
+                    enabled: false
                 host.id:
                     enabled: true
                 host.name:
@@ -1592,6 +1680,13 @@ processors:
                     enabled: true
         override: true
         refresh_interval: 0s
+        retry:
+            enabled: true
+            initial_interval: 1s
+            max_elapsed_time: 0s
+            max_interval: 30s
+            multiplier: 2
+            randomization_factor: 0.5
         scaleway:
             resource_attributes:
                 cloud.account.id:
@@ -1640,7 +1735,7 @@ processors:
                     enabled: false
                 host.name:
                     enabled: true
-                os.build.id:
+                os.build_id:
                     enabled: false
                 os.description:
                     enabled: false
@@ -1698,10 +1793,12 @@ processors:
                     enabled: true
     transform/application_signals_logs:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["temporary_key.service.name"], resource.attributes["service.name"])
                 - set(resource.attributes["temporary_key.service.name"], "unknown_service") where resource.attributes["temporary_key.service.name"] == nil
@@ -1712,10 +1809,12 @@ processors:
         trace_statements: []
     transform/application_signals_logs_cleanup:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "temporary_key.service.name")
@@ -1735,14 +1834,12 @@ receivers:
     otlp/http_0_0_0_0_4316:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:4316
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s
@@ -1785,8 +1882,8 @@ service:
             exporters:
                 - awsemf/application_signals
             processors:
-                - metricstransform/application_signals
-                - resourcedetection
+                - metrics_transform/application_signals
+                - resource_detection
                 - awsapplicationsignals
                 - awsentity/service/application_signals
             receivers:
@@ -1809,7 +1906,7 @@ service:
             exporters:
                 - awsxray/application_signals
             processors:
-                - resourcedetection
+                - resource_detection
                 - awsapplicationsignals
             receivers:
                 - otlp/grpc_0_0_0_0_4315

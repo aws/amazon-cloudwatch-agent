@@ -175,7 +175,7 @@ build-for-docker-fast-windows-amd64: build-for-docker-windows-amd64
 	rm -rf tmp
 
 install-goimports:
-	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports
+	GOBIN=$(TOOLS_BIN_DIR) go install golang.org/x/tools/cmd/goimports@v0.52.0
 
 install-shfmt:
 	GOBIN=$(TOOLS_BIN_DIR) go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.0

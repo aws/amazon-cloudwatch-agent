@@ -104,17 +104,17 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		if cfg.TargetAllocator.HasValue() {
 			taCfg := cfg.TargetAllocator.Get()
 			if taCfg != nil {
-				if taCfg.TLS.CAFile == "" {
-					taCfg.TLS.CAFile = defaultTLSCaPath
+				if taCfg.ClientConfig.TLS.CAFile == "" {
+					taCfg.ClientConfig.TLS.CAFile = defaultTLSCaPath
 				}
-				if taCfg.TLS.CertFile == "" {
-					taCfg.TLS.CertFile = defaultTLSCertPath
+				if taCfg.ClientConfig.TLS.CertFile == "" {
+					taCfg.ClientConfig.TLS.CertFile = defaultTLSCertPath
 				}
-				if taCfg.TLS.KeyFile == "" {
-					taCfg.TLS.KeyFile = defaultTLSKeyPath
+				if taCfg.ClientConfig.TLS.KeyFile == "" {
+					taCfg.ClientConfig.TLS.KeyFile = defaultTLSKeyPath
 				}
-				if taCfg.TLS.ReloadInterval == 0 {
-					taCfg.TLS.ReloadInterval = 10 * time.Second
+				if taCfg.ClientConfig.TLS.ReloadInterval == 0 {
+					taCfg.ClientConfig.TLS.ReloadInterval = 10 * time.Second
 				}
 			}
 		}

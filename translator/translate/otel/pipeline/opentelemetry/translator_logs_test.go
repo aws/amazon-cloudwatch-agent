@@ -109,7 +109,7 @@ func TestBaseLogsTranslator(t *testing.T) {
 				assert.NotNil(t, got)
 				assert.Equal(t, 1, got.Receivers.Len())
 				assert.Equal(t, 6, got.Processors.Len())
-				assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[0].String())
+				assert.Equal(t, "resource_detection/opentelemetry", got.Processors.Keys()[0].String())
 				assert.Equal(t, "transform/identity", got.Processors.Keys()[1].String())
 				assert.Equal(t, "transform/logs_routing", got.Processors.Keys()[2].String())
 				assert.Equal(t, "attributestocontext/opentelemetry", got.Processors.Keys()[3].String())
@@ -144,7 +144,7 @@ func TestBaseLogsTranslatorResourceAttributes(t *testing.T) {
 	require.NotNil(t, got)
 	assert.Equal(t, 7, got.Processors.Len())
 	assert.Equal(t, "resource/opentelemetry", got.Processors.Keys()[0].String())
-	assert.Equal(t, "resourcedetection/opentelemetry", got.Processors.Keys()[1].String())
+	assert.Equal(t, "resource_detection/opentelemetry", got.Processors.Keys()[1].String())
 	assert.Equal(t, "batch/opentelemetry_logs", got.Processors.Keys()[6].String())
 }
 

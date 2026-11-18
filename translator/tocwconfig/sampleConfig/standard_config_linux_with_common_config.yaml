@@ -40,7 +40,7 @@ processors:
         entity_type: Resource
         platform: ec2
         scrape_datapoint_attribute: true
-    cumulativetodelta/hostDeltaMetrics:
+    cumulative_to_delta/hostDeltaMetrics:
         exclude:
             match_type: strict
             metrics:
@@ -98,15 +98,15 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_mem
                 - telegraf_swap
                 - telegraf_cpu
                 - telegraf_disk
+                - telegraf_mem
         metrics/hostDeltaMetrics:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostDeltaMetrics
+                - cumulative_to_delta/hostDeltaMetrics
                 - ec2tagger
                 - awsentity/resource
             receivers:

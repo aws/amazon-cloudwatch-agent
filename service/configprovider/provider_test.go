@@ -40,6 +40,6 @@ func TestConfigProvider(t *testing.T) {
 	require.True(t, ok)
 	// ENV_LOG_STREAM_NAME isn't set, so it'll resolve to an empty string
 	assert.Equal(t, "", gotCfg.LogStreamName)
-	assert.Equal(t, envRegion, gotCfg.Region)
-	assert.Equal(t, envRoleARN, gotCfg.RoleARN)
+	assert.Equal(t, envRegion, gotCfg.AWSSessionSettings.Region)
+	assert.Equal(t, envRoleARN, gotCfg.AWSSessionSettings.RoleARN)
 }

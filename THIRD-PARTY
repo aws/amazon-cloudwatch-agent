@@ -317,6 +317,8 @@ https://github.com/NYTimes/gziphandler
 ** github.com/oklog/ulid; version v1.3.1 -- https://github.com/oklog/ulid
 ** github.com/OneOfOne/xxhash; version v1.2.2 --
 https://github.com/OneOfOne/xxhash
+** github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jmxreceiver; version v0.165.1 --
+https://github.com/open-telemetry/opentelemetry-collector-contrib
 ** github.com/opencontainers/go-digest; version v1.0.0-rc1 --
 https://github.com/opencontainers/go-digest/
 ** github.com/opencontainers/image-spec; version v1.0.0-rc6-12-g372ad78 --
