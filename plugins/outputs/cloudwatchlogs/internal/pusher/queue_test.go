@@ -185,7 +185,8 @@ func TestEntityIsSentWithEveryBatch(t *testing.T) {
 	for i := 1; i <= batches; i++ {
 		q.AddEvent(newStubLogEvent("MSG", time.Now()))
 		require.Eventually(t, func() bool {
-			// The event may not have reached the batch yet, so send until it is sent.
+			// The event may not have reached the batch yet, so send until it is sent. Extra triggers send nothing, as
+			// an empty batch is not sent.
 			triggerSend(t, q)
 			return sent() == i
 		}, 2*time.Second, 10*time.Millisecond)
