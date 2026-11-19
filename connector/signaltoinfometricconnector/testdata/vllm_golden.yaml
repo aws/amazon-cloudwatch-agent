@@ -1,0 +1,115 @@
+# Expected Info metric series for the fixtures in testdata/vllm with the rule in
+# testdata/vllm_rule.yaml, one per pod, sorted by pod name. The test reads every value
+# verbatim as a string (True, 1, and None stay strings) and compares the pairs in order.
+#
+# The attributes are the values in the startup line of each fixture. vllm-v063-1b7c logs
+# "Initializing an LLM engine" (the v0.6.x form) with no engine version, so its vllm_engine
+# V0 comes from default_value. The startup lines of vllm-v063-1b7c and vllm-v085-9e2a have
+# no data_parallel_size, so their series omit it.
+#
+# The resource holds include_resource_attributes in config order: the identity, then
+# k8s.pod.uid. The test sets k8s.pod.uid to "uid-<pod>" on the input resource.
+# start_timestamp is the CRI timestamp of the startup line.
+- resource:
+    k8s.namespace.name: inference
+    k8s.pod.name: vllm-main-7d9f
+    k8s.container.name: vllm
+    k8s.pod.uid: uid-vllm-main-7d9f
+  start_timestamp: "2026-10-15T12:40:01.123456789Z"
+  attributes:
+    vllm_version: 0.31.1
+    model: meta-llama/Llama-3.1-70B-Instruct
+    vllm_engine: V1
+    served_model_name: llama-70b
+    dtype: bfloat16
+    max_seq_len: 131072
+    tensor_parallel_size: 4
+    pipeline_parallel_size: 2
+    data_parallel_size: 1
+    quantization: fp8
+    enforce_eager: False
+    kv_cache_dtype: fp8_e4m3
+    enable_prefix_caching: True
+    speculative_method: None
+- resource:
+    k8s.namespace.name: inference
+    k8s.pod.name: vllm-v0285-5c4b
+    k8s.container.name: kserve-container
+    k8s.pod.uid: uid-vllm-v0285-5c4b
+  start_timestamp: "2026-10-15T12:41:00.123456789Z"
+  attributes:
+    vllm_version: 0.28.0
+    model: google/gemma-4-26B-A4B-it
+    vllm_engine: V1
+    served_model_name: gemma-4-26b-a4b-it
+    dtype: bfloat16
+    max_seq_len: 131072
+    tensor_parallel_size: 1
+    pipeline_parallel_size: 1
+    data_parallel_size: 1
+    quantization: None
+    enforce_eager: False
+    kv_cache_dtype: auto
+    enable_prefix_caching: True
+    speculative_method: mtp
+- resource:
+    k8s.namespace.name: team-b
+    k8s.pod.name: vllm-v0290-6a1e
+    k8s.container.name: vllm
+    k8s.pod.uid: uid-vllm-v0290-6a1e
+  start_timestamp: "2026-10-15T12:42:00.123456789Z"
+  attributes:
+    vllm_version: 0.29.0
+    model: /data_nvm2/qwen3.8/model
+    vllm_engine: V1
+    served_model_name: qwen3.6
+    dtype: bfloat16
+    max_seq_len: 524288
+    tensor_parallel_size: 2
+    pipeline_parallel_size: 1
+    data_parallel_size: 1
+    quantization: compressed-tensors
+    enforce_eager: False
+    kv_cache_dtype: fp8
+    enable_prefix_caching: True
+    speculative_method: mtp
+- resource:
+    k8s.namespace.name: legacy
+    k8s.pod.name: vllm-v063-1b7c
+    k8s.container.name: server
+    k8s.pod.uid: uid-vllm-v063-1b7c
+  start_timestamp: "2026-10-15T12:44:00.123456789Z"
+  attributes:
+    vllm_version: 0.6.3
+    model: mistralai/Mistral-7B-Instruct-v0.3
+    vllm_engine: V0
+    served_model_name: mistral-7b
+    dtype: bfloat16
+    max_seq_len: 32768
+    tensor_parallel_size: 2
+    pipeline_parallel_size: 1
+    quantization: None
+    enforce_eager: False
+    kv_cache_dtype: auto
+    enable_prefix_caching: False
+    speculative_method: None
+- resource:
+    k8s.namespace.name: legacy
+    k8s.pod.name: vllm-v085-9e2a
+    k8s.container.name: vllm
+    k8s.pod.uid: uid-vllm-v085-9e2a
+  start_timestamp: "2026-10-15T12:43:00.123456789Z"
+  attributes:
+    vllm_version: 0.8.5
+    model: Qwen/Qwen2.5-7B-Instruct
+    vllm_engine: V0
+    served_model_name: qwen-7b
+    dtype: float16
+    max_seq_len: 32768
+    tensor_parallel_size: 1
+    pipeline_parallel_size: 1
+    quantization: awq
+    enforce_eager: True
+    kv_cache_dtype: auto
+    enable_prefix_caching: False
+    speculative_method: None
