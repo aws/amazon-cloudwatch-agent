@@ -19,6 +19,12 @@ import (
 // make this configurable or construct based on some configs?
 const betaEksEndpoint = "https://api.beta.us-west-2.wesley.amazonaws.com"
 
+// Bound how long we wait for a cluster's node groups to finish deleting before
+// attempting to delete the cluster itself. A cluster cannot be deleted while it
+// still has node groups, so if we do not wait the DeleteCluster call fails and
+// the cluster (and its VPC/ELB/EBS/ENI dependents) lingers until a later run.
+const nodegroupDeleteTimeout = 20 * time.Minute
+
 var (
 	ClustersToClean = []string{
 		"cwagent-eks-integ-",
@@ -30,7 +36,7 @@ var (
 	}
 )
 
-// Clean eks clusters if they have been open longer than 7 day
+// Clean eks clusters if they have been open longer than 1 day
 func main() {
 	err := cleanCluster()
 	if err != nil {
@@ -79,6 +85,19 @@ func clusterNameMatchesClustersToClean(clusterName string, clustersToClean []str
 	return false
 }
 
+// shouldCleanCluster decides whether a cluster is eligible for deletion: it must
+// be older than the expiration cutoff and its name must match one of the known
+// test-cluster prefixes. Kept free of AWS SDK types so it is unit testable.
+func shouldCleanCluster(clusterName string, createdAt *time.Time, expirationDate time.Time, clustersToClean []string) bool {
+	if createdAt == nil {
+		return false
+	}
+	if !expirationDate.After(*createdAt) {
+		return false
+	}
+	return clusterNameMatchesClustersToClean(clusterName, clustersToClean)
+}
+
 func terminateClusters(ctx context.Context, client *eks.Client) {
 	listClusterInput := eks.ListClustersInput{}
 	expirationDateCluster := time.Now().UTC().Add(clean.KeepDurationOneDay)
@@ -93,39 +112,58 @@ func terminateClusters(ctx context.Context, client *eks.Client) {
 		if err != nil {
 			return
 		}
-		if !expirationDateCluster.After(*describeClusterOutput.Cluster.CreatedAt) {
-			log.Printf("Ignoring cluster %s with a launch-date %s since it was created in the last %s", cluster, *describeClusterOutput.Cluster.CreatedAt, clean.KeepDurationOneDay)
-			continue
-		}
-		if !clusterNameMatchesClustersToClean(*describeClusterOutput.Cluster.Name, ClustersToClean) {
-			log.Printf("Ignoring cluster %s since it doesnt match any of the clean regexes", cluster)
+		if !shouldCleanCluster(*describeClusterOutput.Cluster.Name, describeClusterOutput.Cluster.CreatedAt, expirationDateCluster, ClustersToClean) {
+			log.Printf("Ignoring cluster %s with a launch-date %s (too new or name does not match a cleanable prefix)", cluster, *describeClusterOutput.Cluster.CreatedAt)
 			continue
 		}
 		log.Printf("Try to delete cluster %s launch-date %s", cluster, *describeClusterOutput.Cluster.CreatedAt)
-		describeNodegroupInput := eks.ListNodegroupsInput{ClusterName: aws.String(cluster)}
-		nodeGroupOutput, err := client.ListNodegroups(ctx, &describeNodegroupInput)
-		if err != nil {
-			log.Printf("could not query node groups cluster %s err %v", cluster, err)
-		}
-		// it takes about 5 minutes to delete node groups
-		// it will fail to delete cluster if we need to delete node groups
-		// this will delete the cluster on next run the next day
-		// I do not want to wait for node groups to be deleted
-		// as it will increase the runtime of this cleaner
-		for _, nodegroup := range nodeGroupOutput.Nodegroups {
-			deleteNodegroupInput := eks.DeleteNodegroupInput{
-				ClusterName:   aws.String(cluster),
-				NodegroupName: aws.String(nodegroup),
-			}
-			_, err := client.DeleteNodegroup(ctx, &deleteNodegroupInput)
-			if err != nil {
-				log.Printf("could not delete node groups %s cluster %s err %v", nodegroup, cluster, err)
-			}
-		}
+
+		// A cluster cannot be deleted while it still has node groups, so delete
+		// them and wait for the deletions to finish before deleting the cluster.
+		// Waiting (rather than relying on a later run) is what makes teardown
+		// complete in a single pass and stops the cluster's dependents from
+		// orphaning.
+		deleteNodegroupsAndWait(ctx, client, cluster)
+
 		deleteClusterInput := eks.DeleteClusterInput{Name: aws.String(cluster)}
-		_, err = client.DeleteCluster(ctx, &deleteClusterInput)
-		if err != nil {
+		if _, err = client.DeleteCluster(ctx, &deleteClusterInput); err != nil {
+			// Left in place for the next run to retry (for example if a node
+			// group deletion did not finish within the timeout above).
 			log.Printf("could not delete cluster %s err %v", cluster, err)
+			continue
+		}
+		log.Printf("Deleted cluster %s", cluster)
+	}
+}
+
+// deleteNodegroupsAndWait issues a delete for every node group on the cluster and
+// then waits for all of them to finish deleting, bounded by nodegroupDeleteTimeout.
+// Deletes are issued for all node groups first so they drain in parallel.
+func deleteNodegroupsAndWait(ctx context.Context, client *eks.Client, cluster string) {
+	nodeGroupOutput, err := client.ListNodegroups(ctx, &eks.ListNodegroupsInput{ClusterName: aws.String(cluster)})
+	if err != nil {
+		log.Printf("could not query node groups cluster %s err %v", cluster, err)
+		return
+	}
+
+	for _, nodegroup := range nodeGroupOutput.Nodegroups {
+		deleteNodegroupInput := eks.DeleteNodegroupInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(nodegroup),
+		}
+		if _, err := client.DeleteNodegroup(ctx, &deleteNodegroupInput); err != nil {
+			log.Printf("could not delete node group %s cluster %s err %v", nodegroup, cluster, err)
+		}
+	}
+
+	waiter := eks.NewNodegroupDeletedWaiter(client)
+	for _, nodegroup := range nodeGroupOutput.Nodegroups {
+		describeNodegroupInput := eks.DescribeNodegroupInput{
+			ClusterName:   aws.String(cluster),
+			NodegroupName: aws.String(nodegroup),
+		}
+		if err := waiter.Wait(ctx, &describeNodegroupInput, nodegroupDeleteTimeout); err != nil {
+			log.Printf("timed out or errored waiting for node group %s cluster %s to delete err %v", nodegroup, cluster, err)
 		}
 	}
 }
