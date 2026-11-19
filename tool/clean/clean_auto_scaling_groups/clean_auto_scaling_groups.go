@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 
 // Clean eks clusters if they have been open longer than 7 day
 func main() {
+	clean.RegisterCommonFlags()
+	flag.Parse()
 	err := cleanAutoScalingGroups()
 	if err != nil {
 		log.Fatalf("errors cleaning %v", err)
@@ -60,6 +63,9 @@ func terminateAutoScaling(ctx context.Context, client *autoscaling.Client, filte
 	for _, group := range describeAutoScalingGroupsOutput.AutoScalingGroups {
 		if expirationDateCluster.After(*group.CreatedTime) {
 			log.Printf("try to delete auto scaling group %s", *group.AutoScalingGroupName)
+			if clean.Skip("delete auto scaling group %s", *group.AutoScalingGroupName) {
+				continue
+			}
 			deleteAutoScalingGroupInput := autoscaling.DeleteAutoScalingGroupInput{
 				AutoScalingGroupName: group.AutoScalingGroupName,
 				ForceDelete:          aws.Bool(true),

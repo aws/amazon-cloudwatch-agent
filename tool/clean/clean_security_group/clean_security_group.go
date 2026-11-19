@@ -53,7 +53,6 @@ func init() {
 		ageThreshold:  1 * clean.KeepDurationOneDay,
 		numWorkers:    30,
 		exceptionList: []string{"default"},
-		dryRun:        true,
 		skipVpcSGs:    false,
 		skipWithRules: false,
 	}
@@ -64,11 +63,12 @@ func main() {
 	defer cancel()
 
 	// Parse command line flags
-	flag.BoolVar(&cfg.dryRun, "dry-run", false, "Enable dry-run mode (no actual deletion)")
+	clean.RegisterCommonFlags()
 	flag.DurationVar(&cfg.ageThreshold, "age", 1*clean.KeepDurationOneDay, "Age threshold for security groups (e.g. 24h)")
 	flag.BoolVar(&cfg.skipVpcSGs, "skip-vpc", false, "Skip security groups associated with VPCs")
 	flag.BoolVar(&cfg.skipWithRules, "skip-with-rules", false, "Skip security groups that have ingress or egress rules")
 	flag.Parse()
+	cfg.dryRun = clean.DryRun
 
 	// Load AWS configuration
 	awsCfg, err := loadAWSConfig(ctx)
@@ -325,35 +325,36 @@ func fetchAndProcessSecurityGroups(ctx context.Context, client ec2Client,
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			output, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
-				MaxResults: aws.Int32(maxResults),
-				NextToken:  nextToken,
-			})
-			if err != nil {
-				return fmt.Errorf("describing security groups: %w", err)
-			}
-
-			log.Printf("🔍 Described %d times | Found %d security groups\n", describeCount, len(output.SecurityGroups))
-
-			// Process in batches with context awareness
-			for _, securityGroup := range output.SecurityGroups {
-				select {
-				case securityGroupChan <- securityGroup:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-			}
-
-			if output.NextToken == nil {
-				break
-			}
-
-			nextToken = output.NextToken
-			describeCount++
 		}
-	}
 
-	return nil
+		output, err := client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+			MaxResults: aws.Int32(maxResults),
+			NextToken:  nextToken,
+		})
+		if err != nil {
+			return fmt.Errorf("describing security groups: %w", err)
+		}
+
+		log.Printf("🔍 Described %d times | Found %d security groups\n", describeCount, len(output.SecurityGroups))
+
+		// Process in batches with context awareness
+		for _, securityGroup := range output.SecurityGroups {
+			select {
+			case securityGroupChan <- securityGroup:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+
+		// A bare break here would only exit the select, spinning the loop on the
+		// same page forever; return when there are no more pages.
+		if output.NextToken == nil {
+			return nil
+		}
+
+		nextToken = output.NextToken
+		describeCount++
+	}
 }
 
 func isSecurityGroupInUse(ctx context.Context, client ec2Client, securityGroupID string) (bool, error) {
