@@ -258,6 +258,26 @@ func TestEncodeNonStringEncodedKey(t *testing.T) {
 	assert.Nil(t, got)
 }
 
+type testKind string
+
+func TestEncodeNamedStringKey(t *testing.T) {
+	enc := New(&EncoderConfig{})
+	type withKinds struct {
+		Kinds map[testKind]map[string]string `mapstructure:"kinds"`
+	}
+	got, err := enc.Encode(withKinds{Kinds: map[testKind]map[string]string{
+		"pod":  {"k8s.pod.name": "`name`"},
+		"port": {},
+	}})
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]any{
+		"kinds": map[string]any{
+			"pod":  map[string]any{"k8s.pod.name": "`name`"},
+			"port": map[string]any{},
+		},
+	}, got)
+}
+
 func TestDuplicateKey(t *testing.T) {
 	enc := New(&EncoderConfig{
 		EncodeHook: TextMarshalerHookFunc(),
