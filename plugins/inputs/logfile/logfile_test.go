@@ -1378,3 +1378,37 @@ func TestGenerateLogGroupName(t *testing.T) {
 		logGroupName,
 		expectLogGroup))
 }
+
+func TestCleanupStateFolderTempFiles(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(t.TempDir(), "app.log")
+	require.NoError(t, os.WriteFile(source, []byte("line\n"), 0600))
+	content := []byte("10\n" + source)
+	stale := filepath.Join(dir, "app.log"+state.TempFileSuffix+"1")
+	fresh := filepath.Join(dir, "app.log"+state.TempFileSuffix+"2")
+	staleWinEvent := filepath.Join(dir, "Amazon_CloudWatch_WindowsEventLog_x"+state.TempFileSuffix+"3")
+	for _, path := range []string{stale, fresh, staleWinEvent} {
+		require.NoError(t, os.WriteFile(path, content, 0600))
+	}
+	old := time.Now().Add(-2 * state.StaleTempFileAge)
+	require.NoError(t, os.Chtimes(stale, old, old))
+	require.NoError(t, os.Chtimes(staleWinEvent, old, old))
+
+	tt := NewLogFile()
+	tt.Log = TestLogger{t}
+	tt.FileStateFolder = dir
+	tt.cleanupStateFolder()
+
+	assert.NoFileExists(t, stale, "stale temp file should be removed even though its source still exists")
+	assert.NoFileExists(t, staleWinEvent, "stale Windows Event Log temp file should be removed")
+	assert.FileExists(t, fresh, "an in-flight temp file must not be touched")
+
+	// The state file of a source literally named "app.log.tmp" is not a temp file and must be kept.
+	otherSource := filepath.Join(filepath.Dir(source), "app.log.tmp")
+	require.NoError(t, os.WriteFile(otherSource, []byte("line\n"), 0600))
+	otherState := filepath.Join(dir, "app.log.tmp")
+	require.NoError(t, os.WriteFile(otherState, []byte("10\n"+otherSource), 0600))
+	require.NoError(t, os.Chtimes(otherState, old, old))
+	tt.cleanupStateFolder()
+	assert.FileExists(t, otherState)
+}

@@ -351,8 +351,19 @@ func (t *LogFile) cleanupStateFolder() {
 		t.Log.Errorf("Error happens in cleanup state folder %s: %v", t.FileStateFolder, err)
 	}
 	for _, file := range files {
-		if info, err := os.Stat(file); err != nil || info.IsDir() {
+		info, err := os.Stat(file)
+		if err != nil || info.IsDir() {
 			t.Log.Debugf("File %v does not exist or is a dirctory: %v, %v", file, err, info)
+			continue
+		}
+
+		// Temporary files of atomic state saves: keep in-flight ones, remove those left behind by interrupted saves.
+		if strings.Contains(filepath.Base(file), state.TempFileSuffix) {
+			if time.Since(info.ModTime()) >= state.StaleTempFileAge {
+				if err = os.Remove(file); err != nil {
+					t.Log.Errorf("Error happens when deleting stale temporary state file %s: %v", file, err)
+				}
+			}
 			continue
 		}
 
