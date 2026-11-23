@@ -235,6 +235,7 @@ require (
 	go.opentelemetry.io/collector/exporter/exportertest v0.165.0
 	go.opentelemetry.io/collector/exporter/nopexporter v0.165.0
 	go.opentelemetry.io/collector/exporter/otlphttpexporter v0.165.0
+	go.opentelemetry.io/collector/exporter/xexporter v0.165.0
 	go.opentelemetry.io/collector/extension v1.71.0
 	go.opentelemetry.io/collector/extension/extensionauth v1.71.0
 	go.opentelemetry.io/collector/extension/extensioncapabilities v0.165.0
@@ -254,6 +255,7 @@ require (
 	go.opentelemetry.io/collector/receiver/nopreceiver v0.165.0
 	go.opentelemetry.io/collector/receiver/otlpreceiver v0.165.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.165.0
+	go.opentelemetry.io/collector/receiver/xreceiver v0.165.0
 	go.opentelemetry.io/collector/scraper v0.165.0
 	go.opentelemetry.io/collector/scraper/scraperhelper v0.165.0
 	go.opentelemetry.io/collector/semconv v0.128.1-0.20250610090210-188191247685
@@ -267,6 +269,7 @@ require (
 	golang.org/x/sync v0.24.0
 	golang.org/x/sys v0.49.0
 	golang.org/x/text v0.43.0
+	google.golang.org/grpc v1.85.0
 	gopkg.in/fsnotify.v1 v1.4.7
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -629,7 +632,6 @@ require (
 	go.opentelemetry.io/collector/consumer/consumererror/xconsumererror v0.165.0 // indirect
 	go.opentelemetry.io/collector/consumer/xconsumer v0.165.0
 	go.opentelemetry.io/collector/exporter/exporterhelper/xexporterhelper v0.165.0 // indirect
-	go.opentelemetry.io/collector/exporter/xexporter v0.165.0 // indirect
 	go.opentelemetry.io/collector/extension/extensionmiddleware v0.165.0 // indirect
 	go.opentelemetry.io/collector/extension/xextension v0.165.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.71.0
@@ -645,7 +647,6 @@ require (
 	go.opentelemetry.io/collector/processor/processorhelper/xprocessorhelper v0.165.0 // indirect
 	go.opentelemetry.io/collector/processor/xprocessor v0.165.0
 	go.opentelemetry.io/collector/receiver/receiverhelper v0.165.0 // indirect
-	go.opentelemetry.io/collector/receiver/xreceiver v0.165.0 // indirect
 	go.opentelemetry.io/collector/service/hostcapabilities v0.165.0 // indirect
 	go.opentelemetry.io/contrib/bridges/otelzap v0.21.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.72.0 // indirect
@@ -687,7 +688,6 @@ require (
 	google.golang.org/genproto v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261012220534-4341edf3f941 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941 // indirect
-	google.golang.org/grpc v1.85.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
