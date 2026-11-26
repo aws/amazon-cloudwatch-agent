@@ -26,7 +26,7 @@ func TestTranslate(t *testing.T) {
 	k8sCfg, ok := cfg.(*k8sattributesprocessor.Config)
 	require.True(t, ok)
 
-	assert.Equal(t, "serviceAccount", string(k8sCfg.AuthType))
+	assert.Equal(t, "serviceAccount", string(k8sCfg.APIConfig.AuthType))
 	assert.False(t, k8sCfg.Passthrough)
 	assert.Equal(t, "K8S_NODE_NAME", k8sCfg.Filter.NodeFromEnvVar)
 	assert.Empty(t, k8sCfg.Exclude.Pods)
@@ -124,7 +124,7 @@ func TestTranslateWithPodAssociation(t *testing.T) {
 			assert.NotEqual(t, "k8s.pod.ip", source.Name)
 		}
 	}
-	assert.Equal(t, "serviceAccount", string(k8sCfg.AuthType))
+	assert.Equal(t, "serviceAccount", string(k8sCfg.APIConfig.AuthType))
 	assert.Len(t, k8sCfg.Extract.Metadata, 12)
 	require.NoError(t, k8sCfg.Validate())
 }

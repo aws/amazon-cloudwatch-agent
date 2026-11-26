@@ -36,7 +36,7 @@ processors:
         entity_type: Resource
         platform: ec2
         scrape_datapoint_attribute: true
-    cumulativetodelta/hostDeltaMetrics:
+    cumulative_to_delta/hostDeltaMetrics:
         exclude:
             match_type: strict
             metrics:
@@ -59,12 +59,14 @@ processors:
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
     transform:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "Count") where name == "diskio_iops_in_progress"
                 - set(name, "DRIVER_DISKIO_IOPS_IN_PROGRESS") where name == "diskio_iops_in_progress"
@@ -89,7 +91,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostDeltaMetrics
+                - cumulative_to_delta/hostDeltaMetrics
                 - ec2tagger
                 - transform
                 - awsentity/resource

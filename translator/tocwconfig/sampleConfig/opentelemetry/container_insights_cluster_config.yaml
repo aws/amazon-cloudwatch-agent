@@ -7,9 +7,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: ""
-        max_idle_conns: 100
         metrics_endpoint: https://monitoring.us-east-1.amazonaws.com/v1/metrics
         profiles_endpoint: ""
         retry_on_failure:
@@ -134,7 +135,6 @@ processors:
                   key: resource.opentelemetry.io/service.version
                   key_regex: ""
                   tag_name: resource.opentelemetry.io/service.version
-            deployment_name_from_replicaset: false
             labels:
                 - from: pod
                   key: app.kubernetes.io/instance
@@ -169,9 +169,18 @@ processors:
         kube_api_burst: 0
         kube_api_qps: 0
         kube_config_path: ""
+        kubelet:
+            allow_insecure_http: false
+            enabled: false
+            endpoint: ""
+            insecure_skip_verify: false
+            poll_interval: 10s
+            request_timeout: 10s
         passthrough: false
+        pod_delete_grace_period: 2m0s
         wait_for_metadata: false
         wait_for_metadata_timeout: 10s
+        watch_sync_period: 5m0s
     k8sattributes/cw_k8s_ci_v0_node:
         auth_type: serviceAccount
         exclude:
@@ -215,14 +224,7 @@ processors:
                   name: k8s.namespace.name
     metricstarttime/cw_k8s_ci_v0: null
     nodemetadataenricher/cw_k8s_ci_v0: null
-    resourcedetection/cw_k8s_ci_v0:
-        detectors:
-            - eks
-            - env
-            - ec2
-        override: false
-        timeout: 2s
-    resourcedetection/opentelemetry:
+    resource_detection/opentelemetry:
         akamai:
             resource_attributes:
                 cloud.account.id:
@@ -274,6 +276,8 @@ processors:
                     enabled: true
         azure:
             resource_attributes:
+                azure.resource_group.name:
+                    enabled: true
                 azure.resourcegroup.name:
                     enabled: true
                 azure.vm.name:
@@ -297,6 +301,56 @@ processors:
                 host.name:
                     enabled: true
             tags: []
+        azureappservice:
+            resource_attributes:
+                azure.app_service.instance.id:
+                    enabled: true
+                azure.resource_group.name:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                deployment.environment.name:
+                    enabled: true
+                service.name:
+                    enabled: true
+        azurecontainerapps:
+            resource_attributes:
+                azure.container_app.instance.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                service.name:
+                    enabled: true
+        azurefunctions:
+            resource_attributes:
+                azure.resource_group.name:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                deployment.environment.name:
+                    enabled: false
+                faas.instance:
+                    enabled: true
+                service.name:
+                    enabled: true
         consul:
             address: ""
             datacenter: ""
@@ -393,6 +447,11 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
+            auth_type: serviceAccount
+            context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
+            kube_config_path: ""
             node_from_env_var: HOST_NAME
             resource_attributes:
                 cloud.account.id:
@@ -423,10 +482,17 @@ processors:
                     enabled: true
                 deployment.environment:
                     enabled: true
+                deployment.environment.name:
+                    enabled: true
+                deployment.id:
+                    enabled: true
                 service.instance.id:
                     enabled: true
                 service.version:
                     enabled: true
+        env:
+            attributes: {}
+        fail_on_missing_metadata: false
         force_attempt_http2: true
         gcp:
             labels: []
@@ -542,8 +608,23 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-        idle_conn_timeout: 1m30s
         ignore_detector_errors: true
+        k8s_api:
+            auth_type: serviceAccount
+            context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                host.id:
+                    enabled: false
+                k8s.cluster.uid:
+                    enabled: true
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
         k8snode:
             auth_type: serviceAccount
             context: ""
@@ -552,10 +633,17 @@ processors:
             kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
+                host.id:
+                    enabled: false
+                k8s.cluster.uid:
+                    enabled: true
                 k8s.node.name:
                     enabled: true
                 k8s.node.uid:
                     enabled: true
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         kubeadm:
             auth_type: serviceAccount
             context: ""
@@ -587,7 +675,6 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
-        max_idle_conns: 100
         nova:
             fail_on_missing_metadata: false
             labels: []
@@ -618,7 +705,6 @@ processors:
                 k8s.cluster.name:
                     enabled: true
             tls: {}
-            token: ""
         oraclecloud:
             resource_attributes:
                 cloud.availability_zone:
@@ -629,6 +715,8 @@ processors:
                     enabled: true
                 cloud.region:
                     enabled: true
+                cloud.resource_id:
+                    enabled: false
                 host.id:
                     enabled: true
                 host.name:
@@ -641,6 +729,13 @@ processors:
                     enabled: true
         override: true
         refresh_interval: 0s
+        retry:
+            enabled: true
+            initial_interval: 1s
+            max_elapsed_time: 0s
+            max_interval: 30s
+            multiplier: 2
+            randomization_factor: 0.5
         scaleway:
             resource_attributes:
                 cloud.account.id:
@@ -689,7 +784,7 @@ processors:
                     enabled: false
                 host.name:
                     enabled: true
-                os.build.id:
+                os.build_id:
                     enabled: false
                 os.description:
                     enabled: false
@@ -745,24 +840,35 @@ processors:
                     enabled: true
                 host.name:
                     enabled: true
+    resourcedetection/cw_k8s_ci_v0:
+        detectors:
+            - eks
+            - env
+            - ec2
+        override: false
+        timeout: 2s
     transform/clear_schema_url:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.schema_url, "")
         profile_statements: []
         trace_statements: []
     transform/cluster_host_suppress:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - delete_matching_keys(resource.attributes, "^host.") where resource.attributes["_tmp.cluster_scoped"] == true
                 - delete_key(resource.attributes, "cloud.availability_zone") where resource.attributes["_tmp.cluster_scoped"] == true
@@ -961,10 +1067,12 @@ processors:
                 - set(attributes["node"], resource.attributes["node"]) where resource.attributes["node"] != nil
     transform/identity:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
                 - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
@@ -1013,6 +1121,7 @@ processors:
         metric_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
                 - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
@@ -1061,6 +1170,7 @@ processors:
         profile_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
                 - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
@@ -1109,6 +1219,7 @@ processors:
         trace_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.namespace"], resource.attributes["resource.opentelemetry.io/service.namespace"]) where resource.attributes["service.namespace"] == nil and resource.attributes["resource.opentelemetry.io/service.namespace"] != nil
                 - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"]) where resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
@@ -1156,25 +1267,30 @@ processors:
                 - delete_key(resource.attributes, "_tmp.log_type")
     transform/set_cluster_name:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
         metric_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
         profile_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
         trace_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["k8s.cluster.name"], "TestCluster")
 receivers:
@@ -1381,7 +1497,7 @@ service:
             exporters:
                 - otlp_http/metrics
             processors:
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - k8s_attributes/opentelemetry
                 - transform/set_cluster_name
                 - transform/identity

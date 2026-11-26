@@ -56,7 +56,7 @@ func TestTranslatorTraces(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
-				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resource_detection", "awsapplicationsignals"},
 				exporters:  []string{"awsxray/application_signals"},
 				extensions: []string{"awsproxy/application_signals", "agenthealth/traces", "agenthealth/statuscode"},
 			},
@@ -72,7 +72,7 @@ func TestTranslatorTraces(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"otlp/grpc_0_0_0_0_4315", "otlp/http_0_0_0_0_4316"},
-				processors: []string{"resourcedetection", "awsapplicationsignals"},
+				processors: []string{"resource_detection", "awsapplicationsignals"},
 				exporters:  []string{"awsxray/application_signals"},
 				extensions: []string{"awsproxy/application_signals", "agenthealth/traces", "agenthealth/statuscode"},
 			},
@@ -129,7 +129,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -149,7 +149,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -166,7 +166,7 @@ func TestTranslatorMetricsForKubernetes(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"k8smetadata", "agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -224,7 +224,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -243,7 +243,7 @@ func TestTranslatorMetricsForEC2(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals", "awsentity/service/application_signals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals", "awsentity/service/application_signals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -300,7 +300,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals"},
 				exporters:  []string{"awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},
@@ -318,7 +318,7 @@ func TestTranslatorMetricsForECS(t *testing.T) {
 			},
 			want: &want{
 				receivers:  []string{"routing/application_signals_metrics"},
-				processors: []string{"metricstransform/application_signals", "resourcedetection", "awsapplicationsignals"},
+				processors: []string{"metrics_transform/application_signals", "resource_detection", "awsapplicationsignals"},
 				exporters:  []string{"debug/application_signals", "awsemf/application_signals"},
 				extensions: []string{"agenthealth/logs", "agenthealth/statuscode"},
 			},

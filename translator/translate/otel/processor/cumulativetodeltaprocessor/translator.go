@@ -83,7 +83,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	cfg.InitialValue = initialValueDrop
 	excludeMetrics := t.getExcludeMetrics(conf)
 	if len(excludeMetrics) != 0 {
-		cfg.Exclude.MatchType = strict
+		cfg.Exclude.Config.MatchType = strict
 		cfg.Exclude.Metrics = excludeMetrics
 	}
 	return cfg, nil

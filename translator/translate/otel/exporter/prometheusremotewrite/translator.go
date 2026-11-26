@@ -8,6 +8,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/resourcetotelemetry"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configauth"
+	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/exporter"
@@ -46,10 +47,13 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: AMPSectionKey + " or " + common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey)}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*prometheusremotewriteexporter.Config)
-	cfg.ClientConfig.Auth = configoptional.Some(configauth.Config{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))})
+	cfg.HTTP = cfg.ClientConfig
+	cfg.ClientConfig = confighttp.ClientConfig{}
+	cfg.HTTP.Auth = configoptional.Some(configauth.Config{AuthenticatorID: component.NewID(component.MustNewType(common.SigV4Auth))})
 	cfg.ResourceToTelemetrySettings = resourcetotelemetry.Settings{Enabled: true, ClearAfterCopy: true}
 	// Disable metric name type/unit suffixes (e.g. _total, _ratio) and otel_scope_* info labels to preserve backward-compatible AMP metrics.
-	cfg.AddMetricSuffixes = false
+	// UnderscoreEscapingWithoutSuffixes is the exporter's unexported translationStrategy constant.
+	cfg.TranslationStrategy = "UnderscoreEscapingWithoutSuffixes"
 	cfg.DisableScopeInfo = true
 	// ignoring bool return value since we are checking with isSet beforehand
 	value, _ := common.GetString(conf, common.ConfigKey(AMPSectionKey, common.WorkspaceIDKey))
@@ -59,6 +63,6 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	}
 	ampEndpoint := "https://aps-workspaces." + agent.Global_Config.Region + "." + domain + "/workspaces/" + value + "/api/v1/remote_write"
 
-	cfg.ClientConfig.Endpoint = ampEndpoint
+	cfg.HTTP.Endpoint = ampEndpoint
 	return cfg, nil
 }

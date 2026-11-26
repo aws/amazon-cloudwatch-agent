@@ -124,12 +124,14 @@ processors:
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
     transform:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "PERCENT") where name == "LogicalDisk % Idle Time"
                 - set(name, "DISK_READ") where name == "LogicalDisk % Disk Read Time"
@@ -166,14 +168,12 @@ receivers:
     otlp/http_0_0_0_0_2222:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:2222
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s

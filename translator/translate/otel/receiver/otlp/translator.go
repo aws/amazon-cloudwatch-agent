@@ -125,13 +125,13 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	if t.endpointConfig.protocol == http {
-		cfg.GRPC = configoptional.None[configgrpc.ServerConfig]()
-		httpCfg := cfg.HTTP.GetOrInsertDefault()
+		cfg.Protocols.GRPC = configoptional.None[configgrpc.ServerConfig]()
+		httpCfg := cfg.Protocols.HTTP.GetOrInsertDefault()
 		httpCfg.ServerConfig.NetAddr.Endpoint = t.endpointConfig.endpoint
 		httpCfg.ServerConfig.TLS = tlsCfg
 	} else {
-		cfg.HTTP = configoptional.None[otlpreceiver.HTTPConfig]()
-		grpcCfg := cfg.GRPC.GetOrInsertDefault()
+		cfg.Protocols.HTTP = configoptional.None[otlpreceiver.HTTPConfig]()
+		grpcCfg := cfg.Protocols.GRPC.GetOrInsertDefault()
 		grpcCfg.NetAddr.Endpoint = t.endpointConfig.endpoint
 		grpcCfg.TLS = tlsCfg
 	}

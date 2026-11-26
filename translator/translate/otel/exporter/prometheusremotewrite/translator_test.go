@@ -10,6 +10,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/confmap"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/util/testutil"
@@ -20,7 +21,7 @@ import (
 func TestTranslator(t *testing.T) {
 	agent.Global_Config.Region = "us-east-1"
 	tt := NewTranslatorWithName("test")
-	require.EqualValues(t, "prometheusremotewrite/test", tt.ID().String())
+	require.EqualValues(t, "prometheus_remote_write/test", tt.ID().String())
 
 	testCases := map[string]struct {
 		input   map[string]interface{}
@@ -61,6 +62,8 @@ func TestTranslator(t *testing.T) {
 				require.True(t, ok)
 				wantCfg := &prometheusremotewriteexporter.Config{}
 				require.NoError(t, testCase.want.Unmarshal(wantCfg))
+				// The deprecated top-level client settings are unused once the http block is set.
+				wantCfg.ClientConfig = confighttp.ClientConfig{}
 				assert.Equal(t, wantCfg, gotCfg)
 			}
 		})
@@ -118,7 +121,7 @@ func TestTranslatorDualStackEndpoint(t *testing.T) {
 
 			gotCfg, ok := got.(*prometheusremotewriteexporter.Config)
 			require.True(t, ok)
-			assert.Equal(t, testCase.expectedEndpoint, gotCfg.ClientConfig.Endpoint)
+			assert.Equal(t, testCase.expectedEndpoint, gotCfg.HTTP.Endpoint)
 		})
 	}
 }

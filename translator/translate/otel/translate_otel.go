@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/otelcol"
 	"go.opentelemetry.io/collector/pipeline"
@@ -161,7 +160,7 @@ func translateInternal(jsonConfig interface{}, os string, validate bool) (*otelc
 		}
 	}
 	if validate {
-		if err = xconfmap.Validate(cfg); err != nil {
+		if err = confmap.Validate(cfg); err != nil {
 			return nil, fmt.Errorf("invalid otel config: %w", err)
 		}
 	}
@@ -224,9 +223,9 @@ func getSelfTelemetryConfig(conf *confmap.Conf) otelconftelemetry.MetricsConfig 
 // getSelfTelemetryResource tags all self telemetry with the node name via the collector's own
 // resource mechanism. The env ref is expanded per pod by the config provider's expandconverter, so
 // the same generated config yields a distinct node label on every node with no per-pod rendering.
-func getSelfTelemetryResource(conf *confmap.Conf) map[string]*string {
+func getSelfTelemetryResource(conf *confmap.Conf) otelconftelemetry.ResourceConfig {
 	if !selftelemetry.Enabled(conf) {
-		return nil
+		return otelconftelemetry.ResourceConfig{}
 	}
 	// NodeName = per-host identity: K8s uses the K8S_NODE_NAME env ref; off-K8s the EC2 {instance_id},
 	// falling back to {hostname} when not on EC2 so non-EC2 hosts don't collide on i-UNKNOWN.
@@ -238,7 +237,9 @@ func getSelfTelemetryResource(conf *confmap.Conf) map[string]*string {
 			nodeName = translateutil.ResolvePlaceholder("{hostname}", md)
 		}
 	}
-	return map[string]*string{selftelemetry.NodeNameLabel: &nodeName}
+	var res otelconftelemetry.ResourceConfig
+	res.Attributes = []otelconfig.AttributeNameValue{{Name: selftelemetry.NodeNameLabel, Value: nodeName}}
+	return res
 }
 
 // parseAgentLogLevel returns the logging level from the JSON config, or the

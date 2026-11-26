@@ -58,7 +58,7 @@ func TestTranslators(t *testing.T) {
 			want: map[string]want{
 				"metrics/containerinsights": {
 					receivers:  []string{"awscontainerinsightreceiver"},
-					processors: []string{"batch/containerinsights", "filter/containerinsights", "awsentity/resource/containerinsights", "metricstransform/containerinsights", "gpuattributes/containerinsights"},
+					processors: []string{"batch/containerinsights", "filter/containerinsights", "awsentity/resource/containerinsights", "metrics_transform/containerinsights", "gpuattributes/containerinsights"},
 					exporters:  []string{"awsemf/containerinsights"},
 				},
 			},
@@ -103,7 +103,7 @@ func TestTranslators(t *testing.T) {
 			want: map[string]want{
 				"metrics/containerinsights": {
 					receivers:  []string{"awscontainerinsightreceiver"},
-					processors: []string{"batch/containerinsights", "filter/containerinsights", "groupbyattrs/containerinsights", "awsentity/resource/containerinsights", "metricstransform/containerinsights", "gpuattributes/containerinsights"},
+					processors: []string{"batch/containerinsights", "filter/containerinsights", "groupbyattrs/containerinsights", "awsentity/resource/containerinsights", "metrics_transform/containerinsights", "gpuattributes/containerinsights"},
 					exporters:  []string{"awsemf/containerinsights"},
 				},
 			},
