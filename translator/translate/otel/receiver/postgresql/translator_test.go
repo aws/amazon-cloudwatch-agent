@@ -38,7 +38,7 @@ func translateForTest(t *testing.T, opts ...Option) *postgresqlreceiver.Config {
 func enabledMetricNames(t *testing.T, cfg *postgresqlreceiver.Config) map[string]bool {
 	t.Helper()
 	out := map[string]bool{}
-	v := reflect.ValueOf(cfg.Metrics)
+	v := reflect.ValueOf(cfg.MetricsBuilderConfig.Metrics)
 	typ := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		ef := v.Field(i).FieldByName("Enabled")
@@ -69,16 +69,16 @@ func TestTranslator_Translate_Defaults(t *testing.T) {
 	require.NoError(t, err)
 	pgCfg := cfg.(*postgresqlreceiver.Config)
 
-	assert.Equal(t, "localhost:5432", pgCfg.Endpoint)
+	assert.Equal(t, "localhost:5432", pgCfg.AddrConfig.Endpoint)
 	assert.Equal(t, "cw_monitor", pgCfg.Username)
 	assert.Equal(t, "/etc/.pgpass", pgCfg.Passfile)
-	assert.True(t, pgCfg.Insecure)
-	assert.True(t, pgCfg.InsecureSkipVerify)
+	assert.True(t, pgCfg.ClientConfig.Insecure)
+	assert.True(t, pgCfg.ClientConfig.InsecureSkipVerify)
 	assert.Equal(t, time.Second, pgCfg.QuerySampleCollection.CollectionInterval)
 	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
-	assert.Equal(t, int64(200), pgCfg.TopNQuery)
+	assert.Equal(t, int64(200), pgCfg.TopQueryCollection.TopNQuery)
 	assert.Equal(t, int64(5000), pgCfg.TopQueryCollection.MaxRowsPerQuery)
-	assert.Equal(t, int64(1000), pgCfg.MaxExplainEachInterval)
+	assert.Equal(t, int64(1000), pgCfg.TopQueryCollection.MaxExplainEachInterval)
 }
 
 // Explain plan collection is disabled entirely when the budget is zero, so guard
@@ -94,7 +94,7 @@ func TestTranslator_Translate_ExplainPlansEnabled(t *testing.T) {
 	require.NoError(t, err)
 	pgCfg := cfg.(*postgresqlreceiver.Config)
 
-	assert.Positive(t, pgCfg.MaxExplainEachInterval)
+	assert.Positive(t, pgCfg.TopQueryCollection.MaxExplainEachInterval)
 }
 
 func TestTranslator_Translate_Events(t *testing.T) {
@@ -112,10 +112,10 @@ func TestTranslator_Translate_Events(t *testing.T) {
 	require.NoError(t, err)
 	pgCfg := cfg.(*postgresqlreceiver.Config)
 
-	assert.Equal(t, "db.example.com:5432", pgCfg.Endpoint)
-	assert.False(t, pgCfg.Insecure)
-	assert.False(t, pgCfg.InsecureSkipVerify)
-	assert.Equal(t, "/etc/ssl/ca.pem", string(pgCfg.CAFile))
+	assert.Equal(t, "db.example.com:5432", pgCfg.AddrConfig.Endpoint)
+	assert.False(t, pgCfg.ClientConfig.Insecure)
+	assert.False(t, pgCfg.ClientConfig.InsecureSkipVerify)
+	assert.Equal(t, "/etc/ssl/ca.pem", string(pgCfg.ClientConfig.CAFile))
 	assert.Equal(t, 60*time.Second, pgCfg.QuerySampleCollection.CollectionInterval)
 	assert.Equal(t, int64(500), pgCfg.QuerySampleCollection.MaxRowsPerQuery)
 }
@@ -142,10 +142,10 @@ func TestTranslator_Translate_Defaults_MetricScope(t *testing.T) {
 	// Default scope leaves per-resource metrics enabled, events on, and the top-level
 	// scrape interval at the upstream factory default (10s).
 	assert.Equal(t, 10*time.Second, pgCfg.ControllerConfig.CollectionInterval)
-	assert.True(t, pgCfg.Metrics.PostgresqlRows.Enabled)
-	assert.True(t, pgCfg.Metrics.PostgresqlIndexSize.Enabled)
-	assert.True(t, pgCfg.Events.DbServerQuerySample.Enabled)
-	assert.True(t, pgCfg.Events.DbServerTopQuery.Enabled)
+	assert.True(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlRows.Enabled)
+	assert.True(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlIndexSize.Enabled)
+	assert.True(t, pgCfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled)
+	assert.True(t, pgCfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled)
 }
 
 func TestTranslator_ServerMetricsOnly(t *testing.T) {
@@ -157,9 +157,9 @@ func TestTranslator_ServerMetricsOnly(t *testing.T) {
 	for n := range perResourceMetricNames {
 		assert.False(t, enabled[n], "per-resource metric %s must be disabled on server receiver", n)
 	}
-	assert.True(t, pgCfg.Metrics.PostgresqlTableCount.Enabled)
-	assert.True(t, pgCfg.Metrics.PostgresqlBackends.Enabled)
-	assert.True(t, pgCfg.Events.DbServerQuerySample.Enabled)
+	assert.True(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlTableCount.Enabled)
+	assert.True(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlBackends.Enabled)
+	assert.True(t, pgCfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled)
 	assert.Equal(t, 10*time.Second, pgCfg.ControllerConfig.CollectionInterval)
 }
 
@@ -178,15 +178,15 @@ func TestTranslator_PerResourceMetricsOnly(t *testing.T) {
 	// Metrics enabled by default (rows, index.size, ...) are present; a per-resource
 	// metric that was OFF by default (sequential_scans) stays off -- the split does not
 	// introduce new metrics.
-	assert.True(t, pgCfg.Metrics.PostgresqlRows.Enabled)
-	assert.True(t, pgCfg.Metrics.PostgresqlIndexSize.Enabled)
-	assert.False(t, pgCfg.Metrics.PostgresqlSequentialScans.Enabled)
+	assert.True(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlRows.Enabled)
+	assert.True(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlIndexSize.Enabled)
+	assert.False(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlSequentialScans.Enabled)
 	// table.count is a server metric and must be off here.
-	assert.False(t, pgCfg.Metrics.PostgresqlTableCount.Enabled)
+	assert.False(t, pgCfg.MetricsBuilderConfig.Metrics.PostgresqlTableCount.Enabled)
 	// 60s interval and events disabled so it never duplicates DBLoad / TopSQL.
 	assert.Equal(t, 60*time.Second, pgCfg.ControllerConfig.CollectionInterval)
-	assert.False(t, pgCfg.Events.DbServerQuerySample.Enabled)
-	assert.False(t, pgCfg.Events.DbServerTopQuery.Enabled)
+	assert.False(t, pgCfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled)
+	assert.False(t, pgCfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled)
 }
 
 // TestTranslator_MetricsDisabled covers the events receiver's scope: it is wired into a
@@ -196,8 +196,8 @@ func TestTranslator_MetricsDisabled(t *testing.T) {
 	pgCfg := translateForTest(t, baseOpts(WithMetricsDisabled())...)
 
 	assert.Empty(t, enabledMetricNames(t, pgCfg), "no metric may be enabled on a logs-only receiver")
-	assert.True(t, pgCfg.Events.DbServerQuerySample.Enabled)
-	assert.True(t, pgCfg.Events.DbServerTopQuery.Enabled)
+	assert.True(t, pgCfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled)
+	assert.True(t, pgCfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled)
 }
 
 // TestTranslator_MetricSets_Disjoint guards against double emission AND against the

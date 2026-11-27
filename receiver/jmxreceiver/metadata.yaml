@@ -1,0 +1,16 @@
+display_name: JMX Receiver
+type: jmx
+
+status:
+  class: receiver
+  stability:
+    beta: [metrics]
+  distributions: []
+
+tests:
+  config:
+    endpoint: myendpoint:12345
+  goleak:
+    ignore:
+      top:
+        - "internal/poll.runtime_pollWait"

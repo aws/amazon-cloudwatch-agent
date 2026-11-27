@@ -47,7 +47,9 @@ service:
                             without_type_suffix: true
                             without_units: true
         resource:
-            NodeName: ${env:K8S_NODE_NAME}
+            attributes:
+                - name: NodeName
+                  value: ${env:K8S_NODE_NAME}
         traces:
             level: None
             propagators: null

@@ -44,7 +44,7 @@ func newUnreachableTAManager(t *testing.T) (*TargetAllocatorManager, func()) {
 	require.True(t, tam.enabled)
 	// The production TLS file paths do not exist on a test host; clear them so
 	// Start reaches the initial-sync retry loop instead of failing client setup.
-	tam.config.TargetAllocator.Get().TLS = configtls.ClientConfig{}
+	tam.config.TargetAllocator.Get().ClientConfig.TLS = configtls.ClientConfig{}
 	tam.loadManager(logLevel)
 	tam.AttachReloadConfigHandler(func(_ *promconfig.Config) {})
 	return tam, cancelScrape

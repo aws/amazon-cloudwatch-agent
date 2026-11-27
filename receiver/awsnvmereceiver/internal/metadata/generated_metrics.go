@@ -12,6 +12,13 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
+const (
+	AggregationStrategySum = "sum"
+	AggregationStrategyAvg = "avg"
+	AggregationStrategyMin = "min"
+	AggregationStrategyMax = "max"
+)
+
 var MetricsInfo = metricsInfo{
 	DiskioEbsEc2InstancePerformanceExceededIops: metricInfo{
 		Name: "diskio_ebs_ec2_instance_performance_exceeded_iops",
@@ -99,13 +106,14 @@ type metricsInfo struct {
 }
 
 type metricInfo struct {
-	Name string
+	Name       string
+	Attributes []string
 }
 
 type metricDiskioEbsEc2InstancePerformanceExceededIops struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                          // data buffer for generated metric.
+	config   DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig // metric config provided by user.
+	capacity int                                                     // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_ec2_instance_performance_exceeded_iops metric with initial data.
@@ -144,8 +152,9 @@ func (m *metricDiskioEbsEc2InstancePerformanceExceededIops) emit(metrics pmetric
 	}
 }
 
-func newMetricDiskioEbsEc2InstancePerformanceExceededIops(cfg MetricConfig) metricDiskioEbsEc2InstancePerformanceExceededIops {
+func newMetricDiskioEbsEc2InstancePerformanceExceededIops(cfg DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig) metricDiskioEbsEc2InstancePerformanceExceededIops {
 	m := metricDiskioEbsEc2InstancePerformanceExceededIops{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -154,9 +163,9 @@ func newMetricDiskioEbsEc2InstancePerformanceExceededIops(cfg MetricConfig) metr
 }
 
 type metricDiskioEbsEc2InstancePerformanceExceededTp struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                        // data buffer for generated metric.
+	config   DiskioEbsEc2InstancePerformanceExceededTpMetricConfig // metric config provided by user.
+	capacity int                                                   // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_ec2_instance_performance_exceeded_tp metric with initial data.
@@ -195,8 +204,9 @@ func (m *metricDiskioEbsEc2InstancePerformanceExceededTp) emit(metrics pmetric.M
 	}
 }
 
-func newMetricDiskioEbsEc2InstancePerformanceExceededTp(cfg MetricConfig) metricDiskioEbsEc2InstancePerformanceExceededTp {
+func newMetricDiskioEbsEc2InstancePerformanceExceededTp(cfg DiskioEbsEc2InstancePerformanceExceededTpMetricConfig) metricDiskioEbsEc2InstancePerformanceExceededTp {
 	m := metricDiskioEbsEc2InstancePerformanceExceededTp{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -205,9 +215,9 @@ func newMetricDiskioEbsEc2InstancePerformanceExceededTp(cfg MetricConfig) metric
 }
 
 type metricDiskioEbsTotalReadBytes struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                      // data buffer for generated metric.
+	config   DiskioEbsTotalReadBytesMetricConfig // metric config provided by user.
+	capacity int                                 // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_total_read_bytes metric with initial data.
@@ -246,8 +256,9 @@ func (m *metricDiskioEbsTotalReadBytes) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsTotalReadBytes(cfg MetricConfig) metricDiskioEbsTotalReadBytes {
+func newMetricDiskioEbsTotalReadBytes(cfg DiskioEbsTotalReadBytesMetricConfig) metricDiskioEbsTotalReadBytes {
 	m := metricDiskioEbsTotalReadBytes{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -256,9 +267,9 @@ func newMetricDiskioEbsTotalReadBytes(cfg MetricConfig) metricDiskioEbsTotalRead
 }
 
 type metricDiskioEbsTotalReadOps struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                    // data buffer for generated metric.
+	config   DiskioEbsTotalReadOpsMetricConfig // metric config provided by user.
+	capacity int                               // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_total_read_ops metric with initial data.
@@ -297,8 +308,9 @@ func (m *metricDiskioEbsTotalReadOps) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsTotalReadOps(cfg MetricConfig) metricDiskioEbsTotalReadOps {
+func newMetricDiskioEbsTotalReadOps(cfg DiskioEbsTotalReadOpsMetricConfig) metricDiskioEbsTotalReadOps {
 	m := metricDiskioEbsTotalReadOps{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -307,9 +319,9 @@ func newMetricDiskioEbsTotalReadOps(cfg MetricConfig) metricDiskioEbsTotalReadOp
 }
 
 type metricDiskioEbsTotalReadTime struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                     // data buffer for generated metric.
+	config   DiskioEbsTotalReadTimeMetricConfig // metric config provided by user.
+	capacity int                                // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_total_read_time metric with initial data.
@@ -348,8 +360,9 @@ func (m *metricDiskioEbsTotalReadTime) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsTotalReadTime(cfg MetricConfig) metricDiskioEbsTotalReadTime {
+func newMetricDiskioEbsTotalReadTime(cfg DiskioEbsTotalReadTimeMetricConfig) metricDiskioEbsTotalReadTime {
 	m := metricDiskioEbsTotalReadTime{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -358,9 +371,9 @@ func newMetricDiskioEbsTotalReadTime(cfg MetricConfig) metricDiskioEbsTotalReadT
 }
 
 type metricDiskioEbsTotalWriteBytes struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                       // data buffer for generated metric.
+	config   DiskioEbsTotalWriteBytesMetricConfig // metric config provided by user.
+	capacity int                                  // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_total_write_bytes metric with initial data.
@@ -399,8 +412,9 @@ func (m *metricDiskioEbsTotalWriteBytes) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsTotalWriteBytes(cfg MetricConfig) metricDiskioEbsTotalWriteBytes {
+func newMetricDiskioEbsTotalWriteBytes(cfg DiskioEbsTotalWriteBytesMetricConfig) metricDiskioEbsTotalWriteBytes {
 	m := metricDiskioEbsTotalWriteBytes{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -409,9 +423,9 @@ func newMetricDiskioEbsTotalWriteBytes(cfg MetricConfig) metricDiskioEbsTotalWri
 }
 
 type metricDiskioEbsTotalWriteOps struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                     // data buffer for generated metric.
+	config   DiskioEbsTotalWriteOpsMetricConfig // metric config provided by user.
+	capacity int                                // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_total_write_ops metric with initial data.
@@ -450,8 +464,9 @@ func (m *metricDiskioEbsTotalWriteOps) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsTotalWriteOps(cfg MetricConfig) metricDiskioEbsTotalWriteOps {
+func newMetricDiskioEbsTotalWriteOps(cfg DiskioEbsTotalWriteOpsMetricConfig) metricDiskioEbsTotalWriteOps {
 	m := metricDiskioEbsTotalWriteOps{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -460,9 +475,9 @@ func newMetricDiskioEbsTotalWriteOps(cfg MetricConfig) metricDiskioEbsTotalWrite
 }
 
 type metricDiskioEbsTotalWriteTime struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                      // data buffer for generated metric.
+	config   DiskioEbsTotalWriteTimeMetricConfig // metric config provided by user.
+	capacity int                                 // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_total_write_time metric with initial data.
@@ -501,8 +516,9 @@ func (m *metricDiskioEbsTotalWriteTime) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsTotalWriteTime(cfg MetricConfig) metricDiskioEbsTotalWriteTime {
+func newMetricDiskioEbsTotalWriteTime(cfg DiskioEbsTotalWriteTimeMetricConfig) metricDiskioEbsTotalWriteTime {
 	m := metricDiskioEbsTotalWriteTime{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -511,9 +527,9 @@ func newMetricDiskioEbsTotalWriteTime(cfg MetricConfig) metricDiskioEbsTotalWrit
 }
 
 type metricDiskioEbsVolumePerformanceExceededIops struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                     // data buffer for generated metric.
+	config   DiskioEbsVolumePerformanceExceededIopsMetricConfig // metric config provided by user.
+	capacity int                                                // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_volume_performance_exceeded_iops metric with initial data.
@@ -552,8 +568,9 @@ func (m *metricDiskioEbsVolumePerformanceExceededIops) emit(metrics pmetric.Metr
 	}
 }
 
-func newMetricDiskioEbsVolumePerformanceExceededIops(cfg MetricConfig) metricDiskioEbsVolumePerformanceExceededIops {
+func newMetricDiskioEbsVolumePerformanceExceededIops(cfg DiskioEbsVolumePerformanceExceededIopsMetricConfig) metricDiskioEbsVolumePerformanceExceededIops {
 	m := metricDiskioEbsVolumePerformanceExceededIops{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -562,9 +579,9 @@ func newMetricDiskioEbsVolumePerformanceExceededIops(cfg MetricConfig) metricDis
 }
 
 type metricDiskioEbsVolumePerformanceExceededTp struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                   // data buffer for generated metric.
+	config   DiskioEbsVolumePerformanceExceededTpMetricConfig // metric config provided by user.
+	capacity int                                              // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_volume_performance_exceeded_tp metric with initial data.
@@ -603,8 +620,9 @@ func (m *metricDiskioEbsVolumePerformanceExceededTp) emit(metrics pmetric.Metric
 	}
 }
 
-func newMetricDiskioEbsVolumePerformanceExceededTp(cfg MetricConfig) metricDiskioEbsVolumePerformanceExceededTp {
+func newMetricDiskioEbsVolumePerformanceExceededTp(cfg DiskioEbsVolumePerformanceExceededTpMetricConfig) metricDiskioEbsVolumePerformanceExceededTp {
 	m := metricDiskioEbsVolumePerformanceExceededTp{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -613,9 +631,9 @@ func newMetricDiskioEbsVolumePerformanceExceededTp(cfg MetricConfig) metricDiski
 }
 
 type metricDiskioEbsVolumeQueueLength struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                         // data buffer for generated metric.
+	config   DiskioEbsVolumeQueueLengthMetricConfig // metric config provided by user.
+	capacity int                                    // max observed number of data points added to the metric.
 }
 
 // init fills diskio_ebs_volume_queue_length metric with initial data.
@@ -652,8 +670,9 @@ func (m *metricDiskioEbsVolumeQueueLength) emit(metrics pmetric.MetricSlice) {
 	}
 }
 
-func newMetricDiskioEbsVolumeQueueLength(cfg MetricConfig) metricDiskioEbsVolumeQueueLength {
+func newMetricDiskioEbsVolumeQueueLength(cfg DiskioEbsVolumeQueueLengthMetricConfig) metricDiskioEbsVolumeQueueLength {
 	m := metricDiskioEbsVolumeQueueLength{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -662,9 +681,9 @@ func newMetricDiskioEbsVolumeQueueLength(cfg MetricConfig) metricDiskioEbsVolume
 }
 
 type metricDiskioInstanceStorePerformanceExceededIops struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                         // data buffer for generated metric.
+	config   DiskioInstanceStorePerformanceExceededIopsMetricConfig // metric config provided by user.
+	capacity int                                                    // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_performance_exceeded_iops metric with initial data.
@@ -703,8 +722,9 @@ func (m *metricDiskioInstanceStorePerformanceExceededIops) emit(metrics pmetric.
 	}
 }
 
-func newMetricDiskioInstanceStorePerformanceExceededIops(cfg MetricConfig) metricDiskioInstanceStorePerformanceExceededIops {
+func newMetricDiskioInstanceStorePerformanceExceededIops(cfg DiskioInstanceStorePerformanceExceededIopsMetricConfig) metricDiskioInstanceStorePerformanceExceededIops {
 	m := metricDiskioInstanceStorePerformanceExceededIops{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -713,9 +733,9 @@ func newMetricDiskioInstanceStorePerformanceExceededIops(cfg MetricConfig) metri
 }
 
 type metricDiskioInstanceStorePerformanceExceededTp struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                       // data buffer for generated metric.
+	config   DiskioInstanceStorePerformanceExceededTpMetricConfig // metric config provided by user.
+	capacity int                                                  // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_performance_exceeded_tp metric with initial data.
@@ -754,8 +774,9 @@ func (m *metricDiskioInstanceStorePerformanceExceededTp) emit(metrics pmetric.Me
 	}
 }
 
-func newMetricDiskioInstanceStorePerformanceExceededTp(cfg MetricConfig) metricDiskioInstanceStorePerformanceExceededTp {
+func newMetricDiskioInstanceStorePerformanceExceededTp(cfg DiskioInstanceStorePerformanceExceededTpMetricConfig) metricDiskioInstanceStorePerformanceExceededTp {
 	m := metricDiskioInstanceStorePerformanceExceededTp{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -764,9 +785,9 @@ func newMetricDiskioInstanceStorePerformanceExceededTp(cfg MetricConfig) metricD
 }
 
 type metricDiskioInstanceStoreTotalReadBytes struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                // data buffer for generated metric.
+	config   DiskioInstanceStoreTotalReadBytesMetricConfig // metric config provided by user.
+	capacity int                                           // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_total_read_bytes metric with initial data.
@@ -805,8 +826,9 @@ func (m *metricDiskioInstanceStoreTotalReadBytes) emit(metrics pmetric.MetricSli
 	}
 }
 
-func newMetricDiskioInstanceStoreTotalReadBytes(cfg MetricConfig) metricDiskioInstanceStoreTotalReadBytes {
+func newMetricDiskioInstanceStoreTotalReadBytes(cfg DiskioInstanceStoreTotalReadBytesMetricConfig) metricDiskioInstanceStoreTotalReadBytes {
 	m := metricDiskioInstanceStoreTotalReadBytes{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -815,9 +837,9 @@ func newMetricDiskioInstanceStoreTotalReadBytes(cfg MetricConfig) metricDiskioIn
 }
 
 type metricDiskioInstanceStoreTotalReadOps struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                              // data buffer for generated metric.
+	config   DiskioInstanceStoreTotalReadOpsMetricConfig // metric config provided by user.
+	capacity int                                         // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_total_read_ops metric with initial data.
@@ -856,8 +878,9 @@ func (m *metricDiskioInstanceStoreTotalReadOps) emit(metrics pmetric.MetricSlice
 	}
 }
 
-func newMetricDiskioInstanceStoreTotalReadOps(cfg MetricConfig) metricDiskioInstanceStoreTotalReadOps {
+func newMetricDiskioInstanceStoreTotalReadOps(cfg DiskioInstanceStoreTotalReadOpsMetricConfig) metricDiskioInstanceStoreTotalReadOps {
 	m := metricDiskioInstanceStoreTotalReadOps{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -866,9 +889,9 @@ func newMetricDiskioInstanceStoreTotalReadOps(cfg MetricConfig) metricDiskioInst
 }
 
 type metricDiskioInstanceStoreTotalReadTime struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                               // data buffer for generated metric.
+	config   DiskioInstanceStoreTotalReadTimeMetricConfig // metric config provided by user.
+	capacity int                                          // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_total_read_time metric with initial data.
@@ -907,8 +930,9 @@ func (m *metricDiskioInstanceStoreTotalReadTime) emit(metrics pmetric.MetricSlic
 	}
 }
 
-func newMetricDiskioInstanceStoreTotalReadTime(cfg MetricConfig) metricDiskioInstanceStoreTotalReadTime {
+func newMetricDiskioInstanceStoreTotalReadTime(cfg DiskioInstanceStoreTotalReadTimeMetricConfig) metricDiskioInstanceStoreTotalReadTime {
 	m := metricDiskioInstanceStoreTotalReadTime{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -917,9 +941,9 @@ func newMetricDiskioInstanceStoreTotalReadTime(cfg MetricConfig) metricDiskioIns
 }
 
 type metricDiskioInstanceStoreTotalWriteBytes struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                 // data buffer for generated metric.
+	config   DiskioInstanceStoreTotalWriteBytesMetricConfig // metric config provided by user.
+	capacity int                                            // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_total_write_bytes metric with initial data.
@@ -958,8 +982,9 @@ func (m *metricDiskioInstanceStoreTotalWriteBytes) emit(metrics pmetric.MetricSl
 	}
 }
 
-func newMetricDiskioInstanceStoreTotalWriteBytes(cfg MetricConfig) metricDiskioInstanceStoreTotalWriteBytes {
+func newMetricDiskioInstanceStoreTotalWriteBytes(cfg DiskioInstanceStoreTotalWriteBytesMetricConfig) metricDiskioInstanceStoreTotalWriteBytes {
 	m := metricDiskioInstanceStoreTotalWriteBytes{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -968,9 +993,9 @@ func newMetricDiskioInstanceStoreTotalWriteBytes(cfg MetricConfig) metricDiskioI
 }
 
 type metricDiskioInstanceStoreTotalWriteOps struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                               // data buffer for generated metric.
+	config   DiskioInstanceStoreTotalWriteOpsMetricConfig // metric config provided by user.
+	capacity int                                          // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_total_write_ops metric with initial data.
@@ -1009,8 +1034,9 @@ func (m *metricDiskioInstanceStoreTotalWriteOps) emit(metrics pmetric.MetricSlic
 	}
 }
 
-func newMetricDiskioInstanceStoreTotalWriteOps(cfg MetricConfig) metricDiskioInstanceStoreTotalWriteOps {
+func newMetricDiskioInstanceStoreTotalWriteOps(cfg DiskioInstanceStoreTotalWriteOpsMetricConfig) metricDiskioInstanceStoreTotalWriteOps {
 	m := metricDiskioInstanceStoreTotalWriteOps{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -1019,9 +1045,9 @@ func newMetricDiskioInstanceStoreTotalWriteOps(cfg MetricConfig) metricDiskioIns
 }
 
 type metricDiskioInstanceStoreTotalWriteTime struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                // data buffer for generated metric.
+	config   DiskioInstanceStoreTotalWriteTimeMetricConfig // metric config provided by user.
+	capacity int                                           // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_total_write_time metric with initial data.
@@ -1060,8 +1086,9 @@ func (m *metricDiskioInstanceStoreTotalWriteTime) emit(metrics pmetric.MetricSli
 	}
 }
 
-func newMetricDiskioInstanceStoreTotalWriteTime(cfg MetricConfig) metricDiskioInstanceStoreTotalWriteTime {
+func newMetricDiskioInstanceStoreTotalWriteTime(cfg DiskioInstanceStoreTotalWriteTimeMetricConfig) metricDiskioInstanceStoreTotalWriteTime {
 	m := metricDiskioInstanceStoreTotalWriteTime{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()
@@ -1070,9 +1097,9 @@ func newMetricDiskioInstanceStoreTotalWriteTime(cfg MetricConfig) metricDiskioIn
 }
 
 type metricDiskioInstanceStoreVolumeQueueLength struct {
-	data     pmetric.Metric // data buffer for generated metric.
-	config   MetricConfig   // metric config provided by user.
-	capacity int            // max observed number of data points added to the metric.
+	data     pmetric.Metric                                   // data buffer for generated metric.
+	config   DiskioInstanceStoreVolumeQueueLengthMetricConfig // metric config provided by user.
+	capacity int                                              // max observed number of data points added to the metric.
 }
 
 // init fills diskio_instance_store_volume_queue_length metric with initial data.
@@ -1109,8 +1136,9 @@ func (m *metricDiskioInstanceStoreVolumeQueueLength) emit(metrics pmetric.Metric
 	}
 }
 
-func newMetricDiskioInstanceStoreVolumeQueueLength(cfg MetricConfig) metricDiskioInstanceStoreVolumeQueueLength {
+func newMetricDiskioInstanceStoreVolumeQueueLength(cfg DiskioInstanceStoreVolumeQueueLengthMetricConfig) metricDiskioInstanceStoreVolumeQueueLength {
 	m := metricDiskioInstanceStoreVolumeQueueLength{config: cfg}
+
 	if cfg.Enabled {
 		m.data = pmetric.NewMetric()
 		m.init()

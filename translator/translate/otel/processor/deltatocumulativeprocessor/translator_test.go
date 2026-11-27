@@ -17,7 +17,7 @@ import (
 
 func TestTranslator(t *testing.T) {
 	dcpTranslator := NewTranslator(common.WithName("test"))
-	require.EqualValues(t, "deltatocumulative/test", dcpTranslator.ID().String())
+	require.EqualValues(t, "delta_to_cumulative/test", dcpTranslator.ID().String())
 	testCases := map[string]struct {
 		input   map[string]any
 		want    map[string]any

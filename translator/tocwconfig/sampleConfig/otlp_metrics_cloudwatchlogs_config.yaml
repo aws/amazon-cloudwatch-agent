@@ -50,7 +50,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 30s
-    cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
+    cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs:
         exclude:
             match_type: ""
         include:
@@ -73,10 +73,9 @@ receivers:
     otlp/http_0_0_0_0_2345:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:2345
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
@@ -96,7 +95,7 @@ service:
             exporters:
                 - awsemf
             processors:
-                - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs
                 - awsentity/service/otlp
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:

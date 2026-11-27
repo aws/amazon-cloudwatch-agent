@@ -74,7 +74,7 @@ func (t *translator) Translate(c *confmap.Conf) (component.Config, error) {
 		cfg.Endpoint = endpoint
 		cfg.AWSSessionSettings.Endpoint = endpoint
 	}
-	cfg.IMDSRetries = override.GetDefaultRetryNumber()
+	cfg.AWSSessionSettings.IMDSRetries = override.GetDefaultRetryNumber()
 	if profileKey, ok := agent.Global_Config.Credentials[agent.Profile_Key]; ok {
 		cfg.AWSSessionSettings.Profile = fmt.Sprintf("%v", profileKey)
 	}
@@ -97,7 +97,7 @@ func (t *translator) isEmf(conf *confmap.Conf) bool {
 }
 
 func (t *translator) setEmfFields(conf *confmap.Conf, cfg *awscloudwatchlogsexporter.Config) error {
-	cfg.Region = agent.Global_Config.Region
+	cfg.AWSSessionSettings.Region = agent.Global_Config.Region
 	cfg.EmfOnly = true
 	cfg.RawLog = true
 	cfg.LogGroupName = defaultLogGroupName

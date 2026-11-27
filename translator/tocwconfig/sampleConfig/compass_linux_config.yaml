@@ -109,14 +109,14 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 1m0s
-    cumulativetodelta/hostOtlpMetrics:
+    cumulative_to_delta/hostOtlpMetrics:
         exclude:
             match_type: ""
         include:
             match_type: ""
         initial_value: 2
         max_staleness: 1h0m0s
-    cumulativetodelta/hostOtlpMetrics/cloudwatchlogs:
+    cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs:
         exclude:
             match_type: ""
         include:
@@ -147,14 +147,12 @@ receivers:
     otlp/http_127_0_0_1_4318:
         protocols:
             http:
-                cors: null
                 endpoint: 127.0.0.1:4318
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s
@@ -186,7 +184,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostOtlpMetrics
+                - cumulative_to_delta/hostOtlpMetrics
                 - ec2tagger
                 - awsentity/service/otlp/cloudwatch
             receivers:
@@ -196,7 +194,7 @@ service:
             exporters:
                 - awsemf
             processors:
-                - cumulativetodelta/hostOtlpMetrics/cloudwatchlogs
+                - cumulative_to_delta/hostOtlpMetrics/cloudwatchlogs
                 - awsentity/service/otlp/cloudwatchlogs
                 - batch/hostOtlpMetrics/cloudwatchlogs
             receivers:

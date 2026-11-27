@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/confmap"
-	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/pipeline"
 
 	"github.com/aws/amazon-cloudwatch-agent/internal/mapstructure"
@@ -105,7 +104,7 @@ func TestTranslatorConfigRoundTrips(t *testing.T) {
 	factory := routingconnector.NewFactory()
 	decoded := factory.CreateDefaultConfig()
 	require.NoError(t, confmap.NewFromStringMap(m).Unmarshal(decoded))
-	require.NoError(t, xconfmap.Validate(decoded))
+	require.NoError(t, confmap.Validate(decoded))
 }
 
 func TestTranslatorDefaults(t *testing.T) {

@@ -87,7 +87,9 @@ service:
                             without_type_suffix: true
                             without_units: true
         resource:
-            NodeName: i-1234567890abcdef0
+            attributes:
+                - name: NodeName
+                  value: i-1234567890abcdef0
         traces:
             level: None
             propagators: null
