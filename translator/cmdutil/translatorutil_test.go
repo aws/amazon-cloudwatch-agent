@@ -156,6 +156,10 @@ func TestJMXConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/invalidJMX.json", false, expectedErrorMap)
 }
 
+func TestDpdkConfig(t *testing.T) {
+	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validDpdkConfig.json", true, map[string]int{})
+}
+
 func TestOTLPMetricsConfig(t *testing.T) {
 	checkIfSchemaValidateAsExpected(t, "../../translator/config/sampleSchema/validOTLPMetrics.json", true, map[string]int{})
 	expectedErrorMap := map[string]int{}
