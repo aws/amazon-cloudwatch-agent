@@ -189,7 +189,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 5s
-    cumulativetodelta/containerinsightsjmx:
+    cumulative_to_delta/containerinsightsjmx:
         exclude:
             match_type: ""
         include:
@@ -197,7 +197,7 @@ processors:
         initial_value: 2
         max_staleness: 1h0m0s
     filter/containerinsights:
-        error_mode: propagate
+        error_mode: ignore
         logs: {}
         metrics:
             exclude:
@@ -212,7 +212,7 @@ processors:
         spans: {}
         traces: {}
     filter/containerinsightsjmx:
-        error_mode: propagate
+        error_mode: ignore
         logs: {}
         metrics:
             include:
@@ -242,7 +242,7 @@ processors:
         profiles: {}
         spans: {}
         traces: {}
-    metricstransform/containerinsightsjmx:
+    metrics_transform/containerinsightsjmx:
         transforms:
             - action: update
               aggregation_type: ""
@@ -459,16 +459,19 @@ processors:
               pattern: ""
               value: host_name_from_env
     transform/containerinsightsjmx:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: resource
               error_mode: propagate
+              shared_cache: false
               statements:
                 - keep_keys(attributes, ["ClusterName", "Namespace", "NodeName"])
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "Bytes") where name == "jvm.memory.heap.used"
                 - set(unit, "Bytes") where name == "jvm.memory.nonheap.used"
@@ -521,14 +524,12 @@ receivers:
     otlp/http_0_0_0_0_4314:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:4314
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s
@@ -554,8 +555,8 @@ service:
                 - filter/containerinsightsjmx
                 - resource/containerinsightsjmx
                 - transform/containerinsightsjmx
-                - metricstransform/containerinsightsjmx
-                - cumulativetodelta/containerinsightsjmx
+                - metrics_transform/containerinsightsjmx
+                - cumulative_to_delta/containerinsightsjmx
             receivers:
                 - otlp/http_0_0_0_0_4314
     telemetry:

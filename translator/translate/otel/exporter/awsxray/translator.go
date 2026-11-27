@@ -81,7 +81,7 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 	if endpointOverride, ok := common.GetEndpointOverride(conf, common.ConfigKey(common.TracesKey, common.EndpointOverrideKey)); ok {
 		cfg.AWSSessionSettings.Endpoint = endpointOverride
 	}
-	cfg.IMDSRetries = override.GetDefaultRetryNumber()
+	cfg.AWSSessionSettings.IMDSRetries = override.GetDefaultRetryNumber()
 	if context.CurrentContext().Mode() == config.ModeOnPrem || context.CurrentContext().Mode() == config.ModeOnPremise {
 		cfg.AWSSessionSettings.LocalMode = true
 	}

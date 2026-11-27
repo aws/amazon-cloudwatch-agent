@@ -35,7 +35,7 @@ processors:
     awsentity/service/otlp:
         entity_type: Service
         platform: ec2
-    cumulativetodelta/hostOtlpMetrics:
+    cumulative_to_delta/hostOtlpMetrics:
         exclude:
             match_type: ""
         include:
@@ -46,9 +46,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
+            - ImageId
             - InstanceId
             - InstanceType
-            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -69,10 +69,9 @@ receivers:
     otlp/http_0_0_0_0_2345:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:2345
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
@@ -92,7 +91,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostOtlpMetrics
+                - cumulative_to_delta/hostOtlpMetrics
                 - ec2tagger
                 - awsentity/service/otlp
             receivers:

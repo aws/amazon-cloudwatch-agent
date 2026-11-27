@@ -61,8 +61,8 @@ func TestTranslator_Translate(t *testing.T) {
 			require.True(t, ok)
 			assert.Equal(t, "end", got.InputConfig.StartAt)
 			assert.Equal(t, tc.raw, got.InputConfig.Raw)
-			assert.NotNil(t, got.StorageID)
-			assert.Equal(t, filestorage.ComponentID(), *got.StorageID)
+			assert.NotNil(t, got.BaseConfig.StorageID)
+			assert.Equal(t, filestorage.ComponentID(), *got.BaseConfig.StorageID)
 			if tc.query != "" {
 				assert.Equal(t, "", got.InputConfig.Channel)
 				require.NotNil(t, got.InputConfig.Query)

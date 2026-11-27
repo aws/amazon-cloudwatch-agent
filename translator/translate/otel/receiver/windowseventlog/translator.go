@@ -50,7 +50,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 		cfg.InputConfig.Channel = t.channel
 	}
 	storageID := filestorage.ComponentID()
-	cfg.StorageID = &storageID
+	cfg.BaseConfig.StorageID = &storageID
 	if len(t.resource) > 0 {
 		cfg.InputConfig.Resource = make(map[string]helper.ExprStringConfig, len(t.resource))
 		for k, v := range t.resource {
