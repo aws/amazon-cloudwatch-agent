@@ -441,6 +441,7 @@ func (p *program) run() {
 		p.aggregatorFilters,
 		p.processorFilters,
 	)
+	exitAfterServiceRun()
 }
 func (p *program) Stop(_ service.Service) error {
 	close(stop)
