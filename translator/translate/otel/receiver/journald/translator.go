@@ -58,7 +58,7 @@ func (t *translator) Translate(_ *confmap.Conf) (component.Config, error) {
 	}
 
 	storageID := filestorage.ComponentID()
-	cfg.StorageID = &storageID
+	cfg.BaseConfig.StorageID = &storageID
 
 	return cfg, nil
 }

@@ -31,6 +31,18 @@ func telemetryOf(t *testing.T, cfg *otelcol.Config) *otelconftelemetry.Config {
 	return tc
 }
 
+func resourceAttr(t *testing.T, cfg *otelcol.Config, name string) (string, bool) {
+	t.Helper()
+	for _, a := range telemetryOf(t, cfg).Resource.Attributes {
+		if a.Name == name {
+			v, ok := a.Value.(string)
+			require.True(t, ok, "resource attribute %q is not a string", name)
+			return v, true
+		}
+	}
+	return "", false
+}
+
 func selfTelemetryID() component.ID {
 	return component.NewID(selftelemetryextension.TypeStr)
 }
@@ -170,9 +182,9 @@ func TestSelfTelemetryStampsNodeViaResource(t *testing.T) {
 	got, err := TranslateWithoutValidation(selfTelemetryInput(map[string]any{"enabled": true}), "linux")
 	require.NoError(t, err)
 
-	require.Contains(t, telemetryOf(t, got).Resource, "NodeName")
-	require.NotNil(t, telemetryOf(t, got).Resource["NodeName"])
-	assert.Equal(t, "${env:K8S_NODE_NAME}", *telemetryOf(t, got).Resource["NodeName"])
+	nodeName, ok := resourceAttr(t, got, "NodeName")
+	require.True(t, ok)
+	assert.Equal(t, "${env:K8S_NODE_NAME}", nodeName)
 
 	require.Len(t, telemetryOf(t, got).Metrics.Readers, 1)
 	prom := telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus
@@ -188,7 +200,8 @@ func TestSelfTelemetryOffLeavesNoResource(t *testing.T) {
 
 	got, err := TranslateWithoutValidation(selfTelemetryInput(nil), "linux")
 	require.NoError(t, err)
-	assert.NotContains(t, telemetryOf(t, got).Resource, "NodeName")
+	_, ok := resourceAttr(t, got, "NodeName")
+	assert.False(t, ok)
 }
 
 // TestSelfTelemetryOnEC2UsesInstanceID is the EC2/off-Kubernetes contract: there is no operator-injected
@@ -221,8 +234,9 @@ func TestSelfTelemetryOnEC2UsesInstanceID(t *testing.T) {
 
 	// The node label carries the resolved instance ID (not a K8S_NODE_NAME env ref), and the reader
 	// still promotes it as a constant label.
-	require.Contains(t, telemetryOf(t, got).Resource, "NodeName")
-	assert.Equal(t, "i-1234567890abcdef0", *telemetryOf(t, got).Resource["NodeName"])
+	nodeName, ok := resourceAttr(t, got, "NodeName")
+	require.True(t, ok)
+	assert.Equal(t, "i-1234567890abcdef0", nodeName)
 	require.NotNil(t, telemetryOf(t, got).Metrics.Readers[0].Pull.Exporter.Prometheus.WithResourceConstantLabels)
 }
 
@@ -250,7 +264,8 @@ func TestSelfTelemetryOnNonEC2FallsBackToHostname(t *testing.T) {
 	}, "linux")
 	require.NoError(t, err)
 
-	require.Contains(t, telemetryOf(t, got).Resource, "NodeName")
-	assert.Equal(t, "onprem-host-7", *telemetryOf(t, got).Resource["NodeName"])
-	assert.NotEqual(t, translateutil.UnknownInstanceID, *telemetryOf(t, got).Resource["NodeName"])
+	nodeName, ok := resourceAttr(t, got, "NodeName")
+	require.True(t, ok)
+	assert.Equal(t, "onprem-host-7", nodeName)
+	assert.NotEqual(t, translateutil.UnknownInstanceID, nodeName)
 }

@@ -28,11 +28,13 @@ func TestComponents(t *testing.T) {
 		"filelog",
 		"file_log",
 		"hostmetrics",
+		"host_metrics",
 		"jaeger",
 		"journald",
 		"jmx",
 		"kafka",
 		"kubeletstats",
+		"kubelet_stats",
 		"nop",
 		"otlp",
 		"prometheus",
@@ -63,8 +65,11 @@ func TestComponents(t *testing.T) {
 		"awsneuron",
 		"batch",
 		"cumulativetodelta",
+		"cumulative_to_delta",
 		"deltatocumulative",
+		"delta_to_cumulative",
 		"deltatorate",
+		"delta_to_rate",
 		"ec2tagger",
 		"filter",
 		"gpuattributes",
@@ -78,10 +83,12 @@ func TestComponents(t *testing.T) {
 		"metricstarttime",
 		"metric_start_time",
 		"metricstransform",
+		"metrics_transform",
 		"nodemetadataenricher",
 		"probabilistic_sampler",
 		"resource",
 		"resourcedetection",
+		"resource_detection",
 		"rollup",
 		"span",
 		"tail_sampling",
@@ -103,6 +110,7 @@ func TestComponents(t *testing.T) {
 		"otlphttp",
 		"otlp_http",
 		"prometheusremotewrite",
+		"prometheus_remote_write",
 	}
 	gotExporters := collections.MapSlice(maps.Keys(factories.Exporters), component.Type.String)
 	assert.Equal(t, len(wantExporters), len(gotExporters))
@@ -117,6 +125,7 @@ func TestComponents(t *testing.T) {
 		"signaltometrics",
 		"signal_to_metrics",
 		"spanmetrics",
+		"span_metrics",
 	}
 	gotConnectors := collections.MapSlice(maps.Keys(factories.Connectors), component.Type.String)
 	assert.Equal(t, len(wantConnectors), len(gotConnectors))

@@ -7,109 +7,490 @@ import (
 	"go.opentelemetry.io/collector/filter"
 )
 
-// MetricConfig provides common config for a particular metric.
-type MetricConfig struct {
-	Enabled bool `mapstructure:"enabled"`
-
+// DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig provides config for the diskio_ebs_ec2_instance_performance_exceeded_iops metric.
+type DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
 	enabledSetByUser bool
 }
 
-func (ms *MetricConfig) Unmarshal(parser *confmap.Conf) error {
+func (ms *DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig) Unmarshal(parser *confmap.Conf) error {
 	if parser == nil {
 		return nil
 	}
+
 	err := parser.Unmarshal(ms)
 	if err != nil {
 		return err
 	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsEc2InstancePerformanceExceededTpMetricConfig provides config for the diskio_ebs_ec2_instance_performance_exceeded_tp metric.
+type DiskioEbsEc2InstancePerformanceExceededTpMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsEc2InstancePerformanceExceededTpMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsTotalReadBytesMetricConfig provides config for the diskio_ebs_total_read_bytes metric.
+type DiskioEbsTotalReadBytesMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsTotalReadBytesMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsTotalReadOpsMetricConfig provides config for the diskio_ebs_total_read_ops metric.
+type DiskioEbsTotalReadOpsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsTotalReadOpsMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsTotalReadTimeMetricConfig provides config for the diskio_ebs_total_read_time metric.
+type DiskioEbsTotalReadTimeMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsTotalReadTimeMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsTotalWriteBytesMetricConfig provides config for the diskio_ebs_total_write_bytes metric.
+type DiskioEbsTotalWriteBytesMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsTotalWriteBytesMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsTotalWriteOpsMetricConfig provides config for the diskio_ebs_total_write_ops metric.
+type DiskioEbsTotalWriteOpsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsTotalWriteOpsMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsTotalWriteTimeMetricConfig provides config for the diskio_ebs_total_write_time metric.
+type DiskioEbsTotalWriteTimeMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsTotalWriteTimeMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsVolumePerformanceExceededIopsMetricConfig provides config for the diskio_ebs_volume_performance_exceeded_iops metric.
+type DiskioEbsVolumePerformanceExceededIopsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsVolumePerformanceExceededIopsMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsVolumePerformanceExceededTpMetricConfig provides config for the diskio_ebs_volume_performance_exceeded_tp metric.
+type DiskioEbsVolumePerformanceExceededTpMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsVolumePerformanceExceededTpMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioEbsVolumeQueueLengthMetricConfig provides config for the diskio_ebs_volume_queue_length metric.
+type DiskioEbsVolumeQueueLengthMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioEbsVolumeQueueLengthMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStorePerformanceExceededIopsMetricConfig provides config for the diskio_instance_store_performance_exceeded_iops metric.
+type DiskioInstanceStorePerformanceExceededIopsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStorePerformanceExceededIopsMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStorePerformanceExceededTpMetricConfig provides config for the diskio_instance_store_performance_exceeded_tp metric.
+type DiskioInstanceStorePerformanceExceededTpMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStorePerformanceExceededTpMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreTotalReadBytesMetricConfig provides config for the diskio_instance_store_total_read_bytes metric.
+type DiskioInstanceStoreTotalReadBytesMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreTotalReadBytesMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreTotalReadOpsMetricConfig provides config for the diskio_instance_store_total_read_ops metric.
+type DiskioInstanceStoreTotalReadOpsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreTotalReadOpsMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreTotalReadTimeMetricConfig provides config for the diskio_instance_store_total_read_time metric.
+type DiskioInstanceStoreTotalReadTimeMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreTotalReadTimeMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreTotalWriteBytesMetricConfig provides config for the diskio_instance_store_total_write_bytes metric.
+type DiskioInstanceStoreTotalWriteBytesMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreTotalWriteBytesMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreTotalWriteOpsMetricConfig provides config for the diskio_instance_store_total_write_ops metric.
+type DiskioInstanceStoreTotalWriteOpsMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreTotalWriteOpsMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreTotalWriteTimeMetricConfig provides config for the diskio_instance_store_total_write_time metric.
+type DiskioInstanceStoreTotalWriteTimeMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreTotalWriteTimeMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
+	ms.enabledSetByUser = parser.IsSet("enabled")
+	return nil
+}
+
+// DiskioInstanceStoreVolumeQueueLengthMetricConfig provides config for the diskio_instance_store_volume_queue_length metric.
+type DiskioInstanceStoreVolumeQueueLengthMetricConfig struct {
+	Enabled          bool `mapstructure:"enabled"`
+	enabledSetByUser bool
+}
+
+func (ms *DiskioInstanceStoreVolumeQueueLengthMetricConfig) Unmarshal(parser *confmap.Conf) error {
+	if parser == nil {
+		return nil
+	}
+
+	err := parser.Unmarshal(ms)
+	if err != nil {
+		return err
+	}
+
 	ms.enabledSetByUser = parser.IsSet("enabled")
 	return nil
 }
 
 // MetricsConfig provides config for awsnvmereceiver metrics.
 type MetricsConfig struct {
-	DiskioEbsEc2InstancePerformanceExceededIops MetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_iops"`
-	DiskioEbsEc2InstancePerformanceExceededTp   MetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_tp"`
-	DiskioEbsTotalReadBytes                     MetricConfig `mapstructure:"diskio_ebs_total_read_bytes"`
-	DiskioEbsTotalReadOps                       MetricConfig `mapstructure:"diskio_ebs_total_read_ops"`
-	DiskioEbsTotalReadTime                      MetricConfig `mapstructure:"diskio_ebs_total_read_time"`
-	DiskioEbsTotalWriteBytes                    MetricConfig `mapstructure:"diskio_ebs_total_write_bytes"`
-	DiskioEbsTotalWriteOps                      MetricConfig `mapstructure:"diskio_ebs_total_write_ops"`
-	DiskioEbsTotalWriteTime                     MetricConfig `mapstructure:"diskio_ebs_total_write_time"`
-	DiskioEbsVolumePerformanceExceededIops      MetricConfig `mapstructure:"diskio_ebs_volume_performance_exceeded_iops"`
-	DiskioEbsVolumePerformanceExceededTp        MetricConfig `mapstructure:"diskio_ebs_volume_performance_exceeded_tp"`
-	DiskioEbsVolumeQueueLength                  MetricConfig `mapstructure:"diskio_ebs_volume_queue_length"`
-	DiskioInstanceStorePerformanceExceededIops  MetricConfig `mapstructure:"diskio_instance_store_performance_exceeded_iops"`
-	DiskioInstanceStorePerformanceExceededTp    MetricConfig `mapstructure:"diskio_instance_store_performance_exceeded_tp"`
-	DiskioInstanceStoreTotalReadBytes           MetricConfig `mapstructure:"diskio_instance_store_total_read_bytes"`
-	DiskioInstanceStoreTotalReadOps             MetricConfig `mapstructure:"diskio_instance_store_total_read_ops"`
-	DiskioInstanceStoreTotalReadTime            MetricConfig `mapstructure:"diskio_instance_store_total_read_time"`
-	DiskioInstanceStoreTotalWriteBytes          MetricConfig `mapstructure:"diskio_instance_store_total_write_bytes"`
-	DiskioInstanceStoreTotalWriteOps            MetricConfig `mapstructure:"diskio_instance_store_total_write_ops"`
-	DiskioInstanceStoreTotalWriteTime           MetricConfig `mapstructure:"diskio_instance_store_total_write_time"`
-	DiskioInstanceStoreVolumeQueueLength        MetricConfig `mapstructure:"diskio_instance_store_volume_queue_length"`
+	DiskioEbsEc2InstancePerformanceExceededIops DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_iops"`
+	DiskioEbsEc2InstancePerformanceExceededTp   DiskioEbsEc2InstancePerformanceExceededTpMetricConfig   `mapstructure:"diskio_ebs_ec2_instance_performance_exceeded_tp"`
+	DiskioEbsTotalReadBytes                     DiskioEbsTotalReadBytesMetricConfig                     `mapstructure:"diskio_ebs_total_read_bytes"`
+	DiskioEbsTotalReadOps                       DiskioEbsTotalReadOpsMetricConfig                       `mapstructure:"diskio_ebs_total_read_ops"`
+	DiskioEbsTotalReadTime                      DiskioEbsTotalReadTimeMetricConfig                      `mapstructure:"diskio_ebs_total_read_time"`
+	DiskioEbsTotalWriteBytes                    DiskioEbsTotalWriteBytesMetricConfig                    `mapstructure:"diskio_ebs_total_write_bytes"`
+	DiskioEbsTotalWriteOps                      DiskioEbsTotalWriteOpsMetricConfig                      `mapstructure:"diskio_ebs_total_write_ops"`
+	DiskioEbsTotalWriteTime                     DiskioEbsTotalWriteTimeMetricConfig                     `mapstructure:"diskio_ebs_total_write_time"`
+	DiskioEbsVolumePerformanceExceededIops      DiskioEbsVolumePerformanceExceededIopsMetricConfig      `mapstructure:"diskio_ebs_volume_performance_exceeded_iops"`
+	DiskioEbsVolumePerformanceExceededTp        DiskioEbsVolumePerformanceExceededTpMetricConfig        `mapstructure:"diskio_ebs_volume_performance_exceeded_tp"`
+	DiskioEbsVolumeQueueLength                  DiskioEbsVolumeQueueLengthMetricConfig                  `mapstructure:"diskio_ebs_volume_queue_length"`
+	DiskioInstanceStorePerformanceExceededIops  DiskioInstanceStorePerformanceExceededIopsMetricConfig  `mapstructure:"diskio_instance_store_performance_exceeded_iops"`
+	DiskioInstanceStorePerformanceExceededTp    DiskioInstanceStorePerformanceExceededTpMetricConfig    `mapstructure:"diskio_instance_store_performance_exceeded_tp"`
+	DiskioInstanceStoreTotalReadBytes           DiskioInstanceStoreTotalReadBytesMetricConfig           `mapstructure:"diskio_instance_store_total_read_bytes"`
+	DiskioInstanceStoreTotalReadOps             DiskioInstanceStoreTotalReadOpsMetricConfig             `mapstructure:"diskio_instance_store_total_read_ops"`
+	DiskioInstanceStoreTotalReadTime            DiskioInstanceStoreTotalReadTimeMetricConfig            `mapstructure:"diskio_instance_store_total_read_time"`
+	DiskioInstanceStoreTotalWriteBytes          DiskioInstanceStoreTotalWriteBytesMetricConfig          `mapstructure:"diskio_instance_store_total_write_bytes"`
+	DiskioInstanceStoreTotalWriteOps            DiskioInstanceStoreTotalWriteOpsMetricConfig            `mapstructure:"diskio_instance_store_total_write_ops"`
+	DiskioInstanceStoreTotalWriteTime           DiskioInstanceStoreTotalWriteTimeMetricConfig           `mapstructure:"diskio_instance_store_total_write_time"`
+	DiskioInstanceStoreVolumeQueueLength        DiskioInstanceStoreVolumeQueueLengthMetricConfig        `mapstructure:"diskio_instance_store_volume_queue_length"`
 }
 
 func DefaultMetricsConfig() MetricsConfig {
 	return MetricsConfig{
-		DiskioEbsEc2InstancePerformanceExceededIops: MetricConfig{
+		DiskioEbsEc2InstancePerformanceExceededIops: DiskioEbsEc2InstancePerformanceExceededIopsMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsEc2InstancePerformanceExceededTp: MetricConfig{
+		DiskioEbsEc2InstancePerformanceExceededTp: DiskioEbsEc2InstancePerformanceExceededTpMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsTotalReadBytes: MetricConfig{
+		DiskioEbsTotalReadBytes: DiskioEbsTotalReadBytesMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsTotalReadOps: MetricConfig{
+		DiskioEbsTotalReadOps: DiskioEbsTotalReadOpsMetricConfig{
 			Enabled: true,
 		},
-		DiskioEbsTotalReadTime: MetricConfig{
+		DiskioEbsTotalReadTime: DiskioEbsTotalReadTimeMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsTotalWriteBytes: MetricConfig{
+		DiskioEbsTotalWriteBytes: DiskioEbsTotalWriteBytesMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsTotalWriteOps: MetricConfig{
+		DiskioEbsTotalWriteOps: DiskioEbsTotalWriteOpsMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsTotalWriteTime: MetricConfig{
+		DiskioEbsTotalWriteTime: DiskioEbsTotalWriteTimeMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsVolumePerformanceExceededIops: MetricConfig{
+		DiskioEbsVolumePerformanceExceededIops: DiskioEbsVolumePerformanceExceededIopsMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsVolumePerformanceExceededTp: MetricConfig{
+		DiskioEbsVolumePerformanceExceededTp: DiskioEbsVolumePerformanceExceededTpMetricConfig{
 			Enabled: false,
 		},
-		DiskioEbsVolumeQueueLength: MetricConfig{
+		DiskioEbsVolumeQueueLength: DiskioEbsVolumeQueueLengthMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStorePerformanceExceededIops: MetricConfig{
+		DiskioInstanceStorePerformanceExceededIops: DiskioInstanceStorePerformanceExceededIopsMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStorePerformanceExceededTp: MetricConfig{
+		DiskioInstanceStorePerformanceExceededTp: DiskioInstanceStorePerformanceExceededTpMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreTotalReadBytes: MetricConfig{
+		DiskioInstanceStoreTotalReadBytes: DiskioInstanceStoreTotalReadBytesMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreTotalReadOps: MetricConfig{
+		DiskioInstanceStoreTotalReadOps: DiskioInstanceStoreTotalReadOpsMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreTotalReadTime: MetricConfig{
+		DiskioInstanceStoreTotalReadTime: DiskioInstanceStoreTotalReadTimeMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreTotalWriteBytes: MetricConfig{
+		DiskioInstanceStoreTotalWriteBytes: DiskioInstanceStoreTotalWriteBytesMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreTotalWriteOps: MetricConfig{
+		DiskioInstanceStoreTotalWriteOps: DiskioInstanceStoreTotalWriteOpsMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreTotalWriteTime: MetricConfig{
+		DiskioInstanceStoreTotalWriteTime: DiskioInstanceStoreTotalWriteTimeMetricConfig{
 			Enabled: false,
 		},
-		DiskioInstanceStoreVolumeQueueLength: MetricConfig{
+		DiskioInstanceStoreVolumeQueueLength: DiskioInstanceStoreVolumeQueueLengthMetricConfig{
 			Enabled: false,
 		},
 	}
@@ -164,7 +545,7 @@ type MetricsBuilderConfig struct {
 	ResourceAttributes ResourceAttributesConfig `mapstructure:"resource_attributes"`
 }
 
-func DefaultMetricsBuilderConfig() MetricsBuilderConfig {
+func NewDefaultMetricsBuilderConfig() MetricsBuilderConfig {
 	return MetricsBuilderConfig{
 		Metrics:            DefaultMetricsConfig(),
 		ResourceAttributes: DefaultResourceAttributesConfig(),

@@ -12,7 +12,7 @@ import (
 
 func TestTranslator_ID(t *testing.T) {
 	tr := NewTranslator("opentelemetry")
-	assert.Equal(t, "spanmetrics/opentelemetry", tr.ID().String())
+	assert.Equal(t, "span_metrics/opentelemetry", tr.ID().String())
 }
 
 func TestTranslator_Translate(t *testing.T) {

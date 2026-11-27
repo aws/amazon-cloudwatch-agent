@@ -162,10 +162,10 @@ func (tam *TargetAllocatorManager) loadConfig(filename string) error {
 	if taCfg == nil {
 		return nil
 	}
-	taCfg.TLS.CAFile = DefaultTLSCaFilePath
-	taCfg.TLS.CertFile = DefaultTLSCertFilePath
-	taCfg.TLS.KeyFile = DefaultTLSKeyFilePath
-	taCfg.TLS.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
+	taCfg.ClientConfig.TLS.CAFile = DefaultTLSCaFilePath
+	taCfg.ClientConfig.TLS.CertFile = DefaultTLSCertFilePath
+	taCfg.ClientConfig.TLS.KeyFile = DefaultTLSKeyFilePath
+	taCfg.ClientConfig.TLS.ReloadInterval = DEFAULT_TLS_RELOAD_INTERVAL_SECONDS
 	return nil
 }
 

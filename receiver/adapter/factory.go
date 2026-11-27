@@ -75,7 +75,7 @@ func (a Adapter) createMetricsReceiver(ctx context.Context, settings receiver.Se
 
 	return scraperhelper.NewMetricsController(
 		&cfg.ControllerConfig, settings, consumer,
-		scraperhelper.AddScraper(settings.ID.Type(), scraper),
+		scraperhelper.AddMetricsScraper(settings.ID.Type(), scraper),
 	)
 }
 
