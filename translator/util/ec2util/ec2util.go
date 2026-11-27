@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -95,6 +96,9 @@ func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) {
 	// More information on API: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html#instance-metadata-ex-2
 	if hostname, err := mdProvider.Hostname(ctx); err != nil {
 		fmt.Println("E! [EC2] Fetch hostname from EC2 metadata fail:", err)
+	} else if !isValidHostname(hostname) {
+		// A captive portal can answer the metadata request with an HTML login page.
+		fmt.Println("E! [EC2] Ignoring EC2 metadata hostname that is not a valid hostname")
 	} else {
 		e.Hostname = hostname
 	}
@@ -110,4 +114,16 @@ func (e *EC2Util) deriveEC2MetadataFromIMDS(ctx context.Context) {
 		e.InstanceType = instanceIdentityDocument.InstanceType
 		e.ImageID = instanceIdentityDocument.ImageID
 	}
+}
+
+// maxHostnameLength is the maximum length of a DNS name.
+const maxHostnameLength = 253
+
+// isValidHostname reports whether the hostname returned by the metadata service
+// looks like a hostname rather than arbitrary content such as an HTML page.
+func isValidHostname(hostname string) bool {
+	if hostname == "" || len(hostname) > maxHostnameLength {
+		return false
+	}
+	return !strings.ContainsAny(hostname, " \t\r\n<>/\\")
 }
