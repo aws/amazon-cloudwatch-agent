@@ -7,11 +7,15 @@
 package tocwconfig
 
 import (
+	stdcontext "context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -30,8 +34,10 @@ import (
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/agent"
 	globallogs "github.com/aws/amazon-cloudwatch-agent/translator/translate/logs"
 	"github.com/aws/amazon-cloudwatch-agent/translator/translate/otel"
+	translateutil "github.com/aws/amazon-cloudwatch-agent/translator/translate/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util"
 	"github.com/aws/amazon-cloudwatch-agent/translator/util/ecsutil"
+	"github.com/aws/amazon-cloudwatch-agent/translator/util/tagutil"
 )
 
 func TestCompleteConfigUnix(t *testing.T) {
@@ -139,6 +145,44 @@ func TestJournaldLogsUnitsAndPriority(t *testing.T) {
 	resetContext(t)
 	expectedEnvVars := map[string]string{}
 	checkTranslation(t, "journaldlogs_units_and_priority", "linux", expectedEnvVars, "")
+}
+
+// TestLogAutoScalingGroupNamePlaceholder checks {autoscaling_group_name} in the
+// files (TOML), journald (YAML) and top-level log stream names. The ASG name is
+// returned by a fake ec2:DescribeTags client and contains characters that are
+// invalid in log names, so the golden files also cover sanitization.
+func TestLogAutoScalingGroupNamePlaceholder(t *testing.T) {
+	resetContext(t)
+	context.CurrentContext().SetMode(config.ModeEC2)
+
+	originalMetadataProvider := translateutil.Ec2MetadataInfoProvider
+	translateutil.Ec2MetadataInfoProvider = func() *translateutil.Metadata {
+		return &translateutil.Metadata{InstanceID: "i-0123456789abcdef0"}
+	}
+	tagutil.ResetTagsCache()
+	tagutil.SetEC2APIProviderForTesting(func() ec2.DescribeTagsAPIClient {
+		return fakeDescribeTagsClient{tags: map[string]string{"aws:autoscaling:groupName": "my asg+prod"}}
+	})
+	t.Cleanup(func() {
+		translateutil.Ec2MetadataInfoProvider = originalMetadataProvider
+		tagutil.ResetEC2APIProvider()
+		tagutil.ResetTagsCache()
+	})
+
+	checkTranslation(t, "log_autoscaling_group_name_placeholder", "linux", nil, "")
+}
+
+// fakeDescribeTagsClient returns a fixed set of instance tags in a single page.
+type fakeDescribeTagsClient struct {
+	tags map[string]string
+}
+
+func (c fakeDescribeTagsClient) DescribeTags(stdcontext.Context, *ec2.DescribeTagsInput, ...func(*ec2.Options)) (*ec2.DescribeTagsOutput, error) {
+	output := &ec2.DescribeTagsOutput{}
+	for k, v := range c.tags {
+		output.Tags = append(output.Tags, ec2types.TagDescription{Key: aws.String(k), Value: aws.String(v)})
+	}
+	return output, nil
 }
 
 func TestCombinedV1V2EC2Config(t *testing.T) {
