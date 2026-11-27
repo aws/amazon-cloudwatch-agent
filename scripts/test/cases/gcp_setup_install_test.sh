@@ -77,12 +77,6 @@ run_install() {
           CWAGENT_AWS_REGION=us-east-1
 }
 
-assert_output_lacks() {
-     if grep -F -q -- "$2" "${SANDBOX}/$1"; then
-          fail "$1 unexpectedly contains '$2' (got: $(cat "${SANDBOX}/$1"))"
-     fi
-}
-
 t_case "linux success: stdout shown, transcript hidden"
 gcloud_fake
 run_install

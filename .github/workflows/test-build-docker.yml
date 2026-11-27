@@ -338,15 +338,14 @@ jobs:
           REPOSITORY: ${{ steps.repo_name.outputs.ContainerRepositoryName }}
           REPOSITORYWindows: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:windows
           REPO2022: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2022
-          REPO2019: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:2019
           REPOLinuxAmd: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-amd64${{ inputs.ArchTagSuffix }}
           REPOLinuxArm: ${{ steps.repo_name.outputs.ContainerRepositoryName }}:linux-arm64${{ inputs.ArchTagSuffix }}
         if: contains(inputs.BucketKey, 'test') == false || steps.cached_binaries.outputs.cache-hit == false
         run: |
-          docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019
+          docker manifest create $REGISTRY/$REPOSITORYWindows --amend $REGISTRY/$REPO2022
           docker manifest push $REGISTRY/$REPOSITORYWindows
 
-          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPO2019 --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
+          docker manifest create $REGISTRY/$OrigREPOSITORY --amend $REGISTRY/$REPO2022 --amend $REGISTRY/$REPOLinuxAmd --amend $REGISTRY/$REPOLinuxArm
           docker manifest push $REGISTRY/$OrigREPOSITORY
 
   #GH actions set up gpg only works on ubuntu as of this commit date

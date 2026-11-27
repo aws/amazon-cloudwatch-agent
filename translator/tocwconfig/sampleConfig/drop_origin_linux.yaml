@@ -53,12 +53,14 @@ processors:
         refresh_tags_interval: 0s
         refresh_volumes_interval: 0s
     transform:
-        error_mode: propagate
-        flatten_data: false
+        error_mode: ignore
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: metric
               error_mode: propagate
+              shared_cache: false
               statements:
                 - set(unit, "unit") where name == "cpu_usage_idle"
                 - set(name, "CPU_USAGE_IDLE") where name == "cpu_usage_idle"
@@ -92,9 +94,9 @@ service:
                 - transform
                 - awsentity/resource
             receivers:
-                - telegraf_cpu
                 - telegraf_disk
                 - telegraf_nvidia_smi
+                - telegraf_cpu
     telemetry:
         logs:
             encoding: console

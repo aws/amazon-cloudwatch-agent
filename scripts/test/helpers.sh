@@ -26,7 +26,8 @@ if ! command -v jq >/dev/null 2>&1; then
      echo "jq is required to run these tests" >&2
      exit 1
 fi
-REAL_TOOL_PATH="$(dirname -- "$(command -v jq)"):/usr/bin:/bin"
+JQ_DIR=$(dirname -- "$(command -v jq)")
+REAL_TOOL_PATH="${JQ_DIR}:/usr/bin:/bin"
 
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/cwa-scripts-test.XXXXXX")
 trap 'rm -rf "${WORK}"' EXIT
@@ -45,6 +46,26 @@ t_case() {
      CALLS="${SANDBOX}/calls.log"
      mkdir -p "${BIN}"
      : >"${CALLS}"
+     TOOL_PATH=""
+}
+
+# hide_tools <cmd>...: for the current case, the real tools the script sees
+# are REAL_TOOL_PATH minus the named commands, so a "tool not installed" case
+# behaves the same whatever the host has in /usr/bin (GitHub's ubuntu runner
+# ships kubectl there). Builds one directory of symlinks per set of names,
+# shared by the cases that hide the same set. A fake made with make_fake still
+# wins, since ${BIN} stays first on PATH.
+hide_tools() {
+     TOOL_PATH="${WORK}/realbin-$(printf '%s' "$*" | tr -c 'A-Za-z0-9\n' '_')"
+     [ -d "${TOOL_PATH}" ] && return 0
+     mkdir -p "${TOOL_PATH}"
+     # Same lookup order as REAL_TOOL_PATH, so the first match per name wins.
+     for _f in "${JQ_DIR}"/* /usr/bin/* /bin/*; do
+          [ -e "${_f}" ] || continue
+          _n=${_f##*/}
+          case " $* " in *" ${_n} "*) continue ;; esac
+          [ -e "${TOOL_PATH}/${_n}" ] || ln -s "${_f}" "${TOOL_PATH}/${_n}"
+     done
 }
 
 fail() {
@@ -78,7 +99,7 @@ run_setup() {
      _script="${REPO_ROOT}/scripts/$1"
      shift
      STATUS=0
-     env -i PATH="${BIN}:${REAL_TOOL_PATH}" CALLS="${CALLS}" SANDBOX="${SANDBOX}" "$@" \
+     env -i PATH="${BIN}:${TOOL_PATH:-${REAL_TOOL_PATH}}" CALLS="${CALLS}" SANDBOX="${SANDBOX}" "$@" \
           sh "${_script}" >"${SANDBOX}/stdout" 2>"${SANDBOX}/stderr" || STATUS=$?
 }
 
@@ -101,6 +122,13 @@ $(cat "${SANDBOX}/stdout.diff")"
 assert_output_contains() {
      grep -F -q -- "$2" "${SANDBOX}/$1" ||
           fail "$1 does not contain '$2' (got: $(cat "${SANDBOX}/$1"))"
+}
+
+# assert_output_lacks <stdout|stderr> <fixed string>
+assert_output_lacks() {
+     if grep -F -q -- "$2" "${SANDBOX}/$1"; then
+          fail "$1 unexpectedly contains '$2' (got: $(cat "${SANDBOX}/$1"))"
+     fi
 }
 
 assert_called() {

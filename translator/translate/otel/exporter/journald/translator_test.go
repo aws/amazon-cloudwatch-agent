@@ -49,7 +49,7 @@ func TestTranslator_Translate_BasicConfig(t *testing.T) {
 	require.True(t, ok)
 
 	assert.Equal(t, &agenthealth.LogsID, cfg.MiddlewareID)
-	assert.Equal(t, "us-west-2", cfg.Region)
+	assert.Equal(t, "us-west-2", cfg.AWSSessionSettings.Region)
 	assert.Equal(t, "", cfg.LogGroupName)  // Default empty when no collect config
 	assert.Equal(t, "", cfg.LogStreamName) // Default empty when no collect config
 }
@@ -81,7 +81,7 @@ func TestTranslator_Translate_WithCollectConfig(t *testing.T) {
 	assert.Equal(t, "my-journald-logs", cfg.LogGroupName)
 	assert.Equal(t, "i-UNKNOWN", cfg.LogStreamName) // Placeholder resolved
 	assert.Equal(t, int32(7), cfg.LogRetention)
-	assert.Equal(t, "us-east-1", cfg.Region)
+	assert.Equal(t, "us-east-1", cfg.AWSSessionSettings.Region)
 }
 
 func TestTranslator_Translate_NeverExpireRetention(t *testing.T) {
@@ -160,9 +160,9 @@ func TestTranslator_Translate_WithCredentials(t *testing.T) {
 	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)
 
-	assert.Equal(t, "arn:aws:iam::123456789012:role/CloudWatchAgentServerRole", cfg.RoleARN)
-	assert.Equal(t, "test-profile", cfg.Profile)
-	assert.Equal(t, []string{"/path/to/credentials"}, cfg.SharedCredentialsFile)
+	assert.Equal(t, "arn:aws:iam::123456789012:role/CloudWatchAgentServerRole", cfg.AWSSessionSettings.RoleARN)
+	assert.Equal(t, "test-profile", cfg.AWSSessionSettings.Profile)
+	assert.Equal(t, []string{"/path/to/credentials"}, cfg.AWSSessionSettings.SharedCredentialsFile)
 }
 
 func TestTranslator_Translate_WithEndpointOverride(t *testing.T) {
@@ -247,7 +247,7 @@ func TestTranslator_Translate_WithRoleARNOverride(t *testing.T) {
 	require.True(t, ok)
 
 	// Should use the logs-specific role ARN, not the global one
-	assert.Equal(t, "arn:aws:iam::123456789012:role/LogsRole", cfg.RoleARN)
+	assert.Equal(t, "arn:aws:iam::123456789012:role/LogsRole", cfg.AWSSessionSettings.RoleARN)
 }
 
 func TestTranslator_Translate_OnPremMode(t *testing.T) {
@@ -275,7 +275,7 @@ func TestTranslator_Translate_OnPremMode(t *testing.T) {
 	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)
 
-	assert.True(t, cfg.LocalMode)
+	assert.True(t, cfg.AWSSessionSettings.LocalMode)
 	// On-prem mode should default to {hostname}, not {instance_id}
 	assert.Equal(t, "hostname-UNKNOWN", cfg.LogStreamName)
 }
@@ -305,7 +305,7 @@ func TestTranslator_Translate_WithCABundle(t *testing.T) {
 	cfg, ok := result.(*awscloudwatchlogsexporter.Config)
 	require.True(t, ok)
 
-	assert.Equal(t, testCABundle, cfg.CertificateFilePath)
+	assert.Equal(t, testCABundle, cfg.AWSSessionSettings.CertificateFilePath)
 }
 
 func TestTranslator_Translate_WithPlaceholderResolution(t *testing.T) {

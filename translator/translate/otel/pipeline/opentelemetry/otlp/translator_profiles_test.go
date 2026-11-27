@@ -73,7 +73,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 			region: "us-east-1",
 			want: &want{
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
-				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "transform/identity"},
+				processors: []string{"transform/otlp_scope", "resource_detection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
 				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
 			},
@@ -84,7 +84,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 			ecs:    true,
 			want: &want{
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
-				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "transform/identity"},
+				processors: []string{"transform/otlp_scope", "resource_detection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
 				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
 			},
@@ -103,7 +103,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 			region: "us-east-1",
 			want: &want{
 				receivers:  []string{"otlp/grpc_127_0_0_1_5317", "otlp/http_127_0_0_1_5318"},
-				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "transform/identity"},
+				processors: []string{"transform/otlp_scope", "resource_detection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
 				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
 			},
@@ -120,7 +120,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 			region: "us-east-1",
 			want: &want{
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
-				processors: []string{"transform/otlp_scope", "resource/opentelemetry", "resourcedetection/opentelemetry", "transform/identity"},
+				processors: []string{"transform/otlp_scope", "resource/opentelemetry", "resource_detection/opentelemetry", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
 				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
 			},
@@ -131,7 +131,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 			k8sMode: config.ModeEKS,
 			want: &want{
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
-				processors: []string{"transform/otlp_scope", "resourcedetection/opentelemetry", "k8s_attributes/profiles", "transform/set_cluster_name", "transform/identity"},
+				processors: []string{"transform/otlp_scope", "resource_detection/opentelemetry", "k8s_attributes/profiles", "transform/set_cluster_name", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
 				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
 			},
@@ -150,7 +150,7 @@ func TestProfilesPipelineTranslator(t *testing.T) {
 			k8sMode: config.ModeEKS,
 			want: &want{
 				receivers:  []string{"otlp/grpc_127_0_0_1_4317", "otlp/http_127_0_0_1_4318"},
-				processors: []string{"transform/otlp_scope", "resource/opentelemetry", "resourcedetection/opentelemetry", "k8s_attributes/profiles", "transform/set_cluster_name", "transform/identity"},
+				processors: []string{"transform/otlp_scope", "resource/opentelemetry", "resource_detection/opentelemetry", "k8s_attributes/profiles", "transform/set_cluster_name", "transform/identity"},
 				exporters:  []string{"otlp_http/profiles"},
 				extensions: []string{"sigv4auth/monitoring", "agenthealth/opentelemetry_profiles"},
 			},
@@ -293,15 +293,12 @@ func TestProfilesKubernetesProcessors(t *testing.T) {
 	require.NoError(t, err)
 	k8sCfg, ok := cfg.(*k8sattributesprocessor.Config)
 	require.True(t, ok)
-	require.Len(t, k8sCfg.Association, 3)
+	require.Len(t, k8sCfg.Association, 2)
 	require.Len(t, k8sCfg.Association[0].Sources, 1)
 	assert.Equal(t, "resource_attribute", k8sCfg.Association[0].Sources[0].From)
 	assert.Equal(t, "container.id", k8sCfg.Association[0].Sources[0].Name)
 	require.Len(t, k8sCfg.Association[1].Sources, 1)
-	assert.Equal(t, "resource_attribute", k8sCfg.Association[1].Sources[0].From)
-	assert.Equal(t, "k8s.pod.ip", k8sCfg.Association[1].Sources[0].Name)
-	require.Len(t, k8sCfg.Association[2].Sources, 1)
-	assert.Equal(t, "connection", k8sCfg.Association[2].Sources[0].From)
+	assert.Equal(t, "connection", k8sCfg.Association[1].Sources[0].From)
 	require.NoError(t, k8sCfg.Validate())
 
 	clusterNameTranslator, ok := got.Processors.Get(component.MustNewIDWithName("transform", "set_cluster_name"))
@@ -326,7 +323,7 @@ func assertProfilesInvariants(t *testing.T, got *common.ComponentTranslators) {
 	resourceDetectionIndex, identityIndex := -1, -1
 	for i, id := range keys {
 		switch id.String() {
-		case "resourcedetection/opentelemetry":
+		case "resource_detection/opentelemetry":
 			resourceDetectionIndex = i
 		case "transform/identity":
 			identityIndex = i

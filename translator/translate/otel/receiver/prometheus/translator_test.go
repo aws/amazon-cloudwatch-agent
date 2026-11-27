@@ -34,6 +34,10 @@ func loadPromConfig(t *testing.T, path string) *promconfig.Config {
 	return cfg
 }
 
+func defaultTargetAllocator() configoptional.Optional[targetallocator.Config] {
+	return prometheusreceiver.NewFactory().CreateDefaultConfig().(*prometheusreceiver.Config).TargetAllocator
+}
+
 func TestTranslator(t *testing.T) {
 	testCases := map[string]struct {
 		input   map[string]any
@@ -49,24 +53,24 @@ func TestTranslator(t *testing.T) {
 			input:    testutil.GetJson(t, filepath.Join("testdata", "config.json")),
 			wantID:   "prometheus",
 			promYAML: filepath.Join("testdata", "config_prom.yaml"), // same scrape content, just without OTel wrapper
-			wantTA: configoptional.Some(targetallocator.Config{
-				CollectorID: "col-1234",
-				ClientConfig: confighttp.ClientConfig{
-					TLS: configtls.ClientConfig{
-						Config: configtls.Config{
-							CAFile:         defaultTLSCaPath,
-							CertFile:       defaultTLSCertPath,
-							KeyFile:        defaultTLSKeyPath,
-							ReloadInterval: 10 * time.Second,
-						},
+			wantTA: configoptional.Some(func() targetallocator.Config {
+				ta := targetallocator.Config{CollectorID: "col-1234", ClientConfig: confighttp.NewDefaultClientConfig()}
+				ta.ClientConfig.TLS = configtls.ClientConfig{
+					Config: configtls.Config{
+						CAFile:         defaultTLSCaPath,
+						CertFile:       defaultTLSCertPath,
+						KeyFile:        defaultTLSKeyPath,
+						ReloadInterval: 10 * time.Second,
 					},
-				},
-			}),
+				}
+				return ta
+			}()),
 		},
 		"WithPromConfig": {
 			input:    testutil.GetJson(t, filepath.Join("testdata", "config_prom.json")),
 			wantID:   "prometheus",
 			promYAML: filepath.Join("testdata", "config_prom.yaml"),
+			wantTA:   defaultTargetAllocator(),
 		},
 	}
 	for name, testCase := range testCases {

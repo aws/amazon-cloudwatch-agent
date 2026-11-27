@@ -83,7 +83,7 @@ connectors:
                 description: The number of spans observed.
     forward/opentelemetry: {}
     signal_to_metrics/dbi_topsql:
-        error_mode: propagate
+        error_mode: ignore
         logs:
             - attributes:
                 - key: db.system.name
@@ -334,9 +334,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: https://logs.us-west-2.amazonaws.com/v1/logs
-        max_idle_conns: 100
         metrics_endpoint: ""
         profiles_endpoint: ""
         retry_on_failure:
@@ -355,9 +356,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: ""
-        max_idle_conns: 100
         metrics_endpoint: https://monitoring.us-west-2.amazonaws.com/v1/metrics
         profiles_endpoint: ""
         retry_on_failure:
@@ -376,9 +378,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: ""
-        max_idle_conns: 100
         metrics_endpoint: ""
         profiles_endpoint: https://monitoring.us-west-2.amazonaws.com/v1development/profiles
         retry_on_failure:
@@ -405,9 +408,10 @@ exporters:
         compression: gzip
         encoding: proto
         force_attempt_http2: true
-        idle_conn_timeout: 1m30s
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         logs_endpoint: ""
-        max_idle_conns: 100
         metrics_endpoint: ""
         profiles_endpoint: ""
         retry_on_failure:
@@ -577,7 +581,7 @@ processors:
         send_batch_max_size: 0
         send_batch_size: 8192
         timeout: 200ms
-    cumulativetodelta/hostDeltaMetrics:
+    cumulative_to_delta/hostDeltaMetrics:
         exclude:
             match_type: strict
             metrics:
@@ -592,9 +596,9 @@ processors:
         ec2_instance_tag_keys:
             - AutoScalingGroupName
         ec2_metadata_tags:
-            - ImageId
             - InstanceId
             - InstanceType
+            - ImageId
         imds_retries: 1
         middleware: agenthealth/statuscode
         refresh_tags_interval: 0s
@@ -615,7 +619,7 @@ processors:
         gc_interval: 10m0s
         start_time_metric_regex: ""
         strategy: true_reset_point
-    resourcedetection/opentelemetry:
+    resource_detection/opentelemetry:
         akamai:
             resource_attributes:
                 cloud.account.id:
@@ -667,6 +671,8 @@ processors:
                     enabled: true
         azure:
             resource_attributes:
+                azure.resource_group.name:
+                    enabled: true
                 azure.resourcegroup.name:
                     enabled: true
                 azure.vm.name:
@@ -690,6 +696,56 @@ processors:
                 host.name:
                     enabled: true
             tags: []
+        azureappservice:
+            resource_attributes:
+                azure.app_service.instance.id:
+                    enabled: true
+                azure.resource_group.name:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                deployment.environment.name:
+                    enabled: true
+                service.name:
+                    enabled: true
+        azurecontainerapps:
+            resource_attributes:
+                azure.container_app.instance.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                service.name:
+                    enabled: true
+        azurefunctions:
+            resource_attributes:
+                azure.resource_group.name:
+                    enabled: true
+                cloud.account.id:
+                    enabled: true
+                cloud.platform:
+                    enabled: true
+                cloud.provider:
+                    enabled: true
+                cloud.region:
+                    enabled: true
+                cloud.resource_id:
+                    enabled: true
+                deployment.environment.name:
+                    enabled: false
+                faas.instance:
+                    enabled: true
+                service.name:
+                    enabled: true
         consul:
             address: ""
             datacenter: ""
@@ -786,6 +842,11 @@ processors:
                 cloud.region:
                     enabled: true
         eks:
+            auth_type: serviceAccount
+            context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
+            kube_config_path: ""
             node_from_env_var: HOST_NAME
             resource_attributes:
                 cloud.account.id:
@@ -816,10 +877,17 @@ processors:
                     enabled: true
                 deployment.environment:
                     enabled: true
+                deployment.environment.name:
+                    enabled: true
+                deployment.id:
+                    enabled: true
                 service.instance.id:
                     enabled: true
                 service.version:
                     enabled: true
+        env:
+            attributes: {}
+        fail_on_missing_metadata: false
         force_attempt_http2: true
         gcp:
             labels: []
@@ -935,8 +1003,23 @@ processors:
                     enabled: true
                 host.type:
                     enabled: true
-        idle_conn_timeout: 1m30s
         ignore_detector_errors: true
+        k8s_api:
+            auth_type: serviceAccount
+            context: ""
+            kube_api_burst: 0
+            kube_api_qps: 0
+            kube_config_path: ""
+            node_from_env_var: ""
+            resource_attributes:
+                host.id:
+                    enabled: false
+                k8s.cluster.uid:
+                    enabled: true
+                k8s.node.name:
+                    enabled: true
+                k8s.node.uid:
+                    enabled: true
         k8snode:
             auth_type: serviceAccount
             context: ""
@@ -945,10 +1028,17 @@ processors:
             kube_config_path: ""
             node_from_env_var: ""
             resource_attributes:
+                host.id:
+                    enabled: false
+                k8s.cluster.uid:
+                    enabled: true
                 k8s.node.name:
                     enabled: true
                 k8s.node.uid:
                     enabled: true
+        keepalive:
+            idle_conn_timeout: 1m30s
+            max_idle_conns: 100
         kubeadm:
             auth_type: serviceAccount
             context: ""
@@ -980,7 +1070,6 @@ processors:
                     enabled: true
                 faas.version:
                     enabled: true
-        max_idle_conns: 100
         nova:
             fail_on_missing_metadata: false
             labels: []
@@ -1011,7 +1100,6 @@ processors:
                 k8s.cluster.name:
                     enabled: true
             tls: {}
-            token: ""
         oraclecloud:
             resource_attributes:
                 cloud.availability_zone:
@@ -1022,6 +1110,8 @@ processors:
                     enabled: true
                 cloud.region:
                     enabled: true
+                cloud.resource_id:
+                    enabled: false
                 host.id:
                     enabled: true
                 host.name:
@@ -1034,6 +1124,13 @@ processors:
                     enabled: true
         override: true
         refresh_interval: 0s
+        retry:
+            enabled: true
+            initial_interval: 1s
+            max_elapsed_time: 0s
+            max_interval: 30s
+            multiplier: 2
+            randomization_factor: 0.5
         scaleway:
             resource_attributes:
                 cloud.account.id:
@@ -1082,7 +1179,7 @@ processors:
                     enabled: false
                 host.name:
                     enabled: true
-                os.build.id:
+                os.build_id:
                     enabled: false
                 os.description:
                     enabled: false
@@ -1140,11 +1237,13 @@ processors:
                     enabled: true
     transform/dbi_fix_start_time:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: datapoint
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(datapoint.start_time_unix_nano, datapoint.time_unix_nano) where datapoint.start_time_unix_nano == 0
                 - replace_match(datapoint.attributes["postgresql.wait_event_type"], "", "CPU")
@@ -1157,10 +1256,12 @@ processors:
         trace_statements: []
     transform/dbi_logs_raw-events_0:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/raw-events")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
@@ -1169,15 +1270,18 @@ processors:
         trace_statements: []
     transform/dbi_logs_server-logs_0:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["aws.log.group.name"], "/aws/self-managed-database-insights/postgresql/server-logs")
                 - set(resource.attributes["aws.log.stream.name"], Concat([resource.attributes["host.id"], "my-postgres"], "/"))
             - context: log
               error_mode: ignore
+              shared_cache: false
               statements:
                 - delete_key(attributes, "timestamp")
                 - delete_key(attributes, "severity")
@@ -1186,16 +1290,19 @@ processors:
         trace_statements: []
     transform/dbi_resource_0:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
         metric_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["db.system.name"], "postgresql")
                 - set(resource.attributes["db.instance.name"], "my-postgres")
@@ -1203,16 +1310,19 @@ processors:
         trace_statements: []
     transform/dbi_scope:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
         metric_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-database-insights")
@@ -1220,11 +1330,13 @@ processors:
         trace_statements: []
     transform/host_metrics_scope:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-host-metrics")
@@ -1232,10 +1344,12 @@ processors:
         trace_statements: []
     transform/identity:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
@@ -1244,6 +1358,7 @@ processors:
         metric_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
@@ -1252,6 +1367,7 @@ processors:
         profile_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
@@ -1260,6 +1376,7 @@ processors:
         trace_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["service.name"], "unknown_service") where resource.attributes["service.name"] == nil
                 - set(resource.attributes["cloud.resource_id"], Concat(["arn:aws:ec2", resource.attributes["cloud.region"], resource.attributes["cloud.account.id"], Concat(["instance", resource.attributes["host.id"]], "/")], ":")) where resource.attributes["cloud.resource_id"] == nil and resource.attributes["host.id"] != nil and resource.attributes["cloud.platform"] == "aws_ec2"
@@ -1267,10 +1384,12 @@ processors:
                 - set(resource.attributes["deployment.environment.name"], Concat([resource.attributes["cloud.platform"], "default"], ":")) where resource.attributes["deployment.environment.name"] == nil and resource.attributes["cloud.platform"] != nil
     transform/logs_cleanup:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - delete_key(resource.attributes, "aws.log.group.name")
                 - delete_key(resource.attributes, "aws.log.stream.name")
@@ -1280,10 +1399,12 @@ processors:
         trace_statements: []
     transform/logs_routing:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["aws.log.group.name"], Concat(["/aws/cwagent", resource.attributes["aws.log.source"]], "/")) where resource.attributes["aws.log.group.name"] == nil and resource.attributes["aws.log.source"] != nil
                 - set(resource.attributes["aws.log.group.name"], "/aws/cwagent/default") where resource.attributes["aws.log.group.name"] == nil
@@ -1301,10 +1422,12 @@ processors:
         trace_statements: []
     transform/otlp_log_source:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: resource
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(resource.attributes["aws.log.source"], "otlp") where resource.attributes["aws.log.source"] == nil
         metric_statements: []
@@ -1312,38 +1435,45 @@ processors:
         trace_statements: []
     transform/otlp_scope:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         metric_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         profile_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
         trace_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-otlp")
     transform/prometheus_scope:
         error_mode: ignore
-        flatten_data: false
+        flatten:
+            log: false
         log_statements: []
         metric_statements:
             - context: scope
               error_mode: ignore
+              shared_cache: false
               statements:
                 - set(scope.attributes["cloudwatch.source"], "cloudwatch-agent")
                 - set(scope.attributes["cloudwatch.solution"], "otel-prometheus")
@@ -1404,7 +1534,7 @@ receivers:
                 parse_from: attributes.severity
               type: regex_parser
         start_at: end
-    hostmetrics/opentelemetry:
+    host_metrics/opentelemetry:
         collection_interval: 1m0s
         initial_delay: 1s
         scrapers:
@@ -1471,35 +1601,34 @@ receivers:
     otlp/http_0_0_0_0_4318:
         protocols:
             http:
-                cors: null
                 endpoint: 0.0.0.0:4318
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s
     otlp/http_127_0_0_1_4328:
         protocols:
             http:
-                cors: null
                 endpoint: 127.0.0.1:4328
-                idle_timeout: 0s
-                keep_alives_enabled: true
+                keepalive:
+                    idle_timeout: 1m0s
                 logs_url_path: /v1/logs
                 metrics_url_path: /v1/metrics
                 read_header_timeout: 0s
-                tls: null
                 traces_url_path: /v1/traces
                 transport: tcp
                 write_timeout: 0s
     postgresql/events_0:
         collection_interval: 10s
+        connect_database: postgres
         endpoint: localhost:5432
         events:
+            db.server.query_plan:
+                enabled: false
             db.server.query_sample:
                 enabled: true
             db.server.top_query:
@@ -1507,6 +1636,9 @@ receivers:
         initial_delay: 1s
         metrics:
             postgresql.backends:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.bgwriter.buffers.allocated:
                 enabled: false
@@ -1528,15 +1660,26 @@ receivers:
             postgresql.bgwriter.maxwritten:
                 enabled: false
             postgresql.blks_hit:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.blks_read:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.blocks_read:
                 aggregation_strategy: sum
                 attributes:
                     - source
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.commits:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.connection.max:
                 enabled: false
@@ -1548,24 +1691,55 @@ receivers:
                     - relation
                     - mode
                     - lock_type
+                    - db.namespace
                 enabled: false
             postgresql.db_size:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.deadlocks:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.function.calls:
                 aggregation_strategy: sum
                 attributes:
                     - function
+                    - db.namespace
                 enabled: false
             postgresql.index.scans:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
+                    - postgresql.index.name
                 enabled: false
             postgresql.index.size:
+                aggregation_strategy: avg
+                attributes:
+                    - db.namespace
+                    - db.collection.name
+                    - postgresql.index.name
                 enabled: false
             postgresql.operations:
                 aggregation_strategy: sum
                 attributes:
                     - operation
+                    - db.namespace
+                    - db.collection.name
+                enabled: false
+            postgresql.query.conflicts:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.conflict.type
+                    - db.namespace
+                enabled: false
+            postgresql.query.execution.time:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.replication.data_delay:
                 aggregation_strategy: avg
@@ -1573,13 +1747,22 @@ receivers:
                     - replication_client
                 enabled: false
             postgresql.rollbacks:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.rows:
                 aggregation_strategy: sum
                 attributes:
                     - state
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.sequential_scans:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.sessions:
                 aggregation_strategy: avg
@@ -1587,24 +1770,84 @@ receivers:
                     - session_state
                 enabled: false
             postgresql.table.count:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.table.size:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.table.vacuum.count:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.temp.io:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.temp_files:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_deleted:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_fetched:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_inserted:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_returned:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_updated:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.insert.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.insert.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.calls:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.rows_returned:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
                 enabled: false
             postgresql.wal.age:
                 enabled: false
@@ -1626,6 +1869,8 @@ receivers:
             enabled: true
             max_rows_per_query: 500
         resource_attributes:
+            db.system.version:
+                enabled: false
             postgresql.database.name:
                 enabled: true
             postgresql.index.name:
@@ -1634,9 +1879,17 @@ receivers:
                 enabled: true
             postgresql.table.name:
                 enabled: true
+            server.address:
+                enabled: true
+            server.port:
+                enabled: true
             service.instance.id:
                 enabled: true
-        timeout: 0s
+            service.name:
+                enabled: false
+            service.namespace:
+                enabled: false
+        timeout: 1m0s
         tls:
             insecure: true
             insecure_skip_verify: true
@@ -1651,8 +1904,11 @@ receivers:
         username: cw_monitor
     postgresql/metrics_0:
         collection_interval: 10s
+        connect_database: postgres
         endpoint: localhost:5432
         events:
+            db.server.query_plan:
+                enabled: false
             db.server.query_sample:
                 enabled: true
             db.server.top_query:
@@ -1660,6 +1916,9 @@ receivers:
         initial_delay: 1s
         metrics:
             postgresql.backends:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: true
             postgresql.bgwriter.buffers.allocated:
                 enabled: true
@@ -1681,15 +1940,26 @@ receivers:
             postgresql.bgwriter.maxwritten:
                 enabled: true
             postgresql.blks_hit:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.blks_read:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.blocks_read:
                 aggregation_strategy: sum
                 attributes:
                     - source
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.commits:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: true
             postgresql.connection.max:
                 enabled: true
@@ -1701,24 +1971,55 @@ receivers:
                     - relation
                     - mode
                     - lock_type
+                    - db.namespace
                 enabled: false
             postgresql.db_size:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: true
             postgresql.deadlocks:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.function.calls:
                 aggregation_strategy: sum
                 attributes:
                     - function
+                    - db.namespace
                 enabled: false
             postgresql.index.scans:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
+                    - postgresql.index.name
                 enabled: false
             postgresql.index.size:
+                aggregation_strategy: avg
+                attributes:
+                    - db.namespace
+                    - db.collection.name
+                    - postgresql.index.name
                 enabled: false
             postgresql.operations:
                 aggregation_strategy: sum
                 attributes:
                     - operation
+                    - db.namespace
+                    - db.collection.name
+                enabled: false
+            postgresql.query.conflicts:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.conflict.type
+                    - db.namespace
+                enabled: false
+            postgresql.query.execution.time:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.replication.data_delay:
                 aggregation_strategy: avg
@@ -1726,13 +2027,22 @@ receivers:
                     - replication_client
                 enabled: true
             postgresql.rollbacks:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: true
             postgresql.rows:
                 aggregation_strategy: sum
                 attributes:
                     - state
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.sequential_scans:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.sessions:
                 aggregation_strategy: avg
@@ -1740,24 +2050,84 @@ receivers:
                     - session_state
                 enabled: false
             postgresql.table.count:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: true
             postgresql.table.size:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.table.vacuum.count:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.temp.io:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.temp_files:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_deleted:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_fetched:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_inserted:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_returned:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_updated:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.insert.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.insert.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.calls:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.rows_returned:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
                 enabled: false
             postgresql.wal.age:
                 enabled: true
@@ -1779,6 +2149,8 @@ receivers:
             enabled: true
             max_rows_per_query: 500
         resource_attributes:
+            db.system.version:
+                enabled: false
             postgresql.database.name:
                 enabled: true
             postgresql.index.name:
@@ -1787,9 +2159,17 @@ receivers:
                 enabled: true
             postgresql.table.name:
                 enabled: true
+            server.address:
+                enabled: true
+            server.port:
+                enabled: true
             service.instance.id:
                 enabled: true
-        timeout: 0s
+            service.name:
+                enabled: false
+            service.namespace:
+                enabled: false
+        timeout: 1m0s
         tls:
             insecure: true
             insecure_skip_verify: true
@@ -1804,8 +2184,11 @@ receivers:
         username: cw_monitor
     postgresql/metrics_perresource_0:
         collection_interval: 1m0s
+        connect_database: postgres
         endpoint: localhost:5432
         events:
+            db.server.query_plan:
+                enabled: false
             db.server.query_sample:
                 enabled: false
             db.server.top_query:
@@ -1813,6 +2196,9 @@ receivers:
         initial_delay: 1s
         metrics:
             postgresql.backends:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.bgwriter.buffers.allocated:
                 enabled: false
@@ -1834,15 +2220,26 @@ receivers:
             postgresql.bgwriter.maxwritten:
                 enabled: false
             postgresql.blks_hit:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.blks_read:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.blocks_read:
                 aggregation_strategy: sum
                 attributes:
                     - source
+                    - db.namespace
+                    - db.collection.name
                 enabled: true
             postgresql.commits:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.connection.max:
                 enabled: false
@@ -1854,38 +2251,78 @@ receivers:
                     - relation
                     - mode
                     - lock_type
+                    - db.namespace
                 enabled: false
             postgresql.db_size:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.deadlocks:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.function.calls:
                 aggregation_strategy: sum
                 attributes:
                     - function
+                    - db.namespace
                 enabled: false
             postgresql.index.scans:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
+                    - postgresql.index.name
                 enabled: true
             postgresql.index.size:
+                aggregation_strategy: avg
+                attributes:
+                    - db.namespace
+                    - db.collection.name
+                    - postgresql.index.name
                 enabled: true
             postgresql.operations:
                 aggregation_strategy: sum
                 attributes:
                     - operation
+                    - db.namespace
+                    - db.collection.name
                 enabled: true
+            postgresql.query.conflicts:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.conflict.type
+                    - db.namespace
+                enabled: false
+            postgresql.query.execution.time:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
             postgresql.replication.data_delay:
                 aggregation_strategy: avg
                 attributes:
                     - replication_client
                 enabled: false
             postgresql.rollbacks:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.rows:
                 aggregation_strategy: sum
                 attributes:
                     - state
+                    - db.namespace
+                    - db.collection.name
                 enabled: true
             postgresql.sequential_scans:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: false
             postgresql.sessions:
                 aggregation_strategy: avg
@@ -1893,24 +2330,84 @@ receivers:
                     - session_state
                 enabled: false
             postgresql.table.count:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.table.size:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: true
             postgresql.table.vacuum.count:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                    - db.collection.name
                 enabled: true
             postgresql.temp.io:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.temp_files:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_deleted:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_fetched:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_inserted:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_returned:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
                 enabled: false
             postgresql.tup_updated:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.insert.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.insert.rows:
+                aggregation_strategy: sum
+                attributes:
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.calls:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.duration:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
+                enabled: false
+            postgresql.vector.search.rows_returned:
+                aggregation_strategy: sum
+                attributes:
+                    - postgresql.distance.function.name
+                    - db.namespace
                 enabled: false
             postgresql.wal.age:
                 enabled: false
@@ -1932,6 +2429,8 @@ receivers:
             enabled: true
             max_rows_per_query: 500
         resource_attributes:
+            db.system.version:
+                enabled: false
             postgresql.database.name:
                 enabled: true
             postgresql.index.name:
@@ -1940,9 +2439,17 @@ receivers:
                 enabled: true
             postgresql.table.name:
                 enabled: true
+            server.address:
+                enabled: true
+            server.port:
+                enabled: true
             service.instance.id:
                 enabled: true
-        timeout: 0s
+            service.name:
+                enabled: false
+            service.namespace:
+                enabled: false
+        timeout: 1m0s
         tls:
             insecure: true
             insecure_skip_verify: true
@@ -1958,11 +2465,15 @@ receivers:
     prometheus/opentelemetry:
         api_server:
             enabled: false
+            max_connections: 512
             server_config:
-                idle_timeout: 0s
-                read_header_timeout: 0s
+                endpoint: 127.0.0.1:9090
+                keepalive:
+                    idle_timeout: 1m0s
+                read_header_timeout: 1m0s
+                read_timeout: 10m0s
                 transport: tcp
-                write_timeout: 0s
+                write_timeout: 30s
         config:
             global:
                 evaluation_interval: 1m
@@ -1977,6 +2488,7 @@ receivers:
                 translation_strategy: UnderscoreEscapingWithSuffixes
             runtime:
                 gogc: 75
+                log_level: info
             scrape_configs:
                 - always_scrape_classic_histograms: false
                   convert_classic_histograms_to_nhcb: false
@@ -2022,6 +2534,9 @@ receivers:
                 tsdb:
                     outofordertimewindow: 0
                     retention: null
+        discovery_reload_on_startup: false
+        initial_scrape_offset: 0s
+        scrape_on_shutdown: false
         trim_metric_suffixes: false
     telegraf_cpu:
         collection_interval: 1m0s
@@ -2090,7 +2605,6 @@ service:
         - agenthealth/logs
         - agenthealth/traces
         - sigv4auth/monitoring
-        - agenthealth/opentelemetry_profiles
         - agenthealth/opentelemetry_metrics
         - sigv4auth/logs
         - awscloudwatchlogsprovisioner
@@ -2098,6 +2612,7 @@ service:
         - agenthealth/opentelemetry_logs
         - sigv4auth/xray
         - agenthealth/opentelemetry_traces
+        - agenthealth/opentelemetry_profiles
         - entitystore
     pipelines:
         logs/dbi_postgresql_0:
@@ -2114,7 +2629,7 @@ service:
             processors:
                 - filter/dbi_exclude_monitor_0
                 - transform/dbi_scope
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - transform/dbi_resource_0
                 - transform/dbi_logs_raw-events_0
             receivers:
@@ -2124,7 +2639,7 @@ service:
                 - forward/opentelemetry
             processors:
                 - transform/dbi_scope
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - groupbyattrs/files
                 - transform/dbi_resource_0
                 - transform/dbi_logs_server-logs_0
@@ -2141,7 +2656,7 @@ service:
             exporters:
                 - otlp_http/logs
             processors:
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - transform/identity
                 - transform/logs_routing
                 - attributestocontext/opentelemetry
@@ -2177,20 +2692,20 @@ service:
                 - ec2tagger
                 - awsentity/resource
             receivers:
-                - telegraf_swap
-                - telegraf_processes
-                - telegraf_procstat/1917393364
-                - telegraf_netstat
-                - telegraf_mem
                 - telegraf_cpu
+                - telegraf_procstat/1917393364
+                - telegraf_processes
+                - telegraf_mem
                 - telegraf_disk
+                - telegraf_swap
+                - telegraf_netstat
         metrics/host_metrics:
             exporters:
                 - forward/opentelemetry
             processors:
                 - transform/host_metrics_scope
             receivers:
-                - hostmetrics/opentelemetry
+                - host_metrics/opentelemetry
         metrics/hostCustomMetrics:
             exporters:
                 - awscloudwatch
@@ -2204,7 +2719,7 @@ service:
             exporters:
                 - awscloudwatch
             processors:
-                - cumulativetodelta/hostDeltaMetrics
+                - cumulative_to_delta/hostDeltaMetrics
                 - ec2tagger
                 - awsentity/resource
             receivers:
@@ -2214,7 +2729,7 @@ service:
             exporters:
                 - otlp_http/metrics
             processors:
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - transform/identity
                 - awsattributelimit/opentelemetry_metrics
                 - batch/opentelemetry_metrics
@@ -2241,7 +2756,7 @@ service:
                 - otlp_http/profiles
             processors:
                 - transform/otlp_scope
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - transform/identity
             receivers:
                 - otlp/grpc_127_0_0_1_4327
@@ -2250,7 +2765,7 @@ service:
             exporters:
                 - otlp_http/traces
             processors:
-                - resourcedetection/opentelemetry
+                - resource_detection/opentelemetry
                 - transform/identity
                 - batch/opentelemetry_traces
             receivers:

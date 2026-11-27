@@ -107,8 +107,8 @@ func TestTranslator(t *testing.T) {
 			want: &want{
 				pipelineID: "metrics/prometheus/amp",
 				receivers:  []string{"prometheus"},
-				processors: []string{"batch/prometheus/amp", "deltatocumulative/prometheus/amp"},
-				exporters:  []string{"prometheusremotewrite/amp"},
+				processors: []string{"batch/prometheus/amp", "delta_to_cumulative/prometheus/amp"},
+				exporters:  []string{"prometheus_remote_write/amp"},
 				extensions: []string{"sigv4auth"},
 			},
 		},

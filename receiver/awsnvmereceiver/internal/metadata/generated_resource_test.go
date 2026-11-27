@@ -30,16 +30,15 @@ func TestResourceBuilder(t *testing.T) {
 			default:
 				assert.Failf(t, "unexpected test case: %s", tt)
 			}
-
-			val, ok := res.Attributes().Get("SerialId")
+			serialIDAttrVal, ok := res.Attributes().Get("SerialId")
 			assert.True(t, ok)
 			if ok {
-				assert.Equal(t, "SerialId-val", val.Str())
+				assert.Equal(t, "SerialId-val", serialIDAttrVal.Str())
 			}
-			val, ok = res.Attributes().Get("VolumeId")
+			volumeIDAttrVal, ok := res.Attributes().Get("VolumeId")
 			assert.True(t, ok)
 			if ok {
-				assert.Equal(t, "VolumeId-val", val.Str())
+				assert.Equal(t, "VolumeId-val", volumeIDAttrVal.Str())
 			}
 		})
 	}

@@ -55,12 +55,12 @@ func (t *translator) Translate(conf *confmap.Conf) (component.Config, error) {
 		return nil, &common.MissingKeyError{ID: t.ID(), JsonKey: baseKey}
 	}
 	cfg := t.factory.CreateDefaultConfig().(*awsxrayreceiver.Config)
-	cfg.Endpoint = defaultEndpoint
+	cfg.AddrConfig.Endpoint = defaultEndpoint
 	cfg.ProxyServer.Endpoint = defaultEndpoint
 	cfg.ProxyServer.RoleARN = getRoleARN(conf)
 	cfg.ProxyServer.Region = getRegion(conf)
 	if endpoint, ok := common.GetString(conf, common.ConfigKey(baseKey, bindAddressKey)); ok {
-		cfg.Endpoint = endpoint
+		cfg.AddrConfig.Endpoint = endpoint
 	}
 	if endpoint, ok := common.GetString(conf, common.ConfigKey(baseKey, tcpProxyKey, bindAddressKey)); ok {
 		cfg.ProxyServer.Endpoint = endpoint
